@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Web 深度版 — 八仓横向结论与 TaiChu 借鉴指南 — Skill-Evolving</title>
+  <link rel="alternate" hreflang="en" href="/html/site/notes/synthesis/web-deep-taichu-borrowing-guide.html">
+  <link rel="alternate" hreflang="zh-Hans" href="/html/site/zh/notes/synthesis/web-deep-taichu-borrowing-guide.html">
+  <link rel="alternate" hreflang="x-default" href="/html/site/notes/synthesis/web-deep-taichu-borrowing-guide.html">
+  <link rel="stylesheet" href="../../../../css/viewer.css">
+</head>
+<body class="" data-doc-locale="zh" data-content-lang="zh">
+  <div class="viewer-layout">
+    <nav>
+      <div data-lang-switch class="lang-switch-host"></div>
+      <h1 data-i18n="nav.docs">Docs</h1>
+      <div class="title" data-i18n="nav.rendered">Rendered HTML</div>
+      <section class="highlight-section"><h2 data-i18n="nav.compare">nav.compare</h2><ul><li><a href="./agent-skill-architecture-survey-matrix.html" data-i18n="nav.matrix165">nav.matrix165</a></li><li><a href="./skill-lifecycle-full-matrix.html" data-i18n="nav.lifecycle">nav.lifecycle</a></li><li><a href="./web-expanded-lifecycle-matrix-merged.html" data-i18n="nav.web_l3">nav.web_l3</a></li><li><a href="./eight-repo-comprehensive-survey.html" data-i18n="nav.survey20">nav.survey20</a></li><li><a href="./skill-lifecycle-and-dynamic-loading-survey.html" data-i18n="nav.per_turn">nav.per_turn</a></li><li><a href="./eight-repo-deep-source-analysis.html" data-i18n="nav.deep_source">nav.deep_source</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.per_repo">nav.per_repo</h2><ul><li><a href="./survey-reports/opensquilla.html">OpenSquilla (9.0)</a></li><li><a href="./survey-reports/hermes-agent.html">Hermes (8.1)</a></li><li><a href="./survey-reports/openclaw.html">OpenClaw (8.0)</a></li><li><a href="./survey-reports/claude-code-rev.html">Claude Rev (7.7)</a></li><li><a href="./survey-reports/codex.html">Codex (7.2)</a></li><li><a href="./survey-reports/taichu.html">TaiChu (5.0)</a></li><li><a href="./survey-reports/zeroclaw.html">ZeroClaw (5.0)</a></li><li><a href="./survey-reports/genericagent.html">GenericAgent (4.8)</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.papers">nav.papers</h2><ul><li><a href="../../../topics/skill-rl/overview.html">SkillRL</a></li><li><a href="../../../topics/claw-r1/overview.html">Claw-R1</a></li><li><a href="./comparison.html" data-i18n="nav.comparison">nav.comparison</a></li><li><a href="./combined-pipeline.html" data-i18n="nav.pipeline">nav.pipeline</a></li><li><a href="./l3-comprehensive-skill-analysis.html" data-i18n="nav.l3">nav.l3</a></li><li><a href="../../../notes/synthesis/taichu-p0-skill-compaction-spec.html" data-i18n="nav.taichu_p0">nav.taichu_p0</a></li></ul></section><section><h2 data-i18n="nav.more">More</h2><ul>
+    <li><a href="/html/docs.html" data-i18n="nav.sitemap">Sitemap</a></li>
+    <li><a href="/html/i18n-coverage.html" data-i18n="nav.i18n_coverage">i18n coverage</a></li>
+    <li><a href="/html/index.html" data-i18n="nav.dashboard">Dashboard</a></li>
+    <li><a href="/html/deck/index.html" data-i18n="nav.decks">Slide decks</a></li>
+  </ul></section>
+    </nav>
+    <div class="viewer-main">
+      <div class="viewer-toolbar">
+        <div>
+          <h1>Web 深度版 — 八仓横向结论与 TaiChu 借鉴指南</h1>
+          <div class="path">notes/synthesis/web-deep-taichu-borrowing-guide.md</div>
+        </div>
+        <a class="btn" href="/html/docs.html" data-i18n="toolbar.sitemap">Sitemap</a>
+        <a class="btn primary" href="./agent-skill-architecture-survey-matrix.html" data-i18n="toolbar.matrix">165-dim matrix</a>
+      </div>
+      
+      <article class="md-body"><h1>Web 深度版 — 八仓横向结论与 TaiChu 借鉴指南</h1>
+<blockquote>
+<p><strong>证据来源</strong>：公开 GitHub / 官方文档 / issue 页面（<strong>无本机 clone 访问</strong>）。<br><strong>交叉核对</strong>：见文末 <a href="#%E9%99%84%E5%BD%95%E4%B8%8E%E6%9C%AC%E6%9C%BA-l3-%E4%BA%A4%E5%8F%89%E6%A0%B8%E5%AF%B9">附录：与本机 L3 交叉核对</a>。<br><strong>相关</strong>：<a href="./web-vs-local-reconciliation.html"><code>web-vs-local-reconciliation.md</code></a> · <a href="./l3-comprehensive-skill-analysis.html"><code>l3-comprehensive-skill-analysis.md</code></a> · <a href="../../../notes/synthesis/taichu-p0-skill-compaction-spec.html"><code>taichu-p0-skill-compaction-spec.md</code></a></p>
+</blockquote>
+<hr>
+<h2>0. 总体判断</h2>
+<p><strong>最值得 TaiChu 借鉴的是：</strong></p>
+<pre><code class="language-text">Codex / OpenClaw / Hermes 的 SKILL.md 标准化
++
+OpenClaw 的多来源加载、优先级、per-agent visibility
++
+Codex 的 progressive disclosure + description-based implicit trigger
++
+Hermes 的 skill_manage / agent-created skills / background self-improvement
++
+OpenSquilla 的 MetaSkill = workflow-level skill
++
+ZeroClaw 的 registry/audit/security governance
++
+GenericAgent 的 task → execution path → reusable skill 思想
+</code></pre>
+<p>但真正做到「安全、工程化、可上线」的 <strong>Skill 自进化</strong>，目前没有一个项目完全成熟。Hermes 最激进，但 issue 里也暴露了自修改 skill 的安全和一致性问题，例如 background review 可能在未读取当前 <code>SKILL.md</code> 的情况下 patch skill，导致内容被错误删除；也有 issue 要求防止 agent 修改 critical skills。(<a href="https://github.com/NousResearch/hermes-agent/issues/55647">GitHub #55647</a>)</p>
+<hr>
+<h2>1. 横向结论表</h2>
+<blockquote>
+<p><strong>完整九阶段矩阵</strong>（Store / Expose / Discover / Recommend / Offload / Use / Compact / Delete / Evolve）：见 <strong><a href="./skill-lifecycle-full-matrix.html">skill-lifecycle-full-matrix.md</a></strong>。<br><strong>165 维架构调研矩阵</strong>（7 大类）：见 <strong><a href="./agent-skill-architecture-survey-matrix.html">agent-skill-architecture-survey-matrix.md</a></strong>。下表为简版。</p>
+</blockquote>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>项目</th>
+<th>Skill 存储</th>
+<th>动态加载</th>
+<th>Per-turn skill</th>
+<th>子 Agent skill</th>
+<th>自进化</th>
+<th>工程成熟度</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Codex</strong></td>
+<td><code>skills/&lt;name&gt;/SKILL.md</code> + scripts/references/assets</td>
+<td>强，progressive disclosure</td>
+<td>支持 implicit/explicit activation</td>
+<td>可能通过 agents/openai.yaml 扩展，但不是核心</td>
+<td>Record &amp; Replay 可生成 skill，但不是闭环自进化</td>
+<td>高</td>
+</tr>
+<tr>
+<td><strong>OpenClaw</strong></td>
+<td>多来源 <code>SKILL.md</code></td>
+<td>中强，session snapshot + watcher refresh</td>
+<td>session snapshot，下一 turn 可刷新</td>
+<td>明确 per-agent/workspace/personal/shared skills</td>
+<td>agent-drafted proposals，但偏人工 approve</td>
+<td>中高</td>
+</tr>
+<tr>
+<td><strong>Hermes</strong></td>
+<td><code>~/.hermes/skills/**/SKILL.md</code></td>
+<td>强，on-demand / progressive disclosure</td>
+<td>支持 <code>/skills</code>、<code>/&lt;skill&gt;</code>、自动选择</td>
+<td>有 delegate/subagent，但 skill isolation 还不完整</td>
+<td>最强，<code>skill_manage</code> 可 create/patch/edit/delete</td>
+<td>激进但风险高</td>
+</tr>
+<tr>
+<td><strong>GenericAgent</strong></td>
+<td>memory/SOP/skill tree</td>
+<td>更像 recall，不是标准 skill loader</td>
+<td>任务后复用</td>
+<td>弱</td>
+<td>强理念：每次任务 crystallize 成 Skill</td>
+<td>简洁但治理弱</td>
+</tr>
+<tr>
+<td><strong>OpenSquilla</strong></td>
+<td>Skill + MetaSkill docs/workflow</td>
+<td>中强</td>
+<td>router/turn-loop 相关</td>
+<td>MetaSkill 可编排 tools/skills/sub-agents</td>
+<td><code>meta-skill-creator</code>，偏 proposal</td>
+<td>设计优秀</td>
+</tr>
+<tr>
+<td><strong>ZeroClaw</strong></td>
+<td>registry + <code>SKILL.md</code></td>
+<td>install/audit/use</td>
+<td>更偏 registry/runtime</td>
+<td>SOP/tool/channel 更强</td>
+<td>弱，偏安全治理</td>
+<td>安全治理值得借</td>
+</tr>
+<tr>
+<td><strong>claude-code-reverse</strong></td>
+<td>不是 skill runtime</td>
+<td>无</td>
+<td>无</td>
+<td>重点是 Task/Sub Agent 分析</td>
+<td>无</td>
+<td>用来学习 Claude Code harness 思路</td>
+</tr>
+<tr>
+<td><strong>TaiChu</strong></td>
+<td>建议 <code>.taichu/skills/**/SKILL.md</code> + metadata store</td>
+<td>可借 hooks/session factory 实现</td>
+<td>可实现</td>
+<td>可结合 subagent relay</td>
+<td>待实现</td>
+<td>接缝很好</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2>2. Codex：标准化 skill + progressive disclosure，适合作为 TaiChu 基线</h2>
+<p>Codex 官方文档已经把 Agent Skills 做成正式能力：skill 是目录，包含 <code>SKILL.md</code>，可带 <code>scripts/</code>、<code>references/</code>、<code>assets/</code>、<code>agents/openai.yaml</code>；<code>SKILL.md</code> 必须包含 <code>name</code> 和 <code>description</code>。(<a href="https://developers.openai.com/codex/skills">OpenAI Developers — Agent Skills</a>)</p>
+<p>最关键的是 <strong>progressive disclosure</strong>：</p>
+<pre><code class="language-text">初始上下文：
+  name + description + file path
+
+真正使用时：
+  读取完整 SKILL.md
+</code></pre>
+<p>Codex 还限制初始 skill list 的上下文预算：最多 2% context window，未知窗口时最多 8000 字符；如果 skill 太多，先缩短 description，再可能省略部分 skill。</p>
+<p>Codex 的触发方式有两种：</p>
+<pre><code class="language-text">explicit:
+  /skills
+  $ mention skill
+
+implicit:
+  根据 description 自动选择
+</code></pre>
+<p>这点对 TaiChu 很重要：<strong>description 不是文档字段，而是 routing signal</strong>。</p>
+<p>Codex 也有 skill creation 入口：<code>$skill-creator</code>，并且支持 Record &amp; Replay：记录 workflow、检查步骤、草拟 reusable skill。</p>
+<h3>TaiChu 应借什么</h3>
+<p>TaiChu 的第一版 skill runtime 应直接采用：</p>
+<pre><code class="language-text">.taichu/skills/&lt;skill-name&gt;/
+  SKILL.md
+  scripts/
+  references/
+  assets/
+  agents/
+</code></pre>
+<p>并要求 frontmatter：</p>
+<pre><code class="language-yaml">name: rust-test-debugger
+description: Use when cargo test fails and the task is to diagnose Rust test failure, inspect logs, minimize repro, and propose patch.
+version: 0.1.0
+owner: team-or-user
+allowed_tools:
+  - read_file
+  - grep
+  - bash
+risk_level: medium
+</code></pre>
+<p><strong>重点：description 要为 router 写，不是给人看的。</strong></p>
+<hr>
+<h2>3. OpenClaw：多来源 skill loading / priority / per-agent visibility 做得最好</h2>
+<p>OpenClaw 文档明确说明 skill 是带 YAML frontmatter 的 markdown instruction file，用于教 agent 如何以及何时使用工具。它从多个来源加载 skill，并按优先级覆盖。(<a href="https://github.com/openclaw/openclaw/blob/main/docs/tools/skills.md">openclaw/docs/tools/skills.md</a>)</p>
+<p>加载优先级是：</p>
+<pre><code class="language-text">1. &lt;workspace&gt;/skills
+2. &lt;workspace&gt;/.agents/skills
+3. ~/.agents/skills
+4. ~/.openclaw/skills
+5. bundled skills
+6. skills.load.extraDirs + plugin skills
+</code></pre>
+<p>同名 skill 由高优先级覆盖低优先级。</p>
+<p>OpenClaw 还明确区分 <strong>location precedence</strong> 和 <strong>agent visibility</strong>。多 agent 场景下，每个 agent 有自己的 workspace，可以使用 per-agent、project-agent、personal-agent、shared managed、extra dirs 等不同作用域。</p>
+<p>这是 TaiChu 非常应该借鉴的地方。因为 TaiChu 有 subagent / relay / runtime tool factories 的设计，天然会遇到：</p>
+<pre><code class="language-text">主 Agent 可见的 skill
+子 Agent 可见的 skill
+项目级 skill
+用户级 skill
+系统级 skill
+临时任务 skill
+</code></pre>
+<p>OpenClaw 还做了 session snapshot：session 开始时 snapshot eligible skills，后续 turn 复用；但如果 watcher 检测到 <code>SKILL.md</code> 变化，或远程节点连接，下一 turn 可以刷新。</p>
+<h3>TaiChu 应借什么</h3>
+<p>TaiChu 的 skill scope 可以这样设计：</p>
+<pre><code class="language-text">Priority 1: &lt;workspace&gt;/.taichu/skills
+Priority 2: &lt;workspace&gt;/.agents/skills
+Priority 3: ~/.taichu/skills
+Priority 4: ~/.agents/skills
+Priority 5: managed registry skills
+Priority 6: bundled skills
+Priority 7: plugin-provided skills
+</code></pre>
+<p>再加一个 allowlist：</p>
+<pre><code class="language-yaml">agent_profiles:
+  coding_agent:
+    allowed_skills:
+      - rust-debug
+      - git-safety
+      - test-repair
+
+  review_agent:
+    allowed_skills:
+      - code-review
+      - security-review
+      - diff-analysis
+
+  skill_evolver:
+    allowed_skills:
+      - skill-authoring
+      - regression-eval
+</code></pre>
+<p><strong>关键点：skill 是否存在、skill 优先级、skill 对哪个 agent 可见，是三件事，不要混在一起。</strong></p>
+<hr>
+<h2>4. Hermes：最接近真正 Skill 自进化，但也暴露最多风险</h2>
+<p>Hermes 的 skill 文档说明：skills 是 on-demand knowledge documents，使用 progressive disclosure 减少 token；所有 skills 都在 <code>~/.hermes/skills/</code>，这是 primary source of truth；bundled、hub-installed、agent-created skills 都会放这里；并且 agent 可以修改或删除任意 skill。(<a href="https://github.com/NousResearch/hermes-agent/blob/main/website/docs/user-guide/features/skills.md">hermes-agent skills docs</a>)</p>
+<p>这就是它最激进的地方：</p>
+<pre><code class="language-text">Agent 不只是用 skill
+Agent 可以创建 / 修改 / 删除 skill
+</code></pre>
+<p>Hermes 还有 <code>skill_manage</code>，相关 issue 显示它支持 create/patch/edit/delete；同时也暴露出一致性问题：有 issue 说 <code>skill_manage</code> 应该和 <code>skill_view</code> / <code>skills_list</code> 使用同一 discovery path；还有 issue 说 <code>skill_manage</code> 报告创建成功但磁盘上没写出 <code>SKILL.md</code>。(<a href="https://github.com/NousResearch/hermes-agent/issues/54195">GitHub #54195</a>)</p>
+<p>最有价值的 Hermes 经验不是「让 agent 随便改 skill」，而是它证明了一个完整闭环的必要组件：</p>
+<pre><code class="language-text">skill_list
+skill_view
+skill_manage
+background_review
+progressive disclosure
+agent-created skills
+</code></pre>
+<p>同时它也证明了危险点：</p>
+<pre><code class="language-text">没有 read-before-write 会 hallucinate patch
+没有 critical skill protection 会破坏治理 skill
+没有 on-disk verification 会造成 session 内假成功
+没有 shadowing 防护会绕过 readonly external skill
+</code></pre>
+<p>Hermes issue 中明确提到 background self-improvement review turn 可以调用 <code>skill_manage(patch)</code>，但如果没先读当前 skill，会基于 transcript 幻觉式 patch，甚至删除大量现有内容。(<a href="https://github.com/NousResearch/hermes-agent/issues/55647">GitHub #55647</a>)</p>
+<h3>TaiChu 应借什么</h3>
+<p>TaiChu 可以借 Hermes 的能力，但要加硬约束：</p>
+<pre><code class="language-text">skill_manage(action=patch)
+  必须先 skill_view 当前版本
+  必须提交 unified diff
+  必须做 schema validation
+  必须写临时 candidate
+  必须 run eval
+  必须 produce before/after summary
+  高风险 skill 必须 human approve
+</code></pre>
+<p>不要让 agent 直接写生产 skill。应该是：</p>
+<pre><code class="language-text">Agent proposes
+System validates
+Eval scores
+Policy gates
+Human approves if needed
+Then deploy
+</code></pre>
+<hr>
+<h2>5. GenericAgent：最纯粹的「任务路径固化为 skill」思想</h2>
+<p>GenericAgent README 明确说它是 minimal self-evolving autonomous agent framework，核心约 3K 行、9 个 atomic tools、约 100 行 agent loop；设计哲学是「不预加载 skills，而是 evolve them」。每次解决新任务后，会把 execution path 自动 crystallize 成 reusable Skill，长期形成 personal skill tree。(<a href="https://github.com/lsdefine/genericagent">lsdefine/genericagent</a>)</p>
+<p>这代表一种和 Codex/OpenClaw/Hermes 不同的路线：</p>
+<pre><code class="language-text">Codex / OpenClaw / Hermes:
+  skills are authored packages
+
+GenericAgent:
+  skills are crystallized execution paths
+</code></pre>
+<p>这更接近 SkillRL 的精神：从 trajectory 中抽取 reusable abstraction。</p>
+<p>但它的问题是：如果缺少评测和治理，crystallized skill 很容易把偶然经验、环境特定路径、错误 workaround 固化下来。</p>
+<h3>TaiChu 应借什么</h3>
+<p>TaiChu 应借 GenericAgent 的 <strong>Skill Miner</strong> 思想：</p>
+<pre><code class="language-text">task
+  ↓
+trajectory
+  ↓
+success/failure analysis
+  ↓
+candidate skill
+</code></pre>
+<p>但不要借它的「直接沉淀到可用 skill」。TaiChu 应该加：</p>
+<pre><code class="language-text">candidate skill
+  ↓
+deduplicate
+  ↓
+generalize
+  ↓
+regression test
+  ↓
+risk gate
+  ↓
+versioned publish
+</code></pre>
+<p>也就是说：</p>
+<pre><code class="language-text">GenericAgent = skill 自进化的灵感
+Hermes = skill 自修改的 runtime
+Codex/OpenClaw = skill packaging/loading standard
+ZeroClaw = security governance
+OpenSquilla = workflow-level MetaSkill
+</code></pre>
+<hr>
+<h2>6. OpenSquilla：MetaSkill 是 TaiChu 最应该吸收的抽象</h2>
+<p>OpenSquilla 的 MetaSkill 定义很清楚：Meta-skills package repeatable multi-step work as reusable, inspectable workflows；适合需要多个 normal skill、tool、checkpoint、final synthesis pass 的任务。(<a href="https://www.opensquilla.ai/docs/features/meta-skills/">OpenSquilla Meta-Skills</a>)</p>
+<p>它区分：</p>
+<pre><code class="language-text">Skill:
+  one focused task pattern / instruction set / script / tool helper
+
+MetaSkill:
+  reusable workflow made of multiple steps / skills / checks / outputs
+</code></pre>
+<p>这对 TaiChu 很关键。因为「Skill 自进化」如果只停留在 prompt 片段，会很快失控。真正可工程化的是：</p>
+<pre><code class="language-text">procedure
+  + preconditions
+  + steps
+  + tool permissions
+  + checkpoints
+  + expected artifacts
+  + eval criteria
+</code></pre>
+<p>这其实就是 MetaSkill。</p>
+<p>OpenSquilla 还内置 <code>meta-skill-creator</code>，用于把重复的多 skill 协作模式变成新的 MetaSkill proposals。</p>
+<h3>TaiChu 应借什么</h3>
+<p>TaiChu 可以把 skill 分两层：</p>
+<pre><code class="language-text">AtomicSkill:
+  单一能力
+  例如：cargo-test-debug, git-safety-check, web-search-verify
+
+MetaSkill:
+  workflow 编排
+  例如：implement-feature-with-tests
+</code></pre>
+<p>MetaSkill 示例：</p>
+<pre><code class="language-yaml">name: implement-feature-with-tests
+description: Use for code changes requiring implementation, tests, and verification.
+steps:
+  - skill: repo-understanding
+  - skill: implementation-plan
+  - skill: edit-code
+  - checkpoint: compile
+  - skill: test-repair
+  - checkpoint: regression
+  - skill: final-summary
+subagents:
+  reviewer:
+    skills:
+      - code-review
+      - security-review
+outputs:
+  - patch
+  - test_report
+  - risk_summary
+</code></pre>
+<p>这样 TaiChu 的 skill evolution 可以分层演进：</p>
+<pre><code class="language-text">AtomicSkill evolution:
+  改某个调试步骤
+
+MetaSkill evolution:
+  改整个工作流拓扑
+</code></pre>
+<hr>
+<h2>7. ZeroClaw：Skill registry 安全治理值得直接照搬</h2>
+<p>ZeroClaw 主项目是 Rust agent runtime，强调本地运行、工具、channel、provider、MCP 等。(<a href="https://github.com/zeroclaw-labs/zeroclaw">zeroclaw-labs/zeroclaw</a>)</p>
+<p>更重要的是 <code>zeroclaw-skills</code> registry：它明确说 registry 不是 vetted security boundary；CI 只做结构验证、secret detection、dangerous regex、file-policy checks；用户仍需要自己 <code>zeroclaw skills audit &lt;name&gt;</code> 并阅读 <code>SKILL.md</code>。(<a href="https://github.com/zeroclaw-labs/zeroclaw-skills">zeroclaw-labs/zeroclaw-skills</a>)</p>
+<p>这非常现实。</p>
+<p>OpenClaw 生态也被安全报道指出过 skill marketplace 风险：恶意 skill 会伪装成正常扩展，诱导 agent 或用户执行恶意脚本；安全问题集中在 local file / network / command execution 权限和第三方 skill 未充分 sandbox。(<a href="https://www.theverge.com/news/874011/openclaw-ai-skill-clawhub-extensions-security-nightmare">The Verge</a>)</p>
+<h3>TaiChu 应借什么</h3>
+<p>TaiChu 的 skill store 必须是安全对象，而不是普通 markdown：</p>
+<pre><code class="language-yaml">name: github-pr-review
+version: 0.2.1
+source: workspace | user | registry | generated | bundled
+owner: andy
+trust_tier: bundled | team | personal | generated | community
+risk_level: low | medium | high | critical
+allowed_tools:
+  - read_file
+  - grep
+  - git_diff
+denied_tools:
+  - shell_network
+  - write_sensitive_file
+requires_approval:
+  - bash
+  - network
+  - modify_skill
+mutable_by_agent: false
+</code></pre>
+<p>对自进化生成的 skill，默认：</p>
+<pre><code class="language-text">trust_tier = generated
+mutable_by_agent = false after publish
+requires_human_approval = true
+</code></pre>
+<p>否则会出现 Hermes issue 中那类「agent 把 governance skill 改坏」的问题。(<a href="https://github.com/NousResearch/hermes-agent/issues/25083">GitHub #25083</a>)</p>
+<hr>
+<h2>8. Claude Code Reverse：重点不是 skill，而是 subagent context offload</h2>
+<p><code>claude-code-reverse</code> 不是 skill runtime，而是可视化 Claude Code LLM interactions 的工具。它的价值在于揭示 Claude Code 的 harness 模式。</p>
+<p>它记录的 Task/Sub Agent workflow 是：</p>
+<pre><code class="language-text">Main Agent
+  ↓
+通过 Task Tool 启动 Sub Agent
+  ↓
+把独立任务抽取成 sub context 初始 prompt
+  ↓
+Sub Agent 完成后把最终结果作为 tool result 返回 main context
+</code></pre>
+<p>这个设计的价值是隔离 dirty context：例如代码搜索过程中产生大量无关文件读取，这些上下文留在 subagent，主上下文只保留最终摘要。(<a href="https://github.com/Yuyz0112/claude-code-reverse">Yuyz0112/claude-code-reverse</a>)</p>
+<p>它还提到 TodoWrite 会写 JSON 到 <code>~/.claude/todos/</code>，作为当前 conversation 的短期 memory；system reminder 会动态加载最新 Todo list。</p>
+<h3>TaiChu 应借什么</h3>
+<p>Skill 和 subagent 应该结合：</p>
+<pre><code class="language-text">Main Agent:
+  only sees task-level MetaSkill
+
+Sub Agent:
+  sees specialized AtomicSkills
+
+Main context:
+  only receives compact result
+</code></pre>
+<p>比如：</p>
+<pre><code class="language-text">主 Agent:
+  MetaSkill = implement-feature-with-tests
+
+子 Agent A:
+  skills = repo-search, symbol-trace
+
+子 Agent B:
+  skills = rust-test-debug, cargo-error-minimize
+
+子 Agent C:
+  skills = review-diff, security-check
+</code></pre>
+<p>这就是 <strong>complementary skills for subagents</strong>。它不应该是所有 agent 共享同一个 skill list，而是：</p>
+<pre><code class="language-text">task decomposition
+  ↓
+subagent role
+  ↓
+skill bundle selection
+  ↓
+subagent isolated execution
+  ↓
+compact return
+</code></pre>
+<hr>
+<h2>9. Skill 生命周期完整模型</h2>
+<p>TaiChu 最终应该实现的是这张生命周期表：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>阶段</th>
+<th>作用</th>
+<th>来源项目可借鉴</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Discover</td>
+<td>找到所有 skills</td>
+<td>OpenClaw multi-root loading</td>
+</tr>
+<tr>
+<td>Expose</td>
+<td>暴露 name/description/path</td>
+<td>Codex progressive disclosure</td>
+</tr>
+<tr>
+<td>Recommend</td>
+<td>按 task 推荐 skill</td>
+<td>Codex implicit trigger / router</td>
+</tr>
+<tr>
+<td>Load</td>
+<td>读取完整 SKILL.md</td>
+<td>Codex/Hermes</td>
+</tr>
+<tr>
+<td>Execute</td>
+<td>按 skill 指令执行</td>
+<td>全部</td>
+</tr>
+<tr>
+<td>Trace</td>
+<td>记录 turn/tool/failure</td>
+<td>Claw-R1 思想 + TaiChu hooks</td>
+</tr>
+<tr>
+<td>Mine</td>
+<td>从 trajectory 提取 candidate</td>
+<td>GenericAgent / SkillRL</td>
+</tr>
+<tr>
+<td>Propose</td>
+<td>生成 skill patch/new skill</td>
+<td>Hermes skill_manage</td>
+</tr>
+<tr>
+<td>Evaluate</td>
+<td>regression/eval/score</td>
+<td>Hermes self-evolution / GEPA 思想</td>
+</tr>
+<tr>
+<td>Approve</td>
+<td>人审/策略门禁</td>
+<td>ZeroClaw governance</td>
+</tr>
+<tr>
+<td>Publish</td>
+<td>写入 versioned store</td>
+<td>OpenClaw/ZeroClaw</td>
+</tr>
+<tr>
+<td>Monitor</td>
+<td>统计使用率/成功率</td>
+<td>TaiChu 自建</td>
+</tr>
+<tr>
+<td>Compact</td>
+<td>压缩 description / references</td>
+<td>Codex/OpenClaw</td>
+</tr>
+<tr>
+<td>Delete</td>
+<td>删除/归档/禁用</td>
+<td>Hermes/ZeroClaw</td>
+</tr>
+<tr>
+<td>Rollback</td>
+<td>回滚版本</td>
+<td>TaiChu 必须补</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2>10. TaiChu 推荐实现：三层 skill 系统</h2>
+<h3>Layer 1：Skill Registry</h3>
+<pre><code class="language-rust">struct SkillManifest {
+    name: String,
+    description: String,
+    version: SemVer,
+    source: SkillSource,
+    scope: SkillScope,
+    trust_tier: TrustTier,
+    risk_level: RiskLevel,
+    allowed_tools: Vec&lt;String&gt;,
+    denied_tools: Vec&lt;String&gt;,
+    mutable_by_agent: bool,
+    requires_approval: Vec&lt;ApprovalKind&gt;,
+}
+</code></pre>
+<h3>Layer 2：Skill Router</h3>
+<p>输入：</p>
+<pre><code class="language-text">task
+session state
+agent role
+available tools
+risk policy
+context budget
+</code></pre>
+<p>输出：</p>
+<pre><code class="language-text">selected skill summaries
+full SKILL.md for activated skills
+subagent skill bundles
+</code></pre>
+<p>Router 必须支持：</p>
+<pre><code class="language-text">explicit:
+  /skill rust-debug
+
+implicit:
+  task matches description
+
+role-based:
+  reviewer agent only gets review skills
+
+budget-based:
+  initial skill list capped
+</code></pre>
+<h3>Layer 3：Skill Evolution</h3>
+<pre><code class="language-text">SessionHook / ToolHook
+  ↓
+TraceCollector
+  ↓
+FailureMiner / SuccessMiner
+  ↓
+SkillCandidateGenerator
+  ↓
+Deduper
+  ↓
+Evaluator
+  ↓
+PolicyGate
+  ↓
+SkillPublisher
+</code></pre>
+<p>TaiChu 已有 hooks、session options、extra tool factories、context options，这些就是落点。资料里显示 <code>SessionOptions</code> 已有 <code>extra_tools</code>、<code>extra_tool_factories</code>、<code>enable_interaction_log</code>，<code>ContextOptions</code> 有 <code>hook_chain</code>，这些适合接入 trace capture 与 dynamic skill/tool 注入。</p>
+<hr>
+<h2>11. 自进化不要直接在线更新：推荐 Candidate/PR 模式</h2>
+<p>最安全的 TaiChu 自进化闭环：</p>
+<pre><code class="language-text">Online execution
+  ↓
+collect traces
+  ↓
+offline miner generates candidate skill
+  ↓
+candidate saved under:
+    .taichu/skill-candidates/&lt;id&gt;/
+  ↓
+run regression harness
+  ↓
+score:
+    success_rate_delta
+    token_delta
+    latency_delta
+    tool_error_delta
+    safety_risk
+  ↓
+if good:
+    open PR / human approve
+  ↓
+publish to:
+    .taichu/skills/&lt;name&gt;/SKILL.md
+</code></pre>
+<p>不要直接：</p>
+<pre><code class="language-text">background agent
+  ↓
+patch production SKILL.md
+</code></pre>
+<p>Hermes 的 issue 已经说明这个路径很危险。(<a href="https://github.com/NousResearch/hermes-agent/issues/55647">GitHub #55647</a>)</p>
+<hr>
+<h2>12. 最终建议：TaiChu 应该借鉴谁的哪一部分</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>借鉴对象</th>
+<th>借什么</th>
+<th>不借什么</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Codex</td>
+<td>SKILL.md 标准、progressive disclosure、implicit trigger、Record &amp; Replay</td>
+<td>不要只做手工 skill creator</td>
+</tr>
+<tr>
+<td>OpenClaw</td>
+<td>多来源加载、优先级、per-agent visibility、session snapshot、watch refresh</td>
+<td>不要照搬 marketplace 风险</td>
+</tr>
+<tr>
+<td>Hermes</td>
+<td><code>skill_manage</code>、agent-created skills、background review、skill self-improvement</td>
+<td>不要让 agent 无门禁修改 critical skills</td>
+</tr>
+<tr>
+<td>GenericAgent</td>
+<td>trajectory → reusable skill</td>
+<td>不要无评测直接固化</td>
+</tr>
+<tr>
+<td>OpenSquilla</td>
+<td>MetaSkill = workflow-level skill</td>
+<td>不要把 workflow 写成散 prompt</td>
+</tr>
+<tr>
+<td>ZeroClaw</td>
+<td>registry/audit/trust tier/security</td>
+<td>不要相信 CI 扫描就是安全边界</td>
+</tr>
+<tr>
+<td>Claude Code Reverse</td>
+<td>subagent context offload</td>
+<td>不要把所有 skill 暴露给所有 subagent</td>
+</tr>
+</tbody></table></div>
+<h3>一句话结论</h3>
+<p>TaiChu 最优路线不是简单做一个 <code>skills/</code> 目录，而是做：</p>
+<pre><code class="language-text">Versioned Skill Registry
++
+Per-turn Skill Router
++
+Subagent-specific Skill Bundles
++
+Trace-driven Skill Candidate Mining
++
+Eval-gated Skill Evolution
++
+Security/Approval Governance
+</code></pre>
+<p>也就是把 skill 当成 <strong>可评测、可审计、可版本化、可回滚的软件资产</strong>，而不是 prompt 片段。</p>
+<hr>
+<h2>附录：与本机 L3 交叉核对</h2>
+<blockquote>
+<p>本 workspace 有本机 clone 的 L3 源码证据。以下修正/补充 Web 版结论。</p>
+</blockquote>
+<h3>A. 必须修正：两个不同的「claude-code-reverse」</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>仓库</th>
+<th>实际是什么</th>
+<th>对 TaiChu 的价值</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Yuyz0112/claude-code-reverse</strong></td>
+<td>LLM 交互可视化工具</td>
+<td>Subagent Task 模式、TodoWrite 模式（Web 文 §8 引用的是这个）</td>
+</tr>
+<tr>
+<td><strong>oboard/claude-code-rev</strong>（本机 <code>oss/experimental/claude-code-rev</code>）</td>
+<td><strong>完整 skill runtime + harness</strong></td>
+<td><code>invoked_skills</code> compaction 存活、<code>skillImprovement</code> 5-turn、subagent frontmatter preload</td>
+</tr>
+</tbody></table></div>
+<p><strong>Web 文 §1 表将 claude-code-reverse 标为「不是 skill runtime」——对 Yuyz0112 正确，但会漏掉 oboard 仓。</strong> 本机 L3 证据表明 oboard 应单独列入借鉴表：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>借鉴对象</th>
+<th>额外应借（本机 L3）</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>oboard/claude-code-rev</strong></td>
+<td>compaction 后 reinject invoked skills；5-turn skill improvement；<code>ChildSessionSpec</code> skill preload</td>
+</tr>
+</tbody></table></div>
+<p>见 <a href="./repos/claude-code-rev.html"><code>repos/claude-code-rev.md</code></a> · <a href="../../../notes/synthesis/taichu-p0-skill-compaction-spec.html"><code>taichu-p0-skill-compaction-spec.md</code></a>。</p>
+<h3>B. OpenClaw 自进化 — Web 偏保守，本机更强</h3>
+<p>Web 表写「agent-drafted proposals，偏人工 approve」。本机 L3 发现 <strong><code>extensions/skill-workshop/</code></strong> 在 <code>agent_end</code> 有 heuristic + LLM reviewer → apply 管道，不仅是 marketplace。强度仍低于 OpenSquilla 5-gate，但应上调。</p>
+<h3>C. OpenSquilla — Web 偏设计文档，本机有完整代码</h3>
+<p>本机 L3：<code>proposals_lib.py</code>（accept + gates）、<code>skills_filter.py</code>（<strong>每 turn RRF</strong>）、<code>auto_propose.py</code>、<code>runtime_e2e.py</code>。MetaSkill 不仅是文档抽象，有 <code>meta/orchestrator.py</code> DAG 编排。</p>
+<h3>D. TaiChu 接缝名修正（§10）</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Web 文写法</th>
+<th>本机核实</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>SessionOptions.extra_tool_factories</code></td>
+<td>→ <strong><code>Runtime::add_tool_factory</code></strong> / <code>register_extra_tools</code></td>
+</tr>
+<tr>
+<td><code>ContextOptions.hook_chain</code></td>
+<td>→ <strong><code>SessionOptions.transform_context</code></strong> + Toollery <code>before_prompt</code></td>
+</tr>
+<tr>
+<td><code>set_skill_name_filter</code></td>
+<td>✅ 正确，per-turn filter</td>
+</tr>
+</tbody></table></div>
+<h3>E. 合并后的「借鉴谁」表（Web + L3）</h3>
+<p>在 §12 基础上 <strong>增加一行</strong>：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>借鉴对象</th>
+<th>借什么</th>
+<th>不借什么</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>oboard/claude-code-rev</strong></td>
+<td><code>invoked_skills</code> compaction survival、skillImprovement、subagent skill preload</td>
+<td>不要与 Yuyz0112 可视化工具混淆</td>
+</tr>
+</tbody></table></div>
+<h3>F. 合并后的生命周期表补充</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>阶段</th>
+<th>本机 L3 额外证据</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Compact</td>
+<td><strong>仅 oboard</strong> 有 <code>invoked_skills</code> 附件；TaiChu <strong>P0 缺口</strong></td>
+</tr>
+<tr>
+<td>Recommend</td>
+<td>OpenSquilla <strong>每 turn RRF</strong> 强于 Codex 静态 list</td>
+</tr>
+<tr>
+<td>Propose</td>
+<td>OpenSquilla <strong>5-gate</strong> + OpenClaw <strong>skill-workshop</strong> 双路径</td>
+</tr>
+</tbody></table></div>
+<h3>G. 证据等级</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>本文</th>
+<th>等级</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>§0–§12 主体</td>
+<td><strong>L0</strong>（公开 docs/issue）</td>
+</tr>
+<tr>
+<td>本附录</td>
+<td><strong>L3</strong>（本机源码交叉）</td>
+</tr>
+</tbody></table></div>
+<p>完整合并排序见 <a href="./web-vs-local-reconciliation.html"><code>web-vs-local-reconciliation.md</code></a> · <a href="./l3-comprehensive-skill-analysis.html"><code>l3-comprehensive-skill-analysis.md</code></a>。</p>
+<hr>
+<h2>参考链接</h2>
+<ul>
+<li><a href="https://github.com/NousResearch/hermes-agent/issues/55647">Hermes #55647 — skill_manage patches hallucinate</a></li>
+<li><a href="https://developers.openai.com/codex/skills">OpenAI Codex Agent Skills</a></li>
+<li><a href="https://github.com/openclaw/openclaw/blob/main/docs/tools/skills.md">OpenClaw skills.md</a></li>
+<li><a href="https://github.com/NousResearch/hermes-agent/blob/main/website/docs/user-guide/features/skills.md">Hermes skills docs</a></li>
+<li><a href="https://github.com/NousResearch/hermes-agent/issues/54195">Hermes #54195 — skill_manage symlink</a></li>
+<li><a href="https://github.com/lsdefine/genericagent">GenericAgent</a></li>
+<li><a href="https://www.opensquilla.ai/docs/features/meta-skills/">OpenSquilla Meta-Skills</a></li>
+<li><a href="https://github.com/zeroclaw-labs/zeroclaw">ZeroClaw</a></li>
+<li><a href="https://github.com/zeroclaw-labs/zeroclaw-skills">zeroclaw-skills registry</a></li>
+<li><a href="https://www.theverge.com/news/874011/openclaw-ai-skill-clawhub-extensions-security-nightmare">The Verge — OpenClaw skill security</a></li>
+<li><a href="https://github.com/NousResearch/hermes-agent/issues/25083">Hermes #25083 — critical skill protection</a></li>
+<li><a href="https://github.com/Yuyz0112/claude-code-reverse">Yuyz0112/claude-code-reverse</a>（可视化；≠ oboard/claude-code-rev）</li>
+</ul>
+</article>
+    </div>
+  </div>
+  <script src="../../../../js/i18n.js"></script>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
+  </script>
+</body>
+</html>

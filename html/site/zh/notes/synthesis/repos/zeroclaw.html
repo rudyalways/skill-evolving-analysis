@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZeroClaw — 20 维度源码分析 — Skill-Evolving</title>
+  <link rel="alternate" hreflang="en" href="/html/site/notes/synthesis/repos/zeroclaw.html">
+  <link rel="alternate" hreflang="zh-Hans" href="/html/site/zh/notes/synthesis/repos/zeroclaw.html">
+  <link rel="alternate" hreflang="x-default" href="/html/site/notes/synthesis/repos/zeroclaw.html">
+  <link rel="stylesheet" href="../../../../../css/viewer.css">
+</head>
+<body class="" data-doc-locale="zh" data-content-lang="zh">
+  <div class="viewer-layout">
+    <nav>
+      <div data-lang-switch class="lang-switch-host"></div>
+      <h1 data-i18n="nav.docs">Docs</h1>
+      <div class="title" data-i18n="nav.rendered">Rendered HTML</div>
+      <section class="highlight-section"><h2 data-i18n="nav.compare">nav.compare</h2><ul><li><a href="../agent-skill-architecture-survey-matrix.html" data-i18n="nav.matrix165">nav.matrix165</a></li><li><a href="../skill-lifecycle-full-matrix.html" data-i18n="nav.lifecycle">nav.lifecycle</a></li><li><a href="../web-expanded-lifecycle-matrix-merged.html" data-i18n="nav.web_l3">nav.web_l3</a></li><li><a href="../eight-repo-comprehensive-survey.html" data-i18n="nav.survey20">nav.survey20</a></li><li><a href="../skill-lifecycle-and-dynamic-loading-survey.html" data-i18n="nav.per_turn">nav.per_turn</a></li><li><a href="../eight-repo-deep-source-analysis.html" data-i18n="nav.deep_source">nav.deep_source</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.per_repo">nav.per_repo</h2><ul><li><a href="../survey-reports/opensquilla.html">OpenSquilla (9.0)</a></li><li><a href="../survey-reports/hermes-agent.html">Hermes (8.1)</a></li><li><a href="../survey-reports/openclaw.html">OpenClaw (8.0)</a></li><li><a href="../survey-reports/claude-code-rev.html">Claude Rev (7.7)</a></li><li><a href="../survey-reports/codex.html">Codex (7.2)</a></li><li><a href="../survey-reports/taichu.html">TaiChu (5.0)</a></li><li><a href="../survey-reports/zeroclaw.html">ZeroClaw (5.0)</a></li><li><a href="../survey-reports/genericagent.html">GenericAgent (4.8)</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.papers">nav.papers</h2><ul><li><a href="../../../../topics/skill-rl/overview.html">SkillRL</a></li><li><a href="../../../../topics/claw-r1/overview.html">Claw-R1</a></li><li><a href="../comparison.html" data-i18n="nav.comparison">nav.comparison</a></li><li><a href="../combined-pipeline.html" data-i18n="nav.pipeline">nav.pipeline</a></li><li><a href="../l3-comprehensive-skill-analysis.html" data-i18n="nav.l3">nav.l3</a></li><li><a href="../../../../notes/synthesis/taichu-p0-skill-compaction-spec.html" data-i18n="nav.taichu_p0">nav.taichu_p0</a></li></ul></section><section><h2 data-i18n="nav.more">More</h2><ul>
+    <li><a href="/html/docs.html" data-i18n="nav.sitemap">Sitemap</a></li>
+    <li><a href="/html/i18n-coverage.html" data-i18n="nav.i18n_coverage">i18n coverage</a></li>
+    <li><a href="/html/index.html" data-i18n="nav.dashboard">Dashboard</a></li>
+    <li><a href="/html/deck/index.html" data-i18n="nav.decks">Slide decks</a></li>
+  </ul></section>
+    </nav>
+    <div class="viewer-main">
+      <div class="viewer-toolbar">
+        <div>
+          <h1>ZeroClaw — 20 维度源码分析</h1>
+          <div class="path">notes/synthesis/repos/zeroclaw.md</div>
+        </div>
+        <a class="btn" href="/html/docs.html" data-i18n="toolbar.sitemap">Sitemap</a>
+        <a class="btn primary" href="../agent-skill-architecture-survey-matrix.html" data-i18n="toolbar.matrix">165-dim matrix</a>
+      </div>
+      
+      <article class="md-body"><h1>ZeroClaw — 20 维度源码分析</h1>
+<blockquote>
+<p>Path: <code>/Users/maybewu/Documents/Projects/oss/zeroclaw</code><br>Upstream: <a href="https://github.com/zeroclaw-labs/zeroclaw">zeroclaw-labs/zeroclaw</a></p>
+</blockquote>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Dimension</th>
+<th>Summary</th>
+<th>Key paths</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td><strong>Architecture</strong></td>
+<td>Rust modular: agent, tools, memory, skills, gateway, goals</td>
+<td><code>src/lib.rs</code>, <code>src/main.rs</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>Agent loop</strong></td>
+<td>Tool-use loop; parallel/sequential exec; loop detection</td>
+<td><code>agent/loop_.rs</code>, <code>agent/agent.rs</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>Harness</strong></td>
+<td>TurnBuffer; auto_compact_history; multi-format parsing</td>
+<td><code>agent/loop_/history.rs</code>, <code>parsing.rs</code></td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>Session</strong></td>
+<td>SessionManager trait; Sqlite/Memory backends; TTL</td>
+<td><code>agent/session.rs</code>, <code>gateway/ws.rs</code></td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong>Memory</strong></td>
+<td>Pluggable: Sqlite, Qdrant, Markdown, hybrid…</td>
+<td><code>memory/mod.rs</code>, <code>memory/hygiene.rs</code></td>
+</tr>
+<tr>
+<td>6</td>
+<td><strong>Skills</strong></td>
+<td>SKILL.md or SKILL.toml; open-skills sync</td>
+<td><code>skills/mod.rs</code>, <code>skills/tool_handler.rs</code></td>
+</tr>
+<tr>
+<td>7</td>
+<td><strong>Workflow</strong></td>
+<td>Goals engine state/goals.json; SOP gate eval</td>
+<td><code>goals/engine.rs</code>, <code>tools/sop_status.rs</code></td>
+</tr>
+<tr>
+<td>8</td>
+<td><strong>Reflection</strong></td>
+<td>LoopDetector warn → hard stop</td>
+<td><code>agent/loop_/detection.rs</code></td>
+</tr>
+<tr>
+<td>9</td>
+<td><strong>Self-improvement</strong></td>
+<td>Nightly consolidation cron; hygiene archival</td>
+<td><code>cron/consolidation.rs</code>, <code>memory/hygiene.rs</code></td>
+</tr>
+<tr>
+<td>10</td>
+<td><strong>Skill evolution</strong></td>
+<td><strong>Audit + load only</strong></td>
+<td><code>skills/audit.rs</code></td>
+</tr>
+<tr>
+<td>11</td>
+<td><strong>Prompt</strong></td>
+<td>prompt.rs; skills full/compact injection</td>
+<td><code>agent/prompt.rs</code>, <code>skills/mod.rs</code></td>
+</tr>
+<tr>
+<td>12</td>
+<td><strong>Evaluation</strong></td>
+<td>Skill audit; economic min_evaluation_threshold</td>
+<td><code>skills/audit.rs</code>, <code>economic/mod.rs</code></td>
+</tr>
+<tr>
+<td>13</td>
+<td><strong>Hooks</strong></td>
+<td>HookHandler trait; session_memory (placeholder)</td>
+<td><code>hooks/traits.rs</code>, <code>hooks/runner.rs</code></td>
+</tr>
+<tr>
+<td>14</td>
+<td><strong>Context</strong></td>
+<td>auto_compact; CanaryGuard exfiltration block</td>
+<td><code>loop_/history.rs</code></td>
+</tr>
+<tr>
+<td>15</td>
+<td><strong>Tools</strong></td>
+<td>Rich Tool trait; MCP; subagent_spawn</td>
+<td><code>tools/mod.rs</code>, <code>security/policy.rs</code></td>
+</tr>
+<tr>
+<td>16</td>
+<td><strong>Multi-agent</strong></td>
+<td>SubAgentRegistry; team topology budgeting</td>
+<td><code>tools/subagent_spawn.rs</code>, <code>agent/team_orchestration.rs</code></td>
+</tr>
+<tr>
+<td>17</td>
+<td><strong>Training/RL</strong></td>
+<td>Economic tracker (task payment model)</td>
+<td><code>economic/tracker.rs</code></td>
+</tr>
+<tr>
+<td>18</td>
+<td><strong>Interesting</strong></td>
+<td>LoopDetector; SkillToolHandler shell bridge; team topology</td>
+<td><code>loop_/detection.rs</code>, <code>skills/tool_handler.rs</code></td>
+</tr>
+<tr>
+<td>19</td>
+<td><strong>Weaknesses</strong></td>
+<td>SessionMemoryHook no-op; 7000+ line loop_.rs</td>
+<td><code>hooks/builtin/session_memory.rs</code></td>
+</tr>
+<tr>
+<td>20</td>
+<td><strong>For TaiChu</strong></td>
+<td>Loop detection; subagent registry; skill audit</td>
+<td>comprehensive survey P2</td>
+</tr>
+</tbody></table></div>
+<h2>Skill evolution sub-matrix</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Sub</th>
+<th>Status</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Representation</td>
+<td>SKILL.md / SKILL.toml</td>
+<td><code>skills/mod.rs</code></td>
+</tr>
+<tr>
+<td>Loading</td>
+<td>workspace + open-skills repo</td>
+<td><code>skills/mod.rs</code></td>
+</tr>
+<tr>
+<td>Evolution</td>
+<td>None</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Reflection</td>
+<td>Loop detection only</td>
+<td><code>loop_/detection.rs</code></td>
+</tr>
+<tr>
+<td>Memory types</td>
+<td>Multi-backend + categories</td>
+<td><code>memory/traits.rs</code></td>
+</tr>
+<tr>
+<td>Harness ext</td>
+<td>Skill audit</td>
+<td><code>skills/audit.rs</code></td>
+</tr>
+<tr>
+<td>Evaluation</td>
+<td>Audit + economic threshold</td>
+<td><code>config/schema.rs</code></td>
+</tr>
+<tr>
+<td>RL readiness</td>
+<td>None</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Step traces</td>
+<td>OTel / runtime_trace</td>
+<td><code>observability/</code></td>
+</tr>
+<tr>
+<td>Versioning</td>
+<td>manifest version field</td>
+<td><code>skills/mod.rs</code></td>
+</tr>
+<tr>
+<td>Ranking</td>
+<td>None</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Candidates</td>
+<td>None</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Auto merge</td>
+<td>None</td>
+<td>—</td>
+</tr>
+</tbody></table></div>
+</article>
+    </div>
+  </div>
+  <script src="../../../../../js/i18n.js"></script>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
+  </script>
+</body>
+</html>

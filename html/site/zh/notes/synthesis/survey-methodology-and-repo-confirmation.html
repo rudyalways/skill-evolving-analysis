@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>调研口径 + Repo 确认 — Skill-Evolving</title>
+  <link rel="alternate" hreflang="en" href="/html/site/notes/synthesis/survey-methodology-and-repo-confirmation.html">
+  <link rel="alternate" hreflang="zh-Hans" href="/html/site/zh/notes/synthesis/survey-methodology-and-repo-confirmation.html">
+  <link rel="alternate" hreflang="x-default" href="/html/site/notes/synthesis/survey-methodology-and-repo-confirmation.html">
+  <link rel="stylesheet" href="../../../../css/viewer.css">
+</head>
+<body class="" data-doc-locale="zh" data-content-lang="zh">
+  <div class="viewer-layout">
+    <nav>
+      <div data-lang-switch class="lang-switch-host"></div>
+      <h1 data-i18n="nav.docs">Docs</h1>
+      <div class="title" data-i18n="nav.rendered">Rendered HTML</div>
+      <section class="highlight-section"><h2 data-i18n="nav.compare">nav.compare</h2><ul><li><a href="./agent-skill-architecture-survey-matrix.html" data-i18n="nav.matrix165">nav.matrix165</a></li><li><a href="./skill-lifecycle-full-matrix.html" data-i18n="nav.lifecycle">nav.lifecycle</a></li><li><a href="./web-expanded-lifecycle-matrix-merged.html" data-i18n="nav.web_l3">nav.web_l3</a></li><li><a href="./eight-repo-comprehensive-survey.html" data-i18n="nav.survey20">nav.survey20</a></li><li><a href="./skill-lifecycle-and-dynamic-loading-survey.html" data-i18n="nav.per_turn">nav.per_turn</a></li><li><a href="./eight-repo-deep-source-analysis.html" data-i18n="nav.deep_source">nav.deep_source</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.per_repo">nav.per_repo</h2><ul><li><a href="./survey-reports/opensquilla.html">OpenSquilla (9.0)</a></li><li><a href="./survey-reports/hermes-agent.html">Hermes (8.1)</a></li><li><a href="./survey-reports/openclaw.html">OpenClaw (8.0)</a></li><li><a href="./survey-reports/claude-code-rev.html">Claude Rev (7.7)</a></li><li><a href="./survey-reports/codex.html">Codex (7.2)</a></li><li><a href="./survey-reports/taichu.html">TaiChu (5.0)</a></li><li><a href="./survey-reports/zeroclaw.html">ZeroClaw (5.0)</a></li><li><a href="./survey-reports/genericagent.html">GenericAgent (4.8)</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.papers">nav.papers</h2><ul><li><a href="../../../topics/skill-rl/overview.html">SkillRL</a></li><li><a href="../../../topics/claw-r1/overview.html">Claw-R1</a></li><li><a href="./comparison.html" data-i18n="nav.comparison">nav.comparison</a></li><li><a href="./combined-pipeline.html" data-i18n="nav.pipeline">nav.pipeline</a></li><li><a href="./l3-comprehensive-skill-analysis.html" data-i18n="nav.l3">nav.l3</a></li><li><a href="../../../notes/synthesis/taichu-p0-skill-compaction-spec.html" data-i18n="nav.taichu_p0">nav.taichu_p0</a></li></ul></section><section><h2 data-i18n="nav.more">More</h2><ul>
+    <li><a href="/html/docs.html" data-i18n="nav.sitemap">Sitemap</a></li>
+    <li><a href="/html/i18n-coverage.html" data-i18n="nav.i18n_coverage">i18n coverage</a></li>
+    <li><a href="/html/index.html" data-i18n="nav.dashboard">Dashboard</a></li>
+    <li><a href="/html/deck/index.html" data-i18n="nav.decks">Slide decks</a></li>
+  </ul></section>
+    </nav>
+    <div class="viewer-main">
+      <div class="viewer-toolbar">
+        <div>
+          <h1>调研口径 + Repo 确认</h1>
+          <div class="path">notes/synthesis/survey-methodology-and-repo-confirmation.md</div>
+        </div>
+        <a class="btn" href="/html/docs.html" data-i18n="toolbar.sitemap">Sitemap</a>
+        <a class="btn primary" href="./agent-skill-architecture-survey-matrix.html" data-i18n="toolbar.matrix">165-dim matrix</a>
+      </div>
+      
+      <article class="md-body"><h1>调研口径 + Repo 确认</h1>
+<blockquote>
+<p><strong>诚实声明</strong>：截至 2026-07-08，本 workspace <strong>未</strong>对任一 repo 做「全库逐文件读完」。<br>已完成的是 <strong>L1–L2 证据</strong>（关键路径 grep + 核心模块精读）；后续按 repo <strong>逐个 L3 深挖</strong>。</p>
+</blockquote>
+<hr>
+<h2>一、证据等级（固定口径）</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th align="center">等级</th>
+<th>名称</th>
+<th>含义</th>
+<th>本调研现状</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center"><strong>L0</strong></td>
+<td>README / 文档</td>
+<td>官方描述、博客</td>
+<td>全部 8+1 已读</td>
+</tr>
+<tr>
+<td align="center"><strong>L1</strong></td>
+<td>第一层源码</td>
+<td>目录结构 + 关键词 grep + 入口文件</td>
+<td><strong>8 runtime repo 已完成</strong></td>
+</tr>
+<tr>
+<td align="center"><strong>L2</strong></td>
+<td>模块精读</td>
+<td>Skill/memory/harness 核心文件 20–80 行上下文</td>
+<td><strong>8 runtime repo 部分完成</strong>（见下表）</td>
+</tr>
+<tr>
+<td align="center"><strong>L3</strong></td>
+<td>深读</td>
+<td>单 repo 全链路走读（agent loop → compact → evolve）</td>
+<td><strong>排队中，按 repo 逐个</strong></td>
+</tr>
+<tr>
+<td align="center"><strong>L4</strong></td>
+<td>交叉验证</td>
+<td>测试、CHANGELOG、设计 doc 与实现对照</td>
+<td>未系统做</td>
+</tr>
+</tbody></table></div>
+<p><strong>对外表述应写</strong>：「基于 L1–L2 源码证据的对比调研，L3 深读进行中」—— <strong>不要</strong>写「已彻底读完源码」。</p>
+<hr>
+<h2>二、Repo 确认（本机实测 remote）</h2>
+<h3>2.1 已 clone 且 remote 已验证</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>项目</th>
+<th>GitHub</th>
+<th>本机路径</th>
+<th>HEAD 日期</th>
+<th>角色</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>OpenClaw</strong></td>
+<td><a href="https://github.com/openclaw/openclaw">openclaw/openclaw</a></td>
+<td><code>oss/openclaw</code></td>
+<td>2026-04-27</td>
+<td>Gateway + skill ecosystem + skill-workshop</td>
+</tr>
+<tr>
+<td><strong>OpenClaw-RL</strong></td>
+<td><a href="https://github.com/Gen-Verse/OpenClaw-RL">Gen-Verse/OpenClaw-RL</a></td>
+<td><code>oss/openclaw-rl</code></td>
+<td>2026-04-21</td>
+<td><strong>RL 训练层</strong>（≠ openclaw 主仓）</td>
+</tr>
+<tr>
+<td><strong>claude-code-rev</strong></td>
+<td><a href="https://github.com/oboard/claude-code-rev">oboard/claude-code-rev</a></td>
+<td><code>oss/experimental/claude-code-rev</code></td>
+<td>2026-04-08</td>
+<td><strong>完整 agent runtime</strong> 社区还原</td>
+</tr>
+<tr>
+<td><strong>GenericAgent</strong></td>
+<td><a href="https://github.com/lsdefine/genericagent">lsdefine/genericagent</a></td>
+<td><code>oss/genericagent</code></td>
+<td>2026-06-29</td>
+<td>SOP-as-skill 自进化</td>
+</tr>
+<tr>
+<td><strong>Codex</strong></td>
+<td><a href="https://github.com/openai/codex">openai/codex</a></td>
+<td><code>oss/codex</code></td>
+<td>2026-06-07</td>
+<td>官方 Rust CLI harness</td>
+</tr>
+<tr>
+<td><strong>OpenSquilla</strong></td>
+<td><a href="https://github.com/opensquilla/opensquilla">opensquilla/opensquilla</a></td>
+<td><code>oss/opensquilla</code></td>
+<td>2026-07-01</td>
+<td>Token-efficient agent + proposals</td>
+</tr>
+<tr>
+<td><strong>ZeroClaw</strong></td>
+<td><a href="https://github.com/zeroclaw-labs/zeroclaw">zeroclaw-labs/zeroclaw</a></td>
+<td><code>oss/zeroclaw</code></td>
+<td>2026-03-04</td>
+<td>轻量 Rust runtime</td>
+</tr>
+<tr>
+<td><strong>Hermes Agent</strong></td>
+<td><a href="https://github.com/nousresearch/hermes-agent">nousresearch/hermes-agent</a></td>
+<td><code>oss/hermes-agent</code></td>
+<td>2026-04-10</td>
+<td>skill_manage + RL env</td>
+</tr>
+<tr>
+<td><strong>TaiChu</strong></td>
+<td>taichu.fun Gitea（私有）</td>
+<td><code>drafts/zk/TaiChu</code></td>
+<td>2026-06-11</td>
+<td>端云集成目标</td>
+</tr>
+</tbody></table></div>
+<h3>2.2 常见混淆 — 必须纠正</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>名字</th>
+<th>是什么</th>
+<th>不是什么</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>openclaw</strong></td>
+<td>个人 AI 助手 gateway</td>
+<td>OpenClaw-RL 论文/训练项目</td>
+</tr>
+<tr>
+<td><strong>OpenClaw-RL</strong></td>
+<td>Gen-Verse RL 插件 + 训练脚本</td>
+<td>openclaw 内置 skill 进化</td>
+</tr>
+<tr>
+<td><strong>oboard/claude-code-rev</strong></td>
+<td>source-map <strong>完整 runtime</strong> 还原（query/compact/skills）</td>
+<td>Yuyz0112 的工具</td>
+</tr>
+<tr>
+<td><strong>Yuyz0112/claude-code-reverse</strong></td>
+<td><strong>LLM API 交互可视化</strong>工具</td>
+<td>agent skill runtime；<strong>本机未 clone</strong></td>
+</tr>
+<tr>
+<td><strong>Claw-R1</strong> (arXiv:2606.09138)</td>
+<td>论文：step-level middleware</td>
+<td>上述任一 GitHub repo 名</td>
+</tr>
+</tbody></table></div>
+<h3>2.3 尚未 clone（可选扩展）</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>项目</th>
+<th>GitHub</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>ZeroClaw Skills</strong></td>
+<td><a href="https://github.com/zeroclaw-labs/zeroclaw-skills">zeroclaw-labs/zeroclaw-skills</a></td>
+<td>社区 skill registry；ZeroClaw 主仓有 sync 逻辑，registry 仓 <strong>L3 时再 clone</strong></td>
+</tr>
+<tr>
+<td><strong>Yuyz0112/claude-code-reverse</strong></td>
+<td>见上</td>
+<td>若只关心 API 抓包可视化才需要；<strong>skill 调研优先 oboard/claude-code-rev</strong></td>
+</tr>
+</tbody></table></div>
+<h3>2.4 Codex 官方 repo</h3>
+<p>已确认：<strong><a href="https://github.com/openai/codex">openai/codex</a></strong> — Rust monorepo <code>codex-rs/</code>。</p>
+<hr>
+<h2>三、固定调研维度（与用户表对齐）</h2>
+<p>每个 repo L3 深读时填同一张表：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>要查什么</th>
+<th>L2 已有结论摘要</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>per-turn skill</strong></td>
+<td>每轮 catalog 是否变化</td>
+<td>OpenSquilla ★；TaiChu user prefix ★；Claude incremental ★</td>
+</tr>
+<tr>
+<td><strong>dynamic loading</strong></td>
+<td>body 按需加载</td>
+<td>全员 lazy/progressive；TaiChu <code>load_skill</code></td>
+</tr>
+<tr>
+<td><strong>subagent complementary skills</strong></td>
+<td>子 agent 独立 skill set</td>
+<td>Claude frontmatter preload ★；Codex child turn_skills；TaiChu ❌</td>
+</tr>
+<tr>
+<td><strong>storage</strong></td>
+<td>文件/registry/DB 布局</td>
+<td>见 <a href="./skill-lifecycle-and-dynamic-loading-survey.html">skill-lifecycle survey</a></td>
+</tr>
+<tr>
+<td><strong>expose / discover</strong></td>
+<td>prompt / CLI / hub</td>
+<td>各仓不同</td>
+</tr>
+<tr>
+<td><strong>recommend</strong></td>
+<td>retrieval / router</td>
+<td>OpenSquilla RRF ★；Claude decay；TaiChu Toollery</td>
+</tr>
+<tr>
+<td><strong>offload / compact</strong></td>
+<td>压缩后 skill 是否存活</td>
+<td>Claude <code>invoked_skills</code> ★；TaiChu ❌ gap</td>
+</tr>
+<tr>
+<td><strong>delete / evolve</strong></td>
+<td>退役 + 自进化闭环</td>
+<td>OpenSquilla gates；Hermes skill_manage；OpenClaw workshop</td>
+</tr>
+<tr>
+<td><strong>自进化</strong></td>
+<td>trace→candidate→eval→deploy</td>
+<td>无单仓全闭环；见下节</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2>四、Skill 自进化强度 — 修正版（L1–L2 证据）</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>项目</th>
+<th align="center">强度</th>
+<th>L2 结论（源码，非 README）</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>OpenSquilla</strong></td>
+<td align="center"><strong>高（skill 文件）</strong></td>
+<td><code>proposals_lib</code> + 4-gate + <code>auto_propose</code> + Dream — <strong>比 README 描述的「router flywheel」更完整</strong></td>
+</tr>
+<tr>
+<td><strong>Hermes</strong></td>
+<td align="center"><strong>高</strong></td>
+<td><code>skill_manage</code> CRUD + <code>_spawn_background_review</code> — 闭环在 runtime，无 proposal gate</td>
+</tr>
+<tr>
+<td><strong>OpenClaw</strong></td>
+<td align="center"><strong>中高</strong></td>
+<td><code>extensions/skill-workshop/</code>：<code>agent_end</code> → heuristic/LLM → proposal → scanner → apply</td>
+</tr>
+<tr>
+<td><strong>GenericAgent</strong></td>
+<td align="center"><strong>中高（SOP 哲学）</strong></td>
+<td><code>start_long_term_update</code> + L3 SOP；<strong>非 SKILL.md 标准</strong></td>
+</tr>
+<tr>
+<td><strong>Claude-code-rev</strong></td>
+<td align="center"><strong>中</strong></td>
+<td><code>skillImprovement</code> 5-turn + survey UI；<code>invoked_skills</code> compact 存活</td>
+</tr>
+<tr>
+<td><strong>OpenClaw-RL</strong></td>
+<td align="center"><strong>高（模型 RL）</strong></td>
+<td>feedback → trajectory → GRPO/OPD；<strong>不写 SKILL.md</strong></td>
+</tr>
+<tr>
+<td><strong>OpenClaw（主仓）</strong></td>
+<td align="center">中</td>
+<td>skill 生态 + workshop；非 GRPO</td>
+</tr>
+<tr>
+<td><strong>ZeroClaw</strong></td>
+<td align="center">低–中</td>
+<td>audit + open-skills sync；<strong>无 auto-create</strong></td>
+</tr>
+<tr>
+<td><strong>Codex</strong></td>
+<td align="center">低（刻意）</td>
+<td>skill 基础设施；memories/harness 进化，非 skill library</td>
+</tr>
+<tr>
+<td><strong>TaiChu</strong></td>
+<td align="center"><strong>无</strong></td>
+<td>load/catalog 强；evolution 未实现</td>
+</tr>
+</tbody></table></div>
+<p><strong>Yuyz0112/claude-code-reverse</strong> 不在上表 — 不是 skill runtime。</p>
+<hr>
+<h2>五、L3 深读排队（建议顺序）</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th align="center">序</th>
+<th>Repo</th>
+<th>优先文件</th>
+<th>产出</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">1</td>
+<td><strong>TaiChu</strong></td>
+<td><code>compaction.rs</code>, <code>load_skill.rs</code>, <code>session/mod.rs</code>, <code>tool_search_bridge.rs</code>, <code>api/mod.rs</code></td>
+<td>P0 实现 spec</td>
+</tr>
+<tr>
+<td align="center">2</td>
+<td><strong>Claude-code-rev</strong></td>
+<td><code>compact/compact.ts</code>, <code>skillImprovement.ts</code>, <code>runAgent.ts</code>, <code>attachments.ts</code></td>
+<td>invoked_skills 移植设计</td>
+</tr>
+<tr>
+<td align="center">3</td>
+<td><strong>OpenSquilla</strong></td>
+<td><code>skills_filter.py</code>, <code>proposals_lib.py</code>, <code>runtime_e2e.py</code>, <code>meta/orchestrator.py</code></td>
+<td>gate 模板</td>
+</tr>
+<tr>
+<td align="center">4</td>
+<td><strong>Hermes</strong></td>
+<td><code>run_agent.py</code> (review), <code>skill_manager_tool.py</code></td>
+<td>CRUD + review 移植</td>
+</tr>
+<tr>
+<td align="center">5</td>
+<td><strong>OpenClaw</strong></td>
+<td><code>skill-workshop/</code>, <code>skills/workspace.ts</code>, <code>trajectory/</code></td>
+<td>workshop + trace</td>
+</tr>
+<tr>
+<td align="center">6</td>
+<td><strong>OpenClaw-RL</strong></td>
+<td><code>extensions/rl-training-headers</code>, training scripts</td>
+<td>RL 接缝（非 skill 文件）</td>
+</tr>
+<tr>
+<td align="center">7</td>
+<td><strong>Codex</strong></td>
+<td><code>core-skills/</code>, <code>hook_runtime.rs</code>, <code>skills.rs</code></td>
+<td>hooks + implicit invoke</td>
+</tr>
+<tr>
+<td align="center">8</td>
+<td><strong>ZeroClaw</strong></td>
+<td><code>skills/mod.rs</code>, <code>loop_/detection.rs</code></td>
+<td>audit + loop detect</td>
+</tr>
+<tr>
+<td align="center">9</td>
+<td><strong>GenericAgent</strong></td>
+<td><code>ga.py</code>, <code>memory_management_sop.md</code></td>
+<td>L0 SOP 协议</td>
+</tr>
+<tr>
+<td align="center">10</td>
+<td><strong>zeroclaw-skills</strong></td>
+<td>clone 后</td>
+<td>registry 格式</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2>六、TaiChu 接缝映射（源码核实）</h2>
+<p>用户提出的 <code>SessionOptions.extra_tools / hook_chain</code> — <strong>与当前代码略有出入</strong>，以下为本机 <strong>实际接缝</strong>：</p>
+<h3>6.1 已有（可直接挂 Skill 生命周期）</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>接缝</th>
+<th>位置</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong><code>SessionOptions.transform_context</code></strong></td>
+<td><code>agent-framework/src/session/mod.rs:257-280</code></td>
+<td><strong>Per-turn</strong> 注入 <code># Available Skills</code>、turn_reminder；不改 SDK transcript</td>
+</tr>
+<tr>
+<td><strong><code>disable_workspace_skill_scan</code></strong></td>
+<td>同上 :244-256</td>
+<td>A-system 避免 dual skill registry</td>
+</tr>
+<tr>
+<td><strong><code>set_skill_name_filter</code></strong></td>
+<td><code>agent-session/src/session.rs</code></td>
+<td>Toollery per-turn 收窄 skill</td>
+</tr>
+<tr>
+<td><strong><code>ToolleryHook before_prompt</code></strong></td>
+<td><code>agent-plugin/src/tool_search_bridge.rs:370-382</code></td>
+<td>decide → skill_filter + active_tools</td>
+</tr>
+<tr>
+<td><strong><code>load_skill</code> tool</strong></td>
+<td><code>builtintools/src/skill/load_skill.rs</code></td>
+<td>按需 body + runs_on 路由</td>
+</tr>
+<tr>
+<td><strong><code>interaction_log</code></strong></td>
+<td>session handle</td>
+<td>turn-level trace（SkillCandidate 输入）</td>
+</tr>
+<tr>
+<td><strong><code>register_extra_tools</code></strong></td>
+<td><code>agent-session/src/session.rs:884+</code></td>
+<td>运行时合并新 tool（含未来 skill_manage）</td>
+</tr>
+<tr>
+<td><strong><code>Runtime::add_tool_factory</code></strong></td>
+<td><code>core-architecture.md</code></td>
+<td><strong>Host 工具注册</strong>（<code>extra_tool_factories</code> 已从 SessionOptions 迁到 Runtime，见 <code>docs/guides/sdk-integration.md:575</code>）</td>
+</tr>
+</tbody></table></div>
+<h3>6.2 命名对照（文档 vs crate）</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>用户/文档说法</th>
+<th>本机 crate/符号</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>fast_agent-session</code></td>
+<td><code>core/agent-session</code>（FFI 导出 <code>fast_agent_create_session</code>）</td>
+</tr>
+<tr>
+<td><code>fast_agent-agent</code></td>
+<td><code>core/agent-loop</code> + <code>core/agent-framework</code></td>
+</tr>
+<tr>
+<td><code>taichu-core-sdk</code></td>
+<td><code>core/taichu-core-sdk</code></td>
+</tr>
+<tr>
+<td><code>SessionOptions.hook_chain</code></td>
+<td><strong>无此字段</strong>；workflow 有 <code>hook_chain_trace.jsonl</code>（issue-366 diagnostics）；等效 hook 为 <strong><code>transform_context</code></strong> + <strong>Toollery <code>before_prompt</code></strong> + extension hooks 设计 doc</td>
+</tr>
+<tr>
+<td><code>ContextOptions</code></td>
+<td>分散在 <code>SessionOptions</code> + <code>PromptBuilderContext</code></td>
+</tr>
+<tr>
+<td><code>extra_tool_factories</code></td>
+<td><strong><code>Runtime::add_tool_factory</code></strong>（非 SessionOptions）</td>
+</tr>
+</tbody></table></div>
+<h3>6.3 建议落地的 Skill 生命周期（映射到真实接缝）</h3>
+<pre><code class="language-text">agent-loop turn complete
+  ↓
+interaction_log JSONL          ← 已有
+  ↓
+[NEW] SkillEvolutionHook       ← 挂 SessionOptions 扩展或 service 层 async task
+  ↓  (借 Hermes _spawn_background_review)
+[NEW] SkillCandidateStore      ← ~/.taichu/proposals/  (借 OpenSquilla proposals_lib)
+  ↓
+[NEW] SkillEvaluator           ← regression + gates.json
+  ↓
+[NEW] skill_manage tool        ← register_extra_tools / add_tool_factory
+  ↓
+canonical skills/ + MANAGED    ← 现有 load_skill roots
+  ↓
+transform_context              ← per-turn # Available Skills 动态列表
+  ↓
+load_skill → exec_cli          ← 现有端云链
+</code></pre>
+<p><strong>Compaction 补强</strong>（P0，借 Claude Rev）：</p>
+<pre><code class="language-text">load_skill ToolResult
+  ↓
+[NEW] InvokedSkillRegistry     ← session state
+  ↓
+compaction.rs summarize
+  ↓
+[NEW] re-inject invoked_skills attachment  ← transform_context 或 transcript repair
+</code></pre>
+<hr>
+<h2>七、与 OpenClaw-RL / Claw-R1 / SkillRL 的关系</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>层</th>
+<th>Repo / 论文</th>
+<th>TaiChu 借什么</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Step trace</strong></td>
+<td>Claw-R1 论文；OpenClaw trajectory；OpenSquilla trace</td>
+<td>enrich interaction_log schema</td>
+</tr>
+<tr>
+<td><strong>Skill file evolution</strong></td>
+<td>OpenSquilla + Hermes + OpenClaw workshop</td>
+<td>proposals + skill_manage</td>
+</tr>
+<tr>
+<td><strong>Model RL</strong></td>
+<td>OpenClaw-RL；Hermes Atropos；SkillRL 论文</td>
+<td>独立训练管线，非 skill MD 写入</td>
+</tr>
+<tr>
+<td><strong>Compact survival</strong></td>
+<td>Claude-code-rev</td>
+<td>invoked_skills</td>
+</tr>
+</tbody></table></div>
+<p>OpenClaw-RL <strong>应单独 L3</strong>，不要与 openclaw skill-workshop 混为一谈。</p>
+<hr>
+<h2>八、本 workspace 已有产出索引</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>文档</th>
+<th>证据等级</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><a href="./eight-repo-source-analysis-framework.html">eight-repo-source-analysis-framework.md</a></td>
+<td>L0–L1</td>
+<td>身份确认</td>
+</tr>
+<tr>
+<td><a href="./eight-repo-deep-source-analysis.html">eight-repo-deep-source-analysis.md</a></td>
+<td>L1–L2</td>
+<td>7 维 × 8 仓</td>
+</tr>
+<tr>
+<td><a href="./eight-repo-comprehensive-survey.html">eight-repo-comprehensive-survey.md</a></td>
+<td>L1–L2</td>
+<td>20 维矩阵</td>
+</tr>
+<tr>
+<td><a href="./skill-lifecycle-and-dynamic-loading-survey.html">skill-lifecycle-and-dynamic-loading-survey.md</a></td>
+<td>L2</td>
+<td>per-turn / subagent / 生命周期</td>
+</tr>
+<tr>
+<td><strong>本文</strong></td>
+<td>元数据</td>
+<td>口径 + repo 确认 + TaiChu 接缝</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2>变更记录</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>日期</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>2026-07-08</td>
+<td>初版：证据等级、repo 纠正、TaiChu 接缝核实、L3 排队</td>
+</tr>
+</tbody></table></div>
+</article>
+    </div>
+  </div>
+  <script src="../../../../js/i18n.js"></script>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
+  </script>
+</body>
+</html>

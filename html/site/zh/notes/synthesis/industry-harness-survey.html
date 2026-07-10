@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>业界 Agent Harness 调研：自进化是如何做的，特别是 Skill 自进化 — Skill-Evolving</title>
+  <link rel="alternate" hreflang="en" href="/html/site/notes/synthesis/industry-harness-survey.html">
+  <link rel="alternate" hreflang="zh-Hans" href="/html/site/zh/notes/synthesis/industry-harness-survey.html">
+  <link rel="alternate" hreflang="x-default" href="/html/site/notes/synthesis/industry-harness-survey.html">
+  <link rel="stylesheet" href="../../../../css/viewer.css">
+</head>
+<body class="" data-doc-locale="zh" data-content-lang="zh">
+  <div class="viewer-layout">
+    <nav>
+      <div data-lang-switch class="lang-switch-host"></div>
+      <h1 data-i18n="nav.docs">Docs</h1>
+      <div class="title" data-i18n="nav.rendered">Rendered HTML</div>
+      <section class="highlight-section"><h2 data-i18n="nav.compare">nav.compare</h2><ul><li><a href="./agent-skill-architecture-survey-matrix.html" data-i18n="nav.matrix165">nav.matrix165</a></li><li><a href="./skill-lifecycle-full-matrix.html" data-i18n="nav.lifecycle">nav.lifecycle</a></li><li><a href="./web-expanded-lifecycle-matrix-merged.html" data-i18n="nav.web_l3">nav.web_l3</a></li><li><a href="./eight-repo-comprehensive-survey.html" data-i18n="nav.survey20">nav.survey20</a></li><li><a href="./skill-lifecycle-and-dynamic-loading-survey.html" data-i18n="nav.per_turn">nav.per_turn</a></li><li><a href="./eight-repo-deep-source-analysis.html" data-i18n="nav.deep_source">nav.deep_source</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.per_repo">nav.per_repo</h2><ul><li><a href="./survey-reports/opensquilla.html">OpenSquilla (9.0)</a></li><li><a href="./survey-reports/hermes-agent.html">Hermes (8.1)</a></li><li><a href="./survey-reports/openclaw.html">OpenClaw (8.0)</a></li><li><a href="./survey-reports/claude-code-rev.html">Claude Rev (7.7)</a></li><li><a href="./survey-reports/codex.html">Codex (7.2)</a></li><li><a href="./survey-reports/taichu.html">TaiChu (5.0)</a></li><li><a href="./survey-reports/zeroclaw.html">ZeroClaw (5.0)</a></li><li><a href="./survey-reports/genericagent.html">GenericAgent (4.8)</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.papers">nav.papers</h2><ul><li><a href="../../../topics/skill-rl/overview.html">SkillRL</a></li><li><a href="../../../topics/claw-r1/overview.html">Claw-R1</a></li><li><a href="./comparison.html" data-i18n="nav.comparison">nav.comparison</a></li><li><a href="./combined-pipeline.html" data-i18n="nav.pipeline">nav.pipeline</a></li><li><a href="./l3-comprehensive-skill-analysis.html" data-i18n="nav.l3">nav.l3</a></li><li><a href="../../../notes/synthesis/taichu-p0-skill-compaction-spec.html" data-i18n="nav.taichu_p0">nav.taichu_p0</a></li></ul></section><section><h2 data-i18n="nav.more">More</h2><ul>
+    <li><a href="/html/docs.html" data-i18n="nav.sitemap">Sitemap</a></li>
+    <li><a href="/html/i18n-coverage.html" data-i18n="nav.i18n_coverage">i18n coverage</a></li>
+    <li><a href="/html/index.html" data-i18n="nav.dashboard">Dashboard</a></li>
+    <li><a href="/html/deck/index.html" data-i18n="nav.decks">Slide decks</a></li>
+  </ul></section>
+    </nav>
+    <div class="viewer-main">
+      <div class="viewer-toolbar">
+        <div>
+          <h1>业界 Agent Harness 调研：自进化是如何做的，特别是 Skill 自进化</h1>
+          <div class="path">notes/synthesis/industry-harness-survey.md</div>
+        </div>
+        <a class="btn" href="/html/docs.html" data-i18n="toolbar.sitemap">Sitemap</a>
+        <a class="btn primary" href="./agent-skill-architecture-survey-matrix.html" data-i18n="toolbar.matrix">165-dim matrix</a>
+      </div>
+      
+      <article class="md-body"><h1>业界 Agent Harness 调研：自进化是如何做的，特别是 Skill 自进化</h1>
+<h2>1. 先厘清：什么是 Agent Harness</h2>
+<p>Agent Harness 是把 LLM <strong>变成可用 Agent 的控制层</strong>，包括：</p>
+<ul>
+<li>Prompt / system instructions</li>
+<li>Tool schema &amp; routing</li>
+<li>Planning / recovery / retry logic</li>
+<li>Subagent orchestration</li>
+<li><strong>Skills</strong>（可复用流程包）</li>
+<li>Memory / context management</li>
+</ul>
+<p>业界共识（2025–2026）：<strong>Agent 性能 = Base Model × Harness</strong>。同一模型换不同 harness，差距可达 20–40pp（Terminal-Bench、SWE-bench 等 benchmark 已反复验证）。</p>
+<hr>
+<h2>2. 自进化的三层 × 三时域框架</h2>
+<p>参考 <a href="https://xinmingtu.cn/blog/2026/self-evolving-agents/">Xinming Tu 的 3×3 矩阵</a>，自进化状态可以落在三个 <strong>substrate（载体）</strong> 和三个 <strong>persistence horizon（持久性）</strong> 的交叉点上：</p>
+<h3>三个载体（What evolves）</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>层</th>
+<th>载体</th>
+<th>例子</th>
+<th>成本</th>
+<th>持久性</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>L1</td>
+<td><strong>External Files</strong></td>
+<td>Skills、memory、CLAUDE.md、脚本</td>
+<td>低</td>
+<td>可编辑、可审计</td>
+</tr>
+<tr>
+<td>L2</td>
+<td><strong>Agent Harness</strong></td>
+<td>Prompt、tool policy、workflow、recovery</td>
+<td>中</td>
+<td>需重新部署/加载</td>
+</tr>
+<tr>
+<td>L3</td>
+<td><strong>Model Weights</strong></td>
+<td>SFT/RL 后的 checkpoint</td>
+<td>高</td>
+<td>最 durable</td>
+</tr>
+</tbody></table></div>
+<p><strong>关键边界</strong>：Skill 文件开始时是 L1（外部文件），一旦被 runtime 发现、加载、路由，就<strong>变成 L2（harness 逻辑）</strong>。</p>
+<h3>三个时域（When persists）</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>时域</th>
+<th>含义</th>
+<th>Skill 相关例子</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Single Session</strong></td>
+<td>单次任务内适应</td>
+<td>动态编排、scratchpad、runtime 合成 tool</td>
+</tr>
+<tr>
+<td><strong>Across Sessions</strong></td>
+<td>跨会话持久</td>
+<td>Skill library、Record &amp; Replay、SkillBank</td>
+</tr>
+<tr>
+<td><strong>Across Users</strong></td>
+<td>群体级进化</td>
+<td>平台默认 harness 升级、skill marketplace</td>
+</tr>
+</tbody></table></div>
+<p><strong>Skill 自进化主要发生在 L1 × Across Sessions</strong>，部分系统会进一步编译到 L2 或蒸馏到 L3。</p>
+<hr>
+<h2>3. Skill 自进化的六种范式</h2>
+<h3>范式 A：人工编写 → 语义发现（工业基线）</h3>
+<p><strong>代表</strong>：Anthropic Agent Skills、OpenAI Codex Skills、Cursor</p>
+<pre><code>SKILL.md (name + description) → Agent 语义匹配 → 按需加载完整指令
+</code></pre>
+<ul>
+<li><strong>格式</strong>：<code>SKILL.md</code> + 可选 scripts/references（<a href="https://agentskills.io">agentskills.io</a> 开放标准，16+ 工具兼容）</li>
+<li><strong>进化方式</strong>：<strong>人工迭代</strong> — 观察 agent 使用 skill 的行为，修改 description/instructions</li>
+<li><strong>Anthropic 路线图</strong>：<em>&quot;enable agents to create, edit, and evaluate Skills on their own&quot;</em> — 尚未完全自动化</li>
+<li><strong>特点</strong>：Progressive disclosure（先加载 ~100 token metadata，命中后再加载全文）</li>
+</ul>
+<h3>范式 B：演示 → 自动生成 Skill（Record &amp; Replay）</h3>
+<p><strong>代表</strong>：OpenAI Codex Record &amp; Replay</p>
+<pre><code>用户演示工作流 → Codex 观察 → 自动生成 SKILL.md → 未来复用
+</code></pre>
+<ul>
+<li><strong>进化触发</strong>：用户主动录制</li>
+<li><strong>进化粒度</strong>：一次演示 → 一个 skill</li>
+<li><strong>本质</strong>：Experience → Skill 的单向蒸馏，<strong>无自动 refinement loop</strong></li>
+</ul>
+<h3>范式 C：轨迹蒸馏 → Skill Library（RL / Teacher 驱动）</h3>
+<p><strong>代表</strong>：SkillRL、ExpeL、Voyager</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>系统</th>
+<th>蒸馏物</th>
+<th>进化机制</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Voyager</strong> (2023)</td>
+<td>可执行 code skills</td>
+<td>成功轨迹 → 新 skill 入库 → 检索复用</td>
+</tr>
+<tr>
+<td><strong>ExpeL</strong> (2024)</td>
+<td>Natural-language insights</td>
+<td>成功/失败轨迹 → 提取 rules → ICL 检索</td>
+</tr>
+<tr>
+<td><strong>SkillRL</strong> (2026)</td>
+<td>分层 SkillBank</td>
+<td>Teacher 蒸馏 + GRPO + <strong>递归进化</strong></td>
+</tr>
+</tbody></table></div>
+<p><strong>SkillRL 的递归进化 loop</strong>（与本项目核心相关）：</p>
+<pre><code>Policy → Rollout → Teacher 蒸馏(success/failure)
+    → SkillBank 更新 → GRPO → 更强 Policy → 更好轨迹 → 更好 Skills → ...
+</code></pre>
+<ul>
+<li>成功 → strategic patterns</li>
+<li>失败 → failure lessons（不是丢弃）</li>
+<li>验证 epoch 触发：弱类别 → 分析 gap → 新增/精炼 skill</li>
+</ul>
+<h3>范式 D：Skill 文档作为可训练参数（Text-Space Optimization）</h3>
+<p><strong>代表</strong>：Microsoft SkillOpt</p>
+<pre><code>Frozen target model + skill document
+    → Rollout → Optimizer model 提出 edit (add/delete/replace)
+    → Validation gate（必须严格优于 held-out）
+    → 接受 → best_skill.md
+</code></pre>
+<ul>
+<li><strong>核心创新</strong>：把 skill 当 <strong>trainable parameter</strong>，模型权重 frozen</li>
+<li><strong>训练纪律</strong>：textual learning rate（edit budget）、rejected-edit buffer、epoch-wise slow update</li>
+<li><strong>部署产物</strong>：300–2000 token 的 <code>best_skill.md</code>，零额外 inference cost</li>
+<li><strong>52/52 cells best or tied-best</strong>（6 benchmarks × 7 models × 3 harnesses）</li>
+</ul>
+<p>与 SkillRL 对比：SkillOpt 优化<strong>单个 skill 文档</strong>；SkillRL 维护<strong>分层 skill library</strong> 并 co-evolve with policy。</p>
+<h3>范式 E：Read-Execute-Reflect-Write（部署时自修复）</h3>
+<p><strong>代表</strong>：Memento-Skills、AutoSkill</p>
+<p><strong>Memento-Skills</strong> loop：</p>
+<pre><code>Read (检索/生成 skill)
+  → Execute
+  → Reflect (失败归因 → 定位弱 skill)
+  → Write (修复 skill 写回 library)
+</code></pre>
+<ul>
+<li>Skill 是 <strong>first-class capability unit</strong>（不仅是 prompt，含 code + prompts）</li>
+<li>Behaviour-aligned contrastive router 选择 skill</li>
+<li>模型 frozen，skill library 持续读写</li>
+</ul>
+<p><strong>AutoSkill</strong>：</p>
+<ul>
+<li>从对话/交互中自动抽象 skill → 标准化 <code>SKILL.md</code></li>
+<li>跨 session 注入相关 skill，<strong>无需 retrain model</strong></li>
+<li>面向个性化偏好（写作风格、机构规范等）</li>
+</ul>
+<h3>范式 F：Co-Evolutionary Skill Generation（生成器 + 验证器共进化）</h3>
+<p><strong>代表</strong>：EvoSkills</p>
+<pre><code>Skill Generator ←→ Surrogate Verifier (共进化)
+    ↓
+Ground-truth oracle (opaque pass/fail)
+    ↓
+Multi-file skill package
+</code></pre>
+<ul>
+<li>解决 <strong>human-machine cognitive misalignment</strong>（人类写的 skill 有时反而降低 agent 性能）</li>
+<li>5 轮进化后 surpass human-curated skills on SkillsBench (+40.5pp)</li>
+<li>Surrogate Verifier 合成测试用例，无需 ground-truth 内容访问</li>
+</ul>
+<hr>
+<h2>4. 非 Skill 层的 Harness 自进化</h2>
+<p>Skill 只是 harness 自进化的一部分。业界还有：</p>
+<h3>Harness 代码/配置自进化</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>系统</th>
+<th>机制</th>
+<th>提升</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Self-Harness</strong></td>
+<td>Weakness Mining → Harness Proposal → Validation</td>
+<td>40.5%→61.9% (Terminal-Bench)</td>
+</tr>
+<tr>
+<td><strong>AHE</strong> (Agentic Harness Engineering)</td>
+<td>三支柱 observability + 可 falsifiable edit contract</td>
+<td>69.7%→77.0%</td>
+</tr>
+<tr>
+<td><strong>Meta-Harness</strong></td>
+<td>Outer-loop 搜索 harness code</td>
+<td>+7.7pt, 4× fewer tokens</td>
+</tr>
+<tr>
+<td><strong>HarnessX</strong></td>
+<td>Processor 组合搜索 + RL bridge</td>
+<td>Harness evolution + Model evolution 双 loop</td>
+</tr>
+</tbody></table></div>
+<p>共同模式：</p>
+<pre><code>Execution traces → 分析失败模式 → 提出 harness 修改 → 回归验证 → 接受/拒绝
+</code></pre>
+<h3>Memory Skill 自进化（Meta-Memory）</h3>
+<p><strong>MemSkill</strong> — 进化的不是 memory content，而是 <strong>memory skills</strong>（如何提取、整合、遗忘）：</p>
+<ul>
+<li>Skill-conditioned memory construction</li>
+<li>Hard case mining → refine/propose memory skills</li>
+<li>跨 dataset、跨 model transfer</li>
+</ul>
+<h3>Policy + Experience 自进化（Weight 层）</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>系统</th>
+<th>机制</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>AgentEvolver</strong></td>
+<td>Self-questioning + Self-navigating + Self-attributing</td>
+</tr>
+<tr>
+<td><strong>OpenClaw-RL</strong></td>
+<td>Next-state signal → Binary RL + OPD</td>
+</tr>
+<tr>
+<td><strong>HarnessX Model Evolution</strong></td>
+<td>Reward-annotated trajectories → VERL RL</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2>5. 工业界产品矩阵</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>产品</th>
+<th>Skill 支持</th>
+<th>自进化方式</th>
+<th>进化层</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Claude Code</strong></td>
+<td>Agent Skills 标准</td>
+<td>人工 + <code>/loop</code> 动态编排；平台级 harness 升级</td>
+<td>L1 + L2</td>
+</tr>
+<tr>
+<td><strong>OpenAI Codex</strong></td>
+<td>Skills + Record &amp; Replay</td>
+<td>演示→skill；插件 marketplace</td>
+<td>L1</td>
+</tr>
+<tr>
+<td><strong>Cursor</strong></td>
+<td><code>.cursor/skills/</code> + rules</td>
+<td>Tab accept/edit → RL signal；人工 skill 迭代</td>
+<td>L1 + L3</td>
+</tr>
+<tr>
+<td><strong>OpenHands</strong></td>
+<td>Persistent skill install</td>
+<td>跨 session enable/disable</td>
+<td>L1</td>
+</tr>
+<tr>
+<td><strong>HarnessX</strong></td>
+<td>Processor bundles</td>
+<td>自动 harness search + RL</td>
+<td>L2 + L3</td>
+</tr>
+</tbody></table></div>
+<p><strong>平台级 flywheel</strong>（Across Users）：</p>
+<pre><code>Aggregate failure logs → 识别结构性瓶颈 → 升级默认 harness
+→ 所有用户继承（plan mode、/loop、tool schema 改进等）
+</code></pre>
+<hr>
+<h2>6. Skill 自进化技术谱系</h2>
+<pre><code>                    人工程度
+                       ↑
+    Anthropic Skills ──┤
+    Codex R&amp;R ────────┤
+                       │
+    AutoSkill ─────────┤
+    Memento-Skills ────┤  ← Read-Execute-Reflect-Write
+                       │
+    SkillOpt ──────────┤  ← Text-space optimization (validation gate)
+                       │
+    SkillRL ───────────┤  ← RL + recursive SkillBank co-evolution
+    ExpeL / Voyager ───┤  ← Trajectory distillation
+                       │
+    EvoSkills ─────────┤  ← Co-evolutionary generation
+                       ↓
+                    自动化程度
+</code></pre>
+<h3>进化信号来源</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>信号</th>
+<th>使用者</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>成功轨迹</td>
+<td>SkillRL, Voyager, ExpeL</td>
+</tr>
+<tr>
+<td>失败轨迹</td>
+<td>SkillRL (failure lessons), Memento (reflect)</td>
+</tr>
+<tr>
+<td>用户演示</td>
+<td>Codex R&amp;R</td>
+</tr>
+<tr>
+<td>用户对话/偏好</td>
+<td>AutoSkill</td>
+</tr>
+<tr>
+<td>验证集分数</td>
+<td>SkillOpt</td>
+</tr>
+<tr>
+<td>Surrogate 测试</td>
+<td>EvoSkills</td>
+</tr>
+<tr>
+<td>Next-state 反馈</td>
+<td>OpenClaw-RL (weight 层，非 skill)</td>
+</tr>
+</tbody></table></div>
+<h3>进化产物形态</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>形态</th>
+<th>系统</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>单个 <code>best_skill.md</code></td>
+<td>SkillOpt</td>
+</tr>
+<tr>
+<td>分层 SkillBank (general + task-specific)</td>
+<td>SkillRL</td>
+</tr>
+<tr>
+<td>Multi-file skill package</td>
+<td>EvoSkills, Anthropic Skills</td>
+</tr>
+<tr>
+<td>可执行 code skill</td>
+<td>Voyager</td>
+</tr>
+<tr>
+<td>NL insights/rules</td>
+<td>ExpeL</td>
+</tr>
+<tr>
+<td>Memory operation skills</td>
+<td>MemSkill</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2>7. 与本项目（SkillRL + Claw-R1）的关系</h2>
+<pre><code>┌─────────────────────────────────────────────────────────┐
+│  Claw-R1 — 数据层                                        │
+│  Gateway → Step Data Pool → 可查询、可筛选的 step 资产    │
+└────────────────────────┬────────────────────────────────┘
+                         │ trajectories
+                         ▼
+┌─────────────────────────────────────────────────────────┐
+│  SkillRL — 算法层                                        │
+│  蒸馏 → SkillBank → GRPO → 递归进化                      │
+└────────────────────────┬────────────────────────────────┘
+                         │
+          ┌──────────────┼──────────────┐
+          ▼              ▼              ▼
+     SkillOpt       EvoSkills     Memento-Skills
+   (单 skill 优化)  (多文件生成)   (部署时修复)
+</code></pre>
+<ul>
+<li><strong>Claw-R1</strong> 对应业界 &quot;Feature Store / Data Lake for agents&quot; — 解决 <strong>数据从哪来、怎么管</strong></li>
+<li><strong>SkillRL</strong> 对应 &quot;Experience → Skill distillation + RL&quot; — 解决 <strong>怎么从经验中学</strong></li>
+<li>工业界大多停在 <strong>范式 A/B</strong>（人工 skill + 演示录制），学术前沿正在推进 <strong>范式 C–F</strong></li>
+</ul>
+<hr>
+<h2>8. 趋势判断</h2>
+<ol>
+<li><strong>Skill 格式标准化</strong> — Agent Skills 开放标准（2025.12）已成事实标准，skill 成为跨平台可移植资产</li>
+<li><strong>Skill 从静态到可训练</strong> — SkillOpt 证明 skill 文档可以像 weight 一样优化；SkillRL 证明 skill library 可以与 policy co-evolve</li>
+<li><strong>Harness 自进化独立成赛道</strong> — Self-Harness、AHE、Meta-Harness、HarnessX 表明 harness engineering 本身可被自动化</li>
+<li><strong>数据基础设施觉醒</strong> — Claw-R1、OpenClaw-RL、slime 等表明 agent RL 首先是 data problem</li>
+<li><strong>三层协同</strong> — 未来系统 likely 是 L1(skill files) + L2(harness) + L3(weights) 同时进化，而非只改一层</li>
+<li><strong>Human-machine misalignment</strong> — EvoSkills 揭示人类写的 skill 不一定适合 agent；自动进化可能优于人工</li>
+</ol>
+<h2>9. 待深入调研</h2>
+<ul>
+<li><input disabled="" type="checkbox"> SkillsBench benchmark 详细结果对比</li>
+<li><input disabled="" type="checkbox"> SkillOpt vs SkillRL 在同一 benchmark 的直接对比</li>
+<li><input disabled="" type="checkbox"> Cursor / Claude Code 是否有未公开的 skill auto-evolution 能力</li>
+<li><input disabled="" type="checkbox"> Claw-R1 Data Pool 能否直接 feed SkillRL distillation pipeline</li>
+<li><input disabled="" type="checkbox"> MemSkill 的 memory skill 与 SkillRL 的 task skill 能否统一抽象</li>
+</ul>
+<h2>References</h2>
+<ul>
+<li>Anthropic Agent Skills: <a href="https://www.anthropic.com/engineering/equipping-agents-for-the-real-world-with-agent-skills">https://www.anthropic.com/engineering/equipping-agents-for-the-real-world-with-agent-skills</a></li>
+<li>Agent Skills Standard: <a href="https://agentskills.io">https://agentskills.io</a></li>
+<li>SkillRL: arXiv:2602.08234</li>
+<li>Claw-R1: arXiv:2606.09138</li>
+<li>SkillOpt: Microsoft Research / github.com/microsoft/SkillOpt</li>
+<li>EvoSkills: arXiv:2604.01687</li>
+<li>Memento-Skills: arXiv:2603.18743</li>
+<li>AutoSkill: arXiv:2603.01145</li>
+<li>Self-Harness: arXiv:2606.09498</li>
+<li>AHE: arXiv:2604.25850</li>
+<li>Meta-Harness: arXiv:2603.28052</li>
+<li>HarnessX: github.com/Darwin-Agent/HarnessX</li>
+<li>AgentEvolver: github.com/modelscope/AgentEvolver</li>
+<li>MemSkill: github.com/ViktorAxelsen/MemSkill</li>
+<li>3×3 Framework: <a href="https://xinmingtu.cn/blog/2026/self-evolving-agents/">https://xinmingtu.cn/blog/2026/self-evolving-agents/</a></li>
+</ul>
+</article>
+    </div>
+  </div>
+  <script src="../../../../js/i18n.js"></script>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
+  </script>
+</body>
+</html>

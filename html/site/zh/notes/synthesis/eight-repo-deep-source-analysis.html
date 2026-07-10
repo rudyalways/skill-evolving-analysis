@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>八仓库源码深度分析 — Skill-Evolving</title>
+  <link rel="alternate" hreflang="en" href="/html/site/notes/synthesis/eight-repo-deep-source-analysis.html">
+  <link rel="alternate" hreflang="zh-Hans" href="/html/site/zh/notes/synthesis/eight-repo-deep-source-analysis.html">
+  <link rel="alternate" hreflang="x-default" href="/html/site/notes/synthesis/eight-repo-deep-source-analysis.html">
+  <link rel="stylesheet" href="../../../../css/viewer.css">
+</head>
+<body class="" data-doc-locale="zh" data-content-lang="zh">
+  <div class="viewer-layout">
+    <nav>
+      <div data-lang-switch class="lang-switch-host"></div>
+      <h1 data-i18n="nav.docs">Docs</h1>
+      <div class="title" data-i18n="nav.rendered">Rendered HTML</div>
+      <section class="highlight-section"><h2 data-i18n="nav.compare">nav.compare</h2><ul><li><a href="./agent-skill-architecture-survey-matrix.html" data-i18n="nav.matrix165">nav.matrix165</a></li><li><a href="./skill-lifecycle-full-matrix.html" data-i18n="nav.lifecycle">nav.lifecycle</a></li><li><a href="./web-expanded-lifecycle-matrix-merged.html" data-i18n="nav.web_l3">nav.web_l3</a></li><li><a href="./eight-repo-comprehensive-survey.html" data-i18n="nav.survey20">nav.survey20</a></li><li><a href="./skill-lifecycle-and-dynamic-loading-survey.html" data-i18n="nav.per_turn">nav.per_turn</a></li><li><a class="active" href="./eight-repo-deep-source-analysis.html" data-i18n="nav.deep_source">nav.deep_source</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.per_repo">nav.per_repo</h2><ul><li><a href="./survey-reports/opensquilla.html">OpenSquilla (9.0)</a></li><li><a href="./survey-reports/hermes-agent.html">Hermes (8.1)</a></li><li><a href="./survey-reports/openclaw.html">OpenClaw (8.0)</a></li><li><a href="./survey-reports/claude-code-rev.html">Claude Rev (7.7)</a></li><li><a href="./survey-reports/codex.html">Codex (7.2)</a></li><li><a href="./survey-reports/taichu.html">TaiChu (5.0)</a></li><li><a href="./survey-reports/zeroclaw.html">ZeroClaw (5.0)</a></li><li><a href="./survey-reports/genericagent.html">GenericAgent (4.8)</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.papers">nav.papers</h2><ul><li><a href="../../../topics/skill-rl/overview.html">SkillRL</a></li><li><a href="../../../topics/claw-r1/overview.html">Claw-R1</a></li><li><a href="./comparison.html" data-i18n="nav.comparison">nav.comparison</a></li><li><a href="./combined-pipeline.html" data-i18n="nav.pipeline">nav.pipeline</a></li><li><a href="./l3-comprehensive-skill-analysis.html" data-i18n="nav.l3">nav.l3</a></li><li><a href="../../../notes/synthesis/taichu-p0-skill-compaction-spec.html" data-i18n="nav.taichu_p0">nav.taichu_p0</a></li></ul></section><section><h2 data-i18n="nav.more">More</h2><ul>
+    <li><a href="/html/docs.html" data-i18n="nav.sitemap">Sitemap</a></li>
+    <li><a href="/html/i18n-coverage.html" data-i18n="nav.i18n_coverage">i18n coverage</a></li>
+    <li><a href="/html/index.html" data-i18n="nav.dashboard">Dashboard</a></li>
+    <li><a href="/html/deck/index.html" data-i18n="nav.decks">Slide decks</a></li>
+  </ul></section>
+    </nav>
+    <div class="viewer-main">
+      <div class="viewer-toolbar">
+        <div>
+          <h1>八仓库源码深度分析</h1>
+          <div class="path">notes/synthesis/eight-repo-deep-source-analysis.md</div>
+        </div>
+        <a class="btn" href="/html/docs.html" data-i18n="toolbar.sitemap">Sitemap</a>
+        <a class="btn primary" href="./agent-skill-architecture-survey-matrix.html" data-i18n="toolbar.matrix">165-dim matrix</a>
+      </div>
+      
+      <article class="md-body"><h1>八仓库源码深度分析</h1>
+<blockquote>
+<p><strong>方法</strong>：本机直接读源码（<code>/Users/maybewu/Documents/Projects/</code>），非 README 摘要。<br><strong>范围</strong>：8 仓库 × 7 维度；末尾映射 SkillRL / Claw-R1。<br><strong>TaiChu</strong> 为私有 Gitea；其余 7 个均为开源，路径已验证。</p>
+</blockquote>
+<hr>
+<h2>评估维度（7 问）</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>维度</th>
+<th>问什么</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Q1</td>
+<td><strong>Skill 表示</strong></td>
+<td>文件格式、目录布局、元数据</td>
+</tr>
+<tr>
+<td>Q2</td>
+<td><strong>生命周期</strong></td>
+<td>加载、注入 prompt、执行、卸载</td>
+</tr>
+<tr>
+<td>Q3</td>
+<td><strong>自动生成</strong></td>
+<td>轨迹/失败 → 新 skill 的闭环</td>
+</tr>
+<tr>
+<td>Q4</td>
+<td><strong>自动更新</strong></td>
+<td>已有 skill 的 patch / revision</td>
+</tr>
+<tr>
+<td>Q5</td>
+<td><strong>退役/排序/版本</strong></td>
+<td>淘汰、ranking、版本控制</td>
+</tr>
+<tr>
+<td>Q6</td>
+<td><strong>Harness 协同进化</strong></td>
+<td>compaction / dreaming / cron 与 skill 联动</td>
+</tr>
+<tr>
+<td>Q7</td>
+<td><strong>vs SkillRL / Claw-R1</strong></td>
+<td>对应论文哪一层、缺什么</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2>总览矩阵</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>仓库</th>
+<th>Q1 表示</th>
+<th>Q2 生命周期</th>
+<th>Q3 自动生成</th>
+<th>Q4 自动更新</th>
+<th>Q5 退役/版本</th>
+<th>Q6 Harness 协同</th>
+<th>Q7 论文映射</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>hermes-agent</strong></td>
+<td>SKILL.md + 子目录</td>
+<td>启动加载 → prompt 元数据；<code>load_skill</code> 按需</td>
+<td>✅ 后台 review + <code>skill_manage create</code></td>
+<td>✅ <code>edit</code>/<code>patch</code></td>
+<td>⚠️ 无 ranking/版本</td>
+<td>⚠️ memory review 并行，非 GRPO</td>
+<td>SkillRL 运行时 CRUD 碎片</td>
+</tr>
+<tr>
+<td><strong>opensquilla</strong></td>
+<td>SKILL.md + gates.json</td>
+<td>分层 BUNDLED/MANAGED；proposal 暂存</td>
+<td>✅ meta-skill-creator → proposals</td>
+<td>✅ accept 晋升 MANAGED</td>
+<td>✅ gates + auto_enable 审计</td>
+<td>dream factory + session flush → <strong>memory</strong></td>
+<td>Claw-R1 step trace 近；缺 SkillBank</td>
+</tr>
+<tr>
+<td><strong>genericagent</strong></td>
+<td>L3 <code>*_sop.md</code>（非 SKILL.md）</td>
+<td>SOP 文件 + working memory 引用</td>
+<td>⚠️ agent 自驱写 SOP</td>
+<td>⚠️ <code>file_patch</code> 更新 L2/L3</td>
+<td>❌ 无</td>
+<td>compaction 式 checkpoint；<code>/morphling</code></td>
+<td>Failure→Skill 概念最接近</td>
+</tr>
+<tr>
+<td><strong>openclaw</strong></td>
+<td>SKILL.md ~83 bundled</td>
+<td>ClawHub + workspace skills</td>
+<td>❌ skill-creator 仅指南</td>
+<td>❌ 人工/技能包</td>
+<td>❌</td>
+<td>✅ dreaming 3-phase → MEMORY.md；compaction-safeguard</td>
+<td>Claw-R1 gateway 同类；memory≠skill</td>
+</tr>
+<tr>
+<td><strong>codex</strong></td>
+<td>SKILL.md ~18 samples</td>
+<td>ext/skills catalog + selection</td>
+<td>❌</td>
+<td>❌ 用户管理</td>
+<td>❌</td>
+<td>✅ memories 2-phase distill（harness 非 skill）</td>
+<td>Improvement Loop 对标 harness</td>
+</tr>
+<tr>
+<td><strong>zeroclaw</strong></td>
+<td>用户 workspace，无 bundled</td>
+<td>skills loader 读目录</td>
+<td>❌</td>
+<td>❌</td>
+<td>❌</td>
+<td>✅ nightly consolidation cron（memory）</td>
+<td>仅 memory 侧碎片</td>
+</tr>
+<tr>
+<td><strong>claude-code-rev</strong></td>
+<td>2 bundled skills</td>
+<td>memdir + skill registry</td>
+<td>❌</td>
+<td>❌</td>
+<td>❌</td>
+<td>✅ auto-dream 4-phase → memdir</td>
+<td>参考实现，memory only</td>
+</tr>
+<tr>
+<td><strong>TaiChu</strong></td>
+<td>17 canonical SKILL.md</td>
+<td>ResourceLoader + <code>load_skill</code> 双维度 wire</td>
+<td>❌ planned</td>
+<td>❌</td>
+<td>❌</td>
+<td>compaction 仅 summarization</td>
+<td>集成目标；有跨仓对比 doc</td>
+</tr>
+</tbody></table></div>
+<p><strong>图例</strong>：✅ 有明确代码路径 | ⚠️ 部分/软触发 | ❌ 未见</p>
+<hr>
+<h2>1. hermes-agent</h2>
+<p><strong>路径</strong>：<code>/Users/maybewu/Documents/Projects/oss/hermes-agent</code></p>
+<h3>Q1 — Skill 表示</h3>
+<ul>
+<li>标准 Agent Skills：<code>skills/{name}/SKILL.md</code> + 可选 <code>references/</code>, <code>templates/</code>, <code>scripts/</code>, <code>assets/</code></li>
+<li>用户/agent 创建的技能统一在 <code>~/.hermes/skills/</code></li>
+<li>YAML frontmatter：<code>name</code>, <code>description</code>；与社区 Skills 标准一致</li>
+</ul>
+<h3>Q2 — 生命周期</h3>
+<ul>
+<li>启动：<code>build_skills_system_prompt()</code> 注入 skill 元数据列表</li>
+<li>按需：<code>skills_list</code>, <code>skill_view</code> 浏览；无独立 load 工具（内容通过 view 拉取）</li>
+<li>执行：skill 内容作为 procedural knowledge 指导后续 tool 调用</li>
+</ul>
+<h3>Q3 — 自动生成</h3>
+<p><strong>最强闭环之一。</strong> 后台线程在 turn 结束后 fork 一个 quiet <code>AIAgent</code>，用专用 prompt 审视对话：</p>
+<pre><code class="language-1768:1776:/Users/maybewu/Documents/Projects/oss/hermes-agent/run_agent.py">    _SKILL_REVIEW_PROMPT = (
+        &quot;Review the conversation above and consider saving or updating a skill if appropriate.\n\n&quot;
+        &quot;Focus on: was a non-trivial approach used to complete a task that required trial &quot;
+        &quot;and error, or changing course due to experiential findings along the way, or did &quot;
+        &quot;the user expect or desire a different method or outcome?\n\n&quot;
+        &quot;If a relevant skill already exists, update it with what you learned. &quot;
+        &quot;Otherwise, create a new skill if the approach is reusable.\n&quot;
+        &quot;If nothing is worth saving, just say &#39;Nothing to save.&#39; and stop.&quot;
+    )
+</code></pre>
+<p>触发条件（<code>run_agent.py</code> ~9604）：每 turn 累计 tool iteration ≥ <code>creation_nudge_interval</code>（默认 10）且 <code>skill_manage</code> 在 valid tools 中。</p>
+<h3>Q4 — 自动更新</h3>
+<p><code>skill_manage</code> 支持 <code>create | edit | patch | delete | write_file | remove_file</code>：</p>
+<ul>
+<li><code>edit</code>：整文件替换 SKILL.md</li>
+<li><code>patch</code>：find-and-replace 级局部更新</li>
+<li>写后 <code>_security_scan_skill()</code> — 与 hub 安装同等安全扫描</li>
+</ul>
+<h3>Q5 — 退役/排序/版本</h3>
+<ul>
+<li>无 SkillBank ranking、无 semantic version、无自动退役</li>
+<li><code>delete</code> 可手动移除用户 skill</li>
+<li>大小限制：<code>MAX_SKILL_CONTENT_CHARS = 100_000</code></li>
+</ul>
+<h3>Q6 — Harness 协同进化</h3>
+<ul>
+<li>Memory review 与 skill review <strong>并行</strong>（<code>_COMBINED_REVIEW_PROMPT</code>），同样后台 fork</li>
+<li>Memory：<code>MEMORY.md</code> + external memory providers</li>
+<li><strong>无</strong> RL、无 step-level trace pool、无 validation gate 后再 promote</li>
+</ul>
+<h3>Q7 — vs SkillRL / Claw-R1</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>论文组件</th>
+<th>Hermes 对应</th>
+<th>缺口</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>SkillRL SkillBank</td>
+<td><code>~/.hermes/skills/</code> 文件树</td>
+<td>无 embedding retrieval、无 success-rate ranking</td>
+</tr>
+<tr>
+<td>SkillRL GRPO evolution</td>
+<td>—</td>
+<td>无训练环</td>
+</tr>
+<tr>
+<td>SkillRL recursive distill</td>
+<td>后台 LLM review</td>
+<td>无 structured failure mining</td>
+</tr>
+<tr>
+<td>Claw-R1 Step Data Pool</td>
+<td>trajectory 存本地</td>
+<td>无 step-level middleware / RPC</td>
+</tr>
+<tr>
+<td>Claw-R1 Gateway</td>
+<td>—</td>
+<td>非 gateway 架构</td>
+</tr>
+</tbody></table></div>
+<p><strong>结论</strong>：<strong>运行时 procedural memory CRUD 最完整</strong>的开源样本；缺 validation layer 和 graph retrieval。</p>
+<hr>
+<h2>2. opensquilla</h2>
+<p><strong>路径</strong>：<code>/Users/maybewu/Documents/Projects/oss/opensquilla</code></p>
+<h3>Q1 — Skill 表示</h3>
+<ul>
+<li><code>skills/bundled/</code> — ~91 个 BUNDLED SKILL.md</li>
+<li><code>~/.opensquilla/skills/{name}/</code> — MANAGED 层（accept 后）</li>
+<li><code>~/.opensquilla/proposals/{8-hex}/</code> — 暂存：<code>SKILL.md</code> + <code>gates.json</code></li>
+</ul>
+<h3>Q2 — 生命周期</h3>
+<p>三层：</p>
+<pre><code>BUNDLED (只读) → proposals (候选) → MANAGED (用户/agent 可执行)
+</code></pre>
+<ul>
+<li>Meta-skills：手动 <code>/meta &lt;name&gt;</code> 触发（默认不 auto_trigger）</li>
+<li><code>meta-skill-creator</code>：把重复 multi-skill 协作模式 → 新 MetaSkill proposal</li>
+</ul>
+<h3>Q3 — 自动生成</h3>
+<p><code>proposals_lib.atomic_write_proposal()</code> — 原子写入 proposal 目录：</p>
+<pre><code class="language-44:69:/Users/maybewu/Documents/Projects/oss/opensquilla/src/opensquilla/skills/proposals_lib.py">def atomic_write_proposal(
+    home: Path, skill_md: str, gates: dict,
+) -&gt; str:
+    &quot;&quot;&quot;Materialise a proposal directory atomically.
+    ...
+    &quot;&quot;&quot;
+    ...
+    (tmp_dir / &quot;SKILL.md&quot;).write_text(skill_md, encoding=&quot;utf-8&quot;)
+    (tmp_dir / &quot;gates.json&quot;).write_text(
+        json.dumps(gates, indent=2, ensure_ascii=False),
+        encoding=&quot;utf-8&quot;,
+    )
+    ...
+    tmp_dir.rename(final_dir)
+    return proposal_id
+</code></pre>
+<p><code>gates.json</code> 含 risk level、auto_enable 资格、validation profile — <strong>最接近 product-grade skill gate</strong>。</p>
+<h3>Q4 — 自动更新</h3>
+<ul>
+<li><code>accept_proposal()</code>：gates 全通过 → <code>shutil.move</code> 到 MANAGED；否则 <code>refused</code></li>
+<li><code>reject_proposal()</code> 丢弃</li>
+<li><code>read_auto_propose_settings()</code> / <code>write_auto_propose_settings()</code> — 可配置自动 propose 行为</li>
+<li><code>list_auto_enabled_skills()</code> — 审计 auto-enable 历史</li>
+</ul>
+<h3>Q5 — 退役/排序/版本</h3>
+<ul>
+<li>gates 未通过 = 无法晋升（软 block）</li>
+<li>同名 skill 已存在则 refuse</li>
+<li>无 git-style skill versioning；有 auto_enable audit trail</li>
+</ul>
+<h3>Q6 — Harness 协同进化</h3>
+<ul>
+<li><strong>Session flush</strong>（<code>memory/session_flush.py</code>）：session reset 时 distill → memory_save</li>
+<li><strong>Dream factory</strong>（memory/dream/）：与 skill 分离，服务 declarative memory</li>
+<li>Skill 与 memory <strong>管道分离</strong>，但 proposal gate 设计可复用到 skill validation</li>
+</ul>
+<h3>Q7 — vs SkillRL / Claw-R1</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>论文组件</th>
+<th>OpenSquilla 对应</th>
+<th>缺口</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>SkillRL validation (SkillOpt/SkillHone)</td>
+<td>gates.json + acceptance</td>
+<td>无 automated benchmark run</td>
+</tr>
+<tr>
+<td>SkillRL SkillBank</td>
+<td>MANAGED layer</td>
+<td>无 RL ranking</td>
+</tr>
+<tr>
+<td>Claw-R1 step trace</td>
+<td>session messages + flush obligations</td>
+<td>有 obligation 提取，无 universal step RPC</td>
+</tr>
+<tr>
+<td>Claw-R1 data pool</td>
+<td>proposals dir</td>
+<td>结构类似 candidate pool</td>
+</tr>
+</tbody></table></div>
+<p><strong>结论</strong>：<strong>Skill 候选 → Gate → Promote</strong> 产品化程度最高；memory dreaming 强但不在 skill 环内。</p>
+<hr>
+<h2>3. genericagent</h2>
+<p><strong>路径</strong>：<code>/Users/maybewu/Documents/Projects/oss/genericagent</code></p>
+<h3>Q1 — Skill 表示</h3>
+<p><strong>不用 SKILL.md。</strong> 自进化单元是 <strong>L3 SOP</strong>：</p>
+<pre><code>memory/
+├── L0  memory_management_sop.md      # 更新协议
+├── L1  (index)
+├── L2  环境事实
+├── L3  *_sop.md                      # 任务级程序知识
+└── L4_raw_sessions/                  # 原始会话 + salient mining
+</code></pre>
+<p><code>morphling_sop.md</code>, <code>incubator_sop.md</code> 等 = 领域 skill 等价物。</p>
+<h3>Q2 — 生命周期</h3>
+<ul>
+<li>Agent 通过 <code>file_read</code> 按需读 SOP</li>
+<li><code>working[&#39;related_sop&#39;]</code> 在 prompt 中提示重读</li>
+<li>每 10 turn 注入 <code>get_global_memory()</code> 提醒记忆层级</li>
+</ul>
+<h3>Q3 — 自动生成</h3>
+<p><code>do_start_long_term_update()</code> — agent <strong>自判断</strong>任务完成后调用：</p>
+<pre><code class="language-508:523:/Users/maybewu/Documents/Projects/oss/genericagent/ga.py">    def do_start_long_term_update(self, args, response):
+        &#39;&#39;&#39;Agent觉得当前任务完成后有重要信息需要记忆时调用此工具。&#39;&#39;&#39;
+        prompt = &#39;&#39;&#39;### [总结提炼经验] ...
+**只能提取行动验证成功的信息**：
+- **环境事实** → `file_patch` 更新 L2，同步 L1
+- **复杂任务经验** → L3 精简 SOP
+...
+&#39;&#39;&#39; + get_global_memory()
+</code></pre>
+<p><code>/morphling</code> — 专门用于 SOP 结晶的子流程（morphling_sop.md）。</p>
+<h3>Q4 — 自动更新</h3>
+<ul>
+<li>L2：<code>file_patch</code> 最小修改</li>
+<li>L3：agent 写新 SOP 或 patch 现有</li>
+<li>严格 L0 SOP 约束：先 read → 判断类型 → 最小更新</li>
+</ul>
+<h3>Q5 — 退役/排序/版本</h3>
+<ul>
+<li><code>memory_cleanup_sop.md</code> 存在但未形成自动 ranking</li>
+<li>无 version field；靠文件命名 + 人工结构</li>
+</ul>
+<h3>Q6 — Harness 协同进化</h3>
+<ul>
+<li>Turn 7/10/25/175 checkpoint 注入 — <strong>prompt-level harness 进化</strong></li>
+<li>L4 salient mining SOP — 会话 → 要点</li>
+<li>无 nightly cron；靠 turn 模数 + agent 自驱</li>
+</ul>
+<h3>Q7 — vs SkillRL / Claw-R1</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>论文组件</th>
+<th>GenericAgent 对应</th>
+<th>缺口</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>SkillRL Failure→Skill</td>
+<td>L3 SOP 从失败结晶</td>
+<td>无结构化 failure tag</td>
+</tr>
+<tr>
+<td>SkillRL Trajectory→Skill</td>
+<td>L4 + long_term_update</td>
+<td>无 batch mining</td>
+</tr>
+<tr>
+<td>Claw-R1</td>
+<td>—</td>
+<td>无 step middleware</td>
+</tr>
+</tbody></table></div>
+<p><strong>结论</strong>：<strong>SOP-as-skill 哲学最一致</strong>；自标 &quot;self-evolving&quot; 名副其实，但非 Agent Skills 标准、无 gate/validation。</p>
+<hr>
+<h2>4. openclaw</h2>
+<p><strong>路径</strong>：<code>/Users/maybewu/Documents/Projects/oss/openclaw</code></p>
+<h3>Q1 — Skill 表示</h3>
+<ul>
+<li><code>skills/</code> ~83 bundled SKILL.md</li>
+<li>ClawHub registry + user workspace skills</li>
+<li><code>skill-creator</code> bundled — <strong>创作指南</strong>，非自动 pipeline</li>
+</ul>
+<h3>Q2 — 生命周期</h3>
+<ul>
+<li>Gateway 启动加载 skill catalog</li>
+<li>Skills 作为 prompt 扩展；工具通过 skill scripts/ 暴露</li>
+<li>与 memory-core <strong>解耦</strong></li>
+</ul>
+<h3>Q3 — 自动生成</h3>
+<ul>
+<li>❌ 无 runtime skill CRUD</li>
+<li><code>skill-creator</code> 教 agent <strong>如何写</strong> SKILL.md，需人工或显式 invoke</li>
+</ul>
+<h3>Q4 — 自动更新</h3>
+<ul>
+<li>❌ 无 auto patch</li>
+<li>Compaction 可能 re-distill <strong>conversation context</strong>，不写回 skill 文件</li>
+</ul>
+<h3>Q5 — 退役/排序/版本</h3>
+<ul>
+<li>❌</li>
+<li>ClawHub 有社区 versioning；runtime 无 SkillBank ranking</li>
+</ul>
+<h3>Q6 — Harness 协同进化</h3>
+<p><strong>Dreaming</strong>（<code>extensions/memory-core</code>，<code>docs/concepts/dreaming.md</code>）：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Phase</th>
+<th>作用</th>
+<th align="center">写 MEMORY.md</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Light</td>
+<td>staging short-term</td>
+<td align="center">No</td>
+</tr>
+<tr>
+<td>Deep</td>
+<td>score + promote</td>
+<td align="center"><strong>Yes</strong></td>
+</tr>
+<tr>
+<td>REM</td>
+<td>theme reflection</td>
+<td align="center">No</td>
+</tr>
+</tbody></table></div>
+<p><code>short-term-promotion.ts</code> — recall tracking → promotion scoring（<code>minScore</code>, <code>minRecallCount</code>, <code>minUniqueQueries</code>）。</p>
+<p><strong>Compaction-safeguard</strong>（<code>src/agents/pi-hooks/compaction-safeguard.ts</code>）— adaptive chunk ratio、tool failure summary、structured fallback — <strong>harness 质量</strong>，非 skill evolution。</p>
+<h3>Q7 — vs SkillRL / Claw-R1</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>论文组件</th>
+<th>OpenClaw 对应</th>
+<th>缺口</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Claw-R1 Gateway</td>
+<td>✅ 多 channel gateway</td>
+<td>step-level pool 未开源在此 repo</td>
+</tr>
+<tr>
+<td>Claw-R1 trace</td>
+<td>session transcripts → dreaming corpus</td>
+<td>有 ingestion，无 RL export</td>
+</tr>
+<tr>
+<td>SkillRL SkillBank</td>
+<td>skills/ 静态</td>
+<td>无 evolution loop</td>
+</tr>
+<tr>
+<td>SkillRL memory distill</td>
+<td>Deep phase promotion</td>
+<td>目标是 MEMORY.md 非 SKILL.md</td>
+</tr>
+</tbody></table></div>
+<p><strong>结论</strong>：<strong>最大开源 harness + memory promotion</strong>；skill 层静态，evolution 在 memory 维。</p>
+<hr>
+<h2>5. codex (openai/codex)</h2>
+<p><strong>路径</strong>：<code>/Users/maybewu/Documents/Projects/oss/codex</code></p>
+<h3>Q1 — Skill 表示</h3>
+<ul>
+<li><code>codex-rs/ext/skills/</code> — catalog, provider, selection, sources</li>
+<li>~18 sample SKILL.md</li>
+<li>Host skill provider 插件架构</li>
+</ul>
+<h3>Q2 — 生命周期</h3>
+<ul>
+<li><code>SkillProviders</code> 聚合多 source</li>
+<li>Selection 决定注入哪些 skill metadata</li>
+<li>Skills 与 <strong>memories 完全分离模块</strong></li>
+</ul>
+<h3>Q3 — 自动生成</h3>
+<ul>
+<li>❌ Skills 用户/团队管理</li>
+<li>Memories 有 auto-write（rollout → distill）</li>
+</ul>
+<h3>Q4 — 自动更新</h3>
+<ul>
+<li>❌ skill 无 auto patch</li>
+<li>Memories：<code>consolidation.md</code> template — INIT/UPDATE phase，git-style diff 驱动</li>
+</ul>
+<h3>Q5 — 退役/排序/版本</h3>
+<ul>
+<li>Memories 有 task-group consolidation + epistemic status</li>
+<li>Skills 无 ranking</li>
+</ul>
+<h3>Q6 — Harness 协同进化</h3>
+<p><strong>Memories 2-phase</strong>（<code>codex-rs/memories/write/templates/</code>）：</p>
+<ol>
+<li><strong>Stage one</strong>：rollout → raw memory + task blocks</li>
+<li><strong>Consolidation</strong>：→ <code>memory_summary.md</code> + structured artifacts</li>
+</ol>
+<p>Improvement Loop（官方 blog）优化 <strong>harness prompts/rules</strong>，非 Skill Library。</p>
+<p><code>phase2_workspace_diff.md</code> — 增量 consolidation，类似 git diff driven update。</p>
+<h3>Q7 — vs SkillRL / Claw-R1</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>论文组件</th>
+<th>Codex 对应</th>
+<th>缺口</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>SkillRL</td>
+<td>—</td>
+<td>无 SkillBank RL</td>
+</tr>
+<tr>
+<td>Claw-R1 step pool</td>
+<td>rollout summaries</td>
+<td>粗粒度 task-level，非 step RPC</td>
+</tr>
+<tr>
+<td>Harness co-evolution</td>
+<td>Improvement Loop + memories</td>
+<td>✅ 官方最强 harness 进化</td>
+</tr>
+</tbody></table></div>
+<p><strong>结论</strong>：<strong>官方标杆：memory/harness 进化</strong>；Skills 基础设施就绪，<strong>刻意不做 skill self-evolution</strong>。</p>
+<hr>
+<h2>6. zeroclaw</h2>
+<p><strong>路径</strong>：<code>/Users/maybewu/Documents/Projects/oss/zeroclaw</code></p>
+<h3>Q1 — Skill 表示</h3>
+<ul>
+<li><code>src/skills/</code> loader — 读用户 workspace</li>
+<li><strong>0 bundled skills</strong> — 极简 runtime</li>
+</ul>
+<h3>Q2 — 生命周期</h3>
+<ul>
+<li>标准目录 scan → inject</li>
+<li>无 bundled meta-skills</li>
+</ul>
+<h3>Q3–Q5 — 生成/更新/版本</h3>
+<ul>
+<li>❌ 全无</li>
+</ul>
+<h3>Q6 — Harness 协同进化</h3>
+<p><strong>Nightly consolidation cron</strong>（<code>src/cron/consolidation.rs</code>）：</p>
+<pre><code class="language-13:49:/Users/maybewu/Documents/Projects/oss/zeroclaw/src/cron/consolidation.rs">const CONSOLIDATION_PROMPT: &amp;str = &quot;\
+You are running a nightly memory consolidation job. ...
+1. Use `cron_runs` to review recent job execution results ...
+2. Use `memory_recall` to retrieve today&#39;s Daily memories ...
+...
+5. Store the summary using `memory_store` with category \&quot;core\&quot; ...
+6. If the workspace file `MEMORY.md` exists, ... append a dated section ...
+</code></pre>
+<ul>
+<li>3:00 AM cron，<code>SessionTarget::Isolated</code></li>
+<li>Agent 用现有 tools 自驱 consolidate — <strong>prompt-driven</strong>，非硬编码 pipeline</li>
+</ul>
+<h3>Q7 — vs SkillRL / Claw-R1</h3>
+<ul>
+<li>仅 <strong>memory consolidation 碎片</strong></li>
+<li>可作为 TaiChu 轻量 cron 参考实现</li>
+</ul>
+<hr>
+<h2>7. claude-code-rev (oboard)</h2>
+<p><strong>路径</strong>：<code>/Users/maybewu/Documents/Projects/oss/experimental/claude-code-rev</code></p>
+<h3>Q1 — Skill 表示</h3>
+<ul>
+<li>2 bundled skills（含 <code>/dream</code>）</li>
+<li><strong>memdir</strong> 为主记忆系统：<code>MEMORY.md</code>, daily logs, topic files</li>
+</ul>
+<h3>Q2 — 生命周期</h3>
+<ul>
+<li><code>src/memdir/</code> — paths, scan, findRelevantMemories, memoryTypes</li>
+<li>Skills 注册于 <code>src/skills/bundled/</code></li>
+</ul>
+<h3>Q3–Q5 — 生成/更新/版本</h3>
+<ul>
+<li>❌ Skill 无 auto CRUD</li>
+<li>Memory 通过 dream 更新</li>
+</ul>
+<h3>Q6 — Harness 协同进化</h3>
+<p><strong>Auto-dream</strong>（<code>src/services/autoDream/consolidationPrompt.ts</code>）— 4-phase：</p>
+<ol>
+<li>Orient — ls memory dir, read index</li>
+<li>Gather — daily logs, transcript grep</li>
+<li>Consolidate — merge into topic files</li>
+<li>Update index</li>
+</ol>
+<p><code>DreamTask.ts</code> — UI 层 background task；与 OpenClaw dreaming 概念平行。</p>
+<p>Cron：<code>src/utils/cronTasks.ts</code> — dream task 不参与 age-out。</p>
+<h3>Q7 — vs SkillRL / Claw-R1</h3>
+<ul>
+<li><strong>Memory consolidation 参考实现</strong>（社区还原 Claude Code）</li>
+<li>对 TaiChu / OpenClaw dreaming 设计有逆向参考价值</li>
+<li>无 skill evolution</li>
+</ul>
+<hr>
+<h2>8. TaiChu（私有）</h2>
+<p><strong>路径</strong>：<code>/Users/maybewu/Documents/Projects/drafts/zk/TaiChu</code></p>
+<h3>Q1 — Skill 表示</h3>
+<ul>
+<li>17 canonical：<code>skills/system/{name}/SKILL.md</code></li>
+<li>Frontmatter 扩展：<code>skill_type</code>, <code>runs_on</code>, <code>triggers</code>, <code>when_not</code></li>
+<li>已有 1000+ 行跨仓对比：<code>docs/architecture/skill-system-cross-repo-comparison.md</code></li>
+</ul>
+<h3>Q2 — 生命周期</h3>
+<p><code>DefaultResourceLoader</code>（<code>core/agent-session/src/resource_loader.rs</code>）：</p>
+<ul>
+<li>Scan <code>skills/</code> 目录 → parse SKILL.md</li>
+<li><code>get_skills()</code> → inject system prompt</li>
+<li><strong><code>load_skill</code> 双维度 wire</strong>（<code>taichu-service/tools/a_system/</code>）：<ul>
+<li>LLM 视角：<code>load_skill({name})</code> snake_case</li>
+<li>Device wire：<code>SkillLoad</code> PascalCase — 端云 skill 执行</li>
+</ul>
+</li>
+</ul>
+<p><code>skill_name_filter</code> — Toollery gate 测试用</p>
+<h3>Q3 — 自动生成</h3>
+<ul>
+<li>❌ <strong>planned</strong>，无 runtime proposal pipeline</li>
+<li>无 agent CRUD skill tool</li>
+</ul>
+<h3>Q4 — 自动更新</h3>
+<ul>
+<li>❌</li>
+<li>Skill snapshots 存在但非 auto-evolution</li>
+</ul>
+<h3>Q5 — 退役/排序/版本</h3>
+<ul>
+<li>❌</li>
+<li>Canonical 17 人工 curated</li>
+</ul>
+<h3>Q6 — Harness 协同进化</h3>
+<p><code>compaction.rs</code> — <strong>纯 context summarization</strong>：</p>
+<ul>
+<li><code>should_compact()</code> token threshold</li>
+<li>LLM summarize old messages → free context</li>
+<li><strong>不写 skill / memory 文件</strong></li>
+</ul>
+<p>Gap vs OpenClaw dreaming / Hermes review：<strong>compaction 后无 distill-to-skill 步骤</strong>。</p>
+<h3>Q7 — vs SkillRL / Claw-R1</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>论文组件</th>
+<th>TaiChu 现状</th>
+<th>建议集成</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Claw-R1 step trace</td>
+<td>agent_loop messages</td>
+<td>加 step export middleware</td>
+</tr>
+<tr>
+<td>SkillRL SkillBank</td>
+<td>17 static skills</td>
+<td>+ MANAGED layer</td>
+</tr>
+<tr>
+<td>SkillRL failure mining</td>
+<td>—</td>
+<td>post-compaction review fork</td>
+</tr>
+<tr>
+<td>OpenSquilla gates</td>
+<td>—</td>
+<td>proposals_lib 模式</td>
+</tr>
+<tr>
+<td>Hermes skill_manage</td>
+<td>—</td>
+<td>Rust/Python tool 移植</td>
+</tr>
+</tbody></table></div>
+<p><strong>结论</strong>：<strong>Skill 加载/端云执行最强</strong>；<strong>evolution loop 全缺</strong> — 集成目标明确。</p>
+<hr>
+<h2>跨仓库：谁实现了什么环？</h2>
+<pre class="mermaid">flowchart LR
+  subgraph trace [Step Trace]
+    OC[OpenClaw transcripts]
+    OS[OpenSquilla session flush]
+    TC[TaiChu agent_loop]
+  end
+
+  subgraph mine [Mining / Review]
+    H[Hermes background review]
+    GA[GenericAgent L3 SOP]
+    SQ[OpenSquilla proposals]
+  end
+
+  subgraph validate [Validation]
+    SQG[OpenSquilla gates.json]
+    HG[Hermes security scan]
+  end
+
+  subgraph store [Skill Store]
+    HS[~/.hermes/skills]
+    OSM[~/.opensquilla/skills]
+    GA3[genericagent L3 SOP]
+    TCs[TaiChu skills/system]
+  end
+
+  subgraph mem [Memory Only]
+    OCD[OpenClaw dreaming]
+    CX[Codex memories]
+    ZC[ZeroClaw cron]
+    CCR[claude-rev dream]
+  end
+
+  trace --> mine
+  mine --> validate
+  validate --> store
+  trace --> mem
+</pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>闭环阶段</th>
+<th>最强实现</th>
+<th>次选</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Step-level capture</td>
+<td>OpenSquilla flush obligations</td>
+<td>OpenClaw dreaming corpus</td>
+</tr>
+<tr>
+<td>Trajectory→Skill</td>
+<td>Hermes <code>_SKILL_REVIEW_PROMPT</code></td>
+<td>GenericAgent L3 crystallization</td>
+</tr>
+<tr>
+<td>Failure→Skill</td>
+<td>GenericAgent（验证成功才写）</td>
+<td>Hermes trial-and-error 检测</td>
+</tr>
+<tr>
+<td>Skill Revision</td>
+<td>Hermes <code>patch</code></td>
+<td>GenericAgent <code>file_patch</code></td>
+</tr>
+<tr>
+<td>Validation gate</td>
+<td><strong>OpenSquilla gates.json</strong></td>
+<td>Hermes security scan</td>
+</tr>
+<tr>
+<td>Versioned library</td>
+<td>OpenSquilla MANAGED</td>
+<td>Hermes flat files</td>
+</tr>
+<tr>
+<td>Graph retrieval</td>
+<td>❌ 全无</td>
+<td>—</td>
+</tr>
+<tr>
+<td>RL / GRPO</td>
+<td>❌ 全无</td>
+<td>SkillRL 论文 only</td>
+</tr>
+<tr>
+<td>Harness co-evolution</td>
+<td>Codex Improvement Loop</td>
+<td>OpenClaw compaction-safeguard</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2>SkillRL × Claw-R1 对照：八仓库覆盖度</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>论文层</th>
+<th>组件</th>
+<th>八仓库覆盖</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Claw-R1</strong></td>
+<td>Gateway</td>
+<td>OpenClaw ✅, OpenSquilla ✅, TaiChu 端云 ✅</td>
+</tr>
+<tr>
+<td><strong>Claw-R1</strong></td>
+<td>Step Data Pool</td>
+<td>无完整实现；OpenSquilla obligations ≈ 30%</td>
+</tr>
+<tr>
+<td><strong>Claw-R1</strong></td>
+<td>Step RPC export</td>
+<td>❌</td>
+</tr>
+<tr>
+<td><strong>SkillRL</strong></td>
+<td>SkillBank</td>
+<td>Hermes/OpenSquilla/TaiChu 有静态库</td>
+</tr>
+<tr>
+<td><strong>SkillRL</strong></td>
+<td>Failure mining</td>
+<td>Hermes soft, GenericAgent conceptual</td>
+</tr>
+<tr>
+<td><strong>SkillRL</strong></td>
+<td>GRPO recursive evolution</td>
+<td>❌</td>
+</tr>
+<tr>
+<td><strong>SkillRL</strong></td>
+<td>SkillOpt validation</td>
+<td>OpenSquilla gates ≈ 50%</td>
+</tr>
+<tr>
+<td><strong>Combined</strong></td>
+<td>Full closed loop</td>
+<td><strong>无单一 repo</strong></td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2>对 TaiChu 集成的优先建议</h2>
+<p>基于源码证据，而非愿景：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th align="center">优先级</th>
+<th>从哪里搬</th>
+<th>搬什么</th>
+<th>TaiChu 落点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">P0</td>
+<td>Hermes</td>
+<td><code>_spawn_background_review</code> + skill review prompt</td>
+<td><code>compaction.rs</code> 之后 async fork</td>
+</tr>
+<tr>
+<td align="center">P0</td>
+<td>Hermes</td>
+<td><code>skill_manage</code> CRUD + security scan</td>
+<td>新 tool in taichu-service</td>
+</tr>
+<tr>
+<td align="center">P1</td>
+<td>OpenSquilla</td>
+<td><code>proposals_lib</code> + gates.json</td>
+<td><code>~/.taichu/proposals/</code></td>
+</tr>
+<tr>
+<td align="center">P1</td>
+<td>OpenClaw</td>
+<td>dreaming Deep phase scoring</td>
+<td>memory promotion（若做 memory）</td>
+</tr>
+<tr>
+<td align="center">P2</td>
+<td>GenericAgent</td>
+<td>L0 memory_management_sop 协议</td>
+<td>skill update SOP</td>
+</tr>
+<tr>
+<td align="center">P2</td>
+<td>ZeroClaw</td>
+<td>consolidation cron pattern</td>
+<td>isolated session cron</td>
+</tr>
+<tr>
+<td align="center">P3</td>
+<td>Codex</td>
+<td>phase2 diff-driven consolidation</td>
+<td>harness rules 增量更新</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2>源码索引（本分析引用）</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>仓库</th>
+<th>关键文件</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>hermes-agent</td>
+<td><code>run_agent.py</code> (1753–1830, 9604–9630), <code>tools/skill_manager_tool.py</code></td>
+</tr>
+<tr>
+<td>opensquilla</td>
+<td><code>src/opensquilla/skills/proposals_lib.py</code>, <code>memory/session_flush.py</code></td>
+</tr>
+<tr>
+<td>genericagent</td>
+<td><code>ga.py</code> (508–523), <code>memory/memory_management_sop.md</code></td>
+</tr>
+<tr>
+<td>openclaw</td>
+<td><code>extensions/memory-core/src/short-term-promotion.ts</code>, <code>docs/concepts/dreaming.md</code>, <code>src/agents/pi-hooks/compaction-safeguard.ts</code></td>
+</tr>
+<tr>
+<td>codex</td>
+<td><code>codex-rs/memories/write/templates/</code>, <code>codex-rs/ext/skills/src/lib.rs</code></td>
+</tr>
+<tr>
+<td>zeroclaw</td>
+<td><code>src/cron/consolidation.rs</code></td>
+</tr>
+<tr>
+<td>claude-code-rev</td>
+<td><code>src/services/autoDream/consolidationPrompt.ts</code>, <code>src/memdir/</code></td>
+</tr>
+<tr>
+<td>TaiChu</td>
+<td><code>core/agent-session/src/resource_loader.rs</code>, <code>compaction.rs</code>, <code>services/rust/taichu-service/src/tools/a_system/</code></td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2>变更记录</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>日期</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>2026-07-08</td>
+<td>初版：8 仓库 × 7 维源码深度分析 + SkillRL/Claw-R1 映射</td>
+</tr>
+</tbody></table></div>
+</article>
+    </div>
+  </div>
+  <script src="../../../../js/i18n.js"></script>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
+  </script>
+</body>
+</html>

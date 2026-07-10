@@ -1,0 +1,24 @@
+sequenceDiagram
+  autonumber
+  participant U as User/Channel
+  participant G as Gateway
+  participant A as Agent loop
+  participant W as skill-workshop
+  participant S as proposals store
+  participant WS as workspace/skills
+  U->>G: Fix deploy script (Telegram/WhatsApp)
+  G->>A: skills snapshot (metadata XML)
+  A->>A: read tool → full SKILL.md
+  A->>U: success reply
+  Note over W: agent_end hook
+  W->>W: createProposalFromMessages (regex)
+  W->>W: reviewTranscriptForProposal (LLM)
+  W->>S: save pending proposal
+  W->>W: scanSkillContent()
+  alt approvalPolicy auto
+    W->>WS: applyProposalToWorkspace
+  else manual
+    Note over U: user approves in UI
+    U->>W: approve
+    W->>WS: apply
+  end

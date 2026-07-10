@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TaiChu P0 — Skill Invocation Memory &amp; Compaction Survival — Skill-Evolving</title>
+  <link rel="alternate" hreflang="en" href="/html/site/notes/synthesis/taichu-p0-skill-compaction-spec.html">
+  <link rel="alternate" hreflang="x-default" href="/html/site/notes/synthesis/taichu-p0-skill-compaction-spec.html">
+  <link rel="stylesheet" href="../../../css/viewer.css">
+</head>
+<body class="" data-doc-locale="en" data-content-lang="en">
+  <div class="viewer-layout">
+    <nav>
+      <div data-lang-switch class="lang-switch-host"></div>
+      <h1 data-i18n="nav.docs">Docs</h1>
+      <div class="title" data-i18n="nav.rendered">Rendered HTML</div>
+      <section class="highlight-section"><h2 data-i18n="nav.compare">nav.compare</h2><ul><li><a href="./agent-skill-architecture-survey-matrix.html" data-i18n="nav.matrix165">nav.matrix165</a></li><li><a href="./skill-lifecycle-full-matrix.html" data-i18n="nav.lifecycle">nav.lifecycle</a></li><li><a href="./web-expanded-lifecycle-matrix-merged.html" data-i18n="nav.web_l3">nav.web_l3</a></li><li><a href="./eight-repo-comprehensive-survey.html" data-i18n="nav.survey20">nav.survey20</a></li><li><a href="./skill-lifecycle-and-dynamic-loading-survey.html" data-i18n="nav.per_turn">nav.per_turn</a></li><li><a href="./eight-repo-deep-source-analysis.html" data-i18n="nav.deep_source">nav.deep_source</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.per_repo">nav.per_repo</h2><ul><li><a href="./survey-reports/opensquilla.html">OpenSquilla (9.0)</a></li><li><a href="./survey-reports/hermes-agent.html">Hermes (8.1)</a></li><li><a href="./survey-reports/openclaw.html">OpenClaw (8.0)</a></li><li><a href="./survey-reports/claude-code-rev.html">Claude Rev (7.7)</a></li><li><a href="./survey-reports/codex.html">Codex (7.2)</a></li><li><a href="./survey-reports/taichu.html">TaiChu (5.0)</a></li><li><a href="./survey-reports/zeroclaw.html">ZeroClaw (5.0)</a></li><li><a href="./survey-reports/genericagent.html">GenericAgent (4.8)</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.papers">nav.papers</h2><ul><li><a href="../../topics/skill-rl/overview.html">SkillRL</a></li><li><a href="../../topics/claw-r1/overview.html">Claw-R1</a></li><li><a href="./comparison.html" data-i18n="nav.comparison">nav.comparison</a></li><li><a href="./combined-pipeline.html" data-i18n="nav.pipeline">nav.pipeline</a></li><li><a href="./l3-comprehensive-skill-analysis.html" data-i18n="nav.l3">nav.l3</a></li><li><a class="active" href="./taichu-p0-skill-compaction-spec.html" data-i18n="nav.taichu_p0">nav.taichu_p0</a></li></ul></section><section><h2 data-i18n="nav.more">More</h2><ul>
+    <li><a href="/html/docs.html" data-i18n="nav.sitemap">Sitemap</a></li>
+    <li><a href="/html/i18n-coverage.html" data-i18n="nav.i18n_coverage">i18n coverage</a></li>
+    <li><a href="/html/index.html" data-i18n="nav.dashboard">Dashboard</a></li>
+    <li><a href="/html/deck/index.html" data-i18n="nav.decks">Slide decks</a></li>
+  </ul></section>
+    </nav>
+    <div class="viewer-main">
+      <div class="viewer-toolbar">
+        <div>
+          <h1>TaiChu P0 — Skill Invocation Memory &amp; Compaction Survival</h1>
+          <div class="path">notes/synthesis/taichu-p0-skill-compaction-spec.md</div>
+        </div>
+        <a class="btn" href="/html/docs.html" data-i18n="toolbar.sitemap">Sitemap</a>
+        <a class="btn primary" href="./agent-skill-architecture-survey-matrix.html" data-i18n="toolbar.matrix">165-dim matrix</a>
+      </div>
+      <p id="i18n-fallback-notice" class="i18n-notice" hidden data-i18n="content.fallback">content.fallback</p>
+      <article class="md-body"><h1>TaiChu P0 — Skill Invocation Memory &amp; Compaction Survival</h1>
+<blockquote>
+<p>L3 设计 spec。借 Claude Code Rev <code>invoked_skills</code> + Hermes review 接缝。<br>证据：<a href="./l3-comprehensive-skill-analysis.html">l3-comprehensive-skill-analysis.md</a> §4-5</p>
+</blockquote>
+<hr>
+<h2>Problem</h2>
+<p><code>load_skill</code> returns <code>ToolResult</code> → compaction summarizes/truncates it (<code>compaction.rs:252-257</code>, <code>context-and-skills.md:64-66</code>). Multi-turn skill-guided tasks lose procedural fidelity after first compact.</p>
+<p>Claude Rev solves with session registry + post-compact attachment (<code>compact.ts:1488-1534</code>).</p>
+<hr>
+<h2>P0-1: <code>InvokedSkillRegistry</code></h2>
+<p><strong>Location</strong>: <code>core/agent-session/src/invoked_skills.rs</code> (new)</p>
+<pre><code class="language-rust">pub struct InvokedSkillInfo {
+    pub skill_name: String,
+    pub skill_path: PathBuf,
+    pub content: String,
+    pub invoked_at: u64,
+    pub role: String,  // interaction_log role / &quot;main&quot;
+}
+
+pub struct InvokedSkillRegistry {
+    skills: HashMap&lt;String, InvokedSkillInfo&gt;,  // key = &quot;{role}:{name}&quot;
+    max_entries: usize,
+}
+</code></pre>
+<p><strong>Hook</strong>: <code>LoadSkillTool::execute</code> success (<code>load_skill.rs:150-159</code>) → <code>ctx.session.record_invoked_skill(...)</code>.</p>
+<p><strong>Child sessions</strong>: key by <code>ChildSessionInheritance</code> role from interaction log.</p>
+<hr>
+<h2>P0-2: Post-compaction reinjection</h2>
+<p><strong>Location</strong>: <code>compaction.rs</code> after <code>build_compaction_prompt</code> / before append <code>Compaction</code> entry.</p>
+<p>Constants (match Claude Rev):</p>
+<ul>
+<li><code>MAX_TOKENS_PER_SKILL = 5000</code></li>
+<li><code>TOTAL_BUDGET = 25000</code></li>
+<li>Sort: most-recent-first</li>
+<li>Truncate: head + <code>...[truncated]</code></li>
+</ul>
+<p><strong>Delivery options</strong> (pick one in impl):</p>
+<ol>
+<li>New <code>SessionEntryKind::InvokedSkillsAttachment</code> in JSONL</li>
+<li>User meta-message via <code>transform_context</code> on next turn</li>
+</ol>
+<p><strong>Summarizer hygiene</strong>: When compacting, strip or heavily truncate prior <code>load_skill</code> ToolResults if reinjection planned.</p>
+<hr>
+<h2>P0-3: Resume restore</h2>
+<p>On <code>open_session</code> / history replay:</p>
+<ul>
+<li>Scan for <code>InvokedSkillsAttachment</code> entries OR</li>
+<li>Fallback: last N successful <code>load_skill</code> tool results</li>
+</ul>
+<p>Rep populate registry.</p>
+<hr>
+<h2>P0-4: Child session preload</h2>
+<p><strong>Location</strong>: <code>core/agent-framework/src/session/mod.rs</code></p>
+<pre><code class="language-rust">pub struct ChildSessionSpec {
+    // existing fields...
+    pub skills: Vec&lt;String&gt;,  // NEW: metadata preload like Claude runAgent.ts:577
+}
+</code></pre>
+<p>In <code>build_child_session_prompt</code>: if <code>spec.skills</code> non-empty, append skill name+description block (not full body — use <code>load_skill</code> or inject truncated body under budget).</p>
+<p>Also call <code>record_invoked_skill</code> for preloaded entries.</p>
+<hr>
+<h2>P0-5: Observability</h2>
+<p>Extend interaction_log:</p>
+<ul>
+<li><code>skill_load_invocation { name, path, remote_delegation, device }</code></li>
+<li><code>skill_compaction_preserved { count, tokens, truncated }</code></li>
+</ul>
+<hr>
+<h2>Acceptance criteria</h2>
+<ol>
+<li>Load skill → compact → next turn: agent still sees skill body (attachment or registry reinject).</li>
+<li>Resume session after compact: registry restored from JSONL.</li>
+<li>Child session with <code>skills: [&quot;foo&quot;]</code>: catalog includes foo metadata; compact preserves if loaded.</li>
+<li>A-system <code>disable_workspace_skill_scan</code> + user prefix: no dual registry regression.</li>
+</ol>
+<hr>
+<h2>Out of scope (P1+)</h2>
+<ul>
+<li><code>skill_manage</code> CRUD tool</li>
+<li>proposals/gates store</li>
+<li>GEPA offline PR</li>
+<li>MetaSkill DAG</li>
+</ul>
+</article>
+    </div>
+  </div>
+  <script src="../../../js/i18n.js"></script>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
+  </script>
+</body>
+</html>

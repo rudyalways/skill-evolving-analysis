@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SkillRL vs Claw-R1 — Skill-Evolving</title>
+  <link rel="alternate" hreflang="en" href="/html/site/notes/synthesis/comparison.html">
+  <link rel="alternate" hreflang="zh-Hans" href="/html/site/zh/notes/synthesis/comparison.html">
+  <link rel="alternate" hreflang="x-default" href="/html/site/notes/synthesis/comparison.html">
+  <link rel="stylesheet" href="../../../css/viewer.css">
+</head>
+<body class="" data-doc-locale="en" data-content-lang="en">
+  <div class="viewer-layout">
+    <nav>
+      <div data-lang-switch class="lang-switch-host"></div>
+      <h1 data-i18n="nav.docs">Docs</h1>
+      <div class="title" data-i18n="nav.rendered">Rendered HTML</div>
+      <section class="highlight-section"><h2 data-i18n="nav.compare">nav.compare</h2><ul><li><a href="./agent-skill-architecture-survey-matrix.html" data-i18n="nav.matrix165">nav.matrix165</a></li><li><a href="./skill-lifecycle-full-matrix.html" data-i18n="nav.lifecycle">nav.lifecycle</a></li><li><a href="./web-expanded-lifecycle-matrix-merged.html" data-i18n="nav.web_l3">nav.web_l3</a></li><li><a href="./eight-repo-comprehensive-survey.html" data-i18n="nav.survey20">nav.survey20</a></li><li><a href="./skill-lifecycle-and-dynamic-loading-survey.html" data-i18n="nav.per_turn">nav.per_turn</a></li><li><a href="./eight-repo-deep-source-analysis.html" data-i18n="nav.deep_source">nav.deep_source</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.per_repo">nav.per_repo</h2><ul><li><a href="./survey-reports/opensquilla.html">OpenSquilla (9.0)</a></li><li><a href="./survey-reports/hermes-agent.html">Hermes (8.1)</a></li><li><a href="./survey-reports/openclaw.html">OpenClaw (8.0)</a></li><li><a href="./survey-reports/claude-code-rev.html">Claude Rev (7.7)</a></li><li><a href="./survey-reports/codex.html">Codex (7.2)</a></li><li><a href="./survey-reports/taichu.html">TaiChu (5.0)</a></li><li><a href="./survey-reports/zeroclaw.html">ZeroClaw (5.0)</a></li><li><a href="./survey-reports/genericagent.html">GenericAgent (4.8)</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.papers">nav.papers</h2><ul><li><a href="../../topics/skill-rl/overview.html">SkillRL</a></li><li><a href="../../topics/claw-r1/overview.html">Claw-R1</a></li><li><a class="active" href="./comparison.html" data-i18n="nav.comparison">nav.comparison</a></li><li><a href="./combined-pipeline.html" data-i18n="nav.pipeline">nav.pipeline</a></li><li><a href="./l3-comprehensive-skill-analysis.html" data-i18n="nav.l3">nav.l3</a></li><li><a href="./taichu-p0-skill-compaction-spec.html" data-i18n="nav.taichu_p0">nav.taichu_p0</a></li></ul></section><section><h2 data-i18n="nav.more">More</h2><ul>
+    <li><a href="/html/docs.html" data-i18n="nav.sitemap">Sitemap</a></li>
+    <li><a href="/html/i18n-coverage.html" data-i18n="nav.i18n_coverage">i18n coverage</a></li>
+    <li><a href="/html/index.html" data-i18n="nav.dashboard">Dashboard</a></li>
+    <li><a href="/html/deck/index.html" data-i18n="nav.decks">Slide decks</a></li>
+  </ul></section>
+    </nav>
+    <div class="viewer-main">
+      <div class="viewer-toolbar">
+        <div>
+          <h1>SkillRL vs Claw-R1</h1>
+          <div class="path">notes/synthesis/comparison.md</div>
+        </div>
+        <a class="btn" href="/html/docs.html" data-i18n="toolbar.sitemap">Sitemap</a>
+        <a class="btn primary" href="./agent-skill-architecture-survey-matrix.html" data-i18n="toolbar.matrix">165-dim matrix</a>
+      </div>
+      <p id="i18n-fallback-notice" class="i18n-notice" hidden data-i18n="content.fallback">content.fallback</p>
+      <article class="md-body"><h1>SkillRL vs Claw-R1</h1>
+<p>These two papers target <strong>different layers</strong> of the agent RL stack. They are <strong>complementary, not competing</strong>.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Paper</th>
+<th>Focus</th>
+<th>Layer</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><a href="../../topics/skill-rl/overview.html">SkillRL</a></td>
+<td>How the policy learns from experience</td>
+<td>RL algorithm / training method</td>
+</tr>
+<tr>
+<td><a href="../../topics/claw-r1/overview.html">Claw-R1</a></td>
+<td>How agent interaction data is collected, managed, fed into RL</td>
+<td>Infrastructure / data system</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2>1. SkillRL</h2>
+<p><strong>Paper:</strong> <a href="https://arxiv.org/abs/2602.08234">SkillRL: Evolving Agents via Recursive Skill-Augmented Reinforcement Learning</a> (2026)</p>
+<h3>Motivation</h3>
+<p>Most LLM agents behave episodically — every task is almost independent. Existing memory methods save raw trajectories that are long, noisy, redundant, hard to retrieve, and don&#39;t generalize.</p>
+<p><strong>Question:</strong> Can we convert trajectories into reusable skills?</p>
+<h3>Main idea — SkillBank</h3>
+<p>Instead of <code>Observation → Action → Observation → Action → ...</code>, store compact skills:</p>
+<blockquote>
+<p>&quot;When searching webpages, first identify official sources, then compare, then verify.&quot;</p>
+</blockquote>
+<h3>Pipeline</h3>
+<pre><code>Environment → Rollouts → Teacher LLM → Skill distillation → SkillBank
+    → Retrieve skills → Policy → GRPO → Better policy
+    → New trajectories → Update SkillBank
+</code></pre>
+<p>The last arrow is key: <strong>SkillBank co-evolves with the policy</strong>.</p>
+<h3>Experience distillation</h3>
+<ul>
+<li><strong>Success</strong> → positive skill (strategy + applicability)</li>
+<li><strong>Failure</strong> → failure lesson (not discarded)</li>
+</ul>
+<p>Example: 50-step failed trajectory becomes:</p>
+<blockquote>
+<p>Failure lesson: Do not search StackOverflow before official documentation.</p>
+</blockquote>
+<h3>Hierarchical SkillBank</h3>
+<ul>
+<li><strong>General skills</strong> — reason before acting, verify answer, search official docs</li>
+<li><strong>Task-specific skills</strong> — ALFWorld cabinet/drawer ordering; WebShop variant checking</li>
+</ul>
+<p>Adaptive retrieval per task instead of dumping all trajectories.</p>
+<h3>Recursive evolution</h3>
+<pre><code>Policy → trajectories → skills → SkillBank → policy learns
+    → better trajectories → better skills → ...
+</code></pre>
+<p>Policy and SkillBank co-evolve recursively.</p>
+<h3>RL objective</h3>
+<p>Uses standard <strong>GRPO</strong>. Novelty is SkillBank + recursive evolution around it, not the RL algorithm itself.</p>
+<h3>Pros / cons</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Pros</th>
+<th>Cons</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Much shorter context</td>
+<td>Requires teacher LLM</td>
+</tr>
+<tr>
+<td>Reusable, transferable</td>
+<td>Skill extraction quality matters</td>
+</tr>
+<tr>
+<td>Better generalization</td>
+<td>Skill retrieval is another optimization</td>
+</tr>
+<tr>
+<td>Learns from failures</td>
+<td></td>
+</tr>
+<tr>
+<td>Hierarchical retrieval</td>
+<td></td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2>2. Claw-R1</h2>
+<p><strong>Paper:</strong> <a href="https://arxiv.org/abs/2606.09138">Claw-R1: A Step-Level Data Middleware System for Agentic Reinforcement Learning</a> (2026)</p>
+<p>This paper is <strong>not</strong> proposing a new RL algorithm. It asks: <strong>How do we manage millions of agent interaction steps?</strong></p>
+<h3>Core architecture</h3>
+<pre><code>Agent → Gateway Server → Step records → Data Pool → RL Trainer
+</code></pre>
+<h3>Gateway Server</h3>
+<p>All requests pass through a unified gateway (not Agent → LLM directly). Records prompt, response, reward, tool calls, metadata, timestamps.</p>
+<h3>Step-level data</h3>
+<p>Each step is an independent, queryable data asset:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Action</th>
+<th>Reward</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td>Search</td>
+<td>0</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Read webpage</td>
+<td>1</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Answer</td>
+<td>1</td>
+</tr>
+</tbody></table></div>
+<p>Query example: <em>all failed search steps where reward &lt; 0 and tool = browser</em></p>
+<h3>Data Pool (Replay Buffer++)</h3>
+<pre><code>Step → Metadata → Filtering → Versioning → Quality labels → Training readiness
+</code></pre>
+<p>Algorithm-agnostic — feeds GRPO, PPO, DPO, or any downstream RL.</p>
+<h3>Why step-level?</h3>
+<p>20-step trajectory, 19 correct, 1 wrong — trajectory storage loses granularity. Step-level lets you train <strong>only the wrong step</strong>.</p>
+<h3>Analogy</h3>
+<p>Feature stores (recsys) · Data lakes (analytics) · Experience replay (classical RL) — but for LLM agents.</p>
+<hr>
+<h2>Side-by-side</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Aspect</th>
+<th>SkillRL</th>
+<th>Claw-R1</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Main contribution</td>
+<td>RL algorithm + skill learning</td>
+<td>Data middleware</td>
+</tr>
+<tr>
+<td>Uses RL</td>
+<td>Yes (GRPO)</td>
+<td>No (algorithm-agnostic)</td>
+</tr>
+<tr>
+<td>Stores</td>
+<td>Skills</td>
+<td>Step records</td>
+</tr>
+<tr>
+<td>Main abstraction</td>
+<td>SkillBank</td>
+<td>Data Pool</td>
+</tr>
+<tr>
+<td>Focus</td>
+<td>Better policy learning</td>
+<td>Better data lifecycle</td>
+</tr>
+<tr>
+<td>Learns from failures</td>
+<td>Yes (distills failure lessons)</td>
+<td>Records failures for later use</td>
+</tr>
+<tr>
+<td>Training improvement</td>
+<td>Direct</td>
+<td>Indirect (through data management)</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2>How they fit together</h2>
+<p>See <a href="./combined-pipeline.html">combined pipeline</a> for the full-stack architecture.</p>
+<p><strong>Claw-R1</strong> provides a high-quality, queryable stream of step-level interaction data.<br><strong>SkillRL</strong> consumes those trajectories, distills them into reusable skills, updates the policy with GRPO, and recursively evolves the SkillBank.</p>
+<p>One manages the <strong>data lifecycle</strong>; the other improves the <strong>learning algorithm</strong>. Together: infrastructure + policy optimization = full-stack agentic RL.</p>
+<h2>Research threads</h2>
+<ol>
+<li>Claw-R1 Data Pool → SkillRL trajectory builder integration</li>
+<li>Step-level failure filtering (Claw-R1) → failure lesson distillation (SkillRL)</li>
+<li>Skill retrieval quality vs step curation quality — which bottleneck dominates?</li>
+<li>Shared GRPO training backends</li>
+<li>Relationship to OpenClaw-RL (online RL from next-state signals) — orthogonal online layer?</li>
+</ol>
+<h2>Evidence to collect</h2>
+<ul>
+<li><input disabled="" type="checkbox"> Claw-R1 repo: step record schema, Data Pool API</li>
+<li><input disabled="" type="checkbox"> SkillRL repo: SkillBank JSON format, distillation prompts</li>
+<li><input disabled="" type="checkbox"> AgentR1 ecosystem: Claw-R1 + Agent-R1 + StepPO cross-references</li>
+<li><input disabled="" type="checkbox"> Demo video walkthrough of Claw-R1 curation UI</li>
+</ul>
+</article>
+    </div>
+  </div>
+  <script src="../../../js/i18n.js"></script>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
+  </script>
+</body>
+</html>

@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SkillRL 与 Claw-R1 — Skill-Evolving</title>
+  <link rel="alternate" hreflang="en" href="/html/site/notes/synthesis/comparison.html">
+  <link rel="alternate" hreflang="zh-Hans" href="/html/site/zh/notes/synthesis/comparison.html">
+  <link rel="alternate" hreflang="x-default" href="/html/site/notes/synthesis/comparison.html">
+  <link rel="stylesheet" href="../../../../css/viewer.css">
+</head>
+<body class="" data-doc-locale="zh" data-content-lang="zh">
+  <div class="viewer-layout">
+    <nav>
+      <div data-lang-switch class="lang-switch-host"></div>
+      <h1 data-i18n="nav.docs">Docs</h1>
+      <div class="title" data-i18n="nav.rendered">Rendered HTML</div>
+      <section class="highlight-section"><h2 data-i18n="nav.compare">nav.compare</h2><ul><li><a href="./agent-skill-architecture-survey-matrix.html" data-i18n="nav.matrix165">nav.matrix165</a></li><li><a href="./skill-lifecycle-full-matrix.html" data-i18n="nav.lifecycle">nav.lifecycle</a></li><li><a href="./web-expanded-lifecycle-matrix-merged.html" data-i18n="nav.web_l3">nav.web_l3</a></li><li><a href="./eight-repo-comprehensive-survey.html" data-i18n="nav.survey20">nav.survey20</a></li><li><a href="./skill-lifecycle-and-dynamic-loading-survey.html" data-i18n="nav.per_turn">nav.per_turn</a></li><li><a href="./eight-repo-deep-source-analysis.html" data-i18n="nav.deep_source">nav.deep_source</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.per_repo">nav.per_repo</h2><ul><li><a href="./survey-reports/opensquilla.html">OpenSquilla (9.0)</a></li><li><a href="./survey-reports/hermes-agent.html">Hermes (8.1)</a></li><li><a href="./survey-reports/openclaw.html">OpenClaw (8.0)</a></li><li><a href="./survey-reports/claude-code-rev.html">Claude Rev (7.7)</a></li><li><a href="./survey-reports/codex.html">Codex (7.2)</a></li><li><a href="./survey-reports/taichu.html">TaiChu (5.0)</a></li><li><a href="./survey-reports/zeroclaw.html">ZeroClaw (5.0)</a></li><li><a href="./survey-reports/genericagent.html">GenericAgent (4.8)</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.papers">nav.papers</h2><ul><li><a href="../../../topics/skill-rl/overview.html">SkillRL</a></li><li><a href="../../../topics/claw-r1/overview.html">Claw-R1</a></li><li><a class="active" href="./comparison.html" data-i18n="nav.comparison">nav.comparison</a></li><li><a href="./combined-pipeline.html" data-i18n="nav.pipeline">nav.pipeline</a></li><li><a href="./l3-comprehensive-skill-analysis.html" data-i18n="nav.l3">nav.l3</a></li><li><a href="../../../notes/synthesis/taichu-p0-skill-compaction-spec.html" data-i18n="nav.taichu_p0">nav.taichu_p0</a></li></ul></section><section><h2 data-i18n="nav.more">More</h2><ul>
+    <li><a href="/html/docs.html" data-i18n="nav.sitemap">Sitemap</a></li>
+    <li><a href="/html/i18n-coverage.html" data-i18n="nav.i18n_coverage">i18n coverage</a></li>
+    <li><a href="/html/index.html" data-i18n="nav.dashboard">Dashboard</a></li>
+    <li><a href="/html/deck/index.html" data-i18n="nav.decks">Slide decks</a></li>
+  </ul></section>
+    </nav>
+    <div class="viewer-main">
+      <div class="viewer-toolbar">
+        <div>
+          <h1>SkillRL 与 Claw-R1</h1>
+          <div class="path">notes/synthesis/comparison.zh.md</div>
+        </div>
+        <a class="btn" href="/html/docs.html" data-i18n="toolbar.sitemap">Sitemap</a>
+        <a class="btn primary" href="./agent-skill-architecture-survey-matrix.html" data-i18n="toolbar.matrix">165-dim matrix</a>
+      </div>
+      
+      <article class="md-body"><h1>SkillRL 与 Claw-R1</h1>
+<p>这两篇论文针对 <strong>Agent RL 技术栈的不同层次</strong>，<strong>互补而非竞争</strong>。</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>论文</th>
+<th>焦点</th>
+<th>层次</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><a href="../../../topics/skill-rl/overview.html">SkillRL</a></td>
+<td>策略如何从经验中学习</td>
+<td>RL 算法 / 训练方法</td>
+</tr>
+<tr>
+<td><a href="../../../topics/claw-r1/overview.html">Claw-R1</a></td>
+<td>如何采集、管理 Agent 交互数据并输入 RL</td>
+<td>基础设施 / 数据系统</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2>1. SkillRL</h2>
+<p><strong>论文：</strong> <a href="https://arxiv.org/abs/2602.08234">SkillRL: Evolving Agents via Recursive Skill-Augmented Reinforcement Learning</a>（2026）</p>
+<h3>动机</h3>
+<p>多数 LLM Agent 呈 episodic 行为——每个任务几乎独立。现有记忆方法保存原始轨迹：冗长、噪声大、难检索、难泛化。</p>
+<p><strong>核心问题：</strong> 能否将轨迹转化为可复用 Skill？</p>
+<h3>核心思想 — SkillBank</h3>
+<p>不再存储 <code>Observation → Action → ...</code>，而是存储紧凑 Skill：</p>
+<blockquote>
+<p>「搜索网页时，先找官方来源，再对比，最后验证。」</p>
+</blockquote>
+<h3>流水线</h3>
+<pre><code>Environment → Rollouts → Teacher LLM → Skill 蒸馏 → SkillBank
+    → 检索 Skill → Policy → GRPO → 更优策略
+    → 新轨迹 → 更新 SkillBank
+</code></pre>
+<p>最后一步是关键：<strong>SkillBank 与策略协同进化</strong>。</p>
+<h3>经验蒸馏</h3>
+<ul>
+<li><strong>成功</strong> → 正向 Skill（策略 + 适用场景）</li>
+<li><strong>失败</strong> → 失败教训（不丢弃）</li>
+</ul>
+<h3>与 Claw-R1 的关系</h3>
+<p>SkillRL 假设已有高质量 step-level 轨迹。Claw-R1 提供这一数据层。</p>
+<hr>
+<h2>2. Claw-R1</h2>
+<p><strong>论文：</strong> <a href="https://arxiv.org/abs/2606.09138">Claw-R1: ...</a>（2026）</p>
+<h3>动机</h3>
+<p>Agent 交互数据分散在日志、trace、会话中，难以系统化用于 RL 训练。</p>
+<h3>核心思想 — Data Pool</h3>
+<p>Gateway 中间件，将每步交互结构化为可查询记录（Replay Buffer++）。</p>
+<h3>特点</h3>
+<ul>
+<li><strong>Step-level</strong> 粒度（非整段 trajectory）</li>
+<li><strong>算法无关</strong>（不绑定 GRPO / PPO）</li>
+<li><strong>可查询</strong>（按失败、工具、任务类型过滤）</li>
+</ul>
+<hr>
+<h2>3. 组合架构</h2>
+<pre><code>用户任务 → Claw-R1 Gateway（采集 step 数据）
+         → Data Pool（存储 + 查询）
+         → SkillRL（蒸馏 Skill + GRPO 训练）
+         → 更强策略 → 回到 Gateway 部署
+</code></pre>
+<p>详见 <a href="./combined-pipeline.html">组合流水线</a>。</p>
+<hr>
+<h2>4. 并排对比</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>SkillRL</th>
+<th>Claw-R1</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>主要贡献</td>
+<td>RL + Skill 学习</td>
+<td>数据中间件</td>
+</tr>
+<tr>
+<td>是否使用 RL</td>
+<td>是（GRPO）</td>
+<td>否（算法无关）</td>
+</tr>
+<tr>
+<td>存储内容</td>
+<td>Skill</td>
+<td>Step 记录</td>
+</tr>
+<tr>
+<td>焦点</td>
+<td>更好的策略学习</td>
+<td>更好的数据生命周期</td>
+</tr>
+<tr>
+<td>失败处理</td>
+<td>蒸馏失败教训</td>
+<td>记录供后续查询</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2>5. 对 TaiChu 的启示</h2>
+<ul>
+<li><strong>SkillRL 层：</strong> SkillBank 抽象、递归进化、失败挖掘 → 在线 Skill 质量提升</li>
+<li><strong>Claw-R1 层：</strong> step-level 轨迹归档 → 为离线 RL / 蒸馏提供燃料</li>
+<li><strong>本地 L3 差距：</strong> TaiChu 有 <code>load_skill</code> 与 progressive disclosure，缺 post-compaction  reinject（P0 见 <a href="../../../notes/synthesis/taichu-p0-skill-compaction-spec.html">TaiChu P0 规范</a>）</li>
+</ul>
+</article>
+    </div>
+  </div>
+  <script src="../../../../js/i18n.js"></script>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
+  </script>
+</body>
+</html>

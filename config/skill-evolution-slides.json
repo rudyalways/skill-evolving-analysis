@@ -1,0 +1,431 @@
+{
+  "title": "Skill 自进化 — 八仓对照",
+  "subtitle": "每仓一屏：5W · 方法论 · 组件 · 工作流 · 调用栈",
+  "repos": [
+    {
+      "id": "opensquilla",
+      "score": "9.0",
+      "theme": "survey",
+      "rank": 1,
+      "headline": "OpenSquilla — 产品化四关晋升",
+      "tagline": "轨迹 → proposals → 4-gate + E2E → MANAGED",
+      "five_w": {
+        "why": "成功/失败决策需变成可复用 Skill，但不能污染生产目录",
+        "what": "auto_propose 生成候选 → gates.json 四关 → accept 写入 MANAGED",
+        "who": "主 Agent + Dream/auto_propose + runtime_e2e judge",
+        "where": "~/.opensquilla/proposals/{id}/ → MANAGED 层 skills/",
+        "when": "回合后 decision log；Dream cron；用户 accept",
+        "how": "启发式 + LLM 反思 → 结构化 proposal → 确定性 gate + 成对 E2E"
+      },
+      "methodologies": [
+        "Decision-log 驱动 auto_propose（轨迹信号）",
+        "Dream 反思：LLM 从共现模式提炼候选",
+        "4-gate evaluate_proposal_gates（gates.json）",
+        "runtime_e2e：meta vs baseline 成对判决",
+        "skills-lock SHA256 版本钉扎"
+      ],
+      "components": [
+        "skills/creator/auto_propose.py",
+        "skills/proposals_lib.py (accept/reject/gates)",
+        "skills/creator/runtime_e2e.py",
+        "memory/dream/runner.py",
+        "engine/steps/skills_filter.py",
+        "skills/injector.py",
+        "skills/loader.py (6-layer)"
+      ],
+      "lifecycle": {
+        "score": "12/13",
+        "stages": "Store→Expose→Discover→Recommend→Offload→Use→Compact◐→Delete→Evolve★",
+        "note": "唯一 productized 四关 + E2E 闭环"
+      },
+      "timeline": [
+        { "phase": "每轮 RRF 注入", "mode": "online" },
+        { "phase": "Post-turn log", "mode": "async" },
+        { "phase": "auto_propose", "mode": "async" },
+        { "phase": "Dream cron", "mode": "cron" },
+        { "phase": "E2E eval", "mode": "offline" },
+        { "phase": "accept", "mode": "human" },
+        { "phase": "下轮生效", "mode": "online" }
+      ],
+      "workflow": [
+        { "n": 1, "t": "Turn 结束", "d": "collect_invoked_skills + decision_log 写入", "mode": "async" },
+        { "n": 2, "t": "auto_propose / Dream", "d": "生成 proposal 目录 + gates.json", "mode": "async" },
+        { "n": 3, "t": "evaluate_proposal_gates", "d": "4 关：结构/触发/工具/安全", "mode": "offline" },
+        { "n": 4, "t": "runtime_e2e", "d": "baseline vs meta 任务回放对比", "mode": "offline" },
+        { "n": 5, "t": "accept_proposal", "d": "写入 MANAGED + 更新 lockfile", "mode": "human" },
+        { "n": 6, "t": "下轮 filter_skills", "d": "HybridRetriever RRF 注入新 skill", "mode": "online" }
+      ],
+      "code": "# skills_filter.py:1\n\"\"\"Step 3: Gate skills deterministically,\noptionally filter by relevance, inject.\"\"\"",
+      "stack": "TurnRunnerHarness\n  → pipeline.run(filter_skills)\n      → HybridRetriever.rrf_top_k(5)\n      → SkillInjector.inject_compact|full\n  → [async] auto_propose()\n      → evaluate_proposal_gates()\n      → runtime_e2e.judge()\n      → accept_proposal() → MANAGED"
+    },
+    {
+      "id": "hermes-agent",
+      "score": "8.1",
+      "theme": "survey",
+      "rank": 2,
+      "headline": "Hermes — 在线 CRUD 自进化",
+      "tagline": "后台 review Agent 直接 skill_manage 写盘",
+      "five_w": {
+        "why": "Agent 应从使用中改进 Skill，而非只读 catalog",
+        "what": "skill_manage create/edit/patch/delete → 即时写 ~/.hermes/skills/",
+        "who": "主 Agent + _spawn_background_review 安静子 Agent",
+        "where": "~/.hermes/skills/{name}/SKILL.md",
+        "when": "Post-turn：本回合 tool-loop 迭代 ≥10 次且未用 skill_manage；或 memory 每 10 user turn",
+        "how": "daemon thread → review AIAgent 读完整 messages → skill_manage 写盘；skills_guard 扫描"
+      },
+      "methodologies": [
+        "Progressive disclosure：skills_list → skill_view",
+        "Nudge 周期性触发 → 后台 review（v0.4+ 非 prompt inject）",
+        "Background review：fork 低噪声 Agent 专做 patch",
+        "skills_guard 安全扫描（非 formal gate）",
+        "Atropos RL 环境（policy 层，非 SKILL.md）"
+      ],
+      "components": [
+        "tools/skill_manager_tool.py",
+        "run_agent.py (_spawn_background_review)",
+        "tools/skills_list / skill_view",
+        "skills_sync.py (bundled hash)",
+        "env/atropos/ (RL trajectories)"
+      ],
+      "lifecycle": {
+        "score": "11/13",
+        "stages": "Store→Use→Evolve★（无 proposal 队列 / formal gate）",
+        "note": "最激进：后台 Agent 直接 CRUD 写盘"
+      },
+      "timeline": [
+        { "phase": "主回合 tools", "mode": "online" },
+        { "phase": "Post-turn 计数触发", "mode": "async" },
+        { "phase": "Review Agent", "mode": "async" },
+        { "phase": "skill_manage 写盘", "mode": "async" },
+        { "phase": "skills_guard", "mode": "async" },
+        { "phase": "下轮可见", "mode": "online" }
+      ],
+      "workflow": [
+        { "n": 1, "t": "主回合执行", "d": "skills_list 元数据 + skill_view 按需 body", "mode": "online" },
+        { "n": 2, "t": "Post-turn 触发", "d": "_iters_since_skill≥10 → _spawn_background_review(snapshot)", "mode": "async" },
+        { "n": 3, "t": "Review Agent (bg thread)", "d": "run_conversation(prompt, history=full messages)", "mode": "async" },
+        { "n": 4, "t": "skill_manage", "d": "直接写 SKILL.md（无 staging）", "mode": "async" },
+        { "n": 5, "t": "skills_guard", "d": "写后 _security_scan_skill", "mode": "async" },
+        { "n": 6, "t": "下轮 session", "d": "frozen index 仍可见新 skill（需 reload 策略）", "mode": "online" }
+      ],
+      "code": "# skill_manager_tool.py:5-8\n\"\"\"Create, edit, patch, delete skills.\nAgent-created procedural memory.\"\"\"",
+      "stack": "AIAgent.run_conversation()\n  → tool loop: skills_list | skill_view | …\n  → post-turn: _iters_since_skill >= 10\n      → _spawn_background_review(messages_snapshot, review_skills=True)\n          → Thread(bg-review).start()  # no queue\n          → review_agent.run_conversation(_SKILL_REVIEW_PROMPT, history=snapshot)\n              → skill_manage(patch|create) → ~/.hermes/skills/\n              → _security_scan_skill()"
+    },
+    {
+      "id": "openclaw",
+      "score": "8.0",
+      "theme": "survey",
+      "rank": 3,
+      "headline": "OpenClaw — skill-workshop 扩展",
+      "tagline": "agent_end → 启发式 + LLM reviewer → scan → apply",
+      "five_w": {
+        "why": "多通道 Gateway 上成功会话应沉淀为 workspace skills",
+        "what": "skill-workshop：proposal store + scanner quarantine + append/replace",
+        "who": "主 Agent + LLM reviewer session + skill-scanner",
+        "where": "<workspace>/skills/ + proposals store",
+        "when": "agent_end(success)；approvalPolicy auto|manual",
+        "how": "Regex signals → LLM reviewTranscript → scanSkillContent → apply"
+      },
+      "methodologies": [
+        "6 源 merge 优先级（workspace 最高）",
+        "Lazy read：catalog 仅 metadata，body 靠 read tool",
+        "Heuristic signals + LLM reviewer 双阶段",
+        "skill-scanner quarantine 危险内容",
+        "Dreaming 记忆层（辅助信号，非 skill 本体）"
+      ],
+      "components": [
+        "extensions/skill-workshop/index.ts",
+        "skill-workshop/signals.ts",
+        "skill-workshop/reviewer.ts",
+        "skill-workshop/store.ts",
+        "skill-workshop/skills.ts (apply)",
+        "security/skill-scanner.ts"
+      ],
+      "lifecycle": {
+        "score": "10/13",
+        "stages": "Store→Use→Evolve◐（proposal + scan；approvalPolicy 可变）",
+        "note": "agent_end hook；manual/auto apply 分支"
+      },
+      "timeline": [
+        { "phase": "Gateway 主回合", "mode": "online" },
+        { "phase": "agent_end hook", "mode": "async" },
+        { "phase": "LLM reviewer", "mode": "async" },
+        { "phase": "proposal store", "mode": "offline" },
+        { "phase": "skill-scanner", "mode": "offline" },
+        { "phase": "apply", "mode": "human" }
+      ],
+      "workflow": [
+        { "n": 1, "t": "agent_end", "d": "hook 注册触发 workshop", "mode": "async" },
+        { "n": 2, "t": "createProposalFromMessages", "d": "regex 检测可沉淀模式", "mode": "async" },
+        { "n": 3, "t": "reviewTranscriptForProposal", "d": "LLM 生成 patch/新 skill 草案", "mode": "async" },
+        { "n": 4, "t": "store pending", "d": "proposals 持久化", "mode": "offline" },
+        { "n": 5, "t": "scanSkillContent", "d": "critical → quarantine 否则继续", "mode": "offline" },
+        { "n": 6, "t": "applyProposalToWorkspace", "d": "append/replace 到 workspace skills", "mode": "human" }
+      ],
+      "code": "// skill-workshop/index.ts:13-14\n// Post-run skill evolution: detect patterns,\n// propose SKILL.md updates, scan, apply.",
+      "stack": "Gateway.agent_loop\n  → agent_end hook\n      → createProposalFromMessages()\n      → reviewTranscriptForProposal()\n      → store.save(pending)\n      → scanSkillContent()\n      → applyProposalToWorkspace()"
+    },
+    {
+      "id": "claude-code-rev",
+      "score": "7.7",
+      "theme": "survey",
+      "rank": 4,
+      "headline": "Claude Code Rev — Survey 门控改进",
+      "tagline": "每 5 turn aux 模型提议 → 用户 Survey → patch",
+      "five_w": {
+        "why": "长会话中 skill 应随用法改进，但需人工确认",
+        "what": "skillImprovement JSON patches + skillify 会话→新 skill",
+        "who": "SideQuery aux 小模型 + 用户 Survey UI",
+        "where": "project skills/ + invoked_skills post-compact",
+        "when": "每 5 user turns；skillify 显式触发",
+        "how": "小模型 cheap reflection → UI gate → applySkillImprovement"
+      },
+      "methodologies": [
+        "Incremental skill listing（sentSkillNames delta）",
+        "invoked_skills attachment  survive compaction ★",
+        "Aux small model 做 section-level patch 提议",
+        "Survey UI preference gate（非 auto-merge）",
+        "7-day usage decay 排序推荐"
+      ],
+      "components": [
+        "utils/hooks/skillImprovement.ts",
+        "hooks/useSkillImprovementSurvey.ts",
+        "skills/bundled/skillify.ts",
+        "loadSkillsDir (multi-root)",
+        "post-compact invoked_skills reinject"
+      ],
+      "lifecycle": {
+        "score": "9/13",
+        "stages": "Store→Use→Compact★→Evolve◐（Survey 门控，非 auto-merge）",
+        "note": "invoked_skills  survive compaction 是亮点"
+      },
+      "timeline": [
+        { "phase": "Turn 1–5 使用", "mode": "online" },
+        { "phase": "每 5 turn hook", "mode": "async" },
+        { "phase": "Aux 提议", "mode": "async" },
+        { "phase": "Survey UI", "mode": "human" },
+        { "phase": "apply patch", "mode": "offline" },
+        { "phase": "Compact reinject", "mode": "online" }
+      ],
+      "workflow": [
+        { "n": 1, "t": "Turn 1–5", "d": "Skill tool + listing；track invoked", "mode": "online" },
+        { "n": 2, "t": "第 5 turn 后", "d": "skillImprovement hook 触发", "mode": "async" },
+        { "n": 3, "t": "Aux model", "d": "输出 [{section, change, reason}]", "mode": "async" },
+        { "n": 4, "t": "Survey UI", "d": "用户逐条 accept/reject", "mode": "human" },
+        { "n": 5, "t": "applySkillImprovement", "d": "patch project SKILL.md", "mode": "offline" },
+        { "n": 6, "t": "Compact 后", "d": "invoked_skills attachment 重新注入", "mode": "online" }
+      ],
+      "code": "// skillImprovement.ts (conceptual)\n// every 5 turns → auxModel(JSON patches)\n// → SkillImprovementSurvey → apply",
+      "stack": "AgentLoop.onTurnComplete\n  → [every 5] skillImprovement.trigger()\n      → auxSmallModel.suggestPatches()\n      → SurveyUI.present()\n      → applySkillImprovement()\n  → onCompact → reinject(invoked_skills)"
+    },
+    {
+      "id": "codex",
+      "score": "7.2",
+      "theme": "skillrl",
+      "rank": 5,
+      "headline": "Codex — 刻意不做 runtime 自进化",
+      "tagline": "人类 authoring + Record&Replay；非 closed-loop",
+      "five_w": {
+        "why": "Skill 质量由人类/CI 保证，避免 agent 自改生产 skill",
+        "what": "skill-creator 样本 + Record&Replay 辅助人工编写",
+        "who": "人类开发者 + TUI approval + Guardian",
+        "where": "repo skills/ · User/Repo/System scopes",
+        "when": "显式 @mention / TUI toggle；非自动 post-turn",
+        "how": "无 skill_manage；Guardian 风险评估 + integration tests"
+      },
+      "methodologies": [
+        "Progressive disclosure + 2% ctx cap",
+        "Implicit shell trigger（description 路由）",
+        "Record & Replay 人工提炼路径",
+        "Guardian fail-closed 工具风险",
+        "Subagent turn_skills 独立集（非继承）"
+      ],
+      "components": [
+        "skills/manager + injection.rs",
+        "skill-creator/SKILL.md (sample)",
+        "guardian/mod.rs",
+        "hook_runtime.rs (10 hook types)",
+        "core/tests/suite/skill_approval.rs"
+      ],
+      "lifecycle": {
+        "score": "7/13",
+        "stages": "Store→Use→Evolve✗（3/16 — 刻意不做 runtime loop）",
+        "note": "人类 authoring + CI；Record&Replay 辅助离线编写"
+      },
+      "timeline": [
+        { "phase": "人类编写", "mode": "offline" },
+        { "phase": "Record&Replay", "mode": "offline" },
+        { "phase": "人工蒸馏", "mode": "human" },
+        { "phase": "CI / TUI test", "mode": "offline" },
+        { "phase": "Runtime @mention", "mode": "online" },
+        { "phase": "Auto evolve", "mode": "none" }
+      ],
+      "workflow": [
+        { "n": 1, "t": "人类编写", "d": "skills/<name>/SKILL.md + scripts/", "mode": "offline" },
+        { "n": 2, "t": "Record session", "d": "Record&Replay 捕获轨迹", "mode": "offline" },
+        { "n": 3, "t": "人工蒸馏", "d": "从 replay 提炼 skill 文本（非自动）", "mode": "human" },
+        { "n": 4, "t": "TUI / test", "d": "write_skill_enabled + integration tests", "mode": "offline" },
+        { "n": 5, "t": "Runtime", "d": "@mention 注入；无 auto patch", "mode": "online" },
+        { "n": "—", "t": "Gap", "d": "Evolution 3/16 — by design", "mode": "none" }
+      ],
+      "code": "# agents/openai.yaml (policy)\npolicy:\n  allow_implicit_invocation: false",
+      "stack": "SkillsManager.scan()\n  → build_skill_injections(@mention only)\n  → [no evolution hook]\nHuman: Record&Replay → edit SKILL.md → cargo test"
+    },
+    {
+      "id": "taichu",
+      "score": "5.0",
+      "theme": "taichu",
+      "rank": 6,
+      "headline": "TaiChu — 无 runtime 自进化（路线图）",
+      "tagline": "17 canonical skills；P0 compact 缺口；miner 待建",
+      "five_w": {
+        "why": "端云 Agent 需从 interaction_log 提炼 skill，且 compact 后不失忆",
+        "what": "当前：load_skill + runs_on；目标：proposals + gates + reinject",
+        "who": "人类 curated canonical；未来 miner + gate agent",
+        "where": "skills/system/ · .taichu/proposals/（规划）",
+        "when": "每 turn user prefix；compact 后 ❌ 丢 body",
+        "how": "规划：log → miner → candidates → regression → PR"
+      },
+      "methodologies": [
+        "Progressive disclosure：catalog → load_skill",
+        "Toollery before_prompt embedding filter",
+        "runs_on 端云路由",
+        "【缺】InvokedSkillRegistry post-compact reinject",
+        "【缺】OpenSquilla-style gates"
+      ],
+      "components": [
+        "builtintools/load_skill.rs",
+        "compaction.rs（纯 summarize）",
+        "tool_search_bridge.rs",
+        "interaction_log JSONL",
+        "【规划】InvokedSkillRegistry"
+      ],
+      "lifecycle": {
+        "score": "5/13",
+        "stages": "Store→Use→Compact✗→Evolve✗（路线图：P0–P2）",
+        "note": "interaction_log 已有；miner + gates 待建"
+      },
+      "timeline": [
+        { "phase": "每 turn 注入", "mode": "online" },
+        { "phase": "Compact 丢 body", "mode": "online" },
+        { "phase": "Reinject", "mode": "none" },
+        { "phase": "P1 miner", "mode": "offline" },
+        { "phase": "P2 gates", "mode": "offline" }
+      ],
+      "workflow": [
+        { "n": 1, "t": "Turn N", "d": "user prefix # Available Skills + load_skill", "mode": "online" },
+        { "n": 2, "t": "Compact", "d": "❌ ToolResult body 被 summarize 掉", "mode": "online" },
+        { "n": 3, "t": "Turn N+1", "d": "❌ 无 invoked_skills reinject", "mode": "none" },
+        { "n": 4, "t": "【P0 目标】", "d": "register invoked → compact → reinject", "mode": "online" },
+        { "n": 5, "t": "【P1 目标】", "d": "interaction_log → proposals/", "mode": "offline" },
+        { "n": 6, "t": "【P2 目标】", "d": "gates → accept → cloud catalog", "mode": "offline" }
+      ],
+      "code": "// taichu-p0 spec (target)\nInvokedSkillRegistry::register(name)\n  → on_compact preserve ids\n  → reinject_skill_bodies()",
+      "stack": "Session.run_turn()\n  → load_skills_from_dirs()\n  → load_skill tool → ToolResult\n  → compact() [drops body] ← P0 fix here\n  → [future] miner → proposals → gates"
+    },
+    {
+      "id": "zeroclaw",
+      "score": "5.0",
+      "theme": "survey",
+      "rank": 7,
+      "headline": "ZeroClaw — 治理优先，无自进化",
+      "tagline": "audit.rs 安装扫描；memory hygiene ≠ skill evolve",
+      "five_w": {
+        "why": "社区 skill 不可信；需 load-time 审计而非 agent 自改",
+        "what": "skills/audit.rs 模式扫描；registry CI 结构校验",
+        "who": "用户 + hygiene cron；非 evolution agent",
+        "where": "~/.zeroclaw/workspace/skills/",
+        "when": "load / sync / 用户 zeroclaw skills audit",
+        "how": "静态规则：zip-bomb、traversal、injection regex"
+      },
+      "methodologies": [
+        "Full vs Compact injection mode",
+        "open-skills / zeroclaw-skills registry sync",
+        "Load-time audit（非 runtime patch）",
+        "cron consolidation 合并 memory（非 SKILL.md）",
+        "Economic threshold 成本控制"
+      ],
+      "components": [
+        "skills/audit.rs",
+        "skills/load + SkillToolHandler",
+        "cron/consolidation.rs",
+        "memory/hygiene.rs",
+        "tools/subagent_spawn.rs"
+      ],
+      "lifecycle": {
+        "score": "5/13",
+        "stages": "Store→Use→Evolve✗（2/16 — load-time audit only）",
+        "note": "memory hygiene cron ≠ skill evolve"
+      },
+      "timeline": [
+        { "phase": "hub install", "mode": "offline" },
+        { "phase": "load + audit", "mode": "offline" },
+        { "phase": "Runtime inject", "mode": "online" },
+        { "phase": "hygiene cron", "mode": "cron" },
+        { "phase": "Skill evolve", "mode": "none" }
+      ],
+      "workflow": [
+        { "n": 1, "t": "hub install / sync", "d": "拉取 open-skills 包", "mode": "offline" },
+        { "n": 2, "t": "load_skills_with_config", "d": "workspace scan + manifest", "mode": "offline" },
+        { "n": 3, "t": "audit.rs", "d": "zip/traversal/injection 检查", "mode": "offline" },
+        { "n": 4, "t": "Runtime", "d": "compact 读 location；always 全文", "mode": "online" },
+        { "n": 5, "t": "hygiene cron", "d": "归档旧 memory（非 skill 进化）", "mode": "cron" },
+        { "n": "—", "t": "Gap", "d": "Evolution 2/16 — audit only", "mode": "none" }
+      ],
+      "code": "// skills/audit.rs (patterns)\n// zip_bomb | path_traversal\n// | prompt_injection_regex",
+      "stack": "load_skills()\n  → audit::scan_skill_dir()\n  → inject(compact|full)\n  → SkillToolHandler.read()\n  [no propose → accept loop]"
+    },
+    {
+      "id": "genericagent",
+      "score": "4.8",
+      "theme": "survey",
+      "rank": 8,
+      "headline": "GenericAgent — SOP 结晶哲学",
+      "tagline": "task 路径 → start_long_term_update → L2/L3 memory",
+      "five_w": {
+        "why": "不预载 skill，而从成功执行路径结晶可复用 SOP",
+        "what": "memory/*_sop.md 写入 L2 facts / L3 SOP 树",
+        "who": "主 Agent + reflect scheduler + goal mode",
+        "where": "memory/ L0–L4 tier tree",
+        "when": "任务 VERIFY 成功后；reflect cron",
+        "how": "file_patch 写 SOP；无 SKILL.md / 无 gate"
+      },
+      "methodologies": [
+        "L-tier memory：L1 index → file_read SOP",
+        "Anchor prompt 每 10 turn 重建 working memory",
+        "start_long_term_update 验证成功才写 L2/L3",
+        "/morphling 长程结晶",
+        "Plan mode VERIFY 门（仅 plan 路径）"
+      ],
+      "components": [
+        "ga.py (start_long_term_update)",
+        "reflect/scheduler.py",
+        "reflect/goal_mode.py",
+        "memory/*_sop.md",
+        "file_read / file_patch tools"
+      ],
+      "lifecycle": {
+        "score": "4.8/13",
+        "stages": "Memory L0–L4 SOP 结晶（非 SKILL.md / 无 gate）",
+        "note": "哲学不同：task 路径 → L2/L3 memory 写入"
+      },
+      "timeline": [
+        { "phase": "读 SOP", "mode": "online" },
+        { "phase": "执行 + VERIFY", "mode": "online" },
+        { "phase": "long_term_update", "mode": "async" },
+        { "phase": "file_patch L2/L3", "mode": "offline" },
+        { "phase": "reflect cron", "mode": "cron" }
+      ],
+      "workflow": [
+        { "n": 1, "t": "新任务", "d": "读 L1 index → file_read 相关 SOP", "mode": "online" },
+        { "n": 2, "t": "执行", "d": "9 atomic tools + plan.md checkpoint", "mode": "online" },
+        { "n": 3, "t": "VERIFY", "d": "plan mode 验证成功条件", "mode": "online" },
+        { "n": 4, "t": "start_long_term_update", "d": "Agent 自触发；仅 verified 信息", "mode": "async" },
+        { "n": 5, "t": "file_patch", "d": "写 L2 facts / 新 *_sop.md", "mode": "offline" },
+        { "n": 6, "t": "下轮", "d": "related_sop 弱提示（无 RRF）", "mode": "online" }
+      ],
+      "code": "# ga.py — start_long_term_update\n# agent self-trigger; only verified-success\n# info → L2/L3 memory tiers",
+      "stack": "GenericAgent.run()\n  → file_read(SOP)\n  → execute tools\n  → VERIFY (plan mode)\n  → start_long_term_update()\n      → file_patch(memory/L2|L3)"
+    }
+  ]
+}

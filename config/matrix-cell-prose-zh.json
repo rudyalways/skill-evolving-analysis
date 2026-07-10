@@ -1,0 +1,41 @@
+{
+  "exact": {
+    "FS scopes": "文件系统作用域",
+    "multi-root scan": "多根目录扫描",
+    "multi-root merge": "多根目录合并",
+    "6-source merge": "六源合并",
+    "6-layer loader": "六层加载器",
+    "6-layer precedence dirs": "六层优先级目录",
+    "system roots only": "仅 system 根",
+    "single home dir": "单一主目录",
+    "single tree": "单一目录树",
+    "scope order": "作用域顺序",
+    "source order": "源顺序",
+    "higher scope wins": "高作用域优先",
+    "scope precedence": "作用域优先级",
+    "last write": "后写胜出",
+    "merge by name+priority": "按名+优先级合并",
+    "on change": "变更时",
+    "per-turn delta": "每轮增量",
+    "per-turn inject": "每轮注入",
+    "crystallized SOP": "结晶 SOP",
+    "seed SOPs": "种子 SOP"
+  },
+  "phrases": [
+    ["every turn", "每轮"],
+    ["per-turn", "每轮"],
+    ["multi-root", "多根"],
+    ["6-source", "六源"],
+    ["6-layer", "六层"],
+    ["highest", "最高"],
+    ["lowest", "最低"],
+    ["over remote", "高于 remote"],
+    ["wins", "优先"],
+    ["conflict resolution", "冲突解决"],
+    ["lazy discovery", "懒发现"],
+    ["file watch", "文件监听"],
+    ["hot reload", "热重载"],
+    ["search path", "搜索路径"],
+    ["discover source", "发现来源"]
+  ]
+}

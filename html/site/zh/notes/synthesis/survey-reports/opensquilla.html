@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OpenSquilla 架构调研（9.0） — Skill-Evolving</title>
+  <link rel="alternate" hreflang="en" href="/html/site/notes/synthesis/survey-reports/opensquilla.html">
+  <link rel="alternate" hreflang="zh-Hans" href="/html/site/zh/notes/synthesis/survey-reports/opensquilla.html">
+  <link rel="alternate" hreflang="x-default" href="/html/site/notes/synthesis/survey-reports/opensquilla.html">
+  <link rel="stylesheet" href="../../../../../css/viewer.css">
+</head>
+<body class="page-compact page-survey-report" data-doc-locale="zh" data-content-lang="zh">
+  <div class="viewer-layout">
+    <nav>
+      <div data-lang-switch class="lang-switch-host"></div>
+      <h1 data-i18n="nav.docs">Docs</h1>
+      <div class="title" data-i18n="nav.rendered">Rendered HTML</div>
+      <section class="highlight-section"><h2 data-i18n="nav.compare">nav.compare</h2><ul><li><a href="../agent-skill-architecture-survey-matrix.html" data-i18n="nav.matrix165">nav.matrix165</a></li><li><a href="../skill-lifecycle-full-matrix.html" data-i18n="nav.lifecycle">nav.lifecycle</a></li><li><a href="../web-expanded-lifecycle-matrix-merged.html" data-i18n="nav.web_l3">nav.web_l3</a></li><li><a href="../eight-repo-comprehensive-survey.html" data-i18n="nav.survey20">nav.survey20</a></li><li><a href="../skill-lifecycle-and-dynamic-loading-survey.html" data-i18n="nav.per_turn">nav.per_turn</a></li><li><a href="../eight-repo-deep-source-analysis.html" data-i18n="nav.deep_source">nav.deep_source</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.per_repo">nav.per_repo</h2><ul><li><a class="active" href="./opensquilla.html">OpenSquilla (9.0)</a></li><li><a href="./hermes-agent.html">Hermes (8.1)</a></li><li><a href="./openclaw.html">OpenClaw (8.0)</a></li><li><a href="./claude-code-rev.html">Claude Rev (7.7)</a></li><li><a href="./codex.html">Codex (7.2)</a></li><li><a href="./taichu.html">TaiChu (5.0)</a></li><li><a href="./zeroclaw.html">ZeroClaw (5.0)</a></li><li><a href="./genericagent.html">GenericAgent (4.8)</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.papers">nav.papers</h2><ul><li><a href="../../../../topics/skill-rl/overview.html">SkillRL</a></li><li><a href="../../../../topics/claw-r1/overview.html">Claw-R1</a></li><li><a href="../comparison.html" data-i18n="nav.comparison">nav.comparison</a></li><li><a href="../combined-pipeline.html" data-i18n="nav.pipeline">nav.pipeline</a></li><li><a href="../l3-comprehensive-skill-analysis.html" data-i18n="nav.l3">nav.l3</a></li><li><a href="../../../../notes/synthesis/taichu-p0-skill-compaction-spec.html" data-i18n="nav.taichu_p0">nav.taichu_p0</a></li></ul></section><section><h2 data-i18n="nav.more">More</h2><ul>
+    <li><a href="/html/docs.html" data-i18n="nav.sitemap">Sitemap</a></li>
+    <li><a href="/html/i18n-coverage.html" data-i18n="nav.i18n_coverage">i18n coverage</a></li>
+    <li><a href="/html/index.html" data-i18n="nav.dashboard">Dashboard</a></li>
+    <li><a href="/html/deck/index.html" data-i18n="nav.decks">Slide decks</a></li>
+  </ul></section>
+    </nav>
+    <div class="viewer-main">
+      <div class="viewer-toolbar">
+        <div>
+          <h1>OpenSquilla 架构调研（9.0）</h1>
+          <div class="path">notes/synthesis/survey-reports/opensquilla.md</div>
+        </div>
+        <a class="btn" href="/html/docs.html" data-i18n="toolbar.sitemap">Sitemap</a>
+        <a class="btn primary" href="../agent-skill-architecture-survey-matrix.html" data-i18n="toolbar.matrix">165-dim matrix</a>
+      </div>
+      
+      <article class="md-body"><h1>OpenSquilla 架构调研（9.0）</h1>
+<blockquote>
+<p><strong>八框架 Skill 进化产品化最强：每轮 RRF 推荐 + proposals 四关 + E2E 晋升</strong></p>
+<p>显式 Agent FSM 分阶段 harness；SkillSpec + 6 层优先级；每轮 filter_skills → 注入；proposals/ 多关 accept 写入 MANAGED。</p>
+</blockquote>
+<h2>1. 架构</h2>
+<p>分阶段 harness：Gateway → TurnRunner → Pipeline(filter→inject) → FSM。6 层优先级：EXTRA → BUNDLED → MANAGED → PERSONAL → PROJECT → WORKSPACE。</p>
+<h2>2. Skill 运行时</h2>
+<p>每轮 HybridRetriever（词法+语义 RRF top-5）；compact/full 渐进披露；meta_invoke 跑 DAG；collect_invoked_skills 遥测。</p>
+<h2>3. Skill 生命周期</h2>
+<p>hub 安装 → auto_propose/Dream → gates.json 四关 → accept→MANAGED；skills-lock SHA256。生命周期 12/13。</p>
+<h2>4. Skill 进化</h2>
+<p>决策日志/Dream → proposals/ → runtime_e2e 对照 → accept。eval_prompts 回归 + meta vs baseline A/B。</p>
+<h2>5. 多 Agent Skill</h2>
+<p>MetaOrchestrator DAG（skill_exec/agent/tool_call）；子 agent one-shot，无 skill preload 列表。</p>
+<h2>6. Skill 治理</h2>
+<p>policy chain 30+ 内置规则；gates.json；hub quarantine；requires_tools 门控。</p>
+<h2>7. Harness 集成</h2>
+<p>Skill 是 pipeline 阶段而非外挂：filter_skills 在 LLM 看到 catalog 前确定性门控。</p>
+<h2>8. RL 就绪度</h2>
+<p>PipelineStepRecord + decision_log skills_invoked；Claw-R1 兼容 step 级记录最强之一。</p>
+<h2>9. TaiChu 可借鉴</h2>
+<p>TaiChu 借：proposals+gates、RRF+always pin、invoked 遥测、runtime_e2e、inject_compact。</p>
+<h2>10. TaiChu 落地</h2>
+<p>P1 proposals 目录+gates；P1 Toollery RRF；P2 interaction_log；P3 MetaSkill。</p>
+<h2>11. 不应借鉴</h2>
+<p>勿搬 6000 行 agent 单体；勿无 gate 自动 accept。</p>
+<h2>12. 评分</h2>
+<p>总分 9.0：Runtime/Evolution 双 9；RL 6（轨迹强、无训练器）。</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Category</th>
+<th align="center">Score</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Data Model</td>
+<td align="center">9</td>
+<td>SkillSpec + MetaSkill + lock SHA</td>
+</tr>
+<tr>
+<td>Runtime</td>
+<td align="center">9</td>
+<td>Per-turn RRF ★</td>
+</tr>
+<tr>
+<td>Lifecycle</td>
+<td align="center">12/13 → <strong>9</strong></td>
+<td>Near-complete</td>
+</tr>
+<tr>
+<td>Evolution</td>
+<td align="center">9</td>
+<td>4-gate + E2E</td>
+</tr>
+<tr>
+<td>Governance</td>
+<td align="center">8</td>
+<td>gates + policy chain</td>
+</tr>
+<tr>
+<td>Agent Integration</td>
+<td align="center">9</td>
+<td>MetaSkill DAG</td>
+</tr>
+<tr>
+<td>RL Readiness</td>
+<td align="center">6</td>
+<td>traces strong; no RL trainer</td>
+</tr>
+<tr>
+<td><strong>Overall</strong></td>
+<td align="center"><strong>9.0</strong></td>
+<td>Best single-repo skill evolution productization</td>
+</tr>
+</tbody></table></div>
+<p><em>完整英文版含 L3 路径与引用 → <code>survey-reports/opensquilla.md</code></em></p>
+</article>
+    </div>
+  </div>
+  <script src="../../../../../js/i18n.js"></script>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
+  </script>
+</body>
+</html>

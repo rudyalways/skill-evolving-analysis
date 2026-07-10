@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>八仓库身份确认 + 源码调研框架 — Skill-Evolving</title>
+  <link rel="alternate" hreflang="en" href="/html/site/notes/synthesis/eight-repo-source-analysis-framework.html">
+  <link rel="alternate" hreflang="zh-Hans" href="/html/site/zh/notes/synthesis/eight-repo-source-analysis-framework.html">
+  <link rel="alternate" hreflang="x-default" href="/html/site/notes/synthesis/eight-repo-source-analysis-framework.html">
+  <link rel="stylesheet" href="../../../../css/viewer.css">
+</head>
+<body class="" data-doc-locale="zh" data-content-lang="zh">
+  <div class="viewer-layout">
+    <nav>
+      <div data-lang-switch class="lang-switch-host"></div>
+      <h1 data-i18n="nav.docs">Docs</h1>
+      <div class="title" data-i18n="nav.rendered">Rendered HTML</div>
+      <section class="highlight-section"><h2 data-i18n="nav.compare">nav.compare</h2><ul><li><a href="./agent-skill-architecture-survey-matrix.html" data-i18n="nav.matrix165">nav.matrix165</a></li><li><a href="./skill-lifecycle-full-matrix.html" data-i18n="nav.lifecycle">nav.lifecycle</a></li><li><a href="./web-expanded-lifecycle-matrix-merged.html" data-i18n="nav.web_l3">nav.web_l3</a></li><li><a href="./eight-repo-comprehensive-survey.html" data-i18n="nav.survey20">nav.survey20</a></li><li><a href="./skill-lifecycle-and-dynamic-loading-survey.html" data-i18n="nav.per_turn">nav.per_turn</a></li><li><a href="./eight-repo-deep-source-analysis.html" data-i18n="nav.deep_source">nav.deep_source</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.per_repo">nav.per_repo</h2><ul><li><a href="./survey-reports/opensquilla.html">OpenSquilla (9.0)</a></li><li><a href="./survey-reports/hermes-agent.html">Hermes (8.1)</a></li><li><a href="./survey-reports/openclaw.html">OpenClaw (8.0)</a></li><li><a href="./survey-reports/claude-code-rev.html">Claude Rev (7.7)</a></li><li><a href="./survey-reports/codex.html">Codex (7.2)</a></li><li><a href="./survey-reports/taichu.html">TaiChu (5.0)</a></li><li><a href="./survey-reports/zeroclaw.html">ZeroClaw (5.0)</a></li><li><a href="./survey-reports/genericagent.html">GenericAgent (4.8)</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.papers">nav.papers</h2><ul><li><a href="../../../topics/skill-rl/overview.html">SkillRL</a></li><li><a href="../../../topics/claw-r1/overview.html">Claw-R1</a></li><li><a href="./comparison.html" data-i18n="nav.comparison">nav.comparison</a></li><li><a href="./combined-pipeline.html" data-i18n="nav.pipeline">nav.pipeline</a></li><li><a href="./l3-comprehensive-skill-analysis.html" data-i18n="nav.l3">nav.l3</a></li><li><a href="../../../notes/synthesis/taichu-p0-skill-compaction-spec.html" data-i18n="nav.taichu_p0">nav.taichu_p0</a></li></ul></section><section><h2 data-i18n="nav.more">More</h2><ul>
+    <li><a href="/html/docs.html" data-i18n="nav.sitemap">Sitemap</a></li>
+    <li><a href="/html/i18n-coverage.html" data-i18n="nav.i18n_coverage">i18n coverage</a></li>
+    <li><a href="/html/index.html" data-i18n="nav.dashboard">Dashboard</a></li>
+    <li><a href="/html/deck/index.html" data-i18n="nav.decks">Slide decks</a></li>
+  </ul></section>
+    </nav>
+    <div class="viewer-main">
+      <div class="viewer-toolbar">
+        <div>
+          <h1>八仓库身份确认 + 源码调研框架</h1>
+          <div class="path">notes/synthesis/eight-repo-source-analysis-framework.md</div>
+        </div>
+        <a class="btn" href="/html/docs.html" data-i18n="toolbar.sitemap">Sitemap</a>
+        <a class="btn primary" href="./agent-skill-architecture-survey-matrix.html" data-i18n="toolbar.matrix">165-dim matrix</a>
+      </div>
+      
+      <article class="md-body"><h1>八仓库身份确认 + 源码调研框架</h1>
+<blockquote>
+<p><strong>本机路径前缀</strong>：<code>/Users/maybewu/Documents/Projects/</code>（不是 <code>/Users/x/</code>）<br>Cursor 环境可直接读源码；无需 zip / File Library。</p>
+</blockquote>
+<hr>
+<h2>一、身份确认（消除歧义）</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>你列的路径</th>
+<th>本机实际路径</th>
+<th align="center">公开仓库</th>
+<th>确认身份</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>oss/openclaw</code></td>
+<td><code>.../oss/openclaw</code></td>
+<td align="center">✅</td>
+<td><strong><a href="https://github.com/openclaw/openclaw">openclaw/openclaw</a></strong> — Personal AI Assistant（🦞），<strong>不是</strong> OpenClaw-RL 论文项目</td>
+</tr>
+<tr>
+<td><code>oss/experimental/claude-code-rev</code></td>
+<td><code>.../oss/experimental/claude-code-rev</code></td>
+<td align="center">✅</td>
+<td><strong><a href="https://github.com/oboard/claude-code-rev">oboard/claude-code-rev</a></strong> — 社区从 source map 还原的 Claude Code，非 Anthropic 官方</td>
+</tr>
+<tr>
+<td><code>drafts/zk/TaiChu</code></td>
+<td><code>.../drafts/zk/TaiChu</code></td>
+<td align="center">❌ 私有 Gitea</td>
+<td><strong><a href="https://taichu.fun/gitea/SystemAgentDev/TaiChu.git">taichu.fun/gitea/SystemAgentDev/TaiChu</a></strong> — 端云兼容 agent 主仓</td>
+</tr>
+<tr>
+<td><code>oss/genericagent</code></td>
+<td><code>.../oss/genericagent</code></td>
+<td align="center">✅</td>
+<td><strong><a href="https://github.com/lsdefine/genericagent">lsdefine/genericagent</a></strong> — 自标 &quot;self-evolving&quot; 极简 agent</td>
+</tr>
+<tr>
+<td><code>oss/codex</code></td>
+<td><code>.../oss/codex</code></td>
+<td align="center">✅</td>
+<td><strong><a href="https://github.com/openai/codex">openai/codex</a></strong> — OpenAI 官方 Codex CLI (Rust)</td>
+</tr>
+<tr>
+<td><code>oss/opensquilla</code></td>
+<td><code>.../oss/opensquilla</code></td>
+<td align="center">✅</td>
+<td><strong><a href="https://github.com/opensquilla/opensquilla">opensquilla/opensquilla</a></strong> — Token-efficient agent microkernel</td>
+</tr>
+<tr>
+<td><code>oss/zeroclaw</code></td>
+<td><code>.../oss/zeroclaw</code></td>
+<td align="center">✅</td>
+<td><strong><a href="https://github.com/zeroclaw-labs/zeroclaw">zeroclaw-labs/zeroclaw</a></strong> — Rust 轻量 agent runtime</td>
+</tr>
+<tr>
+<td><code>oss/hermes-agent</code></td>
+<td><code>.../oss/hermes-agent</code></td>
+<td align="center">✅</td>
+<td><strong><a href="https://github.com/nousresearch/hermes-agent">nousresearch/hermes-agent</a></strong> — Nous Research 自改进 agent</td>
+</tr>
+</tbody></table></div>
+<h3>常见混淆澄清</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>名字相似</th>
+<th>本仓库是</th>
+<th>不是</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>openclaw</td>
+<td>个人 AI 助手 gateway</td>
+<td>OpenClaw-RL (arXiv:2603.10165, Gen-Verse)</td>
+</tr>
+<tr>
+<td>hermes-agent</td>
+<td>NousResearch/hermes-agent</td>
+<td>其他 Hermes 相关小项目</td>
+</tr>
+<tr>
+<td>genericagent</td>
+<td>lsdefine/genericagent</td>
+<td>无其他主流同名</td>
+</tr>
+<tr>
+<td>zeroclaw</td>
+<td>zeroclaw-labs/zeroclaw</td>
+<td>OpenClaw 内有一份 reference copy</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2>二、建议调研顺序（与外部建议一致，附本机状态）</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th align="center">优先级</th>
+<th>仓库</th>
+<th>理由</th>
+<th>本机 HEAD 日期</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">1</td>
+<td><strong>codex</strong></td>
+<td>官方 CLI + memories 2-phase distill</td>
+<td>2026-06-07</td>
+</tr>
+<tr>
+<td align="center">2</td>
+<td><strong>openclaw</strong></td>
+<td>最大开源 harness 之一 + dreaming</td>
+<td>2026-04-27</td>
+</tr>
+<tr>
+<td align="center">3</td>
+<td><strong>hermes-agent</strong></td>
+<td>显式 <code>skill_manage</code> 自改进</td>
+<td>2026-04-10</td>
+</tr>
+<tr>
+<td align="center">4</td>
+<td><strong>genericagent</strong></td>
+<td>SOP 结晶 + morphling</td>
+<td>2026-06-29</td>
+</tr>
+<tr>
+<td align="center">5</td>
+<td><strong>zeroclaw</strong></td>
+<td>轻量 memory consolidation</td>
+<td>2026-03-04</td>
+</tr>
+<tr>
+<td align="center">6</td>
+<td><strong>opensquilla</strong></td>
+<td>meta-skill + dream factory</td>
+<td>2026-07-01</td>
+</tr>
+<tr>
+<td align="center">7</td>
+<td><strong>claude-code-rev</strong></td>
+<td>memdir + /dream 参考</td>
+<td>2026-04-08</td>
+</tr>
+<tr>
+<td align="center">8</td>
+<td><strong>TaiChu</strong></td>
+<td>内部集成目标</td>
+<td>2026-06-11</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2>三、源码目录扫描（本机 find 结果）</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>目录模式</th>
+<th align="center">openclaw</th>
+<th align="center">claude-rev</th>
+<th align="center">TaiChu</th>
+<th align="center">genericagent</th>
+<th align="center">codex</th>
+<th align="center">opensquilla</th>
+<th align="center">zeroclaw</th>
+<th align="center">hermes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>skills/</code></td>
+<td align="center">✅ 多处</td>
+<td align="center">✅ src/skills</td>
+<td align="center">✅ 17+ canonical</td>
+<td align="center">❌</td>
+<td align="center">✅ codex-rs</td>
+<td align="center">✅ 91 SKILL</td>
+<td align="center">✅ loader</td>
+<td align="center">✅ 122</td>
+</tr>
+<tr>
+<td><code>memory/</code></td>
+<td align="center">✅ memory-core</td>
+<td align="center">✅ memdir</td>
+<td align="center">⚠️ deploy only</td>
+<td align="center">✅ <strong>核心</strong></td>
+<td align="center">✅ memories/</td>
+<td align="center">✅ dream/</td>
+<td align="center">✅ src/memory</td>
+<td align="center">✅ plugins</td>
+</tr>
+<tr>
+<td><code>hooks/</code></td>
+<td align="center">✅ src/hooks</td>
+<td align="center">✅ src/hooks</td>
+<td align="center">✅ .cursor/.claude</td>
+<td align="center">❌</td>
+<td align="center">✅ codex-rs</td>
+<td align="center">✅ engine/hooks</td>
+<td align="center">✅ src/hooks</td>
+<td align="center">❌</td>
+</tr>
+<tr>
+<td><code>reflection/</code></td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+<td align="center">⚠️ reflect/</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+</tr>
+<tr>
+<td><code>evaluator/</code></td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+</tr>
+<tr>
+<td><code>benchmark/</code></td>
+<td align="center">⚠️ android</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+</tr>
+<tr>
+<td><code>trainer/</code></td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+</tr>
+<tr>
+<td><code>workflow/</code></td>
+<td align="center">⚠️ prose ext</td>
+<td align="center">❌</td>
+<td align="center">✅ agent-runtime</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+<td align="center">⚠️ meta-DAG</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+</tr>
+<tr>
+<td><code>agent_loop/</code></td>
+<td align="center">⚠️ src/agents</td>
+<td align="center">❌</td>
+<td align="center">⚠️ core</td>
+<td align="center">✅ agent_loop.py</td>
+<td align="center">❌</td>
+<td align="center">✅ engine</td>
+<td align="center">✅ src/agent</td>
+<td align="center">✅ run_agent.py</td>
+</tr>
+<tr>
+<td><code>planner/</code></td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+</tr>
+<tr>
+<td><code>experience/</code></td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+</tr>
+<tr>
+<td><code>trajectory/</code></td>
+<td align="center">✅ src/trajectory</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+</tr>
+<tr>
+<td><strong>SKILL.md</strong></td>
+<td align="center">83</td>
+<td align="center">2</td>
+<td align="center">150*</td>
+<td align="center">0</td>
+<td align="center">18</td>
+<td align="center">91</td>
+<td align="center">0</td>
+<td align="center">122</td>
+</tr>
+</tbody></table></div>
+<p>*TaiChu 150 含 <code>.agent-runtime</code> 快照重复；canonical ~17</p>
+<hr>
+<h2>四、横向对比表（调研维度 × 8 仓库）</h2>
+<p>图例：✅ 已实现 · ⚠️ 部分 · ❌ 无 · 📋 文档/样本</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>维度</th>
+<th align="center">Codex</th>
+<th align="center">OpenClaw</th>
+<th align="center">Hermes</th>
+<th align="center">GenericAgent</th>
+<th align="center">ZeroClaw</th>
+<th align="center">OpenSquilla</th>
+<th align="center">Claude-Rev</th>
+<th align="center">TaiChu</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Runtime Architecture</strong></td>
+<td align="center">Rust CLI</td>
+<td align="center">TS gateway + extensions</td>
+<td align="center">Python agent+gateway</td>
+<td align="center">Python ~3K LOC</td>
+<td align="center">Rust runtime</td>
+<td align="center">Python microkernel</td>
+<td align="center">TS restored CLI</td>
+<td align="center">Rust svc + Flutter</td>
+</tr>
+<tr>
+<td><strong>Agent Loop</strong></td>
+<td align="center">codex-rs/core</td>
+<td align="center">src/agents</td>
+<td align="center">run_agent.py</td>
+<td align="center">agent_loop.py</td>
+<td align="center">src/agent</td>
+<td align="center">engine/</td>
+<td align="center">src/cli</td>
+<td align="center">core/agent-session</td>
+</tr>
+<tr>
+<td><strong>Harness</strong></td>
+<td align="center">ext/skills + hooks</td>
+<td align="center">src/ + extensions</td>
+<td align="center">agent/ + toolsets</td>
+<td align="center">ga.py</td>
+<td align="center">src/gateway</td>
+<td align="center">engine/hooks</td>
+<td align="center">shims + src</td>
+<td align="center">services/rust</td>
+</tr>
+<tr>
+<td><strong>Skill 表示</strong></td>
+<td align="center">SKILL.md</td>
+<td align="center">SKILL.md</td>
+<td align="center">SKILL.md</td>
+<td align="center">L3 *_sop.md</td>
+<td align="center">SKILL.md (user)</td>
+<td align="center">SKILL.md + meta</td>
+<td align="center">SKILL.md</td>
+<td align="center">SKILL.md + system</td>
+</tr>
+<tr>
+<td><strong>Skill 生命周期</strong></td>
+<td align="center">load/version API</td>
+<td align="center">ClawHub sync</td>
+<td align="center">skill_manage CRUD</td>
+<td align="center">morphling→SOP</td>
+<td align="center">workspace sync</td>
+<td align="center">proposals flow</td>
+<td align="center">skillImprovement</td>
+<td align="center">catalog+load_skill</td>
+</tr>
+<tr>
+<td><strong>Skill 自动生成</strong></td>
+<td align="center">📋 skill-creator</td>
+<td align="center">⚠️ skill-creator</td>
+<td align="center">✅ skill_manage</td>
+<td align="center">✅ L3 结晶</td>
+<td align="center">❌</td>
+<td align="center">✅ meta-skill-creator</td>
+<td align="center">⚠️ skillify</td>
+<td align="center">❌</td>
+</tr>
+<tr>
+<td><strong>Skill 自动更新</strong></td>
+<td align="center">❌</td>
+<td align="center">⚠️ Workshop</td>
+<td align="center">✅ patch/write</td>
+<td align="center">✅ start_long_term_update</td>
+<td align="center">❌</td>
+<td align="center">✅ auto_propose</td>
+<td align="center">⚠️ improvement</td>
+<td align="center">❌</td>
+</tr>
+<tr>
+<td><strong>Skill 淘汰/Version</strong></td>
+<td align="center">version API</td>
+<td align="center">❌</td>
+<td align="center">delete skill</td>
+<td align="center">SOP archive</td>
+<td align="center">❌</td>
+<td align="center">proposal accept/reject</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+</tr>
+<tr>
+<td><strong>Memory</strong></td>
+<td align="center">2-phase memories</td>
+<td align="center">memory-core+dream</td>
+<td align="center">MEMORY.md+plugins</td>
+<td align="center">L1-L4</td>
+<td align="center">consolidation cron</td>
+<td align="center">dream factory</td>
+<td align="center">memdir</td>
+<td align="center">compaction only</td>
+</tr>
+<tr>
+<td><strong>Hooks</strong></td>
+<td align="center">codex-rs/hooks</td>
+<td align="center">src/hooks</td>
+<td align="center">cron/gateway</td>
+<td align="center">❌</td>
+<td align="center">src/hooks</td>
+<td align="center">engine/hooks</td>
+<td align="center">src/hooks</td>
+<td align="center">.cursor/.claude</td>
+</tr>
+<tr>
+<td><strong>Reflection</strong></td>
+<td align="center">❌</td>
+<td align="center">compaction distill</td>
+<td align="center">memory nudge</td>
+<td align="center">reflect/scheduler</td>
+<td align="center">consolidation</td>
+<td align="center">session_flush</td>
+<td align="center">/dream</td>
+<td align="center">❌</td>
+</tr>
+<tr>
+<td><strong>Self-evolution</strong></td>
+<td align="center">memory only</td>
+<td align="center">dream+distill</td>
+<td align="center"><strong>skill_manage loop</strong></td>
+<td align="center"><strong>morphling+SOP</strong></td>
+<td align="center">memory cron</td>
+<td align="center"><strong>proposals+dream</strong></td>
+<td align="center">dream→mem</td>
+<td align="center">❌</td>
+</tr>
+<tr>
+<td><strong>Evaluation</strong></td>
+<td align="center">eval-skills doc</td>
+<td align="center">qa/scenarios</td>
+<td align="center">tests/skills</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+<td align="center">skill linter</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+</tr>
+<tr>
+<td><strong>Online Learning</strong></td>
+<td align="center">async memory write</td>
+<td align="center">dreaming phases</td>
+<td align="center">turn nudges</td>
+<td align="center">L4 archive cron</td>
+<td align="center">nightly job</td>
+<td align="center">dream pipeline</td>
+<td align="center">nightly dream</td>
+<td align="center">❌</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2>五、每个仓库要深入读的关键文件</h2>
+<h3>Codex — <code>oss/codex</code></h3>
+<pre><code>codex-rs/memories/          # 2-phase distill
+codex-rs/ext/skills/        # skill loader
+codex-rs/core/              # agent loop
+.codex/skills/              # repo maintenance skills
+</code></pre>
+<h3>OpenClaw — <code>oss/openclaw</code></h3>
+<pre><code>extensions/memory-core/     # hybrid memory + promotion
+src/memory/                 # dreaming, compaction-safeguard
+skills/skill-creator/       # authoring
+src/trajectory/             # trajectory handling
+docs/concepts/dreaming.md
+</code></pre>
+<h3>Hermes — <code>oss/hermes-agent</code></h3>
+<pre><code>tools/skill_manager_tool.py # skill_manage CRUD
+agent/memory_manager.py
+run_agent.py                # nudges + skill review triggers
+skills/
+</code></pre>
+<h3>GenericAgent — <code>oss/genericagent</code></h3>
+<pre><code>ga.py                       # start_long_term_update, morphling
+memory/                     # L1-L4 + *_sop.md
+reflect/scheduler.py
+agent_loop.py
+</code></pre>
+<h3>OpenSquilla — <code>oss/opensquilla</code></h3>
+<pre><code>src/opensquilla/memory/dream/
+src/opensquilla/skills/bundled/meta-skills/
+docs/features/meta-skills.md
+</code></pre>
+<h3>ZeroClaw — <code>oss/zeroclaw</code></h3>
+<pre><code>src/cron/consolidation.rs
+src/memory/
+src/skills/
+</code></pre>
+<h3>Claude Code Rev — <code>oss/experimental/claude-code-rev</code></h3>
+<pre><code>src/memdir/
+src/skills/bundled/
+</code></pre>
+<h3>TaiChu — <code>drafts/zk/TaiChu</code></h3>
+<pre><code>skills/system/                              # 17 device skills
+services/rust/taichu-service/src/tools/a_system/
+core/agent-session/src/compaction.rs
+docs/architecture/skill-system-cross-repo-comparison.md  # ★ 已有 1000+ 行对标
+</code></pre>
+<hr>
+<h2>六、与 SkillRL / Claw-R1 的关系（预判）</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>论文概念</th>
+<th>最接近的开源实现</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Claw-R1 Step Data Pool</td>
+<td><strong>codex</strong> memories JSONL; openclaw trajectory; 无现成 middleware</td>
+</tr>
+<tr>
+<td>SkillRL Trajectory→Skill</td>
+<td><strong>genericagent</strong> L3 SOP; <strong>opensquilla</strong> session_flush</td>
+</tr>
+<tr>
+<td>SkillRL Failure lessons</td>
+<td>openclaw dreaming; opensquilla repair queue</td>
+</tr>
+<tr>
+<td>SkillRL Recursive SkillBank</td>
+<td><strong>无完整开源对标</strong> — 各 repo 只有片段</td>
+</tr>
+<tr>
+<td>SkillHone Version + decision history</td>
+<td>opensquilla proposals; hermes skill_manage</td>
+</tr>
+<tr>
+<td>Validation gate</td>
+<td>opensquilla skill linter; codex eval-skills</td>
+</tr>
+</tbody></table></div>
+<p><strong>Gap</strong>：没有任何一个开源 repo 实现完整 <code>Step Trace → Skill Candidate → Eval → Versioned Library → GRPO</code> 闭环。</p>
+<hr>
+<h2>七、TaiChu 已有工作（不必从零开始）</h2>
+<p><code>drafts/zk/TaiChu/docs/architecture/skill-system-cross-repo-comparison.md</code> 已包含：</p>
+<ul>
+<li>八仓库对标总表（per-turn、compaction、自进化、Hub…）</li>
+<li>T0/T1/T2 调用栈约定</li>
+<li>TaiChu 短板：compaction 保护、SubAgent 技能传递、自进化门禁</li>
+<li>优先借鉴：Hermes skill_view、OpenSquilla filter_skills、Claude-Rev invoked_skills</li>
+</ul>
+<p>本 research workspace 应与之 <strong>交叉引用</strong>，专注 SkillRL/Claw-R1 论文栈 + 官方产品 gap。</p>
+<hr>
+<h2>八、下一步源码深挖（可在此 workspace 继续）</h2>
+<ul>
+<li><input disabled="" type="checkbox"> Hermes: <code>skill_manage</code> 完整 action 流 + 是否有 eval gate</li>
+<li><input disabled="" type="checkbox"> GenericAgent: <code>start_long_term_update</code> vs SkillRL distill 对比</li>
+<li><input disabled="" type="checkbox"> OpenSquilla: meta-skill-creator proposal → accept 代码路径</li>
+<li><input disabled="" type="checkbox"> OpenClaw: dreaming → MEMORY.md promotion 触发条件</li>
+<li><input disabled="" type="checkbox"> Codex: memories consolidation template 与 Skill 边界</li>
+<li><input disabled="" type="checkbox"> TaiChu: <code>load_skill</code> → compaction 丢失问题复现路径</li>
+<li><input disabled="" type="checkbox"> 汇总成 canvas 横向对比表</li>
+</ul>
+</article>
+    </div>
+  </div>
+  <script src="../../../../js/i18n.js"></script>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
+  </script>
+</body>
+</html>

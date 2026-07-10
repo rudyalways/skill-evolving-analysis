@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OpenClaw-RL — RL Harness Survey Report — Skill-Evolving</title>
+  <link rel="alternate" hreflang="en" href="/html/site/notes/synthesis/survey-reports/openclaw-rl.html">
+  <link rel="alternate" hreflang="zh-Hans" href="/html/site/zh/notes/synthesis/survey-reports/openclaw-rl.html">
+  <link rel="alternate" hreflang="x-default" href="/html/site/notes/synthesis/survey-reports/openclaw-rl.html">
+  <link rel="stylesheet" href="../../../../../css/viewer.css">
+</head>
+<body class="page-compact page-survey-report" data-doc-locale="zh" data-content-lang="zh">
+  <div class="viewer-layout">
+    <nav>
+      <div data-lang-switch class="lang-switch-host"></div>
+      <h1 data-i18n="nav.docs">Docs</h1>
+      <div class="title" data-i18n="nav.rendered">Rendered HTML</div>
+      <section class="highlight-section"><h2 data-i18n="nav.compare">nav.compare</h2><ul><li><a href="../agent-skill-architecture-survey-matrix.html" data-i18n="nav.matrix165">nav.matrix165</a></li><li><a href="../skill-lifecycle-full-matrix.html" data-i18n="nav.lifecycle">nav.lifecycle</a></li><li><a href="../web-expanded-lifecycle-matrix-merged.html" data-i18n="nav.web_l3">nav.web_l3</a></li><li><a href="../eight-repo-comprehensive-survey.html" data-i18n="nav.survey20">nav.survey20</a></li><li><a href="../skill-lifecycle-and-dynamic-loading-survey.html" data-i18n="nav.per_turn">nav.per_turn</a></li><li><a href="../eight-repo-deep-source-analysis.html" data-i18n="nav.deep_source">nav.deep_source</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.per_repo">nav.per_repo</h2><ul><li><a href="./opensquilla.html">OpenSquilla (9.0)</a></li><li><a href="./hermes-agent.html">Hermes (8.1)</a></li><li><a href="./openclaw.html">OpenClaw (8.0)</a></li><li><a href="./claude-code-rev.html">Claude Rev (7.7)</a></li><li><a href="./codex.html">Codex (7.2)</a></li><li><a href="./taichu.html">TaiChu (5.0)</a></li><li><a href="./zeroclaw.html">ZeroClaw (5.0)</a></li><li><a href="./genericagent.html">GenericAgent (4.8)</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.papers">nav.papers</h2><ul><li><a href="../../../../topics/skill-rl/overview.html">SkillRL</a></li><li><a href="../../../../topics/claw-r1/overview.html">Claw-R1</a></li><li><a href="../comparison.html" data-i18n="nav.comparison">nav.comparison</a></li><li><a href="../combined-pipeline.html" data-i18n="nav.pipeline">nav.pipeline</a></li><li><a href="../l3-comprehensive-skill-analysis.html" data-i18n="nav.l3">nav.l3</a></li><li><a href="../../../../notes/synthesis/taichu-p0-skill-compaction-spec.html" data-i18n="nav.taichu_p0">nav.taichu_p0</a></li></ul></section><section><h2 data-i18n="nav.more">More</h2><ul>
+    <li><a href="/html/docs.html" data-i18n="nav.sitemap">Sitemap</a></li>
+    <li><a href="/html/i18n-coverage.html" data-i18n="nav.i18n_coverage">i18n coverage</a></li>
+    <li><a href="/html/index.html" data-i18n="nav.dashboard">Dashboard</a></li>
+    <li><a href="/html/deck/index.html" data-i18n="nav.decks">Slide decks</a></li>
+  </ul></section>
+    </nav>
+    <div class="viewer-main">
+      <div class="viewer-toolbar">
+        <div>
+          <h1>OpenClaw-RL — RL Harness Survey Report</h1>
+          <div class="path">notes/synthesis/survey-reports/openclaw-rl.md</div>
+        </div>
+        <a class="btn" href="/html/docs.html" data-i18n="toolbar.sitemap">Sitemap</a>
+        <a class="btn primary" href="../agent-skill-architecture-survey-matrix.html" data-i18n="toolbar.matrix">165-dim matrix</a>
+      </div>
+      
+      <article class="md-body"><h1>OpenClaw-RL — RL Harness Survey Report</h1>
+<blockquote>
+<p><strong>Local</strong>: <code>/Users/maybewu/Documents/Projects/oss/openclaw-rl</code><br><strong>Upstream</strong>: <a href="https://github.com/Gen-Verse/OpenClaw-RL">Gen-Verse/OpenClaw-RL</a><br><strong>Note</strong>: <strong>Not</strong> <code>openclaw/openclaw</code>. Not a SKILL.md lifecycle system — <strong>RL training layer</strong> for conversation → policy signals.</p>
+</blockquote>
+<h2>1. Architecture</h2>
+<p>OpenClaw-RL trains personalized agents from everyday conversations. Architecture emphasizes <strong>async decoupling</strong>:</p>
+<pre><code class="language-text">Serving loop          ←→  Rollout collection
+        ↓                      ↓
+PRM / Judge evaluation  →  Policy training (GRPO / OPD / etc.)
+</code></pre>
+<p><strong>Evidence (L0 README)</strong>: <a href="https://github.com/Gen-Verse/OpenClaw-RL">Gen-Verse/OpenClaw-RL</a> — <em>&quot;Train any agent simply by talking&quot;</em></p>
+<p><strong>Relation to skill survey</strong>: Provides <strong>Claw-R1 / SkillRL data plane</strong> complement to OpenClaw <code>openclaw-trajectory</code> JSONL — not skill Author/Store/Discover.</p>
+<h2>2. Skill Runtime</h2>
+<p><strong>N/A</strong> — no skill catalog, loader, or progressive disclosure in this repo.</p>
+<p>TaiChu relevance: export <code>interaction_log</code> in trajectory shape compatible with OpenClaw-RL + Claw-R1 step middleware.</p>
+<h2>3. Skill Lifecycle</h2>
+<p>All stages <strong>N/A</strong> for SKILL.md. See <a href="../web-expanded-lifecycle-matrix-merged.html">web-expanded-lifecycle-matrix-merged.md</a> row OpenClaw-RL.</p>
+<h2>4. Skill Evolution</h2>
+<p>Evolution here = <strong>policy weights</strong>, not skill documents. Conversation feedback → PRM/judge → GRPO.</p>
+<p>Offline skill evolution (SkillBank) remains separate pipeline: OpenSquilla gates + Hermes GEPA.</p>
+<h2>5. Multi-Agent Skill</h2>
+<p>N/A at skill layer. Multi-turn conversation may include tool traces usable for RL.</p>
+<h2>6. Skill Governance</h2>
+<p>N/A for skills. Training data governance is project-specific.</p>
+<h2>7. Harness Integration</h2>
+<p>Pairs with <strong>OpenClaw gateway</strong> trajectory export (<code>oss/openclaw/trajectory/</code>). Local clone at <code>oss/openclaw-rl</code> — <strong>L0 README only</strong> in this workspace (no L3 walk yet).</p>
+<h2>8. RL Readiness</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Signal</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Step / trajectory</td>
+<td>★ primary purpose</td>
+</tr>
+<tr>
+<td>Reward / PRM / judge</td>
+<td>★</td>
+</tr>
+<tr>
+<td>SkillRL</td>
+<td>◐ skill usage in traj as features</td>
+</tr>
+<tr>
+<td>Claw-R1</td>
+<td>★ aligned middleware philosophy</td>
+</tr>
+</tbody></table></div>
+<p><strong>Matrix §15</strong>: Best dedicated <strong>RL harness</strong> row alongside Hermes Atropos.</p>
+<h2>9. Borrow for TaiChu</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Pattern</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Async serve/train split</td>
+<td>scale skill eval harness</td>
+</tr>
+<tr>
+<td>Conversation → training signal</td>
+<td>long-term SkillRL loop</td>
+</tr>
+<tr>
+<td>Trajectory schema alignment</td>
+<td>unify interaction_log + openclaw-trajectory</td>
+</tr>
+</tbody></table></div>
+<h2>10. Implement in TaiChu</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>P</th>
+<th>What</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>P2</td>
+<td>Export interaction_log fields matching OpenClaw trajectory</td>
+</tr>
+<tr>
+<td>P3</td>
+<td>Optional OpenClaw-RL integration for policy experiments</td>
+</tr>
+</tbody></table></div>
+<h2>11. Do NOT Borrow</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Pattern</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Treat as skill registry</td>
+<td>wrong repo</td>
+</tr>
+<tr>
+<td>Confuse with openclaw skill-workshop</td>
+<td>different layer</td>
+</tr>
+</tbody></table></div>
+<h2>12. Score (1–10)</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Category</th>
+<th align="center">Score</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Data Model</td>
+<td align="center">—</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>Runtime</td>
+<td align="center">—</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>Lifecycle</td>
+<td align="center">—</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>Evolution</td>
+<td align="center">—</td>
+<td>policy not skill</td>
+</tr>
+<tr>
+<td>Governance</td>
+<td align="center">—</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>Agent Integration</td>
+<td align="center">—</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>RL Readiness</td>
+<td align="center"><strong>8</strong></td>
+<td>purpose-built</td>
+</tr>
+<tr>
+<td><strong>Overall (RL only)</strong></td>
+<td align="center"><strong>8.0</strong></td>
+<td>RL layer, not skill architecture</td>
+</tr>
+</tbody></table></div>
+<h2>Evidence index</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Claim</th>
+<th>URL</th>
+<th>Level</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>OCR-01</td>
+<td>Project purpose</td>
+<td><a href="https://github.com/Gen-Verse/OpenClaw-RL">https://github.com/Gen-Verse/OpenClaw-RL</a></td>
+<td>L0</td>
+</tr>
+<tr>
+<td>OCR-02</td>
+<td>Distinct from openclaw</td>
+<td><a href="../survey-methodology-and-repo-confirmation.html">survey-methodology</a> §2.2</td>
+<td>L1</td>
+</tr>
+</tbody></table></div>
+</article>
+    </div>
+  </div>
+  <script src="../../../../../js/i18n.js"></script>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
+  </script>
+</body>
+</html>

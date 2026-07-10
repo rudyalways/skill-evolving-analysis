@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Skill-Evolving Analysis — Research Dashboard</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="layout">
+    <nav>
+      <div data-lang-switch class="lang-switch-host"></div>
+      <h1 data-i18n="nav.research">Research</h1>
+      <div class="title" data-i18n="site.title">Skill-Evolving Analysis</div>
+
+      <section>
+        <h2 data-i18n="nav.docs_compare">Docs &amp; compare</h2>
+        <ul>
+          <li><a href="docs.html"><strong data-i18n="nav.sitemap">Docs sitemap</strong></a></li>
+          <li><a href="site/notes/synthesis/agent-skill-architecture-survey-matrix.html" data-i18n="nav.matrix165">8-repo 165-dim matrix</a></li>
+          <li><a href="site/notes/synthesis/skill-lifecycle-full-matrix.html" data-i18n="nav.lifecycle">Lifecycle matrix</a></li>
+        </ul>
+      </section>
+
+      <section>
+        <h2 data-i18n="nav.presentations">Presentations</h2>
+        <ul>
+          <li><a href="deck/index.html"><strong data-i18n="nav.decks">Slide decks</strong> <span style="color:var(--muted);font-size:0.8em">PPT · 34 slides</span></a></li>
+          <li><a href="deck/skill-evolution-repos.html"><strong>Skill 自进化</strong> · 8 repos</a></li>
+          <li><a href="deck/survey-part1.html">Survey Part 1</a></li>
+          <li><a href="deck/survey-part2.html">Survey Part 2 + TaiChu</a></li>
+          <li><a href="deck/paper-skillrl.html">Paper — SkillRL</a></li>
+          <li><a href="deck/paper-claw-r1.html">Paper — Claw-R1</a></li>
+        </ul>
+      </section>
+
+      <section>
+        <h2 data-i18n="nav.overview">Overview</h2>
+        <ul>
+          <li><a href="index.html" data-page="index.html" class="active" data-i18n="nav.dashboard">Dashboard</a></li>
+          <li><a href="structure.html" data-page="structure.html" data-i18n="nav.directory">Directory map</a></li>
+          <li><a href="workflow.html" data-page="workflow.html" data-i18n="nav.workflow">Workflow</a></li>
+        </ul>
+      </section>
+
+      <section>
+        <h2 data-i18n="nav.stack">Stack layers</h2>
+        <ul>
+          <li><a href="site/topics/skill-rl/overview.html">SkillRL <span style="color:var(--muted);font-size:0.8em" data-i18n="nav.algorithm">algorithm</span></a></li>
+          <li><a href="site/topics/claw-r1/overview.html">Claw-R1 <span style="color:var(--muted);font-size:0.8em" data-i18n="nav.infra">infra</span></a></li>
+        </ul>
+      </section>
+
+      <section>
+        <h2 data-i18n="nav.synthesis">Synthesis</h2>
+        <ul>
+          <li><a href="site/notes/synthesis/comparison.html" data-i18n="nav.comparison">Comparison</a></li>
+          <li><a href="site/notes/synthesis/combined-pipeline.html" data-i18n="nav.pipeline">Combined pipeline</a></li>
+        </ul>
+      </section>
+
+      <section>
+        <h2 data-i18n="nav.catalog">Catalog</h2>
+        <ul>
+          <li><a href="site/INDEX.html">INDEX</a></li>
+          <li><a href="site/README.html">README</a></li>
+        </ul>
+      </section>
+    </nav>
+
+    <main>
+      <header class="page-header">
+        <h1 data-i18n="site.title">Skill-Evolving Analysis</h1>
+        <p data-i18n="dash.tagline">Two complementary layers of the agentic RL stack — algorithm + infrastructure</p>
+      </header>
+
+      <div class="stats">
+        <div class="stat">
+          <div class="num">2</div>
+          <div class="label" data-i18n="dash.stat.papers">Papers</div>
+        </div>
+        <div class="stat">
+          <div class="num">2</div>
+          <div class="label" data-i18n="dash.stat.layers">Stack layers</div>
+        </div>
+        <div class="stat">
+          <div class="num">2</div>
+          <div class="label" data-i18n="dash.stat.synthesis">Synthesis docs</div>
+        </div>
+        <div class="stat">
+          <div class="num">25</div>
+          <div class="label" data-i18n="dash.stat.slides">Deck slides</div>
+        </div>
+        <div class="stat">
+          <div class="num">0</div>
+          <div class="label" data-i18n="dash.stat.raw">Raw files</div>
+        </div>
+      </div>
+
+      <section class="block">
+        <h2 data-i18n="dash.compare.title">8-repo cross-compare (rendered tables)</h2>
+        <div class="card-grid">
+          <article class="card">
+            <h3 data-i18n="dash.compare.matrix">165-dim Architecture Matrix</h3>
+            <div class="meta"><span class="badge active">primary</span> 8 repos × 15 sections</div>
+            <p data-i18n="dash.compare.matrix_desc">Full cross-compare: Codex, Claude Rev, OpenClaw, Hermes, GenericAgent, OpenSquilla, ZeroClaw, TaiChu.</p>
+            <p style="margin-top:0.75rem"><a href="site/notes/synthesis/agent-skill-architecture-survey-matrix.html" data-i18n="dash.compare.open">Open matrix →</a></p>
+          </article>
+          <article class="card">
+            <h3 data-i18n="dash.compare.lifecycle">Lifecycle 9-stage Matrix</h3>
+            <div class="meta">Store → Evolve</div>
+            <p data-i18n="dash.compare.lifecycle_desc">Condensed lifecycle columns with per-stage leaders and TaiChu gap analysis.</p>
+            <p style="margin-top:0.75rem"><a href="site/notes/synthesis/skill-lifecycle-full-matrix.html" data-i18n="dash.compare.open">Open matrix →</a></p>
+          </article>
+          <article class="card">
+            <h3 data-i18n="dash.compare.sitemap">All docs sitemap</h3>
+            <div class="meta">Rendered HTML</div>
+            <p data-i18n="dash.compare.sitemap_desc">Browse every synthesis doc, survey report, and paper overview as styled HTML with GFM tables.</p>
+            <p style="margin-top:0.75rem"><a href="docs.html" data-i18n="dash.compare.open_sitemap">Open sitemap →</a></p>
+          </article>
+        </div>
+      </section>
+
+      <section class="block">
+        <h2 data-i18n="dash.stack.title">Agent RL stack</h2>
+        <table>
+          <thead>
+            <tr>
+              <th data-i18n="dash.stack.paper">Paper</th>
+              <th data-i18n="dash.stack.focus">Focus</th>
+              <th data-i18n="dash.stack.layer">Layer</th>
+              <th data-i18n="dash.stack.abstraction">Abstraction</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><a href="site/topics/skill-rl/overview.html">SkillRL</a></td>
+              <td data-i18n="dash.stack.skillrl_focus">How the policy learns from experience</td>
+              <td><span class="tag">algorithm</span></td>
+              <td>SkillBank</td>
+            </tr>
+            <tr>
+              <td><a href="site/topics/claw-r1/overview.html">Claw-R1</a></td>
+              <td data-i18n="dash.stack.clawr1_focus">How interaction data is collected &amp; fed into RL</td>
+              <td><span class="tag">infrastructure</span></td>
+              <td>Data Pool</td>
+            </tr>
+          </tbody>
+        </table>
+        <p style="margin-top:1rem;color:var(--muted);font-size:0.9rem">
+          <span data-i18n="dash.stack.note">Complementary, not competing. See</span>
+          <a href="site/notes/synthesis/combined-pipeline.html" data-i18n="dash.stack.pipeline_link">combined pipeline →</a>
+        </p>
+      </section>
+
+      <section class="block">
+        <h2 data-i18n="dash.topics.title">Research topics</h2>
+        <div class="card-grid">
+          <article class="card">
+            <h3>SkillRL</h3>
+            <div class="meta"><span class="badge active">algorithm</span> arXiv:2602.08234</div>
+            <p>Distill trajectories → hierarchical SkillBank. Policy and skills co-evolve via GRPO + recursive evolution.</p>
+            <div style="margin-top:0.75rem">
+              <span class="tag">skillbank</span>
+              <span class="tag">recursive-evolution</span>
+              <span class="tag">grpo</span>
+            </div>
+            <p style="margin-top:0.75rem"><a href="site/topics/skill-rl/overview.html" data-i18n="dash.topics.read">Read overview →</a></p>
+          </article>
+
+          <article class="card">
+            <h3>Claw-R1</h3>
+            <div class="meta"><span class="badge active">infrastructure</span> arXiv:2606.09138</div>
+            <p>Gateway + Data Pool middleware. Step-level records, queryable, algorithm-agnostic. Replay Buffer++.</p>
+            <div style="margin-top:0.75rem">
+              <span class="tag">data-pool</span>
+              <span class="tag">gateway</span>
+              <span class="tag">step-level</span>
+            </div>
+            <p style="margin-top:0.75rem"><a href="site/topics/claw-r1/overview.html" data-i18n="dash.topics.read">Read overview →</a></p>
+          </article>
+
+          <article class="card">
+            <h3>Combined pipeline</h3>
+            <div class="meta"><span class="badge active">architecture</span></div>
+            <p>Claw-R1 feeds step data → SkillRL distills skills → GRPO → improved policy → back to Claw-R1.</p>
+            <p style="margin-top:0.75rem"><a href="site/notes/synthesis/combined-pipeline.html" data-i18n="dash.topics.architecture">Read architecture →</a></p>
+          </article>
+        </div>
+      </section>
+
+      <section class="block">
+        <h2 data-i18n="dash.papers.title">Papers</h2>
+        <table>
+          <thead>
+            <tr>
+              <th data-i18n="dash.papers.date">Date</th>
+              <th data-i18n="dash.papers.title_col">Title</th>
+              <th data-i18n="dash.stack.layer">Layer</th>
+              <th>arXiv</th>
+              <th>Code</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>2026-02</td>
+              <td>SkillRL</td>
+              <td>algorithm</td>
+              <td><a href="https://arxiv.org/abs/2602.08234">2602.08234</a></td>
+              <td><a href="https://github.com/aiming-lab/SkillRL">GitHub</a></td>
+            </tr>
+            <tr>
+              <td>2026-06</td>
+              <td>Claw-R1</td>
+              <td>infrastructure</td>
+              <td><a href="https://arxiv.org/abs/2606.09138">2606.09138</a></td>
+              <td><a href="https://github.com/AgentR1/Claw-R1">GitHub</a></td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="block">
+        <h2 data-i18n="dash.side.title">Side-by-side</h2>
+        <table>
+          <thead>
+            <tr>
+              <th data-i18n="dash.side.aspect">Aspect</th>
+              <th>SkillRL</th>
+              <th>Claw-R1</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>Main contribution</td><td>RL + skill learning</td><td>Data middleware</td></tr>
+            <tr><td>Uses RL</td><td>Yes (GRPO)</td><td>No (algorithm-agnostic)</td></tr>
+            <tr><td>Stores</td><td>Skills</td><td>Step records</td></tr>
+            <tr><td>Focus</td><td>Better policy learning</td><td>Better data lifecycle</td></tr>
+            <tr><td>Failure handling</td><td>Distills failure lessons</td><td>Records for later query</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <footer>
+        <span data-i18n="dash.footer.refreshed">Last refreshed:</span> <span id="last-refreshed">—</span> ·
+        <a href="site/notes/synthesis/comparison.html" data-i18n="dash.footer.comparison">Full comparison</a>
+        · <a href="site/zh/notes/synthesis/comparison.html">中文对比</a>
+      </footer>
+    </main>
+  </div>
+  <script src="js/i18n.js"></script>
+  <script src="js/render.js"></script>
+</body>
+</html>

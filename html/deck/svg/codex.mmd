@@ -1,0 +1,16 @@
+sequenceDiagram
+  autonumber
+  participant Dev as Human dev
+  participant RR as Record&Replay
+  participant T as Thread/Session
+  participant SM as SkillsManager
+  participant U as User
+  Dev->>Dev: write skills/foo/SKILL.md
+  Dev->>RR: record session (optional)
+  RR->>Dev: human distills draft
+  Dev->>Dev: cargo test + git commit
+  U->>T: $foo fix the build
+  T->>SM: scan → metadata ≤2% ctx
+  SM->>T: build_skill_injections(@mention)
+  T->>U: turn uses full SKILL.md this turn only
+  Note over T: no post-turn patch hook

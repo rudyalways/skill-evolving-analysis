@@ -1,0 +1,21 @@
+sequenceDiagram
+  autonumber
+  participant U as User
+  participant S as Session
+  participant P as prompt prefix
+  participant LS as load_skill
+  participant C as compaction
+  participant L as interaction_log
+  Note over U,S: Turn N · Online (today)
+  U->>S: 用端侧技能查天气
+  S->>P: # Available Skills XML prefix
+  S->>LS: load_skill(weather-local)
+  LS->>S: ToolResult body (runs_on: device)
+  S->>U: run_subagent → device
+  Note over C: compact summarizes
+  C->>S: ❌ ToolResult body dropped
+  Note over U,S: Turn N+1 · gap
+  U->>S: 继续刚才的天气任务
+  S->>S: ❌ no invoked_skills reinject
+  Note over L: P1 future
+  L->>L: miner → proposals/ (planned)

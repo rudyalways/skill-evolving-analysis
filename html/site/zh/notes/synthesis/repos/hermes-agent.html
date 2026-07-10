@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hermes Agent — 20 维度源码分析 — Skill-Evolving</title>
+  <link rel="alternate" hreflang="en" href="/html/site/notes/synthesis/repos/hermes-agent.html">
+  <link rel="alternate" hreflang="zh-Hans" href="/html/site/zh/notes/synthesis/repos/hermes-agent.html">
+  <link rel="alternate" hreflang="x-default" href="/html/site/notes/synthesis/repos/hermes-agent.html">
+  <link rel="stylesheet" href="../../../../../css/viewer.css">
+</head>
+<body class="" data-doc-locale="zh" data-content-lang="zh">
+  <div class="viewer-layout">
+    <nav>
+      <div data-lang-switch class="lang-switch-host"></div>
+      <h1 data-i18n="nav.docs">Docs</h1>
+      <div class="title" data-i18n="nav.rendered">Rendered HTML</div>
+      <section class="highlight-section"><h2 data-i18n="nav.compare">nav.compare</h2><ul><li><a href="../agent-skill-architecture-survey-matrix.html" data-i18n="nav.matrix165">nav.matrix165</a></li><li><a href="../skill-lifecycle-full-matrix.html" data-i18n="nav.lifecycle">nav.lifecycle</a></li><li><a href="../web-expanded-lifecycle-matrix-merged.html" data-i18n="nav.web_l3">nav.web_l3</a></li><li><a href="../eight-repo-comprehensive-survey.html" data-i18n="nav.survey20">nav.survey20</a></li><li><a href="../skill-lifecycle-and-dynamic-loading-survey.html" data-i18n="nav.per_turn">nav.per_turn</a></li><li><a href="../eight-repo-deep-source-analysis.html" data-i18n="nav.deep_source">nav.deep_source</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.per_repo">nav.per_repo</h2><ul><li><a href="../survey-reports/opensquilla.html">OpenSquilla (9.0)</a></li><li><a href="../survey-reports/hermes-agent.html">Hermes (8.1)</a></li><li><a href="../survey-reports/openclaw.html">OpenClaw (8.0)</a></li><li><a href="../survey-reports/claude-code-rev.html">Claude Rev (7.7)</a></li><li><a href="../survey-reports/codex.html">Codex (7.2)</a></li><li><a href="../survey-reports/taichu.html">TaiChu (5.0)</a></li><li><a href="../survey-reports/zeroclaw.html">ZeroClaw (5.0)</a></li><li><a href="../survey-reports/genericagent.html">GenericAgent (4.8)</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.papers">nav.papers</h2><ul><li><a href="../../../../topics/skill-rl/overview.html">SkillRL</a></li><li><a href="../../../../topics/claw-r1/overview.html">Claw-R1</a></li><li><a href="../comparison.html" data-i18n="nav.comparison">nav.comparison</a></li><li><a href="../combined-pipeline.html" data-i18n="nav.pipeline">nav.pipeline</a></li><li><a href="../l3-comprehensive-skill-analysis.html" data-i18n="nav.l3">nav.l3</a></li><li><a href="../../../../notes/synthesis/taichu-p0-skill-compaction-spec.html" data-i18n="nav.taichu_p0">nav.taichu_p0</a></li></ul></section><section><h2 data-i18n="nav.more">More</h2><ul>
+    <li><a href="/html/docs.html" data-i18n="nav.sitemap">Sitemap</a></li>
+    <li><a href="/html/i18n-coverage.html" data-i18n="nav.i18n_coverage">i18n coverage</a></li>
+    <li><a href="/html/index.html" data-i18n="nav.dashboard">Dashboard</a></li>
+    <li><a href="/html/deck/index.html" data-i18n="nav.decks">Slide decks</a></li>
+  </ul></section>
+    </nav>
+    <div class="viewer-main">
+      <div class="viewer-toolbar">
+        <div>
+          <h1>Hermes Agent — 20 维度源码分析</h1>
+          <div class="path">notes/synthesis/repos/hermes-agent.md</div>
+        </div>
+        <a class="btn" href="/html/docs.html" data-i18n="toolbar.sitemap">Sitemap</a>
+        <a class="btn primary" href="../agent-skill-architecture-survey-matrix.html" data-i18n="toolbar.matrix">165-dim matrix</a>
+      </div>
+      
+      <article class="md-body"><h1>Hermes Agent — 20 维度源码分析</h1>
+<blockquote>
+<p>Path: <code>/Users/maybewu/Documents/Projects/oss/hermes-agent</code><br>Upstream: <a href="https://github.com/nousresearch/hermes-agent">nousresearch/hermes-agent</a></p>
+</blockquote>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Dimension</th>
+<th>Summary</th>
+<th>Key paths</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td><strong>Architecture</strong></td>
+<td>Python monolith: AIAgent + gateway + Atropos env + plugins</td>
+<td><code>run_agent.py</code>, <code>environments/agent_loop.py</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>Agent loop</strong></td>
+<td>OpenAI tool-calling loop until max_iterations</td>
+<td><code>environments/agent_loop.py</code>, <code>run_agent.py</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>Harness</strong></td>
+<td>Atropos <code>HermesAgentBaseEnv</code> for RL/benchmarks</td>
+<td><code>environments/hermes_base_env.py</code></td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>Session</strong></td>
+<td>SQLite SessionDB + FTS5; gateway session reset</td>
+<td><code>hermes_state.py</code>, <code>gateway/session.py</code></td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong>Memory</strong></td>
+<td>MEMORY.md/USER.md + plugin providers (Honcho, mem0)</td>
+<td><code>tools/memory_tool.py</code>, <code>agent/memory_manager.py</code></td>
+</tr>
+<tr>
+<td>6</td>
+<td><strong>Skills</strong></td>
+<td>agentskills.io; progressive disclosure</td>
+<td><code>tools/skills_tool.py</code>, <code>skill_manager_tool.py</code></td>
+</tr>
+<tr>
+<td>7</td>
+<td><strong>Workflow</strong></td>
+<td>todo tool; cron; delegate; no planner tool</td>
+<td><code>tools/todo_tool.py</code>, <code>delegate_tool.py</code></td>
+</tr>
+<tr>
+<td>8</td>
+<td><strong>Reflection</strong></td>
+<td>Verification blocks; <strong>background review</strong> fork</td>
+<td><code>run_agent.py:1753-1830</code>, <code>prompt_builder.py</code></td>
+</tr>
+<tr>
+<td>9</td>
+<td><strong>Self-improvement</strong></td>
+<td>Memory/skill nudges + post-turn background agent</td>
+<td><code>run_agent.py:9604-9632</code></td>
+</tr>
+<tr>
+<td>10</td>
+<td><strong>Skill evolution</strong></td>
+<td><strong>skill_manage</strong> CRUD + background review create/update</td>
+<td><code>tools/skill_manager_tool.py</code></td>
+</tr>
+<tr>
+<td>11</td>
+<td><strong>Prompt</strong></td>
+<td>prompt_builder layers; Anthropic cache control</td>
+<td><code>agent/prompt_builder.py</code>, <code>prompt_caching.py</code></td>
+</tr>
+<tr>
+<td>12</td>
+<td><strong>Evaluation</strong></td>
+<td>Benchmark envs; trajectory_compressor; RL tool</td>
+<td><code>environments/benchmarks/</code>, <code>rl_training_tool.py</code></td>
+</tr>
+<tr>
+<td>13</td>
+<td><strong>Hooks</strong></td>
+<td>Gateway HOOK.yaml + plugin hooks (dual system)</td>
+<td><code>gateway/hooks.py</code>, <code>hermes_cli/plugins.py</code></td>
+</tr>
+<tr>
+<td>14</td>
+<td><strong>Context</strong></td>
+<td>ContextCompressor prune+summarize; frozen memory snapshot</td>
+<td><code>agent/context_compressor.py</code></td>
+</tr>
+<tr>
+<td>15</td>
+<td><strong>Tools</strong></td>
+<td>40+ tools; terminal backends; MCP; checkpoints</td>
+<td><code>toolsets.py</code>, <code>tools/registry.py</code></td>
+</tr>
+<tr>
+<td>16</td>
+<td><strong>Multi-agent</strong></td>
+<td>delegate_task (depth 2); mixture_of_agents</td>
+<td><code>tools/delegate_tool.py</code></td>
+</tr>
+<tr>
+<td>17</td>
+<td><strong>Training/RL</strong></td>
+<td><strong>First-class</strong>: Tinker-Atropos RL training tool</td>
+<td><code>tools/rl_training_tool.py</code>, <code>hermes_base_env.py</code></td>
+</tr>
+<tr>
+<td>18</td>
+<td><strong>Interesting</strong></td>
+<td>Frozen prefix cache; shadow-git checkpoints; skills manifest sync</td>
+<td><code>memory_tool.py</code>, <code>skills_sync.py</code></td>
+</tr>
+<tr>
+<td>19</td>
+<td><strong>Weaknesses</strong></td>
+<td>9.8k-line run_agent.py; no skill ranking/gates</td>
+<td>architecture split</td>
+</tr>
+<tr>
+<td>20</td>
+<td><strong>For TaiChu</strong></td>
+<td>Background review + skill_manage + Atropos env interface</td>
+<td>comprehensive survey P0</td>
+</tr>
+</tbody></table></div>
+<h2>Skill evolution sub-matrix</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Sub</th>
+<th>Status</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Representation</td>
+<td>SKILL.md YAML frontmatter</td>
+<td><code>skills_tool.py</code></td>
+</tr>
+<tr>
+<td>Loading</td>
+<td>Index in prompt; skill_view on demand</td>
+<td><code>skill_utils.py</code></td>
+</tr>
+<tr>
+<td>Evolution</td>
+<td>skill_manage create/edit/patch/delete</td>
+<td><code>skill_manager_tool.py</code></td>
+</tr>
+<tr>
+<td>Reflection</td>
+<td>Post-turn bg review; nudge every 10 iters</td>
+<td><code>run_agent.py:9604-9610</code></td>
+</tr>
+<tr>
+<td>Memory types</td>
+<td>Procedural=skills; declarative=MEMORY.md</td>
+<td><code>skill_manager_tool.py:10-12</code></td>
+</tr>
+<tr>
+<td>Harness ext</td>
+<td>Plugin hooks + Atropos subclass</td>
+<td><code>hermes_base_env.py</code></td>
+</tr>
+<tr>
+<td>Evaluation</td>
+<td>Benchmark rewards only</td>
+<td><code>environments/benchmarks/</code></td>
+</tr>
+<tr>
+<td>RL readiness</td>
+<td><strong>Strong</strong></td>
+<td><code>rl_training_tool.py</code></td>
+</tr>
+<tr>
+<td>Step traces</td>
+<td>agent:step hook; trajectory JSONL</td>
+<td><code>gateway/hooks.py</code>, <code>agent/trajectory.py</code></td>
+</tr>
+<tr>
+<td>Versioning</td>
+<td>Bundled origin-hash manifest</td>
+<td><code>skills_sync.py</code></td>
+</tr>
+<tr>
+<td>Ranking</td>
+<td>None</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Candidates</td>
+<td>None</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Auto merge</td>
+<td>None</td>
+<td>—</td>
+</tr>
+</tbody></table></div>
+</article>
+    </div>
+  </div>
+  <script src="../../../../../js/i18n.js"></script>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
+  </script>
+</body>
+</html>

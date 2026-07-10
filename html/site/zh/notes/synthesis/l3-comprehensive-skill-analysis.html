@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>L3 深度源码分析 — 八仓 Skill 全生命周期 — Skill-Evolving</title>
+  <link rel="alternate" hreflang="en" href="/html/site/notes/synthesis/l3-comprehensive-skill-analysis.html">
+  <link rel="alternate" hreflang="zh-Hans" href="/html/site/zh/notes/synthesis/l3-comprehensive-skill-analysis.html">
+  <link rel="alternate" hreflang="x-default" href="/html/site/notes/synthesis/l3-comprehensive-skill-analysis.html">
+  <link rel="stylesheet" href="../../../../css/viewer.css">
+</head>
+<body class="" data-doc-locale="zh" data-content-lang="zh">
+  <div class="viewer-layout">
+    <nav>
+      <div data-lang-switch class="lang-switch-host"></div>
+      <h1 data-i18n="nav.docs">Docs</h1>
+      <div class="title" data-i18n="nav.rendered">Rendered HTML</div>
+      <section class="highlight-section"><h2 data-i18n="nav.compare">nav.compare</h2><ul><li><a href="./agent-skill-architecture-survey-matrix.html" data-i18n="nav.matrix165">nav.matrix165</a></li><li><a href="./skill-lifecycle-full-matrix.html" data-i18n="nav.lifecycle">nav.lifecycle</a></li><li><a href="./web-expanded-lifecycle-matrix-merged.html" data-i18n="nav.web_l3">nav.web_l3</a></li><li><a href="./eight-repo-comprehensive-survey.html" data-i18n="nav.survey20">nav.survey20</a></li><li><a href="./skill-lifecycle-and-dynamic-loading-survey.html" data-i18n="nav.per_turn">nav.per_turn</a></li><li><a href="./eight-repo-deep-source-analysis.html" data-i18n="nav.deep_source">nav.deep_source</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.per_repo">nav.per_repo</h2><ul><li><a href="./survey-reports/opensquilla.html">OpenSquilla (9.0)</a></li><li><a href="./survey-reports/hermes-agent.html">Hermes (8.1)</a></li><li><a href="./survey-reports/openclaw.html">OpenClaw (8.0)</a></li><li><a href="./survey-reports/claude-code-rev.html">Claude Rev (7.7)</a></li><li><a href="./survey-reports/codex.html">Codex (7.2)</a></li><li><a href="./survey-reports/taichu.html">TaiChu (5.0)</a></li><li><a href="./survey-reports/zeroclaw.html">ZeroClaw (5.0)</a></li><li><a href="./survey-reports/genericagent.html">GenericAgent (4.8)</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.papers">nav.papers</h2><ul><li><a href="../../../topics/skill-rl/overview.html">SkillRL</a></li><li><a href="../../../topics/claw-r1/overview.html">Claw-R1</a></li><li><a href="./comparison.html" data-i18n="nav.comparison">nav.comparison</a></li><li><a href="./combined-pipeline.html" data-i18n="nav.pipeline">nav.pipeline</a></li><li><a class="active" href="./l3-comprehensive-skill-analysis.html" data-i18n="nav.l3">nav.l3</a></li><li><a href="../../../notes/synthesis/taichu-p0-skill-compaction-spec.html" data-i18n="nav.taichu_p0">nav.taichu_p0</a></li></ul></section><section><h2 data-i18n="nav.more">More</h2><ul>
+    <li><a href="/html/docs.html" data-i18n="nav.sitemap">Sitemap</a></li>
+    <li><a href="/html/i18n-coverage.html" data-i18n="nav.i18n_coverage">i18n coverage</a></li>
+    <li><a href="/html/index.html" data-i18n="nav.dashboard">Dashboard</a></li>
+    <li><a href="/html/deck/index.html" data-i18n="nav.decks">Slide decks</a></li>
+  </ul></section>
+    </nav>
+    <div class="viewer-main">
+      <div class="viewer-toolbar">
+        <div>
+          <h1>L3 深度源码分析 — 八仓 Skill 全生命周期</h1>
+          <div class="path">notes/synthesis/l3-comprehensive-skill-analysis.md</div>
+        </div>
+        <a class="btn" href="/html/docs.html" data-i18n="toolbar.sitemap">Sitemap</a>
+        <a class="btn primary" href="./agent-skill-architecture-survey-matrix.html" data-i18n="toolbar.matrix">165-dim matrix</a>
+      </div>
+      
+      <article class="md-body"><h1>L3 深度源码分析 — 八仓 Skill 全生命周期</h1>
+<blockquote>
+<p><strong>证据等级</strong>：L3 — 核心模块全文精读（非全库逐行）。<br><strong>方法</strong>：本机 clone + 子模块走读；<code>hermes-agent-self-evolution</code> / <code>zeroclaw-skills</code> 因网络未 clone，用 README Web 补证。<br><strong>维度</strong>：Store → Expose → Discover → Recommend → Load → Per-turn → Offload → Compact → Delete → Evolve → Subagent</p>
+</blockquote>
+<hr>
+<h2>总览：谁在哪一层最强</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>能力层</th>
+<th>#1</th>
+<th>#2</th>
+<th>#3</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>在线 skill CRUD</strong></td>
+<td>Hermes <code>skill_manage</code></td>
+<td>OpenSquilla accept</td>
+<td>OpenClaw workshop</td>
+</tr>
+<tr>
+<td><strong>候选→Gate→晋升</strong></td>
+<td>OpenSquilla 5-gate</td>
+<td>OpenClaw scanner+pending</td>
+<td>—</td>
+</tr>
+<tr>
+<td><strong>Per-turn catalog</strong></td>
+<td>OpenSquilla pipeline</td>
+<td>Claude Rev listing delta</td>
+<td>TaiChu user prefix</td>
+</tr>
+<tr>
+<td><strong>Per-turn body inject</strong></td>
+<td>Codex <code>$mention</code></td>
+<td>Claude meta user msg</td>
+<td>Hermes skill_view</td>
+</tr>
+<tr>
+<td><strong>Compaction 保 skill</strong></td>
+<td>Claude <code>invoked_skills</code></td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr>
+<td><strong>Subagent skill bundle</strong></td>
+<td>Claude frontmatter preload</td>
+<td>Codex child turn_skills</td>
+<td>OpenSquilla meta DAG</td>
+</tr>
+<tr>
+<td><strong>离线演化 (GEPA)</strong></td>
+<td>hermes-self-evolution</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr>
+<td><strong>RL trace export</strong></td>
+<td>OpenClaw trajectory</td>
+<td>Hermes Atropos</td>
+<td>—</td>
+</tr>
+<tr>
+<td><strong>端云 skill 路由</strong></td>
+<td>TaiChu <code>runs_on</code></td>
+<td>—</td>
+<td>—</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h1>1. Hermes Agent (+ Self-Evolution 生态)</h1>
+<p><strong>路径</strong>：<code>oss/hermes-agent</code> | <strong>L3 精读</strong>：<code>skill_manager_tool.py</code>, <code>skills_tool.py</code>, <code>run_agent.py</code>, <code>skills_guard.py</code>, <code>delegate_tool.py</code></p>
+<h2>生命周期</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>阶段</th>
+<th>实现</th>
+<th>证据</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Store</strong></td>
+<td><code>~/.hermes/skills/</code> 唯一真相；bundled→sync；hub→quarantine→scan→install</td>
+<td><code>skills_sync.py:155-280</code>, <code>skills_hub.py:307-374</code></td>
+</tr>
+<tr>
+<td><strong>Expose</strong></td>
+<td><code>&lt;available_skills&gt;</code> index + <code>SKILLS_GUIDANCE</code> + slash <code>/skill-name</code></td>
+<td><code>prompt_builder.py:525-742</code></td>
+</tr>
+<tr>
+<td><strong>Discover</strong></td>
+<td>三层 progressive：list metadata → view body → view reference</td>
+<td><code>skills_tool.py:719-1056</code></td>
+</tr>
+<tr>
+<td><strong>Recommend</strong></td>
+<td>Prompt 驱动 + iteration nudge（非 embedding）</td>
+<td><code>prompt_builder.py:720-732</code>, <code>run_agent.py:9604-9610</code></td>
+</tr>
+<tr>
+<td><strong>Load</strong></td>
+<td><code>skill_view</code> / CLI <code>--skills</code> preload / slash 注入全文</td>
+<td><code>cli.py:9101-9113</code>, <code>skill_commands.py:291-327</code></td>
+</tr>
+<tr>
+<td><strong>Per-turn</strong></td>
+<td>Index session-frozen；<code>_iters_since_skill</code> 累计</td>
+<td><code>run_agent.py:7464-7468</code>, <code>7244-7247</code></td>
+</tr>
+<tr>
+<td><strong>Offload</strong></td>
+<td>大 skill_view → <code>maybe_persist_tool_result</code>  spill 到沙箱文件</td>
+<td><code>tool_result_storage.py:9-22</code></td>
+</tr>
+<tr>
+<td><strong>Compact</strong></td>
+<td>通用 history 压缩；<strong>skill body 可被 summarize 掉</strong>，需重调 skill_view</td>
+<td><code>context_compressor.py</code></td>
+</tr>
+<tr>
+<td><strong>Delete</strong></td>
+<td><code>skill_manage(delete)</code> → <code>shutil.rmtree</code>；sync 尊重用户删除</td>
+<td><code>skill_manager_tool.py:455-472</code></td>
+</tr>
+<tr>
+<td><strong>Evolve</strong></td>
+<td>① inline patch ② nudge→<code>_spawn_background_review</code> ③ hub/bundled hash sync</td>
+<td><code>run_agent.py:1768-1896</code></td>
+</tr>
+</tbody></table></div>
+<h2>自进化（在线）</h2>
+<pre><code class="language-text">每 ~10 tool iterations 无 skill_manage
+  → _spawn_background_review(review_skills=True)
+  → fork quiet AIAgent + _SKILL_REVIEW_PROMPT
+  → skill_manage create/edit/patch → ~/.hermes/skills/
+  → skills_guard scan → clear_skills_system_prompt_cache
+</code></pre>
+<h2>自进化（离线）— <code>hermes-agent-self-evolution</code> [Web L0]</h2>
+<pre><code class="language-text">Read SKILL.md → synthetic/sessiondb eval dataset
+  → GEPA optimizer + execution traces
+  → candidate variants
+  → gates: pytest 100% + size ≤15KB + semantic preservation
+  → Best variant → PR（永不 direct commit）
+</code></pre>
+<p>Phase 1 skill 文件已实现；Phase 2-5 tool desc / system prompt / code / continuous 计划中。</p>
+<h2>Subagent</h2>
+<ul>
+<li><code>delegate_task</code>：<strong>不 block</strong> skills toolset</li>
+<li><strong>无 skill preload</strong>；child 仅 <code>ephemeral_system_prompt</code>（goal/context）</li>
+<li><strong>已知 bug</strong>：background review agent <strong>未继承</strong> parent <code>enabled_toolsets</code>（<code>run_agent.py:1822-1828</code>）</li>
+</ul>
+<h2>安全</h2>
+<p><code>skills_guard.py</code>：builtin/trusted/community/agent-created 四级；80+ regex + 结构检查。</p>
+<h2>TaiChu 借鉴</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>借什么</th>
+<th>怎么落</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>skill_manage</code> CRUD API</td>
+<td><code>add_tool_factory</code> 注册 Rust tool</td>
+</tr>
+<tr>
+<td><code>_spawn_background_review</code></td>
+<td>post-turn async task</td>
+</tr>
+<tr>
+<td><code>skills_guard</code></td>
+<td>community skill 上设备前扫描</td>
+</tr>
+<tr>
+<td>GEPA 离线 PR</td>
+<td>Phase 2：<code>evolution/</code> 子模块，只开 PR 不改 canonical</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h1>2. OpenSquilla</h1>
+<p><strong>路径</strong>：<code>oss/opensquilla</code> | <strong>L3 精读</strong>：<code>proposals_lib.py</code>, <code>skills_filter.py</code>, <code>injector.py</code>, <code>auto_propose.py</code>, <code>runtime_e2e.py</code>, <code>meta/orchestrator.py</code></p>
+<h2>生命周期</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>阶段</th>
+<th>实现</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Store</strong></td>
+<td>BUNDLED → MANAGED (<code>~/.opensquilla/skills/</code>) + PROPOSALS (<code>proposals/&lt;8-hex&gt;/</code>)</td>
+</tr>
+<tr>
+<td><strong>Expose</strong></td>
+<td><code>SkillInjector</code> → <code>&lt;available_skills&gt;</code> XML（<strong>仅 catalog</strong>）</td>
+</tr>
+<tr>
+<td><strong>Discover</strong></td>
+<td>每 turn pipeline <code>filter_skills</code></td>
+</tr>
+<tr>
+<td><strong>Recommend</strong></td>
+<td><strong>HybridRetriever</strong> lexical+semantic RRF，<code>top_k</code> 默认 5；<code>always</code>+meta_match <strong>pinned 绕过检索</strong></td>
+</tr>
+<tr>
+<td><strong>Load</strong></td>
+<td><code>skill_view(name)</code> 按需全文；<code>meta_invoke</code> 跑 DAG</td>
+</tr>
+<tr>
+<td><strong>Per-turn</strong></td>
+<td><strong>最强</strong>：<code>meta_resolution</code> → gate → retrieve → inject，每 turn 重跑</td>
+</tr>
+<tr>
+<td><strong>Offload</strong></td>
+<td>compact injector 即 offload body</td>
+</tr>
+<tr>
+<td><strong>Compact</strong></td>
+<td>skills 块 per-turn 可重建；history 持久 skills context</td>
+</tr>
+<tr>
+<td><strong>Delete</strong></td>
+<td><code>reject_proposal</code> rmtree；<code>disable_auto_enabled_skill</code> 退回 proposals</td>
+</tr>
+<tr>
+<td><strong>Evolve</strong></td>
+<td><strong>最完整 gate 管道</strong>（见下）</td>
+</tr>
+</tbody></table></div>
+<h2>自进化闭环（源码证实）</h2>
+<pre><code class="language-text">collect_invoked_skills(turn_segments)     # runtime.py:250
+  ↓
+DecisionEntry.skills_invoked → decisions.jsonl
+  ↓
+aggregate_co_occurrences (skill 共现链)
+  ↓
+auto_propose (cron | dream hook)
+  ↓
+MetaOrchestrator(meta-skill-creator)
+  ↓
+proposals/&lt;id&gt;/SKILL.md + gates.json
+  ↓
+5 gates: lint | smoke | collision | risk | acceptance_compare | runtime_e2e
+  ↓
+accept_proposal → MANAGED (或 auto_enable if low risk)
+</code></pre>
+<p><code>runtime_e2e</code>：candidate meta route vs <strong>no-meta baseline</strong> + LLM judge。</p>
+<h2>Subagent / MetaSkill</h2>
+<ul>
+<li><strong>MetaOrchestrator DAG</strong>：<code>agent</code> | <code>skill_exec</code> | <code>tool_call</code> | <code>llm_classify</code> | <code>user_input</code></li>
+<li>子 agent <strong>strip <code>meta_invoke</code></strong> 防嵌套</li>
+<li><code>yield_skill_view_preface</code> 在 sub-agent step 前调真实 <code>skill_view</code></li>
+<li><strong>不是</strong> frontmatter preload list — 是 <strong>组合编排</strong></li>
+</ul>
+<h2>设计不变量</h2>
+<ol>
+<li>Catalog ≠ content（injector vs skill_view）</li>
+<li>Meta trigger 是 <strong>soft hint</strong>，LLM 决定 <code>meta_invoke</code></li>
+<li>Degraded smoke <strong>blocks auto-enable</strong></li>
+<li><code>OPENSQUILLA_AUTO_PROPOSE_DISABLED=1</code> kill switch</li>
+</ol>
+<h2>TaiChu 借鉴</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>借什么</th>
+<th>怎么落</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>proposals_lib</code> 原子写 + gates.json</td>
+<td><code>~/.taichu/proposals/</code></td>
+</tr>
+<tr>
+<td><code>skills_filter</code> pinned + RRF</td>
+<td>扩展 Toollery <code>decide</code></td>
+</tr>
+<tr>
+<td><code>runtime_e2e</code> judge</td>
+<td>skill 晋升前 A/B</td>
+</tr>
+<tr>
+<td>MetaSkill DAG</td>
+<td>P3，单 skill 生命周期稳定后</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h1>3. OpenClaw</h1>
+<p><strong>路径</strong>：<code>oss/openclaw</code> | <strong>L3 精读</strong>：<code>skill-workshop/</code>, <code>skills/workspace.ts</code>, <code>agent-filter.ts</code>, <code>refresh-state.ts</code>, <code>trajectory/</code></p>
+<h2>生命周期</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>阶段</th>
+<th>实现</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Store</strong></td>
+<td>6 源 merge，workspace 最高优先级</td>
+</tr>
+<tr>
+<td><strong>Expose</strong></td>
+<td>XML catalog + &quot;Use <strong>read</strong> tool to load&quot;</td>
+</tr>
+<tr>
+<td><strong>Discover</strong></td>
+<td>chokidar + snapshot version</td>
+</tr>
+<tr>
+<td><strong>Recommend</strong></td>
+<td>字母序 + char budget；<strong>无 embedding</strong></td>
+</tr>
+<tr>
+<td><strong>Load</strong></td>
+<td>Lazy read <code>SKILL.md</code></td>
+</tr>
+<tr>
+<td><strong>Per-turn</strong></td>
+<td><code>ensureSkillSnapshot</code>：version 或 skillFilter 变则 refresh</td>
+</tr>
+<tr>
+<td><strong>Offload</strong></td>
+<td>Body 从未进 prompt（by design）</td>
+</tr>
+<tr>
+<td><strong>Compact</strong></td>
+<td>compaction-safeguard 总结对话；<strong>不</strong>保 invoked skills</td>
+</tr>
+<tr>
+<td><strong>Delete</strong></td>
+<td>用户删文件；workshop quarantine</td>
+</tr>
+<tr>
+<td><strong>Evolve</strong></td>
+<td><strong>skill-workshop</strong>（非仅 marketplace）</td>
+</tr>
+</tbody></table></div>
+<h2>Skill Workshop 三入口</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>入口</th>
+<th>触发</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Heuristic</td>
+<td><code>agent_end</code> success → regex 用户纠正语</td>
+</tr>
+<tr>
+<td>LLM reviewer</td>
+<td>15 turns 或 8 tool calls → 隔离 sub-run（tools disabled）</td>
+</tr>
+<tr>
+<td><code>skill_workshop</code> tool</td>
+<td>suggest/apply/reject</td>
+</tr>
+</tbody></table></div>
+<p>写入 <strong>仅</strong> <code>&lt;workspace&gt;/skills</code>；scanner critical → quarantine；apply 后 <code>bumpSkillsSnapshotVersion</code>。</p>
+<h2>Subagent</h2>
+<ul>
+<li><strong>无 parent→child skill 继承</strong></li>
+<li><code>resolveEffectiveAgentSkillFilter(targetAgentId)</code> 决定 child catalog</li>
+<li>跨 agent spawn 用 <strong>target workspace</strong>，非 caller workspace</li>
+</ul>
+<h2>Trajectory（RL 就绪）</h2>
+<p><code>trace.metadata</code> 含 <code>snapshotVersion</code>, <code>skillFilter</code>, <code>skillsPrompt</code>, entries — NDJSON 默认开启。</p>
+<h2>Dreaming vs Skills</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>Skills</th>
+<th>Dreaming</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>内容</td>
+<td>程序性 workflow</td>
+<td>事实/偏好</td>
+</tr>
+<tr>
+<td>存储</td>
+<td>SKILL.md</td>
+<td>MEMORY.md</td>
+</tr>
+<tr>
+<td>晋升</td>
+<td>scanner + approval</td>
+<td>minScore + recall 阈值</td>
+</tr>
+</tbody></table></div>
+<h2>TaiChu 借鉴</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>借什么</th>
+<th>怎么落</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>snapshot version + watcher</td>
+<td>skill catalog 版本号</td>
+</tr>
+<tr>
+<td>workshop proposal→quarantine→apply</td>
+<td>进化侧车</td>
+</tr>
+<tr>
+<td>trajectory schema</td>
+<td>interaction_log  enrich</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h1>4. Claude Code Rev (oboard)</h1>
+<p><strong>路径</strong>：<code>oss/experimental/claude-code-rev</code> | <strong>L3 精读</strong>：<code>compact.ts</code>, <code>skillImprovement.ts</code>, <code>state.ts</code>, <code>runAgent.ts</code>, <code>attachments.ts</code></p>
+<h2>生命周期亮点</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>阶段</th>
+<th>实现</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Per-turn listing</strong></td>
+<td><code>getSkillListingAttachments</code> — per-<code>agentId</code> delta，initial vs dynamic</td>
+</tr>
+<tr>
+<td><strong>Invocation</strong></td>
+<td><code>addInvokedSkill</code> → composite key <code>${agentId}:${skillName}</code></td>
+</tr>
+<tr>
+<td><strong>Inject band</strong></td>
+<td>Skill content 作为 <strong>meta user message</strong>（非 tool result）</td>
+</tr>
+<tr>
+<td><strong>Compact</strong></td>
+<td><strong><code>invoked_skills</code> attachment</strong> — 5K/skill, 25K total, most-recent-first</td>
+</tr>
+<tr>
+<td><strong>Resume</strong></td>
+<td><code>restoreSkillStateFromMessages</code> 从 transcript 恢复 registry</td>
+</tr>
+<tr>
+<td><strong>Evolve</strong></td>
+<td><code>skillImprovement</code> 每 5 user turns + survey UI gate</td>
+</tr>
+<tr>
+<td><strong>Ranking</strong></td>
+<td><code>skillUsageTracking</code> 7-day half-life decay</td>
+</tr>
+</tbody></table></div>
+<h2>Subagent preload</h2>
+<pre><code class="language-typescript">// runAgent.ts:577-646
+agentDefinition.skills ?? []  → 并发 load → initialMessages meta user
+</code></pre>
+<p><strong>Gap</strong>：preload 不一定调用 <code>addInvokedSkill</code> — compact 保护可能不覆盖 preload-only。</p>
+<h2>TaiChu P0（~300-500 LOC）</h2>
+<ol>
+<li><code>InvokedSkillRegistry</code> in <code>agent-session</code></li>
+<li><code>load_skill</code> success → <code>record_invoked_skill</code></li>
+<li><code>compaction.rs</code> post-summarize → reinject attachment</li>
+<li><code>ChildSessionSpec.skills: Vec&lt;String&gt;</code> preload</li>
+</ol>
+<hr>
+<h1>5. TaiChu（私有）</h1>
+<p><strong>路径</strong>：<code>drafts/zk/TaiChu</code> | <strong>L3 精读</strong>：<code>load_skill.rs</code>, <code>compaction.rs</code>, <code>session/mod.rs</code>, <code>tool_search_bridge.rs</code>, <code>api/mod.rs</code>, <code>manager.rs</code></p>
+<h2>已有优势</h2>
+<ul>
+<li><strong><code>runs_on</code> + <code>remote_delegation</code></strong> — 八仓最全端云路由</li>
+<li><strong>Per-turn <code># Available Skills</code></strong> user prefix — 不 bust system cache</li>
+<li><strong><code>transform_context</code></strong> — turn_reminder + skills + NLU</li>
+<li><strong>Toollery <code>before_prompt</code></strong> — <code>skill_filter</code> per turn</li>
+<li><strong><code>load_skill</code> 双维度 wire</strong> — LLM snake_case / device PascalCase</li>
+</ul>
+<h2>关键缺口（文档已承认）</h2>
+<pre><code class="language-64:66:drafts/zk/TaiChu/docs/capabilities/context-and-skills.md">load_skill 结果作为普通 ToolResult 进入会话，compaction 后可能被摘要或截断
+</code></pre>
+<ul>
+<li>无 <code>InvokedSkillRegistry</code></li>
+<li>无 post-compact reinjection</li>
+<li>无 <code>profile.skills</code> child preload</li>
+<li>无 skill evolution runtime</li>
+</ul>
+<h2>真实接缝（非 hook_chain / extra_tool_factories）</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>接缝</th>
+<th>文件</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Per-turn inject</td>
+<td><code>SessionOptions.transform_context</code></td>
+</tr>
+<tr>
+<td>Per-turn filter</td>
+<td><code>set_skill_name_filter</code> + Toollery</td>
+</tr>
+<tr>
+<td>Tool 注册</td>
+<td><code>Runtime::add_tool_factory</code></td>
+</tr>
+<tr>
+<td>Trace</td>
+<td><code>interaction_log</code> JSONL</td>
+</tr>
+<tr>
+<td>Compact</td>
+<td><code>compaction.rs</code></td>
+</tr>
+</tbody></table></div>
+<hr>
+<h1>6. Codex</h1>
+<p><strong>L3 精读</strong>：<code>core-skills/manager.rs</code>, <code>injection.rs</code>, <code>core/src/skills.rs</code>, <code>hook_runtime.rs</code></p>
+<ul>
+<li><strong>Per-turn</strong>：仅 <strong>explicit <code>$skill-name</code></strong> 注入全文</li>
+<li><strong>Implicit</strong>：shell 命令匹配 skill script path → telemetry</li>
+<li><strong>Subagent</strong>：<code>SubagentStart/Stop</code> hooks；child <strong>不含</strong> parent skills instructions（by design）</li>
+<li><strong>Evolve</strong>：无；filesystem 人工管理</li>
+<li><strong>强项</strong>：typed hooks、Guardian、config-layer skill cache</li>
+</ul>
+<hr>
+<h1>7. GenericAgent</h1>
+<p><strong>L3 精读</strong>：<code>ga.py</code>, <code>memory_management_sop.md</code>, <code>morphling_sop.md</code>, <code>reflect/scheduler.py</code></p>
+<ul>
+<li><strong>Skill = L3 SOP</strong>，非 SKILL.md</li>
+<li><strong>_axiom</strong>：「No Execution, No Memory」</li>
+<li><strong>Per-turn</strong>：anchor prompt 重建 working memory；每 10 turn 注入 L1 index</li>
+<li><strong>Evolve</strong>：<code>start_long_term_update</code> + scheduler + morphling/Goal Hive</li>
+<li><strong>治理最弱</strong>：无 proposal/gate/version</li>
+<li><strong>哲学最强</strong>：适合借 L0 SOP 协议，<strong>不可</strong>照搬全自动固化</li>
+</ul>
+<hr>
+<h1>8. ZeroClaw</h1>
+<p><strong>L3 精读</strong>：<code>skills/mod.rs</code>, <code>audit.rs</code>, <code>consolidation.rs</code></p>
+<ul>
+<li><strong>Full vs Compact</strong> injection mode（compact = lazy read）</li>
+<li><strong><code>always</code></strong> flag 在 compact 下仍注入全文</li>
+<li><strong>audit.rs</strong>：symlink/zip-bomb/prompt-injection 静态扫描</li>
+<li><strong>consolidation cron</strong> 3AM — <strong>memory only</strong>，不改 skill 文件</li>
+<li><strong>zeroclaw-skills</strong> registry 仓未 clone（DNS 失败）</li>
+</ul>
+<hr>
+<h1>9. OpenClaw-RL（独立仓）</h1>
+<p><strong>路径</strong>：<code>oss/openclaw-rl</code> | <strong>角色</strong>：conversation feedback → trajectories → GRPO/OPD</p>
+<ul>
+<li><strong>不写 SKILL.md</strong></li>
+<li>与 openclaw <code>skill-workshop</code> <strong>正交</strong></li>
+<li>TaiChu 若做 SkillRL：trajectory 接缝在 interaction_log + OpenClaw-RL plugin</li>
+</ul>
+<hr>
+<h1>10. 跨仓对比矩阵（L3）</h1>
+<h2>Per-turn / Dynamic / Subagent</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>项目</th>
+<th align="center">Per-turn catalog</th>
+<th align="center">Dynamic body</th>
+<th align="center">Subagent skills</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>OpenSquilla</td>
+<td align="center">★★★ pipeline+RRF</td>
+<td align="center">skill_view</td>
+<td align="center">Meta DAG 组合</td>
+</tr>
+<tr>
+<td>Claude Rev</td>
+<td align="center">★★★ listing delta</td>
+<td align="center">Skill tool/meta msg</td>
+<td align="center">★★ frontmatter preload</td>
+</tr>
+<tr>
+<td>TaiChu</td>
+<td align="center">★★★ user prefix</td>
+<td align="center">load_skill</td>
+<td align="center">❌ rescans only</td>
+</tr>
+<tr>
+<td>Codex</td>
+<td align="center">★★ $mention only</td>
+<td align="center">per-turn inject</td>
+<td align="center">child turn_skills 独立</td>
+</tr>
+<tr>
+<td>OpenClaw</td>
+<td align="center">★★ snapshot refresh</td>
+<td align="center">read tool lazy</td>
+<td align="center">agent skillFilter</td>
+</tr>
+<tr>
+<td>Hermes</td>
+<td align="center">★ session frozen</td>
+<td align="center">skill_view</td>
+<td align="center">delegate 无 preload</td>
+</tr>
+<tr>
+<td>ZeroClaw</td>
+<td align="center">★ session</td>
+<td align="center">compact→read</td>
+<td align="center">spawn 无 skill param</td>
+</tr>
+<tr>
+<td>GenericAgent</td>
+<td align="center">·</td>
+<td align="center">file_read SOP</td>
+<td align="center">subprocess BBS</td>
+</tr>
+</tbody></table></div>
+<h2>Compact 保 skill</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>项目</th>
+<th>机制</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Claude Rev</strong></td>
+<td><code>invoked_skills</code> attachment 25K budget</td>
+</tr>
+<tr>
+<td>Hermes</td>
+<td>无 — 重调 skill_view</td>
+</tr>
+<tr>
+<td>OpenSquilla</td>
+<td>per-turn 重建 catalog</td>
+</tr>
+<tr>
+<td>OpenClaw</td>
+<td>lazy catalog 仍在 snapshot</td>
+</tr>
+<tr>
+<td>TaiChu</td>
+<td><strong>❌ ToolResult 可被 summarize</strong></td>
+</tr>
+<tr>
+<td>Codex</td>
+<td>未 mention 的不注入</td>
+</tr>
+<tr>
+<td>其他</td>
+<td>无专门机制</td>
+</tr>
+</tbody></table></div>
+<h2>自进化闭环完整度</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>项目</th>
+<th align="center">Trace</th>
+<th align="center">Candidate</th>
+<th align="center">Eval</th>
+<th align="center">Deploy</th>
+<th align="center">Online metrics</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>OpenSquilla</td>
+<td align="center">★ decision log</td>
+<td align="center">★ proposals</td>
+<td align="center">★ 5-gate+E2E</td>
+<td align="center">★ accept</td>
+<td align="center">trigger_accuracy</td>
+</tr>
+<tr>
+<td>Hermes online</td>
+<td align="center">★ JSONL</td>
+<td align="center">◐ agent create</td>
+<td align="center">◐ guard</td>
+<td align="center">★ skill_manage</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td>Hermes offline</td>
+<td align="center">sessiondb</td>
+<td align="center">★ GEPA</td>
+<td align="center">★ pytest+size</td>
+<td align="center">PR only</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td>OpenClaw workshop</td>
+<td align="center">★ trajectory</td>
+<td align="center">★ store</td>
+<td align="center">◐ scanner</td>
+<td align="center">apply/quarantine</td>
+<td align="center">qa-lab</td>
+</tr>
+<tr>
+<td>Claude Rev</td>
+<td align="center">session</td>
+<td align="center">◐ JSON patches</td>
+<td align="center">survey UI</td>
+<td align="center">user apply</td>
+<td align="center">★ usage decay</td>
+</tr>
+<tr>
+<td>GenericAgent</td>
+<td align="center">L4 logs</td>
+<td align="center">◐ L3 SOP</td>
+<td align="center">L0 protocol</td>
+<td align="center">file_patch</td>
+<td align="center">access stats</td>
+</tr>
+<tr>
+<td>TaiChu</td>
+<td align="center">◐ interaction_log</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h1>11. TaiChu 推荐架构（L3 定稿）</h1>
+<pre><code class="language-text">┌─────────────────────────────────────────────────────────────┐
+│  EXISTING: interaction_log + transform_context + load_skill │
+│           + Toollery decide + runs_on routing                │
+└───────────────────────────┬─────────────────────────────────┘
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│  P0: InvokedSkillRegistry (Claude Rev)                       │
+│      compaction reinject + resume restore                      │
+│      ChildSessionSpec.skills preload                           │
+└───────────────────────────┬─────────────────────────────────┘
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│  P1: skill_manage tool (Hermes) + post-turn ReviewAgent      │
+│      proposals/ + gates.json (OpenSquilla)                     │
+│      skills_guard / audit (Hermes + ZeroClaw)                  │
+└───────────────────────────┬─────────────────────────────────┘
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│  P2: HybridRetriever top-k (OpenSquilla) via Toollery        │
+│      usage decay ranking (Claude Rev)                          │
+│      trajectory schema enrich (OpenClaw)                       │
+└───────────────────────────┬─────────────────────────────────┘
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│  P3: MetaSkill DAG (OpenSquilla)                             │
+│      GEPA offline PR (hermes-self-evolution)                   │
+│      OpenClaw-RL trajectory export (SkillRL 实验)            │
+└─────────────────────────────────────────────────────────────┘
+</code></pre>
+<p><strong>原则</strong>：Skill = 软件资产。在线只写 <strong>proposals</strong>；canonical 晋升需 <strong>gate</strong>；离线 GEPA 只开 <strong>PR</strong>。</p>
+<hr>
+<h1>12. 分仓 L3 详文索引</h1>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>仓库</th>
+<th>独立 L3 章节位置</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Hermes</td>
+<td>本文 §1 + subagent report <code>289a5d5b</code></td>
+</tr>
+<tr>
+<td>OpenSquilla</td>
+<td>本文 §2 + subagent report <code>704b2caf</code></td>
+</tr>
+<tr>
+<td>OpenClaw</td>
+<td>本文 §3 + subagent report <code>a8c9c500</code></td>
+</tr>
+<tr>
+<td>Claude Rev + TaiChu</td>
+<td>本文 §4-5 + subagent report <code>ca91a057</code></td>
+</tr>
+<tr>
+<td>Codex / GA / ZeroClaw</td>
+<td>本文 §6-8 + subagent report <code>56b9de73</code></td>
+</tr>
+</tbody></table></div>
+<p>完整子报告可请求导出为 <code>notes/synthesis/l3/{repo}.md</code> 分拆文件。</p>
+<hr>
+<h1>13. 待 L4 / 未验证项</h1>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>项</th>
+<th>状态</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>hermes-agent-self-evolution</code> 源码走读</td>
+<td>仅 README Web</td>
+</tr>
+<tr>
+<td><code>zeroclaw-skills</code> registry schema</td>
+<td>clone 失败</td>
+</tr>
+<tr>
+<td>OpenClaw-RL training loop 全读</td>
+<td>仅 README</td>
+</tr>
+<tr>
+<td>Hermes background review toolset bug</td>
+<td>L3 已记录，待 fix 验证</td>
+</tr>
+<tr>
+<td>Claude preload vs addInvokedSkill gap</td>
+<td>L3 已记录</td>
+</tr>
+<tr>
+<td>TaiChu P0 实现</td>
+<td>设计完成，未编码</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2>变更记录</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>日期</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>2026-07-08</td>
+<td>L3 合并版：四路 subagent 深读 + Web GEPA 补证</td>
+</tr>
+</tbody></table></div>
+</article>
+    </div>
+  </div>
+  <script src="../../../../js/i18n.js"></script>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
+  </script>
+</body>
+</html>

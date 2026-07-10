@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>官方产品 Skill 自进化 gap 分析 — Skill-Evolving</title>
+  <link rel="alternate" hreflang="en" href="/html/site/notes/synthesis/official-product-gap-consensus.html">
+  <link rel="alternate" hreflang="zh-Hans" href="/html/site/zh/notes/synthesis/official-product-gap-consensus.html">
+  <link rel="alternate" hreflang="x-default" href="/html/site/notes/synthesis/official-product-gap-consensus.html">
+  <link rel="stylesheet" href="../../../../css/viewer.css">
+</head>
+<body class="" data-doc-locale="zh" data-content-lang="zh">
+  <div class="viewer-layout">
+    <nav>
+      <div data-lang-switch class="lang-switch-host"></div>
+      <h1 data-i18n="nav.docs">Docs</h1>
+      <div class="title" data-i18n="nav.rendered">Rendered HTML</div>
+      <section class="highlight-section"><h2 data-i18n="nav.compare">nav.compare</h2><ul><li><a href="./agent-skill-architecture-survey-matrix.html" data-i18n="nav.matrix165">nav.matrix165</a></li><li><a href="./skill-lifecycle-full-matrix.html" data-i18n="nav.lifecycle">nav.lifecycle</a></li><li><a href="./web-expanded-lifecycle-matrix-merged.html" data-i18n="nav.web_l3">nav.web_l3</a></li><li><a href="./eight-repo-comprehensive-survey.html" data-i18n="nav.survey20">nav.survey20</a></li><li><a href="./skill-lifecycle-and-dynamic-loading-survey.html" data-i18n="nav.per_turn">nav.per_turn</a></li><li><a href="./eight-repo-deep-source-analysis.html" data-i18n="nav.deep_source">nav.deep_source</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.per_repo">nav.per_repo</h2><ul><li><a href="./survey-reports/opensquilla.html">OpenSquilla (9.0)</a></li><li><a href="./survey-reports/hermes-agent.html">Hermes (8.1)</a></li><li><a href="./survey-reports/openclaw.html">OpenClaw (8.0)</a></li><li><a href="./survey-reports/claude-code-rev.html">Claude Rev (7.7)</a></li><li><a href="./survey-reports/codex.html">Codex (7.2)</a></li><li><a href="./survey-reports/taichu.html">TaiChu (5.0)</a></li><li><a href="./survey-reports/zeroclaw.html">ZeroClaw (5.0)</a></li><li><a href="./survey-reports/genericagent.html">GenericAgent (4.8)</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.papers">nav.papers</h2><ul><li><a href="../../../topics/skill-rl/overview.html">SkillRL</a></li><li><a href="../../../topics/claw-r1/overview.html">Claw-R1</a></li><li><a href="./comparison.html" data-i18n="nav.comparison">nav.comparison</a></li><li><a href="./combined-pipeline.html" data-i18n="nav.pipeline">nav.pipeline</a></li><li><a href="./l3-comprehensive-skill-analysis.html" data-i18n="nav.l3">nav.l3</a></li><li><a href="../../../notes/synthesis/taichu-p0-skill-compaction-spec.html" data-i18n="nav.taichu_p0">nav.taichu_p0</a></li></ul></section><section><h2 data-i18n="nav.more">More</h2><ul>
+    <li><a href="/html/docs.html" data-i18n="nav.sitemap">Sitemap</a></li>
+    <li><a href="/html/i18n-coverage.html" data-i18n="nav.i18n_coverage">i18n coverage</a></li>
+    <li><a href="/html/index.html" data-i18n="nav.dashboard">Dashboard</a></li>
+    <li><a href="/html/deck/index.html" data-i18n="nav.decks">Slide decks</a></li>
+  </ul></section>
+    </nav>
+    <div class="viewer-main">
+      <div class="viewer-toolbar">
+        <div>
+          <h1>官方产品 Skill 自进化 gap 分析</h1>
+          <div class="path">notes/synthesis/official-product-gap-consensus.md</div>
+        </div>
+        <a class="btn" href="/html/docs.html" data-i18n="toolbar.sitemap">Sitemap</a>
+        <a class="btn primary" href="./agent-skill-architecture-survey-matrix.html" data-i18n="toolbar.matrix">165-dim matrix</a>
+      </div>
+      
+      <article class="md-body"><h1>官方产品 Skill 自进化 gap 分析</h1>
+<h2>短答案</h2>
+<p><strong>没有一家官方明确提出「Skill 自进化（Skill Self-Evolution）」作为产品能力或官方路线。</strong></p>
+<p>但三家已经分别提供了组成 Skill 自进化闭环的<strong>基础设施</strong>，只是停留在 <strong>Human-in-the-loop</strong>，而不是论文里的 <strong>Automatic Skill Evolution</strong>。</p>
+<hr>
+<h2>总结表（修订版）</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>产品</th>
+<th align="center">Skills</th>
+<th align="center">Memory</th>
+<th align="center">自动修改 Skill</th>
+<th align="center">自动评测 Skill</th>
+<th align="center">官方提出 Skill Evolution?</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Claude Code</td>
+<td align="center">✅ 很强</td>
+<td align="center">部分 (CLAUDE.md 等)</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+<td align="center">❌（路线图有暗示）</td>
+</tr>
+<tr>
+<td>Codex</td>
+<td align="center">✅ 很强</td>
+<td align="center">✅ Memories</td>
+<td align="center">❌</td>
+<td align="center">⚠️ eval-skills 文档</td>
+<td align="center">❌</td>
+</tr>
+<tr>
+<td>Cursor</td>
+<td align="center">✅ Skills + Rules</td>
+<td align="center">部分</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+</tr>
+</tbody></table></div>
+<blockquote>
+<p><strong>修订说明</strong>：Codex 2026 同时强推 <strong>Skills + Memories</strong>（互补，非替代）；Cursor 2.4 已支持 Agent Skills 标准，不只 Rules。</p>
+</blockquote>
+<p><strong>共识</strong>：官方目前都没有做到 SkillRL 那种 <code>Trajectory → Skill → Evaluation → Update Skill</code> 全自动闭环。</p>
+<hr>
+<h2>一、Claude Code</h2>
+<p>Skills 是一等公民：<a href="https://docs.anthropic.com/en/docs/claude-code/skills">Claude Code Skills Documentation</a></p>
+<pre><code>Skill = SKILL.md + scripts/ + references/
+</code></pre>
+<p><strong>Progressive Loading</strong> — metadata 先进 context，命中后再加载全文。</p>
+<h3>官方支持的生命周期</h3>
+<pre><code>Create Skill → Use Skill → Share Skill
+     ↑
+   Human 写
+</code></pre>
+<p><strong>没有</strong>：<code>Trajectory → Generate Skill → Replace Skill</code></p>
+<p>Skill 生命周期仍然靠人维护。Anthropic 强调 Project / Team / Personal Skill 不断积累，但<strong>没有说 Claude 自己修改 Skill</strong>。</p>
+<h3>唯一暗示（路线图，非产品）</h3>
+<blockquote>
+<p>&quot;enable agents to create, edit, and evaluate Skills on their own&quot;<br>— <a href="https://www.anthropic.com/engineering/equipping-agents-for-the-real-world-with-agent-skills">Agent Skills engineering post</a></p>
+</blockquote>
+<hr>
+<h2>二、Codex</h2>
+<p><strong>修订</strong>：Codex 并非「只有 Memory 没有 Skill」。官方 <a href="https://developers.openai.com/codex/concepts/customization">Customization 文档</a> 明确列出互补四层：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>层</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>AGENTS.md</code></td>
+<td>持久指令</td>
+</tr>
+<tr>
+<td><strong>Memories</strong></td>
+<td>从过往 thread 携带 ambient context（偏好、惯例）</td>
+</tr>
+<tr>
+<td><strong>Skills</strong></td>
+<td>可复用 workflow（SKILL.md + scripts）</td>
+</tr>
+<tr>
+<td>MCP</td>
+<td>外部系统</td>
+</tr>
+</tbody></table></div>
+<h3>Memories（Experience → Memory）</h3>
+<pre><code>Experience → Memory → Future Tasks
+</code></pre>
+<ul>
+<li>默认关闭（EEA/UK/CH 需显式开启）</li>
+<li>记住偏好、corrections、tech stack、repo conventions</li>
+<li>背景异步生成，非 skill 文件</li>
+</ul>
+<h3>Skills（Experience → Skill，但单向）</h3>
+<pre><code>演示 / $skill-creator / Record &amp; Replay → SKILL.md
+</code></pre>
+<ul>
+<li><strong>不是</strong>自动 library 更新 loop</li>
+<li><a href="https://developers.openai.com/blog/eval-skills">eval-skills 博客</a> 提供评测方法论，但无 auto-promotion</li>
+</ul>
+<p><strong>判断</strong>：Codex = <strong>Memory Evolution（ambient）+ Skill Creation（manual/semi-auto）</strong>，两者并行，都不是 SkillRL 式闭环。</p>
+<hr>
+<h2>三、Cursor</h2>
+<p><strong>修订</strong>：Cursor 已有 <strong>Agent Skills</strong>（<a href="https://cursor.com/changelog/2-4">changelog 2.4</a>、<a href="https://cursor.com/blog/dynamic-context-discovery">dynamic context discovery</a>），与 Rules 并存：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>机制</th>
+<th>路径</th>
+<th>特点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Rules</td>
+<td><code>.cursor/rules</code></td>
+<td>声明式、always-on 或 glob 触发</td>
+</tr>
+<tr>
+<td>Skills</td>
+<td><code>SKILL.md</code> (agentskills.io)</td>
+<td>程序性 how-to、动态发现</td>
+</tr>
+</tbody></table></div>
+<p>两者都是 <strong>Human 编写、静态维护</strong>。没有 Generate Rule / Update Rule / Auto Skill Evolution。</p>
+<p>Cursor 官方重点在 <strong>Harness 进化</strong>（<a href="https://cursor.com/blog/continually-improving-agent-harness">Continually improving agent harness</a>）：A/B、Keep Rate、平台级 prompt/tool 调优。</p>
+<hr>
+<h2>四、为什么官方都没做 Skill 自进化？</h2>
+<p>真正 Skill Evolution 意味着：</p>
+<pre><code>Rollout → Skill Candidate → 替换 Skill → 以后所有 Agent 都调用新 Skill
+</code></pre>
+<p><strong>企业风险极大</strong>：</p>
+<pre><code>今天生成: &quot;Always use git rebase&quot;
+明天发现: 团队禁止 rebase
+→ 整个团队 agent 行为损坏
+</code></pre>
+<p>所以企业产品必然需要：</p>
+<pre><code>Candidate → Review → Approve → Deploy
+</code></pre>
+<p>和传统软件发布流程一样 — 这解释了 Human-in-the-loop 的产品选择。</p>
+<hr>
+<h2>五、官方架构 vs SkillRL 闭环</h2>
+<h3>官方现状（静态扩展点）</h3>
+<pre><code>Task → Agent → Skill / Memory / Hook / MCP → Result
+                    ↑
+                 全部静态，人工维护
+</code></pre>
+<h3>SkillRL 希望的闭环</h3>
+<pre><code>Task → Trajectory → Reflection → Generate Skill
+  → Evaluate → Version → Replace Skill → Next Task
+                    ↑
+                 完全自动（或 validation-gated）
+</code></pre>
+<p><strong>中间缺失层</strong> — 也是论文价值所在。</p>
+<hr>
+<h2>六、社区 workaround（仍非 Skill 改 Skill）</h2>
+<p>Reddit / 社区常见模式：</p>
+<pre><code>Session 结束 → wrap-up skill → Review → Commit → Learn → Remember
+</code></pre>
+<p>或：Claude review mistakes → suggest memories → human confirm update</p>
+<p>这些都是 <strong>Skill 调用 Memory</strong>，不是 <strong>Skill 修改 Skill</strong>。真正改 <code>SKILL.md</code> 仍需人工确认。</p>
+<hr>
+<h2>七、下一代 Agent Harness 方向（共识架构）</h2>
+<p>官方产品已具备四个组件：<strong>Skills/Rules、Memory、Hooks、长期上下文</strong>。</p>
+<p>缺失的中间层：</p>
+<pre><code>               Runtime
+                  │
+                  ▼
+           Step-level Trace          ← Claw-R1
+                  │
+                  ▼
+            Reflection Agent
+                  │
+        ┌─────────┴─────────┐
+        ▼                   ▼
+   Memory Candidate    Skill Candidate    ← SkillRL / Trace2Skill
+        │                   │
+        │             Regression / Eval    ← SkillOpt / SkillHone
+        │                   │
+        └─────────┬─────────┘
+                  ▼
+         Human Review (可选)              ← 企业必需
+                  │
+                  ▼
+      Versioned Skills / Rules / Memory   ← SkillHone
+                  │
+                  ▼
+          Automatic Retrieval               ← GoS / SkillRouter
+</code></pre>
+<h3>缺失的四块（= 研究/产品机会）</h3>
+<ol>
+<li><strong>Skill Candidate 生成</strong> — Trajectory → Skill</li>
+<li><strong>自动回归测试 / Benchmark</strong> — eval gate</li>
+<li><strong>Skill 排名、版本管理与淘汰</strong> — ELO / score / merge</li>
+<li><strong>自动或半自动发布（Promotion）</strong> — review → deploy</li>
+</ol>
+<p><strong>核心判断</strong>：把 Skills 从静态配置文件 → 持续学习、持续评测、持续版本化的<strong>软件资产</strong> — 这正是 SkillRL、SkillHone 等论文的方向，也是官方产品尚未闭合的 gap。</p>
+<hr>
+<h2>Related</h2>
+<ul>
+<li><a href="./official-blog-skill-evolution.html">官方博客调研</a></li>
+<li><a href="./skill-evolution-taxonomy.html">Skill 进化 taxonomy</a></li>
+<li><a href="../../../notes/synthesis/proposed-skill-lifecycle-architecture.html">Proposed 2027 architecture</a></li>
+</ul>
+</article>
+    </div>
+  </div>
+  <script src="../../../../js/i18n.js"></script>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
+  </script>
+</body>
+</html>

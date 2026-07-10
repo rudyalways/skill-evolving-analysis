@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OpenSquilla — 20 维度源码分析 — Skill-Evolving</title>
+  <link rel="alternate" hreflang="en" href="/html/site/notes/synthesis/repos/opensquilla.html">
+  <link rel="alternate" hreflang="zh-Hans" href="/html/site/zh/notes/synthesis/repos/opensquilla.html">
+  <link rel="alternate" hreflang="x-default" href="/html/site/notes/synthesis/repos/opensquilla.html">
+  <link rel="stylesheet" href="../../../../../css/viewer.css">
+</head>
+<body class="" data-doc-locale="zh" data-content-lang="zh">
+  <div class="viewer-layout">
+    <nav>
+      <div data-lang-switch class="lang-switch-host"></div>
+      <h1 data-i18n="nav.docs">Docs</h1>
+      <div class="title" data-i18n="nav.rendered">Rendered HTML</div>
+      <section class="highlight-section"><h2 data-i18n="nav.compare">nav.compare</h2><ul><li><a href="../agent-skill-architecture-survey-matrix.html" data-i18n="nav.matrix165">nav.matrix165</a></li><li><a href="../skill-lifecycle-full-matrix.html" data-i18n="nav.lifecycle">nav.lifecycle</a></li><li><a href="../web-expanded-lifecycle-matrix-merged.html" data-i18n="nav.web_l3">nav.web_l3</a></li><li><a href="../eight-repo-comprehensive-survey.html" data-i18n="nav.survey20">nav.survey20</a></li><li><a href="../skill-lifecycle-and-dynamic-loading-survey.html" data-i18n="nav.per_turn">nav.per_turn</a></li><li><a href="../eight-repo-deep-source-analysis.html" data-i18n="nav.deep_source">nav.deep_source</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.per_repo">nav.per_repo</h2><ul><li><a href="../survey-reports/opensquilla.html">OpenSquilla (9.0)</a></li><li><a href="../survey-reports/hermes-agent.html">Hermes (8.1)</a></li><li><a href="../survey-reports/openclaw.html">OpenClaw (8.0)</a></li><li><a href="../survey-reports/claude-code-rev.html">Claude Rev (7.7)</a></li><li><a href="../survey-reports/codex.html">Codex (7.2)</a></li><li><a href="../survey-reports/taichu.html">TaiChu (5.0)</a></li><li><a href="../survey-reports/zeroclaw.html">ZeroClaw (5.0)</a></li><li><a href="../survey-reports/genericagent.html">GenericAgent (4.8)</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.papers">nav.papers</h2><ul><li><a href="../../../../topics/skill-rl/overview.html">SkillRL</a></li><li><a href="../../../../topics/claw-r1/overview.html">Claw-R1</a></li><li><a href="../comparison.html" data-i18n="nav.comparison">nav.comparison</a></li><li><a href="../combined-pipeline.html" data-i18n="nav.pipeline">nav.pipeline</a></li><li><a href="../l3-comprehensive-skill-analysis.html" data-i18n="nav.l3">nav.l3</a></li><li><a href="../../../../notes/synthesis/taichu-p0-skill-compaction-spec.html" data-i18n="nav.taichu_p0">nav.taichu_p0</a></li></ul></section><section><h2 data-i18n="nav.more">More</h2><ul>
+    <li><a href="/html/docs.html" data-i18n="nav.sitemap">Sitemap</a></li>
+    <li><a href="/html/i18n-coverage.html" data-i18n="nav.i18n_coverage">i18n coverage</a></li>
+    <li><a href="/html/index.html" data-i18n="nav.dashboard">Dashboard</a></li>
+    <li><a href="/html/deck/index.html" data-i18n="nav.decks">Slide decks</a></li>
+  </ul></section>
+    </nav>
+    <div class="viewer-main">
+      <div class="viewer-toolbar">
+        <div>
+          <h1>OpenSquilla — 20 维度源码分析</h1>
+          <div class="path">notes/synthesis/repos/opensquilla.md</div>
+        </div>
+        <a class="btn" href="/html/docs.html" data-i18n="toolbar.sitemap">Sitemap</a>
+        <a class="btn primary" href="../agent-skill-architecture-survey-matrix.html" data-i18n="toolbar.matrix">165-dim matrix</a>
+      </div>
+      
+      <article class="md-body"><h1>OpenSquilla — 20 维度源码分析</h1>
+<blockquote>
+<p>Path: <code>/Users/maybewu/Documents/Projects/oss/opensquilla</code><br>Upstream: <a href="https://github.com/opensquilla/opensquilla">opensquilla/opensquilla</a></p>
+</blockquote>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Dimension</th>
+<th>Summary</th>
+<th>Key paths</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td><strong>Architecture</strong></td>
+<td>Gateway → TurnRunner staged harness → Agent FSM</td>
+<td><code>engine/runtime.py</code>, <code>engine/pipeline.py</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>Agent loop</strong></td>
+<td>Explicit FSM: IDLE→THINKING→TOOL_CALLING→DONE</td>
+<td><code>engine/agent.py</code>, <code>engine/types.py</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>Harness</strong></td>
+<td>TurnRunnerHarness stage adapters</td>
+<td><code>engine/turn_runner/harness.py</code></td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>Session</strong></td>
+<td>SessionManager; compaction lifecycle; archive</td>
+<td><code>session/manager.py</code>, <code>compaction_lifecycle.py</code></td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong>Memory</strong></td>
+<td>Hybrid FTS+vector; <strong>Dream</strong> cron promotion</td>
+<td><code>memory/dream/runner.py</code>, <code>dream/ranking.py</code></td>
+</tr>
+<tr>
+<td>6</td>
+<td><strong>Skills</strong></td>
+<td>6-layer precedence; skill + meta DAG</td>
+<td><code>skills/loader.py</code>, <code>skills/types.py</code></td>
+</tr>
+<tr>
+<td>7</td>
+<td><strong>Workflow</strong></td>
+<td><strong>MetaOrchestrator</strong> DAG parallel steps</td>
+<td><code>skills/meta/orchestrator.py</code></td>
+</tr>
+<tr>
+<td>8</td>
+<td><strong>Reflection</strong></td>
+<td>Dream signal classification (correction/failure/positive)</td>
+<td><code>memory/dream/candidates.py</code></td>
+</tr>
+<tr>
+<td>9</td>
+<td><strong>Self-improvement</strong></td>
+<td><strong>auto_propose</strong> from decision-log co-occurrence</td>
+<td><code>skills/creator/auto_propose.py</code></td>
+</tr>
+<tr>
+<td>10</td>
+<td><strong>Skill evolution</strong></td>
+<td><strong>proposals → 4-gate → accept MANAGED</strong></td>
+<td><code>skills/proposals_lib.py</code>, <code>runtime_e2e.py</code></td>
+</tr>
+<tr>
+<td>11</td>
+<td><strong>Prompt</strong></td>
+<td>Pre-turn pipeline; SkillInjector full/compact</td>
+<td><code>engine/pipeline.py</code>, <code>skills/injector.py</code></td>
+</tr>
+<tr>
+<td>12</td>
+<td><strong>Evaluation</strong></td>
+<td>Proposal gates; meta trigger-accuracy; eval_prompts</td>
+<td><code>proposals_lib.py</code>, <code>meta/trigger_accuracy.py</code></td>
+</tr>
+<tr>
+<td>13</td>
+<td><strong>Hooks</strong></td>
+<td>TurnHook, ToolHook, CompactionHook protocols</td>
+<td><code>engine/hooks/types.py</code></td>
+</tr>
+<tr>
+<td>14</td>
+<td><strong>Context</strong></td>
+<td>Compaction; ContextBudgetGovernor; ToolResultStore</td>
+<td><code>context_budget.py</code>, <code>session/compaction.py</code></td>
+</tr>
+<tr>
+<td>15</td>
+<td><strong>Tools</strong></td>
+<td>Central dispatch + policy chain; 30+ builtins</td>
+<td><code>tools/dispatch.py</code>, <code>tools/policy/chain.py</code></td>
+</tr>
+<tr>
+<td>16</td>
+<td><strong>Multi-agent</strong></td>
+<td>SubagentManager; MetaOrchestrator one-shot agents</td>
+<td><code>engine/subagent.py</code>, <code>meta/executors/agent.py</code></td>
+</tr>
+<tr>
+<td>17</td>
+<td><strong>Training/RL</strong></td>
+<td>Squilla Router LightGBM (routing only)</td>
+<td><code>squilla_router/v4_phase3.py</code></td>
+</tr>
+<tr>
+<td>18</td>
+<td><strong>Interesting</strong></td>
+<td>Dream evidence-gated promotion; meta skill_exec entrypoints</td>
+<td><code>dream/curated_apply.py</code></td>
+</tr>
+<tr>
+<td>19</td>
+<td><strong>Weaknesses</strong></td>
+<td>6000+ line agent.py; steep operational surface</td>
+<td><code>engine/agent.py</code></td>
+</tr>
+<tr>
+<td>20</td>
+<td><strong>For TaiChu</strong></td>
+<td>Proposal+gate pattern; Dream; trigger-accuracy fixtures</td>
+<td>comprehensive survey P1</td>
+</tr>
+</tbody></table></div>
+<h2>Skill evolution sub-matrix</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Sub</th>
+<th>Status</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Representation</td>
+<td>SKILL.md → SkillSpec; meta adds composition_raw</td>
+<td><code>skills/types.py</code></td>
+</tr>
+<tr>
+<td>Loading</td>
+<td>6-layer + RRF semantic retrieval</td>
+<td><code>skills/retrieval/fusion.py</code></td>
+</tr>
+<tr>
+<td>Evolution</td>
+<td>auto_propose + Dream hook + meta-creator</td>
+<td><code>creator/auto_propose.py</code></td>
+</tr>
+<tr>
+<td>Reflection</td>
+<td>Dream classify + LLM promotion patch</td>
+<td><code>dream/runner.py</code></td>
+</tr>
+<tr>
+<td>Memory types</td>
+<td>Hybrid chunks; Dream → MEMORY.md</td>
+<td><code>memory/types.py</code></td>
+</tr>
+<tr>
+<td>Harness ext</td>
+<td>runtime_e2e meta vs baseline judge</td>
+<td><code>creator/runtime_e2e.py</code></td>
+</tr>
+<tr>
+<td>Evaluation</td>
+<td><strong>4 gates</strong> in evaluate_proposal_gates</td>
+<td><code>proposals_lib.py</code></td>
+</tr>
+<tr>
+<td>RL readiness</td>
+<td>Router ML only</td>
+<td><code>squilla_router/</code></td>
+</tr>
+<tr>
+<td>Step traces</td>
+<td>PipelineStepRecord; TraceContext</td>
+<td><code>observability/trace.py</code></td>
+</tr>
+<tr>
+<td>Versioning</td>
+<td>skills-lock.json SHA256</td>
+<td><code>skills/hub/lockfile.py</code></td>
+</tr>
+<tr>
+<td>Ranking</td>
+<td>Dream rank + RRF</td>
+<td><code>dream/ranking.py</code></td>
+</tr>
+<tr>
+<td>Candidates</td>
+<td>Dream scan + auto_propose chains</td>
+<td><code>dream/candidates.py</code></td>
+</tr>
+<tr>
+<td>Auto merge</td>
+<td>accept_proposal → managed skills</td>
+<td><code>proposals_lib.py:425</code></td>
+</tr>
+</tbody></table></div>
+</article>
+    </div>
+  </div>
+  <script src="../../../../../js/i18n.js"></script>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
+  </script>
+</body>
+</html>

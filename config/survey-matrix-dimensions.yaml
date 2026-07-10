@@ -1,0 +1,289 @@
+# Agent Skill Architecture Survey Matrix — Dimension Index
+# 7 mega-categories · 15 sections · 165 dimensions
+# Parent: notes/synthesis/agent-skill-architecture-survey-matrix.md
+
+version: 1
+last_updated: "2026-07-08"
+projects:
+  - codex
+  - claude_rev
+  - openclaw
+  - hermes
+  - genericagent
+  - opensquilla
+  - zeroclaw
+  - taichu
+
+mega_categories:
+  - id: I
+    name: Skill Data Model
+    sections: [1]
+  - id: II
+    name: Runtime
+    sections: [2, 3, 4, 5, 6, 7]
+  - id: III
+    name: Lifecycle
+    sections: [8]
+  - id: IV
+    name: Evolution & Quality
+    sections: [9, 10]
+  - id: V
+    name: Governance
+    sections: [11]
+  - id: VI
+    name: Agent Integration
+    sections: [12, 13, 14]
+  - id: VII
+    name: RL Readiness
+    sections: [15]
+
+sections:
+  - id: 1
+    name: Skill Data Model
+    mega: I
+    dimensions:
+      - skill_unit
+      - storage_format
+      - file_layout
+      - metadata
+      - description
+      - parameters
+      - scripts
+      - assets
+      - references
+      - examples
+      - embedded_workflow
+      - nested_skill
+      - metaskill
+      - version
+  - id: 2
+    name: Skill Discovery
+    mega: II
+    dimensions:
+      - discover_source
+      - search_path
+      - workspace_skill
+      - user_skill
+      - global_skill
+      - registry_skill
+      - remote_skill
+      - generated_skill
+      - bundled_skill
+      - priority
+      - override
+      - shadow
+      - conflict_resolution
+      - lazy_discovery
+      - file_watch
+      - hot_reload
+      - refresh_policy
+  - id: 3
+    name: Skill Exposure
+    mega: II
+    dimensions:
+      - visible_to_llm
+      - visible_to_user
+      - hidden_skill
+      - progressive_disclosure
+      - summary_only
+      - full_prompt_loaded
+      - description_only
+      - explicit_invocation
+      - implicit_invocation
+  - id: 4
+    name: Skill Recommendation
+    mega: II
+    dimensions:
+      - trigger
+      - description_match
+      - embedding_match
+      - llm_decide
+      - rule_based
+      - task_pattern
+      - tool_pattern
+      - history_pattern
+      - user_preference
+      - frequency
+      - ranking
+      - multi_skill_ranking
+      - budget_aware
+  - id: 5
+    name: Skill Runtime
+    mega: II
+    dimensions:
+      - per_turn_loading
+      - per_session
+      - per_agent
+      - per_subagent
+      - dynamic_loading
+      - dynamic_unloading
+      - parallel_skills
+      - skill_chain
+      - skill_graph
+      - skill_cache
+      - skill_context_budget
+      - skill_compression
+      - skill_summarization
+      - skill_pruning
+  - id: 6
+    name: Skill Offload
+    mega: II
+    dimensions:
+      - offload_to_subagent
+      - offload_to_tool
+      - offload_to_workflow
+      - offload_to_memory
+      - offload_to_mcp
+      - offload_to_human
+  - id: 7
+    name: Skill Usage
+    mega: II
+    dimensions:
+      - direct_prompt
+      - tool_wrapper
+      - code
+      - workflow
+      - planner
+      - sop
+      - agent
+      - mcp
+      - command
+  - id: 8
+    name: Skill Lifecycle
+    mega: III
+    dimensions:
+      - created_by
+      - imported
+      - generated
+      - human_written
+      - ai_written
+      - reviewed
+      - approved
+      - published
+      - deprecated
+      - disabled
+      - deleted
+      - archived
+      - rollback
+  - id: 9
+    name: Skill Evolution
+    mega: IV
+    dimensions:
+      - reflection
+      - self_reflection
+      - teacher
+      - rl
+      - grpo
+      - preference
+      - pairwise
+      - candidate
+      - merge
+      - split
+      - rewrite
+      - summarize
+      - refactor
+      - auto_patch
+      - auto_delete
+      - auto_version
+  - id: 10
+    name: Skill Quality
+    mega: IV
+    dimensions:
+      - benchmark
+      - regression
+      - replay
+      - unit_test
+      - integration_test
+      - sandbox
+      - simulation
+      - online_eval
+      - ab_test
+      - success_rate
+      - reward
+      - token_cost
+      - latency
+  - id: 11
+    name: Skill Governance
+    mega: V
+    dimensions:
+      - permission
+      - capability
+      - risk
+      - signature
+      - trust_level
+      - audit
+      - provenance
+      - registry
+      - marketplace
+      - review
+      - owner
+      - license
+  - id: 12
+    name: Skill Relationship
+    mega: VI
+    dimensions:
+      - parent_skill
+      - child_skill
+      - meta_skill
+      - composite_skill
+      - complementary_skill
+      - alternative_skill
+      - dependency
+      - skill_graph
+      - skill_dag
+  - id: 13
+    name: Multi-Agent Skill
+    mega: VI
+    dimensions:
+      - shared_skill
+      - private_skill
+      - per_agent_skill
+      - per_role_skill
+      - complementary_skill
+      - skill_negotiation
+      - skill_transfer
+      - skill_borrow
+      - skill_broadcast
+      - skill_isolation
+  - id: 14
+    name: Memory Integration
+    mega: VI
+    dimensions:
+      - episodic
+      - semantic
+      - vector
+      - graph
+      - rag
+      - kv
+      - summary
+      - reflection
+      - long_term
+  - id: 15
+    name: RL Readiness
+    mega: VII
+    dimensions:
+      - step_trace
+      - trajectory
+      - tool_trace
+      - reward
+      - verifier
+      - replay
+      - dataset
+      - offline_rl
+      - online_rl
+      - skillrl_compatible
+      - claw_r1_compatible
+
+per_repo_report_sections:
+  - architecture
+  - skill_runtime
+  - skill_lifecycle
+  - skill_evolution
+  - multi_agent_skill
+  - skill_governance
+  - harness_integration
+  - rl_readiness
+  - borrow_for_taichu
+  - implement_in_taichu
+  - do_not_borrow
+  - score_1_10

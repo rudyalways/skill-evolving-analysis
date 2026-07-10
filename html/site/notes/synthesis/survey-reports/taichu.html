@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TaiChu 架构调研（5.0） — Skill-Evolving</title>
+  <link rel="alternate" hreflang="en" href="/html/site/notes/synthesis/survey-reports/taichu.html">
+  <link rel="alternate" hreflang="zh-Hans" href="/html/site/zh/notes/synthesis/survey-reports/taichu.html">
+  <link rel="alternate" hreflang="x-default" href="/html/site/notes/synthesis/survey-reports/taichu.html">
+  <link rel="stylesheet" href="../../../../css/viewer.css">
+</head>
+<body class="page-compact page-survey-report" data-doc-locale="en" data-content-lang="en">
+  <div class="viewer-layout">
+    <nav>
+      <div data-lang-switch class="lang-switch-host"></div>
+      <h1 data-i18n="nav.docs">Docs</h1>
+      <div class="title" data-i18n="nav.rendered">Rendered HTML</div>
+      <section class="highlight-section"><h2 data-i18n="nav.compare">nav.compare</h2><ul><li><a href="../agent-skill-architecture-survey-matrix.html" data-i18n="nav.matrix165">nav.matrix165</a></li><li><a href="../skill-lifecycle-full-matrix.html" data-i18n="nav.lifecycle">nav.lifecycle</a></li><li><a href="../web-expanded-lifecycle-matrix-merged.html" data-i18n="nav.web_l3">nav.web_l3</a></li><li><a href="../eight-repo-comprehensive-survey.html" data-i18n="nav.survey20">nav.survey20</a></li><li><a href="../skill-lifecycle-and-dynamic-loading-survey.html" data-i18n="nav.per_turn">nav.per_turn</a></li><li><a href="../eight-repo-deep-source-analysis.html" data-i18n="nav.deep_source">nav.deep_source</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.per_repo">nav.per_repo</h2><ul><li><a href="./opensquilla.html">OpenSquilla (9.0)</a></li><li><a href="./hermes-agent.html">Hermes (8.1)</a></li><li><a href="./openclaw.html">OpenClaw (8.0)</a></li><li><a href="./claude-code-rev.html">Claude Rev (7.7)</a></li><li><a href="./codex.html">Codex (7.2)</a></li><li><a class="active" href="./taichu.html">TaiChu (5.0)</a></li><li><a href="./zeroclaw.html">ZeroClaw (5.0)</a></li><li><a href="./genericagent.html">GenericAgent (4.8)</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.papers">nav.papers</h2><ul><li><a href="../../../topics/skill-rl/overview.html">SkillRL</a></li><li><a href="../../../topics/claw-r1/overview.html">Claw-R1</a></li><li><a href="../comparison.html" data-i18n="nav.comparison">nav.comparison</a></li><li><a href="../combined-pipeline.html" data-i18n="nav.pipeline">nav.pipeline</a></li><li><a href="../l3-comprehensive-skill-analysis.html" data-i18n="nav.l3">nav.l3</a></li><li><a href="../taichu-p0-skill-compaction-spec.html" data-i18n="nav.taichu_p0">nav.taichu_p0</a></li></ul></section><section><h2 data-i18n="nav.more">More</h2><ul>
+    <li><a href="/html/docs.html" data-i18n="nav.sitemap">Sitemap</a></li>
+    <li><a href="/html/i18n-coverage.html" data-i18n="nav.i18n_coverage">i18n coverage</a></li>
+    <li><a href="/html/index.html" data-i18n="nav.dashboard">Dashboard</a></li>
+    <li><a href="/html/deck/index.html" data-i18n="nav.decks">Slide decks</a></li>
+  </ul></section>
+    </nav>
+    <div class="viewer-main">
+      <div class="viewer-toolbar">
+        <div>
+          <h1>TaiChu 架构调研（5.0）</h1>
+          <div class="path">notes/synthesis/survey-reports/taichu.md</div>
+        </div>
+        <a class="btn" href="/html/docs.html" data-i18n="toolbar.sitemap">Sitemap</a>
+        <a class="btn primary" href="../agent-skill-architecture-survey-matrix.html" data-i18n="toolbar.matrix">165-dim matrix</a>
+      </div>
+      <p id="i18n-fallback-notice" class="i18n-notice" hidden data-i18n="content.fallback">content.fallback</p>
+      <article class="md-body"><h1>TaiChu 架构调研（5.0）</h1>
+<blockquote>
+<p><strong>Store/Expose/Use 强；Compact 丢 skill body 是 P0 缺口</strong><br>17 canonical skills；每 turn user prefix # Available Skills；load_skill + runs_on 端云路由。</p>
+</blockquote>
+<blockquote>
+<p><strong>Local</strong>: <code>/Users/maybewu/Documents/Projects/drafts/zk/TaiChu</code> (private)<br><strong>Upstream</strong>: <a href="https://taichu.fun/gitea/SystemAgentDev/TaiChu">taichu.fun Gitea SystemAgentDev/TaiChu</a><br><strong>Cross-repo doc</strong>: <code>docs/architecture/skill-system-cross-repo-comparison.md</code> (1000+ lines, 2026-07-06)<br><strong>Matrix</strong>: <a href="../agent-skill-architecture-survey-matrix.html">agent-skill-architecture-survey-matrix.md</a><br><strong>P0 spec</strong>: <a href="../taichu-p0-skill-compaction-spec.html">taichu-p0-skill-compaction-spec.md</a></p>
+</blockquote>
+<h2>1. Architecture</h2>
+<p class="zh-lead"><strong>中文</strong> skills/system/<name>/SKILL.md；Toollery before_prompt filter。</p>
+
+
+<p>TaiChu is a <strong>Rust layered SDK</strong> (L1–L5) with 端云协同: <code>taichu-core-sdk</code> Runtime/SessionManager, Pi-mono agent loop, <code>builtintools</code> (<code>load_skill</code>), <code>agent-session</code> compaction, subagent relay. Skills = <strong>17 canonical</strong> <code>skills/system/{name}/SKILL.md</code> + cloud <code>skill_catalog.json</code> — catalog is strong, <strong>lifecycle as versioned asset</strong> is not yet built.</p>
+<pre><code class="language-text">Session scan → XML &lt;local_skills&gt;/&lt;cloud_skills&gt; (system)
+        ↓ per turn
+# Available Skills user prefix (A-system / NLU)
+        ↓
+load_skill → ToolResult body
+        ↓
+compaction.rs summarize  ← ❌ may drop skill body
+</code></pre>
+<p><strong>Evidence</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Claim</th>
+<th>Path</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>SDK layers</td>
+<td><code>docs/overview.md</code>, <code>core/taichu-core-sdk/</code></td>
+</tr>
+<tr>
+<td>8-repo comparison</td>
+<td><code>docs/architecture/skill-system-cross-repo-comparison.md</code></td>
+</tr>
+<tr>
+<td>load_skill tool</td>
+<td><code>core/builtintools/src/skill/load_skill.rs</code></td>
+</tr>
+</tbody></table></div>
+<p><strong>Matrix</strong>: §1 Data Model 6/14 · §2 Discovery remote ★ workspace ❌ · Overall <strong>5.0</strong></p>
+<h2>2. Skill Runtime</h2>
+<p class="zh-lead"><strong>中文</strong> XML catalog + load_skill 渐进披露；Toollery embedding 可选。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Pattern</th>
+<th>Implementation</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Per-turn catalog</td>
+<td>★ <code># Available Skills</code> user prefix</td>
+<td><code>taichu-service/src/api/mod.rs:674-694</code></td>
+</tr>
+<tr>
+<td>Cache-friendly expose</td>
+<td>skills in <strong>user</strong> msg not system</td>
+<td><code>transient.rs</code> comments, lifecycle survey</td>
+</tr>
+<tr>
+<td>Progressive disclosure</td>
+<td>XML metadata → <code>load_skill</code> body</td>
+<td><code>prompt_builder.rs</code></td>
+</tr>
+<tr>
+<td>Per-turn filter</td>
+<td>Toollery <code>before_prompt</code> → <code>skill_filter</code></td>
+<td><code>agent-plugin/src/tool_search_bridge.rs:370-382</code></td>
+</tr>
+<tr>
+<td>runs_on 端云</td>
+<td>★ unique among 8 repos</td>
+<td><code>load_skill.rs:110-132</code></td>
+</tr>
+<tr>
+<td>Compaction survival</td>
+<td>❌ no invoked_skills</td>
+<td><code>compaction.rs</code>, <code>context-and-skills.md:64-68</code></td>
+</tr>
+</tbody></table></div>
+<details class="evidence-block"><summary>💬 引用 / Quote</summary><pre><code class="language-rust">// core/builtintools/src/skill/load_skill.rs:120-131
+text: format!(
+    &quot;技能「{}」在远程设备上执行（runs_on: {}）。\n\
+     请查看 &lt;devices&gt; 中对应的在线设备，\n\
+     使用 run_subagent(target_id=...) 委托执行。&quot;,
+    name, runs_on.join(&quot;, &quot;)
+),
+details: json!({
+    &quot;remote_delegation&quot;: true,
+}),
+</code></pre></details>
+<details class="evidence-block"><summary>💬 引用 / Quote</summary><pre><code class="language-rust">// load_skill.rs:30 (params schema description)
+// &quot;Name lookup does not search the current session workspace.&quot;
+</code></pre></details>
+<p><strong>Standout</strong>: Use ★ (runs_on) · Per-turn expose ★ · Compact ❌</p>
+<h2>3. Skill Lifecycle</h2>
+<p class="zh-lead"><strong>中文</strong> 无 agent CRUD；canonical 人工 curated；cloud catalog。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Stage</th>
+<th>TaiChu</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Human canonical</td>
+<td>17 system skills</td>
+<td>★</td>
+</tr>
+<tr>
+<td>Cloud publish</td>
+<td>skill_catalog.json + device sync</td>
+<td>★</td>
+</tr>
+<tr>
+<td>Discover / expose / load</td>
+<td>scan + prefix + load_skill</td>
+<td>★</td>
+</tr>
+<tr>
+<td>Observe</td>
+<td>interaction_log JSONL</td>
+<td>◐</td>
+</tr>
+<tr>
+<td>Generated / reviewed / approved</td>
+<td>—</td>
+<td>·</td>
+</tr>
+<tr>
+<td>Rollback</td>
+<td>—</td>
+<td>❌</td>
+</tr>
+</tbody></table></div>
+<p><strong>Lifecycle score</strong>: <strong>4/13</strong></p>
+<p><strong>Quote — documented compact risk</strong></p>
+<p>From <code>context-and-skills.md:64-68</code> (referenced in comparison doc):</p>
+<blockquote>
+<p>After compaction, <code>load_skill</code> ToolResult content may be summarized away — multi-turn skill-guided tasks lose procedural fidelity.</p>
+</blockquote>
+<h2>4. Skill Evolution</h2>
+<p class="zh-lead"><strong>中文</strong> 无 runtime evolve；roadmap proposals store。</p>
+
+
+<p><strong>No runtime evolution.</strong> Roadmap P2: proposals store (per <code>skill-system-cross-repo-comparison.md</code> L978-985).</p>
+<p>Recommended path (from matrix synthesis):</p>
+<pre><code class="language-text">interaction_log → miner → .taichu/skill-candidates/
+        → regression → gates → PR → ~/.taichu/skills/
+</code></pre>
+<p><strong>Not</strong>: Hermes-style direct canonical patch.</p>
+<p><strong>Matrix §9</strong>: 1/16</p>
+<h2>5. Multi-Agent Skill</h2>
+<p class="zh-lead"><strong>中文</strong> run_subagent 中继；❌ 无 complementary skill preload。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Pattern</th>
+<th>Status</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>run_subagent / relay</td>
+<td>★ exists</td>
+<td><code>core/subagent/</code></td>
+</tr>
+<tr>
+<td>Child skill preload</td>
+<td>❌</td>
+<td><code>session/manager.rs:1736-1796</code></td>
+</tr>
+<tr>
+<td>Inherit parent invoked</td>
+<td>❌ child rescans canonical only</td>
+<td>comparison doc L776-781</td>
+</tr>
+<tr>
+<td>Complementary bundles</td>
+<td>❌</td>
+<td>matrix §13</td>
+</tr>
+</tbody></table></div>
+<p><strong>Gap vs Claude Rev</strong>: no <code>ChildSessionSpec.skills: Vec&lt;String&gt;</code> preload.</p>
+<h2>6. Skill Governance</h2>
+<p class="zh-lead"><strong>中文</strong> ToolDomains；depends_on_tools soft gate。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Control</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>ToolDomains filtering</td>
+<td>◐ <code>tool_domains.rs</code></td>
+</tr>
+<tr>
+<td>runs_on capability routing</td>
+<td>★</td>
+</tr>
+<tr>
+<td>trust_tier / audit / proposal gates</td>
+<td>·</td>
+</tr>
+<tr>
+<td>Agent CRUD on skills</td>
+<td>·</td>
+</tr>
+</tbody></table></div>
+<p><strong>Target schema</strong> (from web-deep guide):</p>
+<pre><code class="language-yaml">trust_tier: bundled | team | personal | generated | community
+mutable_by_agent: false  # for published skills
+requires_human_approval: true  # for generated
+</code></pre>
+<h2>7. Harness Integration</h2>
+<p class="zh-lead"><strong>中文</strong> Pi-mono loop + Toollery；compaction.rs 纯 summarize。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Seam</th>
+<th>Location</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Per-turn user prefix</td>
+<td><code>SessionOptions.transform_context</code></td>
+<td><strong>not</strong> <code>ContextOptions.hook_chain</code></td>
+</tr>
+<tr>
+<td>Skill filter</td>
+<td><code>set_skill_name_filter</code> + Toollery</td>
+<td>per-turn</td>
+</tr>
+<tr>
+<td>Extra tools</td>
+<td><code>Runtime::add_tool_factory</code></td>
+<td><strong>not</strong> <code>SessionOptions.extra_tool_factories</code></td>
+</tr>
+<tr>
+<td>Trace</td>
+<td><code>interaction_log</code> JSONL</td>
+<td>Claw-R1 extension point</td>
+</tr>
+<tr>
+<td>Compact</td>
+<td><code>agent-session/src/compaction.rs</code></td>
+<td>P0 target</td>
+</tr>
+</tbody></table></div>
+<p>Ref: <a href="../survey-methodology-and-repo-confirmation.html">survey-methodology-and-repo-confirmation.md</a> §TaiChu seams</p>
+<h2>8. RL Readiness</h2>
+<p class="zh-lead"><strong>中文</strong> interaction_log JSONL；bench plan。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Signal</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>interaction_log</td>
+<td>◐ partial step trace</td>
+</tr>
+<tr>
+<td>Trajectory schema</td>
+<td>·</td>
+</tr>
+<tr>
+<td>Reward / Atropos</td>
+<td>·</td>
+</tr>
+<tr>
+<td>SkillRL</td>
+<td>◐ log-only foundation</td>
+</tr>
+<tr>
+<td>Claw-R1</td>
+<td>◐ hooks + log; needs step schema</td>
+</tr>
+</tbody></table></div>
+<p>Align export with OpenClaw <code>openclaw-trajectory</code> fields when extending log.</p>
+<h2>9. Borrow for TaiChu</h2>
+<p class="zh-lead"><strong>中文</strong> 对齐 OpenSquilla gates + Claude invoked_skills + Codex disclosure。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Source</th>
+<th>Pattern</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Claude Rev</strong></td>
+<td>invoked_skills compact, subagent preload, skillImprovement</td>
+</tr>
+<tr>
+<td><strong>OpenSquilla</strong></td>
+<td>proposals + gates, RRF, collect_invoked_skills</td>
+</tr>
+<tr>
+<td><strong>Codex</strong></td>
+<td>SKILL.md layout, metadata budget, implicit trigger</td>
+</tr>
+<tr>
+<td><strong>OpenClaw</strong></td>
+<td>6-layer scope, skillFilter, trajectory JSONL</td>
+</tr>
+<tr>
+<td><strong>Hermes</strong></td>
+<td>review async + skill_manage (candidate-only) + skills_guard</td>
+</tr>
+<tr>
+<td><strong>ZeroClaw</strong></td>
+<td>audit.rs patterns, trust_tier metadata</td>
+</tr>
+<tr>
+<td><strong>GenericAgent</strong></td>
+<td>Skill Miner philosophy (not ungated write)</td>
+</tr>
+</tbody></table></div>
+<p><strong>Keep</strong>: runs_on, user prefix per-turn, load_skill wire, Toollery filter.</p>
+<h2>10. Implement in TaiChu</h2>
+<p class="zh-lead"><strong>中文</strong> P0 InvokedSkillRegistry；P1 RRF；P2 proposals。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>P</th>
+<th>What</th>
+<th>Spec / file</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>P0</strong></td>
+<td>InvokedSkillRegistry + post-compact reinject</td>
+<td><a href="../taichu-p0-skill-compaction-spec.html">taichu-p0-skill-compaction-spec.md</a></td>
+</tr>
+<tr>
+<td><strong>P0</strong></td>
+<td>ChildSessionSpec.skills preload</td>
+<td><code>session/manager.rs</code></td>
+</tr>
+<tr>
+<td>P1</td>
+<td><code>~/.taichu/proposals/</code> + gates</td>
+<td>new crate/module</td>
+</tr>
+<tr>
+<td>P1</td>
+<td>skill_manage → candidates only</td>
+<td><code>builtintools/</code></td>
+</tr>
+<tr>
+<td>P2</td>
+<td>RRF on Toollery</td>
+<td><code>tool_search_bridge.rs</code></td>
+</tr>
+<tr>
+<td>P3</td>
+<td>MetaSkill DAG</td>
+<td>new <code>meta/</code></td>
+</tr>
+</tbody></table></div>
+<h2>11. Do NOT Borrow</h2>
+<p class="zh-lead"><strong>中文</strong> 勿照搬 Hermes 无 gate patch。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Pattern</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Hermes direct production patch</td>
+<td>issue #55647 class</td>
+</tr>
+<tr>
+<td>OpenClaw marketplace trust</td>
+<td>security</td>
+</tr>
+<tr>
+<td>GenericAgent ungated crystallize</td>
+<td>no eval</td>
+</tr>
+<tr>
+<td><code>SessionOptions.extra_tool_factories</code></td>
+<td>migrated API</td>
+</tr>
+<tr>
+<td>Workspace skill scan in session</td>
+<td>intentionally disabled for A-system</td>
+</tr>
+</tbody></table></div>
+<h2>12. Score (1–10)</h2>
+<p class="zh-lead"><strong>中文</strong> 总分 5.0：Compact/Evolve/Delete 缺口；P0 spec 已写。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Category</th>
+<th align="center">Score</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Data Model</td>
+<td align="center">6</td>
+<td>SKILL.md ★; no version/trust</td>
+</tr>
+<tr>
+<td>Runtime</td>
+<td align="center">7</td>
+<td>runs_on ★; compact ❌</td>
+</tr>
+<tr>
+<td>Lifecycle</td>
+<td align="center">4</td>
+<td>4/13 stages</td>
+</tr>
+<tr>
+<td>Evolution</td>
+<td align="center">1</td>
+<td>none</td>
+</tr>
+<tr>
+<td>Governance</td>
+<td align="center">3</td>
+<td>ToolDomains only</td>
+</tr>
+<tr>
+<td>Agent Integration</td>
+<td align="center">5</td>
+<td>subagent skill gap</td>
+</tr>
+<tr>
+<td>RL Readiness</td>
+<td align="center">3</td>
+<td>log foundation</td>
+</tr>
+<tr>
+<td><strong>Overall</strong></td>
+<td align="center"><strong>5.0</strong></td>
+<td><strong>Best seams + 端云; lifecycle immature</strong></td>
+</tr>
+</tbody></table></div>
+<h2>Evidence index</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Claim</th>
+<th>Path / URL</th>
+<th>Level</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>TC-01</td>
+<td>runs_on delegation</td>
+<td><code>builtintools/src/skill/load_skill.rs:110-132</code></td>
+<td>L3</td>
+</tr>
+<tr>
+<td>TC-02</td>
+<td>Per-turn prefix</td>
+<td><code>taichu-service/src/api/mod.rs:674-694</code></td>
+<td>L3</td>
+</tr>
+<tr>
+<td>TC-03</td>
+<td>Tool filter</td>
+<td><code>agent-plugin/src/tool_search_bridge.rs:370-382</code></td>
+<td>L3</td>
+</tr>
+<tr>
+<td>TC-04</td>
+<td>Compact gap</td>
+<td><code>agent-session/src/compaction.rs</code>, <code>context-and-skills.md:64-68</code></td>
+<td>L3</td>
+</tr>
+<tr>
+<td>TC-05</td>
+<td>Child no inherit</td>
+<td><code>session/manager.rs:1736-1796</code></td>
+<td>L2</td>
+</tr>
+<tr>
+<td>TC-06</td>
+<td>8-repo comparison</td>
+<td><code>docs/architecture/skill-system-cross-repo-comparison.md</code></td>
+<td>L2</td>
+</tr>
+<tr>
+<td>TC-07</td>
+<td>P0 spec</td>
+<td><a href="../taichu-p0-skill-compaction-spec.html">taichu-p0-skill-compaction-spec.md</a></td>
+<td>L3</td>
+</tr>
+<tr>
+<td>TC-08</td>
+<td>Private upstream</td>
+<td><a href="https://taichu.fun/gitea/SystemAgentDev/TaiChu">https://taichu.fun/gitea/SystemAgentDev/TaiChu</a></td>
+<td>L0</td>
+</tr>
+</tbody></table></div>
+</article>
+    </div>
+  </div>
+  <script src="../../../../js/i18n.js"></script>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
+  </script>
+</body>
+</html>

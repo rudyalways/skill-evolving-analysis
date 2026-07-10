@@ -1,0 +1,20 @@
+sequenceDiagram
+  autonumber
+  participant U as User
+  participant M as Main Agent
+  participant T as Post-turn trigger
+  participant R as Review Agent (bg thread)
+  participant FS as ~/.hermes/skills
+  Note over U,M: Turn 7 · Online
+  U->>M: Fix flaky API test in repo X
+  M->>M: skills_list → skill_view(api-testing)
+  M->>U: run tests + patch code
+  Note over T: turn ends · _iters_since_skill ≥ 10
+  T->>R: _spawn_background_review(messages_snapshot)
+  Note over R,FS: daemon thread · no queue
+  R->>R: run_conversation(_SKILL_REVIEW_PROMPT, history=snapshot)
+  R->>FS: skill_manage(action=patch)
+  R->>FS: _security_scan_skill()
+  Note over U,M: Turn 8 · Online
+  U->>M: Run API tests again
+  M->>M: skill_view sees patched SKILL.md

@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Proposed Architecture: Online Skill Lifecycle (2026–2027) — Skill-Evolving</title>
+  <link rel="alternate" hreflang="en" href="/html/site/notes/synthesis/proposed-skill-lifecycle-architecture.html">
+  <link rel="alternate" hreflang="x-default" href="/html/site/notes/synthesis/proposed-skill-lifecycle-architecture.html">
+  <link rel="stylesheet" href="../../../css/viewer.css">
+</head>
+<body class="" data-doc-locale="en" data-content-lang="en">
+  <div class="viewer-layout">
+    <nav>
+      <div data-lang-switch class="lang-switch-host"></div>
+      <h1 data-i18n="nav.docs">Docs</h1>
+      <div class="title" data-i18n="nav.rendered">Rendered HTML</div>
+      <section class="highlight-section"><h2 data-i18n="nav.compare">nav.compare</h2><ul><li><a href="./agent-skill-architecture-survey-matrix.html" data-i18n="nav.matrix165">nav.matrix165</a></li><li><a href="./skill-lifecycle-full-matrix.html" data-i18n="nav.lifecycle">nav.lifecycle</a></li><li><a href="./web-expanded-lifecycle-matrix-merged.html" data-i18n="nav.web_l3">nav.web_l3</a></li><li><a href="./eight-repo-comprehensive-survey.html" data-i18n="nav.survey20">nav.survey20</a></li><li><a href="./skill-lifecycle-and-dynamic-loading-survey.html" data-i18n="nav.per_turn">nav.per_turn</a></li><li><a href="./eight-repo-deep-source-analysis.html" data-i18n="nav.deep_source">nav.deep_source</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.per_repo">nav.per_repo</h2><ul><li><a href="./survey-reports/opensquilla.html">OpenSquilla (9.0)</a></li><li><a href="./survey-reports/hermes-agent.html">Hermes (8.1)</a></li><li><a href="./survey-reports/openclaw.html">OpenClaw (8.0)</a></li><li><a href="./survey-reports/claude-code-rev.html">Claude Rev (7.7)</a></li><li><a href="./survey-reports/codex.html">Codex (7.2)</a></li><li><a href="./survey-reports/taichu.html">TaiChu (5.0)</a></li><li><a href="./survey-reports/zeroclaw.html">ZeroClaw (5.0)</a></li><li><a href="./survey-reports/genericagent.html">GenericAgent (4.8)</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.papers">nav.papers</h2><ul><li><a href="../../topics/skill-rl/overview.html">SkillRL</a></li><li><a href="../../topics/claw-r1/overview.html">Claw-R1</a></li><li><a href="./comparison.html" data-i18n="nav.comparison">nav.comparison</a></li><li><a href="./combined-pipeline.html" data-i18n="nav.pipeline">nav.pipeline</a></li><li><a href="./l3-comprehensive-skill-analysis.html" data-i18n="nav.l3">nav.l3</a></li><li><a href="./taichu-p0-skill-compaction-spec.html" data-i18n="nav.taichu_p0">nav.taichu_p0</a></li></ul></section><section><h2 data-i18n="nav.more">More</h2><ul>
+    <li><a href="/html/docs.html" data-i18n="nav.sitemap">Sitemap</a></li>
+    <li><a href="/html/i18n-coverage.html" data-i18n="nav.i18n_coverage">i18n coverage</a></li>
+    <li><a href="/html/index.html" data-i18n="nav.dashboard">Dashboard</a></li>
+    <li><a href="/html/deck/index.html" data-i18n="nav.decks">Slide decks</a></li>
+  </ul></section>
+    </nav>
+    <div class="viewer-main">
+      <div class="viewer-toolbar">
+        <div>
+          <h1>Proposed Architecture: Online Skill Lifecycle (2026–2027)</h1>
+          <div class="path">notes/synthesis/proposed-skill-lifecycle-architecture.md</div>
+        </div>
+        <a class="btn" href="/html/docs.html" data-i18n="toolbar.sitemap">Sitemap</a>
+        <a class="btn primary" href="./agent-skill-architecture-survey-matrix.html" data-i18n="toolbar.matrix">165-dim matrix</a>
+      </div>
+      <p id="i18n-fallback-notice" class="i18n-notice" hidden data-i18n="content.fallback">content.fallback</p>
+      <article class="md-body"><h1>Proposed Architecture: Online Skill Lifecycle (2026–2027)</h1>
+<blockquote>
+<p>Skill 不是静态 Prompt，而是可评测、可版本化、可路由、可淘汰、可持续演化的软件资产。</p>
+</blockquote>
+<h2>Architecture diagram</h2>
+<pre><code>┌──────────────────────────────────────────────────────────────────┐
+│                        AGENT RUNTIME                              │
+│  LLM + Harness (prompt, tools, routing, recovery)               │
+└────────────────────────────┬─────────────────────────────────────┘
+                             │ every action
+                             ▼
+┌──────────────────────────────────────────────────────────────────┐
+│  L0: STEP-LEVEL TRACE CAPTURE                    [Claw-R1]       │
+│  Gateway → {state, action, reward, tool, metadata, timestamp}  │
+│  Data Pool: query, filter, version, quality-label              │
+└────────────────────────────┬─────────────────────────────────────┘
+                             │ step streams / assembled trajectories
+                             ▼
+┌──────────────────────────────────────────────────────────────────┐
+│  L1: EXPERIENCE MINING                                            │
+│  ┌─────────────────────┐    ┌─────────────────────┐              │
+│  │  Failure Mining      │    │  Success Mining      │              │
+│  │  - timeout patterns  │    │  - strategic patterns│              │
+│  │  - wrong tool choice │    │  - efficient paths   │              │
+│  │  - captcha/block     │    │  - verification flow │              │
+│  └──────────┬──────────┘    └──────────┬──────────┘              │
+│             └────────────┬───────────────┘                        │
+│                          ▼                                        │
+│              Skill Candidate Pool                                 │
+│              (prompt / code / workflow variants)                  │
+└────────────────────────────┬─────────────────────────────────────┘
+                             │
+                             ▼
+┌──────────────────────────────────────────────────────────────────┐
+│  L2: VALIDATION &amp; SELECTION                                       │
+│  ┌─────────────────────────────────────────────────────────────┐ │
+│  │ Auto Practice / Regression Tests          [SkillHone]       │ │
+│  │ - role-separated opt/eval subagents                         │ │
+│  │ - practice probes with redacted evidence                    │ │
+│  │ - held-out validation gate                [SkillOpt]        │ │
+│  └─────────────────────────────────────────────────────────────┘ │
+│  ┌─────────────────────────────────────────────────────────────┐ │
+│  │ Pairwise Ranking / A-B Evaluation                           │ │
+│  │ - ELO among skill candidates                                │ │
+│  │ - benchmark tournament                  [EvoSkills]           │ │
+│  └─────────────────────────────────────────────────────────────┘ │
+└────────────────────────────┬─────────────────────────────────────┘
+                             │ accepted skills only
+                             ▼
+┌──────────────────────────────────────────────────────────────────┐
+│  L3: VERSIONED SKILL LIBRARY                                      │
+│  ┌─────────────────────────────────────────────────────────────┐ │
+│  │ General Skills (cross-task heuristics)     [SkillRL S_g]   │ │
+│  │ Task-Specific Skills (domain tactics)      [SkillRL S_k]   │ │
+│  │ Program Skills (executable code)           [Voyager]        │ │
+│  │ Workflow Skills (DAG graphs)               [ComfyClaw]      │ │
+│  │ Decision History (diagnosis→revision)      [SkillHone]      │ │
+│  └─────────────────────────────────────────────────────────────┘ │
+│  Retirement: score threshold · ELO · embedding merge · archive  │
+└────────────────────────────┬─────────────────────────────────────┘
+                             │
+                             ▼
+┌──────────────────────────────────────────────────────────────────┐
+│  L4: GRAPH RETRIEVAL &amp; ROUTING                                    │
+│  Skill Graph (dependencies, workflow chains)    [Graph of Skills] │
+│  Scale routing (80K+ pool)                      [SkillRouter]     │
+│  Progressive disclosure (L0→L4 context depth)   [skill-graph]     │
+└────────────────────────────┬─────────────────────────────────────┘
+                             │ retrieved skill bundle
+                             ▼
+┌──────────────────────────────────────────────────────────────────┐
+│  L5: AGENT EXECUTION (with skill-augmented context)               │
+│  Policy conditions on: general skills + retrieved task skills     │
+│  Optional: GRPO policy update              [SkillRL]              │
+└────────────────────────────┬─────────────────────────────────────┘
+                             │ runtime metrics
+                             ▼
+┌──────────────────────────────────────────────────────────────────┐
+│  L6: HARNESS CO-EVOLUTION                                         │
+│  Harness flaw attribution (ETCLOVG)           [HarnessFix]        │
+│  Harness component edit + regression          [Self-Harness, AHE] │
+│  Skill revision harness                       [SkillHone]         │
+└────────────────────────────┬─────────────────────────────────────┘
+                             │
+                             └──────────────► back to L0 (closed loop)
+</code></pre>
+<h2>Layer responsibilities</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Question it answers</th>
+<th>Key systems</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>L0</td>
+<td>数据从哪来、怎么管？</td>
+<td>Claw-R1</td>
+</tr>
+<tr>
+<td>L1</td>
+<td>从经验中提取什么？</td>
+<td>SkillRL distill, HarnessFix mining</td>
+</tr>
+<tr>
+<td>L2</td>
+<td>怎么保证 skill 质量？</td>
+<td>SkillOpt, SkillHone, EvoSkills</td>
+</tr>
+<tr>
+<td>L3</td>
+<td>怎么组织和版本化？</td>
+<td>SkillRL SkillBank, SkillHone history</td>
+</tr>
+<tr>
+<td>L4</td>
+<td>怎么高效检索？</td>
+<td>Graph of Skills, SkillRouter</td>
+</tr>
+<tr>
+<td>L5</td>
+<td>怎么用于执行和学习？</td>
+<td>SkillRL GRPO, any agent runtime</td>
+</tr>
+<tr>
+<td>L6</td>
+<td>Harness 本身怎么进化？</td>
+<td>Self-Harness, HarnessFix, AHE</td>
+</tr>
+</tbody></table></div>
+<h2>Design principles</h2>
+<ol>
+<li><strong>Step-level first</strong> — 不要等完整 trajectory 才处理；Claw-R1 的 step 粒度支持 failure mining at the wrong step</li>
+<li><strong>Failure ≥ Success</strong> — 失败 lesson 和成功 pattern 同等重要（SkillRL 已验证）</li>
+<li><strong>Validation before store</strong> — 没有 gate 的 skill library 会退化（SkillOpt 52/52 cells 证明 gate 的价值）</li>
+<li><strong>Version, don&#39;t overwrite</strong> — SkillHone 的 decision history 避免重复犯错</li>
+<li><strong>Graph, not list</strong> — 100+ skills 时 flat retrieval 不够（SkillRouter @ 80K scale）</li>
+<li><strong>Harness co-evolve</strong> — Skill 优化不够，harness 层也要一起改（2026 共识）</li>
+</ol>
+<h2>Open design decisions</h2>
+<ul>
+<li><input disabled="" type="checkbox"> Trajectory builder: Claw-R1 extension vs SkillRL preprocessor?</li>
+<li><input disabled="" type="checkbox"> Skill artifacts back into Data Pool as new asset type?</li>
+<li><input disabled="" type="checkbox"> Online vs batch evolution frequency</li>
+<li><input disabled="" type="checkbox"> Human-in-the-loop approval (ComfyClaw model) vs fully automatic</li>
+<li><input disabled="" type="checkbox"> Unified skill schema: Anthropic SKILL.md vs SkillRL prompt-heuristic vs Voyager code</li>
+</ul>
+<h2>Implementation phases</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Phase</th>
+<th>Scope</th>
+<th>Dependencies</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>P0</td>
+<td>Claw-R1 Data Pool + basic step capture</td>
+<td>Claw-R1 repo</td>
+</tr>
+<tr>
+<td>P1</td>
+<td>Failure/success mining → skill candidates</td>
+<td>SkillRL distillation prompts</td>
+</tr>
+<tr>
+<td>P2</td>
+<td>Validation gate (held-out + practice probes)</td>
+<td>SkillOpt / SkillHone patterns</td>
+</tr>
+<tr>
+<td>P3</td>
+<td>Versioned SkillBank + graph retrieval</td>
+<td>SkillRL + Graph of Skills</td>
+</tr>
+<tr>
+<td>P4</td>
+<td>GRPO co-evolution loop</td>
+<td>SkillRL training</td>
+</tr>
+<tr>
+<td>P5</td>
+<td>Harness co-evolution</td>
+<td>HarnessFix / Self-Harness</td>
+</tr>
+</tbody></table></div>
+<h2>Related</h2>
+<ul>
+<li><a href="./skill-evolution-taxonomy.html">Skill evolution taxonomy</a></li>
+<li><a href="./combined-pipeline.html">Combined pipeline (Claw-R1 + SkillRL)</a></li>
+</ul>
+</article>
+    </div>
+  </div>
+  <script src="../../../js/i18n.js"></script>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
+  </script>
+</body>
+</html>

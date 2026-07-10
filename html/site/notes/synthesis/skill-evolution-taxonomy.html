@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Skill 自进化技术路线全景（2025–2026） — Skill-Evolving</title>
+  <link rel="alternate" hreflang="en" href="/html/site/notes/synthesis/skill-evolution-taxonomy.html">
+  <link rel="alternate" hreflang="zh-Hans" href="/html/site/zh/notes/synthesis/skill-evolution-taxonomy.html">
+  <link rel="alternate" hreflang="x-default" href="/html/site/notes/synthesis/skill-evolution-taxonomy.html">
+  <link rel="stylesheet" href="../../../css/viewer.css">
+</head>
+<body class="" data-doc-locale="en" data-content-lang="zh">
+  <div class="viewer-layout">
+    <nav>
+      <div data-lang-switch class="lang-switch-host"></div>
+      <h1 data-i18n="nav.docs">Docs</h1>
+      <div class="title" data-i18n="nav.rendered">Rendered HTML</div>
+      <section class="highlight-section"><h2 data-i18n="nav.compare">nav.compare</h2><ul><li><a href="./agent-skill-architecture-survey-matrix.html" data-i18n="nav.matrix165">nav.matrix165</a></li><li><a href="./skill-lifecycle-full-matrix.html" data-i18n="nav.lifecycle">nav.lifecycle</a></li><li><a href="./web-expanded-lifecycle-matrix-merged.html" data-i18n="nav.web_l3">nav.web_l3</a></li><li><a href="./eight-repo-comprehensive-survey.html" data-i18n="nav.survey20">nav.survey20</a></li><li><a href="./skill-lifecycle-and-dynamic-loading-survey.html" data-i18n="nav.per_turn">nav.per_turn</a></li><li><a href="./eight-repo-deep-source-analysis.html" data-i18n="nav.deep_source">nav.deep_source</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.per_repo">nav.per_repo</h2><ul><li><a href="./survey-reports/opensquilla.html">OpenSquilla (9.0)</a></li><li><a href="./survey-reports/hermes-agent.html">Hermes (8.1)</a></li><li><a href="./survey-reports/openclaw.html">OpenClaw (8.0)</a></li><li><a href="./survey-reports/claude-code-rev.html">Claude Rev (7.7)</a></li><li><a href="./survey-reports/codex.html">Codex (7.2)</a></li><li><a href="./survey-reports/taichu.html">TaiChu (5.0)</a></li><li><a href="./survey-reports/zeroclaw.html">ZeroClaw (5.0)</a></li><li><a href="./survey-reports/genericagent.html">GenericAgent (4.8)</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.papers">nav.papers</h2><ul><li><a href="../../topics/skill-rl/overview.html">SkillRL</a></li><li><a href="../../topics/claw-r1/overview.html">Claw-R1</a></li><li><a href="./comparison.html" data-i18n="nav.comparison">nav.comparison</a></li><li><a href="./combined-pipeline.html" data-i18n="nav.pipeline">nav.pipeline</a></li><li><a href="./l3-comprehensive-skill-analysis.html" data-i18n="nav.l3">nav.l3</a></li><li><a href="./taichu-p0-skill-compaction-spec.html" data-i18n="nav.taichu_p0">nav.taichu_p0</a></li></ul></section><section><h2 data-i18n="nav.more">More</h2><ul>
+    <li><a href="/html/docs.html" data-i18n="nav.sitemap">Sitemap</a></li>
+    <li><a href="/html/i18n-coverage.html" data-i18n="nav.i18n_coverage">i18n coverage</a></li>
+    <li><a href="/html/index.html" data-i18n="nav.dashboard">Dashboard</a></li>
+    <li><a href="/html/deck/index.html" data-i18n="nav.decks">Slide decks</a></li>
+  </ul></section>
+    </nav>
+    <div class="viewer-main">
+      <div class="viewer-toolbar">
+        <div>
+          <h1>Skill 自进化技术路线全景（2025–2026）</h1>
+          <div class="path">notes/synthesis/skill-evolution-taxonomy.md</div>
+        </div>
+        <a class="btn" href="/html/docs.html" data-i18n="toolbar.sitemap">Sitemap</a>
+        <a class="btn primary" href="./agent-skill-architecture-survey-matrix.html" data-i18n="toolbar.matrix">165-dim matrix</a>
+      </div>
+      <p id="i18n-zh-native-notice" class="i18n-notice zh-native" hidden data-i18n="content.zh_native">content.zh_native</p>
+      <article class="md-body"><h1>Skill 自进化技术路线全景（2025–2026）</h1>
+<blockquote>
+<p>过去一年 Agent 研究的明显趋势：<strong>自进化越来越不是更新模型参数，而是更新 Harness、Skill、Memory、Workflow。</strong> 其中 <strong>Skill Evolution</strong> 是最成熟、最一致的方向。</p>
+</blockquote>
+<hr>
+<h2>一、Skill 自进化到底在进化什么？</h2>
+<p>很多人理解成：</p>
+<pre><code>Task → Trajectory → 保存下来
+</code></pre>
+<p><strong>现在不是。</strong></p>
+<p>更准确的是：</p>
+<pre><code>Task → Experience → Skill → Skill Library → Retriever → 以后 Agent 调用
+</code></pre>
+<p>真正进化的是 <strong>Skill Library</strong>，而不是模型参数。</p>
+<pre><code>LLM + Agent Harness + Skill Library
+         ↑                    ↑
+      相对固定           持续成长
+</code></pre>
+<hr>
+<h2>二、六条进化路线</h2>
+<pre><code>                    Self Evolution
+                         │
+────────────────────────────────────────
+Trajectory │ Skill │ Workflow │ Harness │ Tool │ Weight
+                         │
+              真正成熟的是 Skill Evolution
+              Weight Evolution 很少在线发生
+</code></pre>
+<h3>路线 1：Trajectory → Skill（目前主流）</h3>
+<p><strong>代表</strong>：Voyager · SkillRL · Trace2Skill · Memento-Skills · SkillHone</p>
+<p><strong>共同思想</strong>：不是保存 Trajectory，而是 <strong>Distill</strong>。</p>
+<pre><code>Agent: Search → Read → Compare → Answer
+
+变成 Skill:
+&quot;When comparing APIs:
+ 1. Search official docs
+ 2. Compare versions
+ 3. Verify examples&quot;
+
+Trajectory 消失，留下 Skill。
+</code></pre>
+<p><strong>标准流程</strong>：</p>
+<pre><code>Rollout → Trajectory → Teacher LLM → Skill Distillation → Skill Library
+</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>系统</th>
+<th>特点</th>
+<th>arXiv</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Voyager (2023)</td>
+<td>可执行 code skill 入库</td>
+<td>—</td>
+</tr>
+<tr>
+<td>SkillRL (2026)</td>
+<td>分层 SkillBank + GRPO 递归共进化</td>
+<td>2602.08234</td>
+</tr>
+<tr>
+<td>Trace2Skill (2026)</td>
+<td>并行 analyst → 无冲突合并 skill directory</td>
+<td>2603.25158</td>
+</tr>
+<tr>
+<td>Memento-Skills (2026)</td>
+<td>Read-Execute-Reflect-Write</td>
+<td>2603.18743</td>
+</tr>
+<tr>
+<td>SkillHone (2026)</td>
+<td>Persistent decision history + 版本化 revision</td>
+<td>2606.08671</td>
+</tr>
+</tbody></table></div>
+<p><strong>优点</strong>：非常小 · 容易 retrieve · 容易泛化</p>
+<hr>
+<h3>路线 2：Failure → Skill（近一年越来越火）</h3>
+<p><strong>代表</strong>：SkillRL · HarnessFix · SkillHone</p>
+<p><strong>思想</strong>：不要只保存成功经验，<strong>更应该保存失败</strong>。</p>
+<pre><code>失败: Tool timeout → Retry → Retry → Fail
+变成 Skill: &quot;Never retry; use backup API&quot;
+
+失败: Browser → Captcha → Stop
+变成 Skill: &quot;Switch to search API&quot;
+</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>系统</th>
+<th>失败处理方式</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>SkillRL</td>
+<td>Teacher 合成 failure lessons（非丢弃失败轨迹）</td>
+</tr>
+<tr>
+<td>HarnessFix</td>
+<td>HTIR 归因 → ETCLOVG 层 scoped repair</td>
+</tr>
+<tr>
+<td>SkillHone</td>
+<td>诊断 + 候选 revision + practice probe 验证</td>
+</tr>
+</tbody></table></div>
+<p><strong>失败通常比成功更有价值</strong> — 边界条件、反模式、recovery 策略。</p>
+<hr>
+<h3>路线 3：Skill Revision（Skill 持续修改，2026 兴起）</h3>
+<p>不是 Skill V1 一直保存，而是：</p>
+<pre><code>Skill V1 → Run → Feedback → Skill V2 → Run → Feedback → Skill V3
+</code></pre>
+<p>Skill 成为 <strong>Version</strong>，越来越长、越来越成熟。</p>
+<pre><code>&quot;Search docs&quot;
+  → &quot;Search official docs; if unavailable, search github issues&quot;
+</code></pre>
+<p><strong>代表</strong>：SkillHone — 记录 <code>(diagnosis, revision, evidence, outcome)</code> 决策历史，跨 session 持续 refinement，避免重复犯错。</p>
+<p>与 SkillOpt 的区别：SkillOpt 优化单个 <code>best_skill.md</code>；SkillHone 维护完整 revision history + evaluation assets。</p>
+<hr>
+<h3>路线 4：Skill Graph（从 List 到 Graph）</h3>
+<p>以前：</p>
+<pre><code>Skill1, Skill2, Skill3  (flat list)
+</code></pre>
+<p>现在：</p>
+<pre><code>Skill A → Skill B → Skill C     (dependency)
+Search → Read → Summarize → Verify  (workflow chain)
+</code></pre>
+<p><strong>Graph Retrieval</strong> — 只加载相关子图，而非整个 library。</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>系统</th>
+<th>机制</th>
+<th>arXiv</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Graph of Skills</td>
+<td>离线建 skill graph，dependency-aware rerank</td>
+<td>2604.05333</td>
+</tr>
+<tr>
+<td>SkillRouter</td>
+<td>80K skill pool，bi-encoder + cross-encoder rerank</td>
+<td>2603.22455</td>
+</tr>
+<tr>
+<td>SkillFlow (benchmark)</td>
+<td>Lifelong skill discovery &amp; evolution benchmark</td>
+<td>2604.17308</td>
+</tr>
+<tr>
+<td>GraSP</td>
+<td>Graph-Structured Skill Compositions</td>
+<td>2604.17870</td>
+</tr>
+<tr>
+<td>SkillGraph</td>
+<td>Self-evolving multi-agent collaboration + graph topology</td>
+<td>2604.17503</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h3>路线 5：Program Skill（Code，不是 Prompt）</h3>
+<p><strong>代表</strong>：Voyager · Inducing Programmatic Skills</p>
+<pre><code>以前: &quot;Search docs&quot; (prompt)
+后来: def search_docs(): ... (code)
+</code></pre>
+<p><strong>优势</strong>：速度快 · 可 debug · 可测试 · 可 version</p>
+<p>Agent 直接调用函数，而非每次重新推理 procedure。</p>
+<hr>
+<h3>路线 6：Workflow Skill（Skill = Workflow Graph）</h3>
+<p><strong>代表</strong>：ComfyClaw · SkillFlow (executor)</p>
+<p>Skill 不再是一句 Prompt，而是 <strong>整个 Workflow</strong>：</p>
+<pre><code>Browser → Search → Read → Verify → Summarize = 一个 Skill
+</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>系统</th>
+<th>说明</th>
+<th>arXiv</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>ComfyClaw</td>
+<td>ComfyUI workflow 作为 typed graph edit + VLM verifier + skill library</td>
+<td>2607.01709</td>
+</tr>
+<tr>
+<td>SkillFlow</td>
+<td>YAML DAG executor，human-in-the-loop checkpoints</td>
+<td>(engine, not paper)</td>
+</tr>
+</tbody></table></div>
+<p>ComfyClaw 的 skill evolution：clustering traces → propose skill mutations → validate → 加入 library。</p>
+<hr>
+<h2>三、Skill 是怎么产生的？（四种方法）</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>方法</th>
+<th>流程</th>
+<th>代表</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Distillation</strong></td>
+<td>Trajectory → Teacher LLM → Skill</td>
+<td>SkillRL, Trace2Skill</td>
+</tr>
+<tr>
+<td><strong>Reflection</strong></td>
+<td>Trajectory → Reflection → Lesson → Skill</td>
+<td>Reflexion, Memento-Skills</td>
+</tr>
+<tr>
+<td><strong>RL</strong></td>
+<td>Skill 作为 policy 输入；好保留、差删除</td>
+<td>SkillRL (GRPO + SkillBank co-evolve)</td>
+</tr>
+<tr>
+<td><strong>Search</strong></td>
+<td>多 Skill 候选 → Benchmark → Choose best</td>
+<td>SkillOpt, EvoSkills, Harness 论文 increasingly</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2>四、Skill 如何更新？（标准闭环）</h2>
+<p>几乎所有论文都经历：</p>
+<pre><code>Collect → Extract → Validate → Store → Retrieve → Execute → Collect
+</code></pre>
+<p>展开：</p>
+<pre><code>Task → Trajectory → Skill Candidate → Offline Evaluation
+  → Accepted Skill → Skill Library → Retriever → Agent → New Tasks
+         ↑                                              │
+         └──────────────── Rollout ─────────────────────┘
+</code></pre>
+<p><strong>Validation gate 是共识</strong> — SkillOpt（held-out 必须严格更好）、SkillHone（practice probe）、EvoSkills（surrogate verifier + oracle）。</p>
+<hr>
+<h2>五、Skill 如何淘汰？</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>策略</th>
+<th>机制</th>
+<th>采用者</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Score</strong></td>
+<td>success rate / usage / reward，低分删除</td>
+<td>SkillRL (validation epoch 触发)</td>
+</tr>
+<tr>
+<td><strong>ELO</strong></td>
+<td>Skill pairwise 对战，留胜率高的</td>
+<td>increasingly popular</td>
+</tr>
+<tr>
+<td><strong>Embedding Merge</strong></td>
+<td>相似 skill 自动合并</td>
+<td>&quot;Search docs&quot; + &quot;Search official docs&quot;</td>
+</tr>
+<tr>
+<td><strong>Version</strong></td>
+<td>不覆盖，V1→V2→V3 链式保留</td>
+<td>SkillHone (persistent decision history)</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2>六、2026 最大趋势：Harness × Skill 联合进化</h2>
+<p>以前：</p>
+<pre><code>LLM → Trajectory → Skill
+</code></pre>
+<p>现在：</p>
+<pre><code>LLM → Harness → Trajectory → Skill → Harness Update + Skill Update
+</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>系统</th>
+<th>进化什么</th>
+<th>arXiv</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Self-Harness</td>
+<td>Harness 自身（weakness mining → proposal → validation）</td>
+<td>2606.09498</td>
+</tr>
+<tr>
+<td>AHE</td>
+<td>Harness 组件（observability-driven edit contract）</td>
+<td>2604.25850</td>
+</tr>
+<tr>
+<td>HarnessFix</td>
+<td>Harness flaws（ETCLOVG 层归因 + scoped repair）</td>
+<td>2606.06324</td>
+</tr>
+<tr>
+<td>Meta-Harness</td>
+<td>Harness code outer-loop search</td>
+<td>2603.28052</td>
+</tr>
+<tr>
+<td>HarnessX</td>
+<td>Processor 组合 + Model evolution 双 loop</td>
+<td>GitHub</td>
+</tr>
+<tr>
+<td>SkillHone</td>
+<td>Skill revision harness（role-separated opt/eval）</td>
+<td>2606.08671</td>
+</tr>
+<tr>
+<td>ComfyClaw</td>
+<td>Workflow harness + skill library 共进化</td>
+<td>2607.01709</td>
+</tr>
+</tbody></table></div>
+<p><strong>Skill 和 Harness 的边界在模糊</strong> — Skill 文件加载进 runtime 后就是 harness 逻辑。</p>
+<hr>
+<h2>七、六条路线 × 四条产线 对照表</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th align="center">Distillation</th>
+<th align="center">Reflection</th>
+<th align="center">RL</th>
+<th align="center">Search</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Trajectory→Skill</td>
+<td align="center">SkillRL, Trace2Skill</td>
+<td align="center">—</td>
+<td align="center">SkillRL</td>
+<td align="center">—</td>
+</tr>
+<tr>
+<td>Failure→Skill</td>
+<td align="center">SkillRL</td>
+<td align="center">Memento</td>
+<td align="center">—</td>
+<td align="center">HarnessFix</td>
+</tr>
+<tr>
+<td>Skill Revision</td>
+<td align="center">—</td>
+<td align="center">SkillHone</td>
+<td align="center">SkillOpt</td>
+<td align="center">SkillHone</td>
+</tr>
+<tr>
+<td>Skill Graph</td>
+<td align="center">GoS, SkillRouter</td>
+<td align="center">—</td>
+<td align="center">—</td>
+<td align="center">SkillRouter</td>
+</tr>
+<tr>
+<td>Program Skill</td>
+<td align="center">Voyager</td>
+<td align="center">—</td>
+<td align="center">—</td>
+<td align="center">—</td>
+</tr>
+<tr>
+<td>Workflow Skill</td>
+<td align="center">ComfyClaw</td>
+<td align="center">ComfyClaw</td>
+<td align="center">—</td>
+<td align="center">—</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2>八、2026–2027 推荐架构：在线 Skill 生命周期</h2>
+<p>相比目前论文大多仍采用 <code>Trajectory → LLM Distill → Skill</code>，更有潜力的是 <strong>持续在线的 Skill 生命周期</strong>：</p>
+<pre><code>                Agent Runtime
+                     │
+                     ▼
+              Step-level Trace          ← Claw-R1
+                     │
+        ┌────────────┴────────────┐
+        ▼                         ▼
+ Failure Mining             Success Mining    ← SkillRL
+        │                         │
+        └────────────┬────────────┘
+                     ▼
+             Skill Candidate Pool
+                     │
+      Auto Practice / Regression Tests      ← SkillHone, SkillOpt
+                     │
+      Pairwise Ranking / A-B Evaluation     ← ELO / Search
+                     │
+            Versioned Skill Library         ← SkillHone
+                     │
+      Graph Retrieval + Skill Routing       ← GoS, SkillRouter
+                     │
+              Next Agent Execution
+                     │
+          Runtime Metrics Feedback
+                     └──────────────►（继续闭环）
+</code></pre>
+<h3>融合的研究路线</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>组件</th>
+<th>来源</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Step-level 数据管理</td>
+<td>Claw-R1 (Gateway + Data Pool)</td>
+</tr>
+<tr>
+<td>Trajectory → Skill 蒸馏</td>
+<td>SkillRL, Trace2Skill</td>
+</tr>
+<tr>
+<td>Failure Mining</td>
+<td>SkillRL, HarnessFix</td>
+</tr>
+<tr>
+<td>Versioned Skills</td>
+<td>SkillHone</td>
+</tr>
+<tr>
+<td>Graph/Router 检索</td>
+<td>Graph of Skills, SkillFlow, SkillRouter</td>
+</tr>
+<tr>
+<td>Harness 自进化</td>
+<td>Self-Harness, AHE, HarnessFix</td>
+</tr>
+<tr>
+<td>Validation gate</td>
+<td>SkillOpt, EvoSkills</td>
+</tr>
+<tr>
+<td>Workflow Skill</td>
+<td>ComfyClaw</td>
+</tr>
+</tbody></table></div>
+<h3>核心思想</h3>
+<blockquote>
+<p><strong>Skill 不再是静态 Prompt，而是可评测、可版本化、可路由、可淘汰、可持续演化的软件资产。</strong></p>
+</blockquote>
+<p>这也是当前 Agent Harness 研究正在快速汇聚的方向。</p>
+<hr>
+<h2>九、与 Claw-R1 + SkillRL 的定位</h2>
+<pre><code>┌─────────────────────────────────────────────────────────┐
+│  Layer 0: Claw-R1 — Step-level Data Infrastructure      │
+│  Gateway → Data Pool → queryable step assets            │
+└────────────────────────┬────────────────────────────────┘
+                         │
+┌────────────────────────▼────────────────────────────────┐
+│  Layer 1: Skill Lifecycle Engine (proposed)             │
+│  Mining → Candidate → Validate → Version → Graph        │
+└────────────────────────┬────────────────────────────────┘
+                         │
+┌────────────────────────▼────────────────────────────────┐
+│  Layer 2: SkillRL — Distillation + RL co-evolution      │
+│  Teacher distill → SkillBank → GRPO → recursive update  │
+└────────────────────────┬────────────────────────────────┘
+                         │
+┌────────────────────────▼────────────────────────────────┐
+│  Layer 3: Harness co-evolution                          │
+│  Self-Harness / HarnessFix / SkillHone                  │
+└─────────────────────────────────────────────────────────┘
+</code></pre>
+<p>Claw-R1 提供 <strong>数据燃料</strong>；SkillRL 提供 <strong>蒸馏+RL 算法</strong>；上层还需要 SkillHone 式的 versioning、GoS 式的 graph retrieval、SkillOpt 式的 validation gate — 这才是完整 stack。</p>
+<hr>
+<h2>十、Paper Index（本 taxonomy 涉及）</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Short</th>
+<th>Title</th>
+<th>arXiv</th>
+<th>Route</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>SkillRL</td>
+<td>Recursive Skill-Augmented RL</td>
+<td>2602.08234</td>
+<td>T→S, Failure, RL</td>
+</tr>
+<tr>
+<td>Claw-R1</td>
+<td>Step-Level Data Middleware</td>
+<td>2606.09138</td>
+<td>Infrastructure</td>
+</tr>
+<tr>
+<td>Trace2Skill</td>
+<td>Trajectory-Local Lessons</td>
+<td>2603.25158</td>
+<td>T→S</td>
+</tr>
+<tr>
+<td>SkillHone</td>
+<td>Persistent Decision History</td>
+<td>2606.08671</td>
+<td>Revision, Harness×Skill</td>
+</tr>
+<tr>
+<td>SkillOpt</td>
+<td>Skills as Trainable Parameters</td>
+<td>—</td>
+<td>Search/Validate</td>
+</tr>
+<tr>
+<td>EvoSkills</td>
+<td>Co-Evolutionary Verification</td>
+<td>2604.01687</td>
+<td>Search</td>
+</tr>
+<tr>
+<td>Memento-Skills</td>
+<td>Let Agents Design Agents</td>
+<td>2603.18743</td>
+<td>Reflection</td>
+</tr>
+<tr>
+<td>HarnessFix</td>
+<td>Diagnosing Harness Flaws</td>
+<td>2606.06324</td>
+<td>Failure→Harness</td>
+</tr>
+<tr>
+<td>Graph of Skills</td>
+<td>Dependency-Aware Retrieval</td>
+<td>2604.05333</td>
+<td>Graph</td>
+</tr>
+<tr>
+<td>SkillRouter</td>
+<td>Routing at Scale (80K)</td>
+<td>2603.22455</td>
+<td>Graph/Router</td>
+</tr>
+<tr>
+<td>ComfyClaw</td>
+<td>Workflow Skill Evolution</td>
+<td>2607.01709</td>
+<td>Workflow</td>
+</tr>
+<tr>
+<td>Self-Harness</td>
+<td>Harnesses Improve Themselves</td>
+<td>2606.09498</td>
+<td>Harness</td>
+</tr>
+<tr>
+<td>AHE</td>
+<td>Observability-Driven Harness Evolution</td>
+<td>2604.25850</td>
+<td>Harness</td>
+</tr>
+<tr>
+<td>AutoSkill</td>
+<td>Lifelong Skill Self-Evolution</td>
+<td>2603.01145</td>
+<td>Distillation</td>
+</tr>
+</tbody></table></div>
+<p>Full list: <a href="https://github.com/DataArcTech/Awesome-Agent-Skill-Papers">DataArcTech/Awesome-Agent-Skill-Papers</a></p>
+<hr>
+<h2>Related</h2>
+<ul>
+<li><a href="./industry-harness-survey.html">Industry harness survey</a></li>
+<li><a href="./comparison.html">SkillRL vs Claw-R1 comparison</a></li>
+<li><a href="./combined-pipeline.html">Combined pipeline</a></li>
+<li><a href="./proposed-skill-lifecycle-architecture.html">Proposed 2027 architecture</a></li>
+</ul>
+</article>
+    </div>
+  </div>
+  <script src="../../../js/i18n.js"></script>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
+  </script>
+</body>
+</html>

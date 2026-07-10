@@ -1,0 +1,491 @@
+{
+  "opensquilla": {
+    "cross_session": "Session A Turn N 的 decision_log 触发 async 提案；accept 后 MANAGED 层更新；Session B（或 A 的 Turn N+1）filter_skills 从 6-layer loader 读到新 skill — 无需重启 Gateway。",
+    "mermaid": "sequenceDiagram\n  autonumber\n  participant U as User\n  participant H as TurnRunnerHarness\n  participant F as filter_skills\n  participant A as Agent FSM\n  participant L as DecisionLog\n  participant P as auto_propose\n  participant G as gates+E2E\n  Note over U,A: Turn N · Online\n  U->>H: Deploy staging with health check\n  H->>F: HybridRetriever.rrf_top_k(5)\n  F->>A: inject_compact deploy-staging\n  A->>U: bash(deploy.sh) + reply\n  H->>L: collect_invoked_skills (async)\n  Note over L,G: Post-turn · Async→Offline\n  L->>P: trajectory + decision signals\n  P->>G: proposals/{id}/ + gates.json\n  G->>G: evaluate_proposal_gates (4)\n  G->>G: runtime_e2e meta vs baseline\n  Note over G: Human accept_proposal\n  Note over U,A: Turn N+1 · Online\n  U->>H: Same deploy task\n  H->>F: MANAGED layer now includes new skill\n  F->>A: RRF inject updated catalog",
+    "turns": [
+      {
+        "label": "Turn 3 · Session sess-7a2",
+        "mode": "online",
+        "scope": "同 session",
+        "user": "Deploy my app to staging and verify /health returns 200",
+        "system": "filter_skills → RRF top-5: [deploy-staging, k8s-rollout, …] → inject_compact",
+        "agent": "I'll follow deploy-staging skill for the rollout sequence.",
+        "tools": ["filter_skills (pipeline)", "bash(deploy.sh)", "curl(/health)"],
+        "artifacts": ["turn_segments", "skills_invoked: [deploy-staging]"],
+        "note": "Per-turn catalog — skills_filter.py:1"
+      },
+      {
+        "label": "Post-turn · same session",
+        "mode": "async",
+        "scope": "同 session 后台",
+        "user": "—",
+        "system": "TurnRunnerHarness 结束 → observability/decision_log",
+        "agent": "—",
+        "tools": ["collect_invoked_skills(turn_segments)"],
+        "artifacts": ["decision_log.jsonl entry"],
+        "note": "engine/runtime.py:250"
+      },
+      {
+        "label": "Async · proposals/",
+        "mode": "async",
+        "scope": "跨 turn",
+        "user": "—",
+        "system": "auto_propose reads decision log + Dream candidates",
+        "agent": "—",
+        "tools": ["auto_propose()", "write proposals/{id}/SKILL.md"],
+        "artifacts": ["~/.opensquilla/proposals/abc123/", "gates.json"],
+        "note": "skills/creator/auto_propose.py"
+      },
+      {
+        "label": "Offline eval",
+        "mode": "offline",
+        "scope": "无用户在线",
+        "user": "—",
+        "system": "4-gate + runtime_e2e pairwise judge",
+        "agent": "—",
+        "tools": ["evaluate_proposal_gates()", "runtime_e2e.judge()"],
+        "artifacts": ["eval_prompts results", "meta vs baseline score"],
+        "note": "proposals_lib.py + runtime_e2e.py"
+      },
+      {
+        "label": "Turn 4 · Session sess-7a2",
+        "mode": "online",
+        "scope": "同 session 或新 session",
+        "user": "Deploy again with the rollback step we figured out",
+        "system": "MANAGED layer includes accepted skill; lockfile SHA pinned",
+        "agent": "Using deploy-staging-v2 (new MANAGED skill).",
+        "tools": ["filter_skills", "HybridRetriever picks new skill"],
+        "artifacts": ["skills-lock.json updated"],
+        "note": "accept_proposal → proposals_lib.py:425"
+      }
+    ],
+    "components_detail": [
+      { "path": "engine/steps/skills_filter.py", "role": "Pipeline Step 3", "fn": "filter_skills() — gate + RRF + inject" },
+      { "path": "skills/creator/auto_propose.py", "role": "Evolution miner", "fn": "auto_propose() from decision log" },
+      { "path": "skills/proposals_lib.py", "role": "Proposal store", "fn": "accept/reject + evaluate_proposal_gates" },
+      { "path": "skills/creator/runtime_e2e.py", "role": "A/B judge", "fn": "meta vs baseline replay" },
+      { "path": "memory/dream/runner.py", "role": "Cron reflection", "fn": "Dream → skill candidates" }
+    ]
+  },
+  "hermes-agent": {
+    "cross_session": "Background review 写 ~/.hermes/skills/ 后，frozen prefix cache 的 skills index 需 reload/下轮才稳定可见；同一 Gateway session 内下轮 skills_list 可看到新 skill。跨 session 持久化在 FS。",
+    "mermaid": "sequenceDiagram\n  autonumber\n  participant U as User\n  participant M as Main Agent\n  participant T as Post-turn trigger\n  participant R as Review Agent (bg thread)\n  participant FS as ~/.hermes/skills\n  Note over U,M: Turn 7 · Online\n  U->>M: Fix flaky API test in repo X\n  M->>M: skills_list → skill_view(api-testing)\n  M->>U: run tests + patch code\n  Note over T: turn ends · _iters_since_skill ≥ 10\n  T->>R: _spawn_background_review(messages_snapshot)\n  Note over R,FS: daemon thread · no queue\n  R->>R: run_conversation(_SKILL_REVIEW_PROMPT, history=snapshot)\n  R->>FS: skill_manage(action=patch)\n  R->>FS: _security_scan_skill()\n  Note over U,M: Turn 8 · Online\n  U->>M: Run API tests again\n  M->>M: skill_view sees patched SKILL.md",
+    "turns": [
+      {
+        "label": "Turn 7 · Session main",
+        "mode": "online",
+        "scope": "同 session",
+        "user": "The integration test for /api/users keeps failing — fix it",
+        "system": "Frozen MEMORY prefix + skills metadata index in prompt",
+        "agent": "Let me load the api-testing skill first.",
+        "tools": ["skills_list()", "skill_view(api-testing)", "bash(pytest)", "edit_file"],
+        "artifacts": ["trajectory.jsonl step"],
+        "note": "run_agent.py main loop"
+      },
+      {
+        "label": "Turn 7 post · trigger",
+        "mode": "async",
+        "scope": "post-turn · daemon thread",
+        "user": "—",
+        "system": "_iters_since_skill ≥ 10 after turn ends (not prompt injection)",
+        "agent": "—",
+        "tools": ["_spawn_background_review(messages_snapshot, review_skills=True)"],
+        "artifacts": ["threading.Thread(name=bg-review).start() — no task queue"],
+        "note": "run_agent.py:9604-9630"
+      },
+      {
+        "label": "Background review",
+        "mode": "async",
+        "scope": "fork AIAgent · max 8 iters",
+        "user": "_SKILL_REVIEW_PROMPT (appended as new user turn)",
+        "system": "conversation_history = full snapshot: user + assistant + tool results",
+        "agent": "The retry-with-backoff pattern should be added to api-testing.",
+        "tools": ["skill_view(api-testing)", "skill_manage(action=patch, name=api-testing)"],
+        "artifacts": ["~/.hermes/skills/api-testing/SKILL.md", "optional 💾 summary"],
+        "note": "run_agent.py:1835 — main messages unchanged"
+      },
+      {
+        "label": "Turn 8 · same session",
+        "mode": "online",
+        "scope": "同 session",
+        "user": "Run the users API test again",
+        "system": "skill_view loads updated body from disk",
+        "agent": "Following updated retry steps from skill.",
+        "tools": ["skill_view(api-testing)", "bash(pytest)"],
+        "artifacts": ["skills_guard scan passed"],
+        "note": "Immediate write — no proposal queue"
+      }
+    ],
+    "components_detail": [
+      { "path": "tools/skill_manager_tool.py", "role": "CRUD tool", "fn": "create|edit|patch|delete|write_file" },
+      { "path": "run_agent.py", "role": "Main loop", "fn": "_spawn_background_review @ post-turn/nudge" },
+      { "path": "tools/skills_tool.py", "role": "Progressive load", "fn": "skills_list → skill_view" },
+      { "path": "skills_guard.py", "role": "Write gate", "fn": "_security_scan_skill on write" },
+      { "path": "env/atropos/", "role": "RL env", "fn": "trajectory → policy (not SKILL.md)" }
+    ]
+  },
+  "openclaw": {
+    "cross_session": "agent_end hook 在同 Gateway session 的 run 结束时触发；proposal store 持久化；apply 后 chokidar 触发 snapshot bump — 下一 run（可同 session 下一 turn 或新 channel 消息）看到 workspace skills 更新。",
+    "mermaid": "sequenceDiagram\n  autonumber\n  participant U as User/Channel\n  participant G as Gateway\n  participant A as Agent loop\n  participant W as skill-workshop\n  participant S as proposals store\n  participant WS as workspace/skills\n  U->>G: Fix deploy script (Telegram/WhatsApp)\n  G->>A: skills snapshot (metadata XML)\n  A->>A: read tool → full SKILL.md\n  A->>U: success reply\n  Note over W: agent_end hook\n  W->>W: createProposalFromMessages (regex)\n  W->>W: reviewTranscriptForProposal (LLM)\n  W->>S: save pending proposal\n  W->>W: scanSkillContent()\n  alt approvalPolicy auto\n    W->>WS: applyProposalToWorkspace\n  else manual\n    Note over U: user approves in UI\n    U->>W: approve\n    W->>WS: apply\n  end",
+    "turns": [
+      {
+        "label": "Run 1 · Turn 2 · session snap-v3",
+        "mode": "online",
+        "scope": "同 session snapshot",
+        "user": "Update the deploy script to use blue-green",
+        "system": "resolveSkillsPromptForRun() → compact XML catalog (≤18k chars)",
+        "agent": "Reading deploy-workflow skill via read tool.",
+        "tools": ["read(workspace/skills/deploy-workflow/SKILL.md)", "write(deploy.sh)"],
+        "artifacts": ["trajectory JSONL", "agent_end success=true"],
+        "note": "Lazy load — workspace.ts"
+      },
+      {
+        "label": "agent_end · same run",
+        "mode": "async",
+        "scope": "hook 同 run",
+        "user": "—",
+        "system": "skill-workshop extension registered on agent_end",
+        "agent": "—",
+        "tools": ["createProposalFromMessages()", "reviewTranscriptForProposal()"],
+        "artifacts": ["proposal: append deploy-workflow § rollback"],
+        "note": "extensions/skill-workshop/index.ts:13-14"
+      },
+      {
+        "label": "Store + scan",
+        "mode": "offline",
+        "scope": "跨 turn 持久化",
+        "user": "—",
+        "system": "proposals store: pending → scanned",
+        "agent": "—",
+        "tools": ["scanSkillContent()", "skill-scanner quarantine check"],
+        "artifacts": ["store.json pending entry"],
+        "note": "security/skill-scanner.ts"
+      },
+      {
+        "label": "Run 2 · new message",
+        "mode": "online",
+        "scope": "下 run / 可新 session",
+        "user": "Deploy with rollback ready",
+        "system": "chokidar → snapshot v4 includes patched skill",
+        "agent": "Skill metadata shows updated deploy-workflow.",
+        "tools": ["read tool → updated SKILL.md"],
+        "artifacts": ["workspace/skills/deploy-workflow/SKILL.md"],
+        "note": "refresh-state.ts hot reload"
+      }
+    ],
+    "components_detail": [
+      { "path": "extensions/skill-workshop/index.ts", "role": "Hook entry", "fn": "agent_end → workshop pipeline" },
+      { "path": "skill-workshop/signals.ts", "role": "Heuristic miner", "fn": "regex patterns in transcript" },
+      { "path": "skill-workshop/reviewer.ts", "role": "LLM reviewer", "fn": "reviewTranscriptForProposal()" },
+      { "path": "skill-workshop/store.ts", "role": "Persistence", "fn": "pending|applied|quarantined" },
+      { "path": "security/skill-scanner.ts", "role": "Safety gate", "fn": "critical → quarantine" }
+    ]
+  },
+  "claude-code-rev": {
+    "cross_session": "skillImprovement 每 5 user turns 触发；Survey UI 在同 REPL session；apply 写 project skills/ 磁盘。Compact 后 invoked_skills attachment 跨 turn 存活 — 关键差异 vs TaiChu。Subagent Task 可 preload frontmatter skills[]。",
+    "mermaid": "sequenceDiagram\n  autonumber\n  participant U as User\n  participant R as REPL Agent\n  participant A as attachments\n  participant X as Aux model\n  participant S as Survey UI\n  participant C as compact\n  Note over U,R: Turns 1-5 · Online\n  U->>R: Refactor auth module (turn 5)\n  R->>A: Skill tool → addInvokedSkill(auth-refactor)\n  R->>U: code changes\n  Note over X: every 5 turns hook\n  R->>X: skillImprovement.trigger()\n  X->>S: JSON patches [{section,change}]\n  U->>S: accept 2/3 suggestions\n  S->>R: applySkillImprovement()\n  Note over C: later compact\n  C->>A: createSkillAttachmentIfNeeded()\n  A->>R: invoked_skills survive summarize",
+    "turns": [
+      {
+        "label": "Turn 3 · main session",
+        "mode": "online",
+        "scope": "同 session",
+        "user": "Use the auth-refactor skill for this module",
+        "system": "getSkillListingAttachments() — delta unsent skills only",
+        "agent": "Loading auth-refactor via Skill tool.",
+        "tools": ["Skill(auth-refactor)", "Edit", "Bash"],
+        "artifacts": ["STATE.invokedSkills Map entry"],
+        "note": "attachments.ts:2717-2734"
+      },
+      {
+        "label": "Turn 5 · trigger",
+        "mode": "async",
+        "scope": "同 session post-sampling",
+        "user": "—",
+        "system": "postSamplingHooks → skillImprovement every 5 turns",
+        "agent": "—",
+        "tools": ["auxSmallModel(JSON patches)"],
+        "artifacts": ["[{section:'Error handling', change:'...'}]"],
+        "note": "utils/hooks/skillImprovement.ts"
+      },
+      {
+        "label": "Survey gate",
+        "mode": "human",
+        "scope": "同 session UI",
+        "user": "Accept patches 1 & 3, reject 2",
+        "system": "SkillImprovementSurvey React UI",
+        "agent": "—",
+        "tools": ["applySkillImprovement()"],
+        "artifacts": ["project/.claude/skills/auth-refactor/SKILL.md patched"],
+        "note": "hooks/useSkillImprovementSurvey.ts"
+      },
+      {
+        "label": "Turn 12 · after compact",
+        "mode": "online",
+        "scope": "同 session post-compact",
+        "user": "Continue auth refactor",
+        "system": "invoked_skills attachment reinjected (25K budget)",
+        "agent": "Still has auth-refactor guidelines despite summarize.",
+        "tools": ["compact() already ran", "attachment: invoked_skills"],
+        "artifacts": ["POST_COMPACT_SKILLS_TOKEN_BUDGET preserved"],
+        "note": "compact.ts:1488-1534 ★"
+      },
+      {
+        "label": "Subagent Task",
+        "mode": "online",
+        "scope": "child session",
+        "user": "—",
+        "system": "runAgent: frontmatter skills:[] → initialMessages",
+        "agent": "Child preloaded with lint-fix skill only.",
+        "tools": ["Task(subagent)", "Skill(lint-fix)"],
+        "artifacts": ["separate sentSkillNames per agentId"],
+        "note": "runAgent.ts:577-639"
+      }
+    ],
+    "components_detail": [
+      { "path": "utils/hooks/skillImprovement.ts", "role": "5-turn hook", "fn": "aux model → JSON patches" },
+      { "path": "hooks/useSkillImprovementSurvey.ts", "role": "Human gate", "fn": "accept/reject per section" },
+      { "path": "services/compact/compact.ts", "role": "Compact survival", "fn": "createSkillAttachmentIfNeeded()" },
+      { "path": "utils/attachments.ts", "role": "3-channel model", "fn": "listing + Skill tool + invoked" },
+      { "path": "skills/bundled/skillify.ts", "role": "Session→skill", "fn": "explicit skillify workflow" }
+    ]
+  },
+  "codex": {
+    "cross_session": "无 runtime evolve loop。人类在 repo skills/ 编写 → git commit → 下 Session Thread 的 SkillsManager.scan() 发现新 metadata。Record&Replay 是离线人类辅助，非 agent 自改。",
+    "mermaid": "sequenceDiagram\n  autonumber\n  participant Dev as Human dev\n  participant RR as Record&Replay\n  participant T as Thread/Session\n  participant SM as SkillsManager\n  participant U as User\n  Dev->>Dev: write skills/foo/SKILL.md\n  Dev->>RR: record session (optional)\n  RR->>Dev: human distills draft\n  Dev->>Dev: cargo test + git commit\n  U->>T: $foo fix the build\n  T->>SM: scan → metadata ≤2% ctx\n  SM->>T: build_skill_injections(@mention)\n  T->>U: turn uses full SKILL.md this turn only\n  Note over T: no post-turn patch hook",
+    "turns": [
+      {
+        "label": "Offline · authoring",
+        "mode": "offline",
+        "scope": "无 agent session",
+        "user": "—",
+        "system": "Human writes skills/deploy-fix/SKILL.md + scripts/",
+        "agent": "—",
+        "tools": ["$skill-creator guidance", "Record&Replay UI"],
+        "artifacts": ["repo/skills/deploy-fix/", "integration tests"],
+        "note": "By design — no skill_manage"
+      },
+      {
+        "label": "Turn 1 · Thread t-99",
+        "mode": "online",
+        "scope": "新 session",
+        "user": "$deploy-fix CI keeps failing on macOS",
+        "system": "SkillsManager.scan() → AvailableSkills metadata budget",
+        "agent": "Opening SKILL.md for deploy-fix workflow.",
+        "tools": ["@mention $deploy-fix", "shell", "apply_patch"],
+        "artifacts": ["injection.rs user fragment this turn only"],
+        "note": "core-skills/injection.rs:57-80"
+      },
+      {
+        "label": "Turn 2 · same thread",
+        "mode": "online",
+        "scope": "同 thread",
+        "user": "Run tests again",
+        "system": "No auto skill patch — must re-mention or implicit match",
+        "agent": "Running cargo test per skill steps.",
+        "tools": ["shell(cargo test)"],
+        "artifacts": ["Guardian risk check on tools"],
+        "note": "hook_runtime.rs — 10 hook types, none evolve"
+      },
+      {
+        "label": "Subagent child",
+        "mode": "online",
+        "scope": "child turn_skills",
+        "user": "—",
+        "system": "Child excludes parent skills block",
+        "agent": "Independent turn_skills subset only.",
+        "tools": ["multi_agents_v2 spawn"],
+        "artifacts": ["manager_tests.rs:805"],
+        "note": "Deliberate decoupling from parent"
+      }
+    ],
+    "components_detail": [
+      { "path": "core-skills/src/manager.rs", "role": "Discovery", "fn": "User/Repo/System scope scan" },
+      { "path": "core-skills/src/injection.rs", "role": "Per-turn inject", "fn": "build_skill_injections(@mention)" },
+      { "path": "core-skills/src/render.rs", "role": "Budget", "fn": "≤2% ctx metadata cap" },
+      { "path": "guardian/mod.rs", "role": "Tool risk", "fn": "fail-closed approval" },
+      { "path": "skill-creator/SKILL.md", "role": "Authoring sample", "fn": "human+subagent validation guide" }
+    ]
+  },
+  "taichu": {
+    "cross_session": "当前：compact 后 skill body 丢失，跨 turn 失忆。P0 目标：InvokedSkillRegistry 同 session 跨 compact。P1：interaction_log JSONL 跨 session 喂 miner → proposals/。",
+    "mermaid": "sequenceDiagram\n  autonumber\n  participant U as User\n  participant S as Session\n  participant P as prompt prefix\n  participant LS as load_skill\n  participant C as compaction\n  participant L as interaction_log\n  Note over U,S: Turn N · Online (today)\n  U->>S: 用端侧技能查天气\n  S->>P: # Available Skills XML prefix\n  S->>LS: load_skill(weather-local)\n  LS->>S: ToolResult body (runs_on: device)\n  S->>U: run_subagent → device\n  Note over C: compact summarizes\n  C->>S: ❌ ToolResult body dropped\n  Note over U,S: Turn N+1 · gap\n  U->>S: 继续刚才的天气任务\n  S->>S: ❌ no invoked_skills reinject\n  Note over L: P1 future\n  L->>L: miner → proposals/ (planned)",
+    "turns": [
+      {
+        "label": "Turn 2 · Session cloud",
+        "mode": "online",
+        "scope": "同 session",
+        "user": "帮我用端侧技能查一下北京天气",
+        "system": "api/mod.rs:674 — # Available Skills in user prefix",
+        "agent": "加载 weather-local 技能。",
+        "tools": ["load_skill(weather-local)", "run_subagent(target_id=device-1)"],
+        "artifacts": ["ToolResult with runs_on: [harmony-device]"],
+        "note": "load_skill.rs:120-131 remote delegation"
+      },
+      {
+        "label": "Compact · same session",
+        "mode": "online",
+        "scope": "同 session 内",
+        "user": "—",
+        "system": "compaction.rs pure summarize — no skill preserve",
+        "agent": "—",
+        "tools": ["compact()"],
+        "artifacts": ["❌ skill body lost from context"],
+        "note": "P0 gap — context-and-skills.md:64-68"
+      },
+      {
+        "label": "Turn 3 · same session",
+        "mode": "online",
+        "scope": "同 session 跨 compact",
+        "user": "刚才天气结果里湿度多少？",
+        "system": "No InvokedSkillRegistry reinject (today)",
+        "agent": "无法引用已 compact 的 load_skill body。",
+        "tools": ["load_skill retry? — body gone"],
+        "artifacts": ["interaction_log JSONL still has trace"],
+        "note": "【P0】InvokedSkillRegistry target"
+      },
+      {
+        "label": "Future · cross session",
+        "mode": "offline",
+        "scope": "跨 session P1",
+        "user": "—",
+        "system": "interaction_log → miner → proposals/",
+        "agent": "—",
+        "tools": ["【规划】gates → accept → cloud catalog"],
+        "artifacts": [".taichu/proposals/"],
+        "note": "Mirror OpenSquilla proposals_lib"
+      }
+    ],
+    "components_detail": [
+      { "path": "builtintools/load_skill.rs", "role": "Load tool", "fn": "catalog → ToolResult + runs_on" },
+      { "path": "compaction.rs", "role": "Compact", "fn": "summarize — ❌ no reinject" },
+      { "path": "tool_search_bridge.rs", "role": "Filter", "fn": "before_prompt skill_filter" },
+      { "path": "interaction_log JSONL", "role": "Telemetry", "fn": "trajectory for future miner" },
+      { "path": "【P0】InvokedSkillRegistry", "role": "Planned", "fn": "register → compact → reinject" }
+    ]
+  },
+  "zeroclaw": {
+    "cross_session": "Skills 来自 hub sync（离线）→ load-time audit → runtime 只读。hygiene cron 操作 memory/ 非 SKILL.md。无跨 session evolve；新 skill 版本需重新 install/sync。",
+    "mermaid": "sequenceDiagram\n  autonumber\n  participant U as User\n  participant Z as ZeroClaw\n  participant H as hub/sync\n  participant A as audit.rs\n  participant M as memory hygiene\n  U->>H: zeroclaw skills install foo\n  H->>A: load_skills_with_config\n  A->>A: zip/traversal/injection scan\n  U->>Z: Run task using foo skill\n  Z->>Z: compact inject (location only)\n  Z->>U: SkillToolHandler.read full body\n  Note over M: cron — memory only\n  M->>M: consolidate old memory tiers\n  Note over Z: no propose→accept",
+    "turns": [
+      {
+        "label": "Install · offline",
+        "mode": "offline",
+        "scope": "跨 session 前置",
+        "user": "zeroclaw skills install data-viz",
+        "system": "open-skills registry pull → workspace/skills/",
+        "agent": "—",
+        "tools": ["hub install", "sync manifest"],
+        "artifacts": ["~/.zeroclaw/workspace/skills/data-viz/"],
+        "note": "Before any agent session"
+      },
+      {
+        "label": "Load · session start",
+        "mode": "offline",
+        "scope": "session 初始化",
+        "user": "—",
+        "system": "load_skills → audit.rs patterns",
+        "agent": "—",
+        "tools": ["audit::scan_skill_dir()"],
+        "artifacts": ["pass | fail quarantine"],
+        "note": "skills/audit.rs — not runtime patch"
+      },
+      {
+        "label": "Turn 1 · runtime",
+        "mode": "online",
+        "scope": "同 session",
+        "user": "Plot sales CSV with the bundled chart skill",
+        "system": "compact mode: name+location in prompt",
+        "agent": "Reading full skill via SkillToolHandler.",
+        "tools": ["SkillToolHandler.read(data-viz)"],
+        "artifacts": ["injection compact|full per config"],
+        "note": "No evolution hook post-turn"
+      },
+      {
+        "label": "Cron · overnight",
+        "mode": "cron",
+        "scope": "跨 session",
+        "user": "—",
+        "system": "memory/hygiene.rs consolidation",
+        "agent": "—",
+        "tools": ["cron/consolidation.rs"],
+        "artifacts": ["archived L1 memory — not SKILL.md"],
+        "note": "Governance ≠ skill evolve"
+      }
+    ],
+    "components_detail": [
+      { "path": "skills/audit.rs", "role": "Load gate", "fn": "zip_bomb, traversal, injection regex" },
+      { "path": "skills/load.rs", "role": "Discovery", "fn": "workspace scan + manifest" },
+      { "path": "SkillToolHandler", "role": "Runtime read", "fn": "compact catalog → read full" },
+      { "path": "cron/consolidation.rs", "role": "Memory cron", "fn": "merge tiers — not skills" },
+      { "path": "tools/subagent_spawn.rs", "role": "Delegate", "fn": "isolated subagent context" }
+    ]
+  },
+  "genericagent": {
+    "cross_session": "SOP 写入 memory/ 文件系统 — 永久跨 session。同 session 内 anchor prompt 每 10 turn 重建；reflect cron 可跨天触发 Goal Mode。非 SKILL.md 格式。",
+    "mermaid": "sequenceDiagram\n  autonumber\n  participant U as User\n  participant G as GenericAgent\n  participant M as memory/\n  participant R as reflect cron\n  U->>G: New task: scrape product prices\n  G->>M: file_read(web-scrape_sop.md)\n  G->>G: 9 atomic tools execute\n  G->>G: VERIFY plan success\n  G->>G: start_long_term_update()\n  G->>M: file_patch L2 facts + new sop\n  Note over R: later · cron\n  R->>G: Goal Mode inspect/improve SOP",
+    "turns": [
+      {
+        "label": "Turn 1 · new task",
+        "mode": "online",
+        "scope": "新 session",
+        "user": "Scrape competitor prices from site X",
+        "system": "Read L1 index ≤30 lines → pick related SOP",
+        "agent": "Loading web-scrape_sop.md via file_read.",
+        "tools": ["file_read(memory/web-scrape_sop.md)", "web_fetch", "file_write"],
+        "artifacts": ["plan.md checkpoint"],
+        "note": "ga.py — no preload, on-demand SOP"
+      },
+      {
+        "label": "Turn 4 · verify",
+        "mode": "online",
+        "scope": "同 session",
+        "user": "—",
+        "system": "Plan mode VERIFY gate",
+        "agent": "All success conditions met.",
+        "tools": ["VERIFY(plan.md)"],
+        "artifacts": ["verified=true"],
+        "note": "ga.py:472-475"
+      },
+      {
+        "label": "Post-success · same session",
+        "mode": "async",
+        "scope": "同 session agent-triggered",
+        "user": "—",
+        "system": "start_long_term_update — action-verified only",
+        "agent": "Crystallizing pagination fix into SOP.",
+        "tools": ["start_long_term_update()", "file_patch"],
+        "artifacts": ["memory/L2/facts.md", "memory/site-x-prices_sop.md"],
+        "note": "ga.py:508-523"
+      },
+      {
+        "label": "Turn 1 · next day session",
+        "mode": "online",
+        "scope": "新 session",
+        "user": "Scrape site Y prices too",
+        "system": "related_sop weak hint from L1 index",
+        "agent": "file_read site-x-prices_sop as template.",
+        "tools": ["file_read", "file_patch new sop"],
+        "artifacts": ["memory/site-y-prices_sop.md"],
+        "note": "No RRF — weak related_sop hint only"
+      },
+      {
+        "label": "Reflect cron",
+        "mode": "cron",
+        "scope": "跨 session",
+        "user": "—",
+        "system": "reflect/scheduler.py → goal_mode",
+        "agent": "Inspect and improve stale SOPs.",
+        "tools": ["reflect/goal_mode.py", "/morphling"],
+        "artifacts": ["updated *_sop.md tree"],
+        "note": "Long-horizon crystallization"
+      }
+    ],
+    "components_detail": [
+      { "path": "ga.py", "role": "Main loop", "fn": "start_long_term_update on VERIFY" },
+      { "path": "reflect/scheduler.py", "role": "Cron", "fn": "periodic Goal Mode" },
+      { "path": "reflect/goal_mode.py", "role": "SOP improve", "fn": "inspect/improve procedures" },
+      { "path": "memory/*_sop.md", "role": "Skill storage", "fn": "L2/L3 tier tree — not SKILL.md" },
+      { "path": "file_read/file_patch", "role": "Tools", "fn": "load + write SOPs" }
+    ]
+  }
+}

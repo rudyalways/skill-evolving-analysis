@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SkillRL — Skill-Evolving</title>
+  <link rel="alternate" hreflang="en" href="/html/site/topics/skill-rl/overview.html">
+  <link rel="alternate" hreflang="x-default" href="/html/site/topics/skill-rl/overview.html">
+  <link rel="stylesheet" href="../../../css/viewer.css">
+</head>
+<body class="" data-doc-locale="en" data-content-lang="en">
+  <div class="viewer-layout">
+    <nav>
+      <div data-lang-switch class="lang-switch-host"></div>
+      <h1 data-i18n="nav.docs">Docs</h1>
+      <div class="title" data-i18n="nav.rendered">Rendered HTML</div>
+      <section class="highlight-section"><h2 data-i18n="nav.compare">nav.compare</h2><ul><li><a href="../../notes/synthesis/agent-skill-architecture-survey-matrix.html" data-i18n="nav.matrix165">nav.matrix165</a></li><li><a href="../../notes/synthesis/skill-lifecycle-full-matrix.html" data-i18n="nav.lifecycle">nav.lifecycle</a></li><li><a href="../../notes/synthesis/web-expanded-lifecycle-matrix-merged.html" data-i18n="nav.web_l3">nav.web_l3</a></li><li><a href="../../notes/synthesis/eight-repo-comprehensive-survey.html" data-i18n="nav.survey20">nav.survey20</a></li><li><a href="../../notes/synthesis/skill-lifecycle-and-dynamic-loading-survey.html" data-i18n="nav.per_turn">nav.per_turn</a></li><li><a href="../../notes/synthesis/eight-repo-deep-source-analysis.html" data-i18n="nav.deep_source">nav.deep_source</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.per_repo">nav.per_repo</h2><ul><li><a href="../../notes/synthesis/survey-reports/opensquilla.html">OpenSquilla (9.0)</a></li><li><a href="../../notes/synthesis/survey-reports/hermes-agent.html">Hermes (8.1)</a></li><li><a href="../../notes/synthesis/survey-reports/openclaw.html">OpenClaw (8.0)</a></li><li><a href="../../notes/synthesis/survey-reports/claude-code-rev.html">Claude Rev (7.7)</a></li><li><a href="../../notes/synthesis/survey-reports/codex.html">Codex (7.2)</a></li><li><a href="../../notes/synthesis/survey-reports/taichu.html">TaiChu (5.0)</a></li><li><a href="../../notes/synthesis/survey-reports/zeroclaw.html">ZeroClaw (5.0)</a></li><li><a href="../../notes/synthesis/survey-reports/genericagent.html">GenericAgent (4.8)</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.papers">nav.papers</h2><ul><li><a class="active" href="./overview.html">SkillRL</a></li><li><a href="../claw-r1/overview.html">Claw-R1</a></li><li><a href="../../notes/synthesis/comparison.html" data-i18n="nav.comparison">nav.comparison</a></li><li><a href="../../notes/synthesis/combined-pipeline.html" data-i18n="nav.pipeline">nav.pipeline</a></li><li><a href="../../notes/synthesis/l3-comprehensive-skill-analysis.html" data-i18n="nav.l3">nav.l3</a></li><li><a href="../../notes/synthesis/taichu-p0-skill-compaction-spec.html" data-i18n="nav.taichu_p0">nav.taichu_p0</a></li></ul></section><section><h2 data-i18n="nav.more">More</h2><ul>
+    <li><a href="/html/docs.html" data-i18n="nav.sitemap">Sitemap</a></li>
+    <li><a href="/html/i18n-coverage.html" data-i18n="nav.i18n_coverage">i18n coverage</a></li>
+    <li><a href="/html/index.html" data-i18n="nav.dashboard">Dashboard</a></li>
+    <li><a href="/html/deck/index.html" data-i18n="nav.decks">Slide decks</a></li>
+  </ul></section>
+    </nav>
+    <div class="viewer-main">
+      <div class="viewer-toolbar">
+        <div>
+          <h1>SkillRL</h1>
+          <div class="path">topics/skill-rl/overview.md</div>
+        </div>
+        <a class="btn" href="/html/docs.html" data-i18n="toolbar.sitemap">Sitemap</a>
+        <a class="btn primary" href="../../notes/synthesis/agent-skill-architecture-survey-matrix.html" data-i18n="toolbar.matrix">165-dim matrix</a>
+      </div>
+      <p id="i18n-fallback-notice" class="i18n-notice" hidden data-i18n="content.fallback">content.fallback</p>
+      <article class="md-body"><h1>SkillRL</h1>
+<p><strong>Full title:</strong> Evolving Agents via Recursive Skill-Augmented Reinforcement Learning<br><strong>Authors:</strong> Xia et al. (aiming-lab)<br><strong>Code:</strong> <a href="https://github.com/aiming-lab/SkillRL">github.com/aiming-lab/SkillRL</a></p>
+<h2>Layer in the stack</h2>
+<p><strong>RL algorithm / training method</strong> — how the policy learns from experience.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Paper</th>
+<th>Focus</th>
+<th>Layer</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>SkillRL</strong></td>
+<td>How the policy learns from experience</td>
+<td>RL algorithm / training method</td>
+</tr>
+<tr>
+<td>Claw-R1</td>
+<td>How agent interaction data is collected, managed, fed into RL</td>
+<td>Infrastructure / data system</td>
+</tr>
+</tbody></table></div>
+<h2>One-line thesis</h2>
+<p>Convert raw trajectories into reusable <strong>skills</strong> stored in a hierarchical <strong>SkillBank</strong>; co-evolve the library and policy during GRPO.</p>
+<h2>Motivation</h2>
+<p>Most LLM agents today:</p>
+<pre><code>Task 1 → trajectory
+Task 2 → trajectory
+Task 3 → trajectory
+</code></pre>
+<p>Every task is almost independent. Existing memory methods save raw trajectories:</p>
+<pre><code>database
+----------
+task A trajectory
+task B trajectory
+task C trajectory
+</code></pre>
+<p>Problems: trajectories are <strong>long, noisy, redundant, hard to retrieve, don&#39;t generalize</strong>.</p>
+<p>The authors ask: <em>Can we convert trajectories into reusable skills?</em></p>
+<h2>Main idea</h2>
+<p>Instead of storing:</p>
+<pre><code>Observation → Action → Observation → Action → ...
+</code></pre>
+<p>Store:</p>
+<pre><code>Skill: &quot;When searching webpages,
+        first identify official sources,
+        then compare,
+        then verify.&quot;
+</code></pre>
+<p>Much shorter. They call this <strong>SkillBank</strong>.</p>
+<h2>Pipeline</h2>
+<pre><code>Environment
+    ↓
+Rollouts (success + failure)
+    ↓
+Teacher LLM → Skill distillation
+    ↓
+SkillBank → Retrieve skills → Policy
+    ↓
+GRPO → Better policy
+    ↓
+New trajectories → Update SkillBank  ← recursive
+</code></pre>
+<p>The SkillBank is <strong>not fixed</strong> — it evolves together with the policy.</p>
+<h2>Experience distillation</h2>
+<p><strong>Success</strong> → positive skill:</p>
+<pre><code>Applicable: Searching APIs
+Strategy:   Search official docs first
+Failure:    Do not trust cached pages
+</code></pre>
+<p><strong>Failure</strong> → failure lesson (not discarded):</p>
+<pre><code>Failure lesson:
+Do not search StackOverflow before official documentation.
+</code></pre>
+<p>10–20× token compression vs raw trajectories.</p>
+<h2>Hierarchical SkillBank</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Level</th>
+<th>Examples</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>General skills</strong></td>
+<td>Reason before acting; verify answer; search official docs</td>
+</tr>
+<tr>
+<td><strong>Task-specific skills</strong></td>
+<td>ALFWorld: open cabinet before drawer; WebShop: check variants before buying</td>
+</tr>
+</tbody></table></div>
+<p><strong>Adaptive retrieval</strong> — given task &quot;Buy shoes&quot;, retrieve general (verify inventory) + task-specific (compare shoe sizes), not every previous trajectory.</p>
+<h2>Recursive evolution</h2>
+<p>The most interesting contribution. Not just Policy → RL → Done, but:</p>
+<pre><code>Policy → Collect trajectories → Generate skills → Update SkillBank
+    → Policy learns → Collect better trajectories → Generate better skills → ...
+</code></pre>
+<p>Policy and SkillBank <strong>co-evolve recursively</strong>. After validation epochs, analyze failures on weak categories → add/refine skills.</p>
+<h2>RL objective</h2>
+<p>The RL algorithm itself is <strong>not novel</strong> — they use <strong>GRPO</strong>. The novelty is <strong>SkillBank + recursive skill evolution</strong> wrapped around GRPO.</p>
+<p>Cold-start SFT teaches the agent to use skills before RL begins.</p>
+<h2>Results</h2>
+<ul>
+<li>+15.3% over strong baselines</li>
+<li>Benchmarks: ALFWorld, WebShop, 7 search-augmented tasks</li>
+<li>Faster convergence, robust as task complexity increases</li>
+</ul>
+<h2>Pros / cons</h2>
+<p><strong>Pros:</strong> shorter context, reusable, transferable, better generalization, learns from failures, hierarchical retrieval</p>
+<p><strong>Cons:</strong> requires teacher LLM, skill extraction quality matters, skill retrieval is another optimization problem</p>
+<h2>Open questions</h2>
+<ul>
+<li><input disabled="" type="checkbox"> SkillBank size growth / pruning strategy</li>
+<li><input disabled="" type="checkbox"> Retrieval threshold δ and Top-K sensitivity</li>
+<li><input disabled="" type="checkbox"> Can consume Claw-R1 step-level data as input trajectories?</li>
+<li><input disabled="" type="checkbox"> Recursive evolution frequency vs validation cost</li>
+</ul>
+<h2>Related notes</h2>
+<ul>
+<li><a href="../../notes/synthesis/comparison.html">Cross-paper comparison</a></li>
+<li><a href="../../notes/synthesis/combined-pipeline.html">Combined architecture</a></li>
+</ul>
+</article>
+    </div>
+  </div>
+  <script src="../../../js/i18n.js"></script>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
+  </script>
+</body>
+</html>

@@ -1,0 +1,437 @@
+{
+  "opensquilla": {
+    "snippets": [
+      {
+        "id": "filter-skills",
+        "title": "filter_skills — Pipeline Step 3",
+        "file": "engine/steps/skills_filter.py",
+        "lines": "1-45",
+        "lang": "python",
+        "summary": "Every turn: deterministic gate → HybridRetriever RRF top-k → inject_compact|full",
+        "code": "\"\"\"Step 3: Gate skills deterministically,\noptionally filter by relevance, inject.\"\"\"\n\ndef filter_skills(ctx, step_cfg):\n    retriever = _get_retriever()  # HybridRetriever\n    top_k = step_cfg.get(\"top_k\", 5)\n    ranked = retriever.rrf_top_k(query=ctx.user_message, k=top_k)\n    pinned = [s for s in ctx.skills if s.always or s.meta_match]\n    to_inject = pinned + [s for s in ranked if s not in pinned]\n    SkillInjector.inject_compact(ctx, to_inject)  # or inject_full"
+      },
+      {
+        "id": "loader-layers",
+        "title": "6-layer skill precedence",
+        "file": "skills/loader.py",
+        "lines": "184-244",
+        "lang": "python",
+        "summary": "EXTRA < BUNDLED < MANAGED < PERSONAL < PROJECT < WORKSPACE",
+        "code": "LAYER_ORDER = [\n    SkillLayer.EXTRA,\n    SkillLayer.BUNDLED,\n    SkillLayer.MANAGED,      # ← accept_proposal writes here\n    SkillLayer.PERSONAL,\n    SkillLayer.PROJECT,\n    SkillLayer.WORKSPACE,\n]\n\ndef load_all_skills() -> list[SkillSpec]:\n    merged = {}\n    for layer in LAYER_ORDER:\n        for spec in scan_layer(layer):\n            merged[spec.name] = spec  # higher layer wins"
+      },
+      {
+        "id": "auto-propose",
+        "title": "auto_propose from decision log",
+        "file": "skills/creator/auto_propose.py",
+        "lines": "—",
+        "lang": "python",
+        "summary": "Post-turn: trajectory signals → proposal dir + gates.json",
+        "code": "def auto_propose(session_id: str, decision_log: DecisionLog) -> ProposalId | None:\n    signals = extract_signals(decision_log.skills_invoked,\n                              decision_log.tool_outcomes)\n    if not signals.meets_threshold():\n        return None\n    proposal = build_proposal_skillspec(signals)\n    write_proposal_dir(proposal)  # ~/.opensquilla/proposals/{id}/\n    write_gates_json(proposal.id)\n    return proposal.id"
+      },
+      {
+        "id": "accept-proposal",
+        "title": "accept_proposal → MANAGED",
+        "file": "skills/proposals_lib.py",
+        "lines": "425+",
+        "lang": "python",
+        "summary": "After gates + runtime_e2e pass → publish + lockfile pin",
+        "code": "def accept_proposal(proposal_id: str) -> SkillSpec:\n    gates = evaluate_proposal_gates(proposal_id)\n    if not gates.all_passed:\n        raise ProposalRejected(gates.failures)\n    spec = load_proposal_spec(proposal_id)\n    write_managed_skill(spec)           # MANAGED layer\n    update_lockfile_sha256(spec.name)   # skills-lock.json\n    archive_proposal(proposal_id, status=\"accepted\")\n    return spec"
+      }
+    ],
+    "stacks": [
+      {
+        "id": "online-turn",
+        "title": "Online · per-turn inject",
+        "frames": [
+          { "call": "TurnRunnerHarness.run_turn()", "file": "engine/turn_runner/harness.py", "mode": "online", "note": "Gateway entry per user message" },
+          { "call": "pipeline.run(steps=[..., filter_skills, ...])", "file": "engine/pipeline.py", "mode": "online", "note": "Staged pipeline before Agent FSM" },
+          { "call": "filter_skills(ctx)", "file": "engine/steps/skills_filter.py:1", "mode": "online", "note": "RRF top-5 + pinned always/meta", "snippet_id": "filter-skills" },
+          { "call": "HybridRetriever.rrf_top_k(5)", "file": "skills_filter.py:22-45", "mode": "online", "note": "Lexical + semantic fusion" },
+          { "call": "SkillInjector.inject_compact|full", "file": "skills/injector.py", "mode": "online", "note": "Catalog into user_message / system" },
+          { "call": "Agent FSM THINKING → TOOL_CALLING", "file": "engine/agent.py", "mode": "online", "note": "LLM sees injected skill catalog" },
+          { "call": "collect_invoked_skills(turn_segments)", "file": "engine/runtime.py:250", "mode": "async", "note": "Post-turn telemetry → decision_log" }
+        ]
+      },
+      {
+        "id": "evolve-path",
+        "title": "Async/Offline · evolution loop",
+        "frames": [
+          { "call": "decision_log.flush()", "file": "observability/decision_log.py", "mode": "async", "note": "skills_invoked + tool outcomes" },
+          { "call": "auto_propose(session_id, log)", "file": "skills/creator/auto_propose.py", "mode": "async", "note": "Heuristic + LLM reflection", "snippet_id": "auto-propose" },
+          { "call": "evaluate_proposal_gates(id)", "file": "skills/proposals_lib.py", "mode": "offline", "note": "4 gates: structure/trigger/tools/security" },
+          { "call": "runtime_e2e.judge(meta, baseline)", "file": "skills/creator/runtime_e2e.py", "mode": "offline", "note": "Pairwise replay A/B" },
+          { "call": "accept_proposal(id)", "file": "skills/proposals_lib.py:425", "mode": "human", "note": "Human/policy gate optional", "snippet_id": "accept-proposal" },
+          { "call": "load_all_skills() → MANAGED visible", "file": "skills/loader.py", "mode": "online", "note": "Next turn filter_skills picks new skill", "snippet_id": "loader-layers" }
+        ]
+      }
+    ]
+  },
+  "hermes-agent": {
+    "snippets": [
+      {
+        "id": "skill-manage-header",
+        "title": "skill_manage — procedural memory CRUD",
+        "file": "tools/skill_manager_tool.py",
+        "lines": "1-32",
+        "lang": "python",
+        "summary": "Agent-writable skills under ~/.hermes/skills/ — no staging",
+        "code": "\"\"\"\nAllows the agent to create, update, and delete skills, turning successful\napproaches into reusable procedural knowledge. New skills are created in\n~/.hermes/skills/.\n\"\"\"\n# Skills are procedural memory: *how to do a specific type of task*.\n# General memory (MEMORY.md) is broad and declarative.\n\ndef skill_manage(action, name, content=None, patch=None):\n    if action in (\"create\", \"edit\", \"patch\", \"delete\", \"write_file\"):\n        path = resolve_skill_path(name)\n        apply_action(action, path, content, patch)\n        _security_scan_skill(path)  # skills_guard"
+      },
+      {
+        "id": "spawn-review",
+        "title": "_spawn_background_review",
+        "file": "run_agent.py",
+        "lines": "1792-1896",
+        "lang": "python",
+        "summary": "Post-turn daemon thread — full messages snapshot → quiet AIAgent (max 8 iters); no queue",
+        "code": "def _spawn_background_review(\n    self,\n    messages_snapshot: List[Dict],\n    review_memory: bool = False,\n    review_skills: bool = False,\n) -> None:\n    \"\"\"Spawn bg thread. Review prompt appended as next user turn\n    in forked conversation. Never modifies main history.\"\"\"\n    prompt = self._SKILL_REVIEW_PROMPT  # or _COMBINED / _MEMORY\n\n    def _run_review():\n        review_agent = AIAgent(\n            model=self.model, max_iterations=8, quiet_mode=True,\n            platform=self.platform, provider=self.provider,\n        )\n        review_agent._memory_store = self._memory_store\n        review_agent._skill_nudge_interval = 0  # no nested review\n        review_agent.run_conversation(\n            user_message=prompt,\n            conversation_history=messages_snapshot,\n        )\n        # Parse tool results → optional \"💾 …\" summary\n\n    threading.Thread(target=_run_review, daemon=True, name=\"bg-review\").start()\n    # Output: None. Side effect: skill_manage → ~/.hermes/skills/"
+      },
+      {
+        "id": "skills-list-view",
+        "title": "Progressive disclosure",
+        "file": "tools/skills_tool.py",
+        "lines": "—",
+        "lang": "python",
+        "summary": "Frozen metadata index → skill_view loads full SKILL.md on demand",
+        "code": "def skills_list() -> str:\n    \"\"\"Return name + description index (prefix cache friendly).\"\"\"\n    return render_skills_index(~/.hermes/skills)\n\ndef skill_view(name: str) -> str:\n    \"\"\"Load full SKILL.md body for named skill.\"\"\"\n    return read_skill_md(resolve_skill_path(name))"
+      }
+    ],
+    "stacks": [
+      {
+        "id": "main-turn",
+        "title": "Online · main agent turn",
+        "frames": [
+          { "call": "AIAgent.run_turn(user_msg)", "file": "run_agent.py", "mode": "online", "note": "OpenAI tool-calling loop" },
+          { "call": "prompt_builder.build(frozen MEMORY prefix)", "file": "agent/prompt_builder.py", "mode": "online", "note": "Skills metadata in cached prefix" },
+          { "call": "skills_list() / skill_view(name)", "file": "tools/skills_tool.py", "mode": "online", "note": "Progressive disclosure", "snippet_id": "skills-list-view" },
+          { "call": "tool calls (bash, edit, ...)", "file": "environments/agent_loop.py", "mode": "online", "note": "Main task execution" },
+          { "call": "trajectory.log_step()", "file": "agent/trajectory.py", "mode": "online", "note": "JSONL + SQLite trace" }
+        ]
+      },
+      {
+        "id": "review-path",
+        "title": "Async · background skill review",
+        "frames": [
+          { "call": "post-turn: _iters_since_skill >= interval", "file": "run_agent.py:9604-9610", "mode": "async", "note": "After final_response — not prompt injection" },
+          { "call": "_spawn_background_review(messages_snapshot, …)", "file": "run_agent.py:1792", "mode": "async", "note": "Thread bg-review — no queue", "snippet_id": "spawn-review" },
+          { "call": "review_agent.run_conversation(prompt, history=snapshot)", "file": "run_agent.py:1835", "mode": "async", "note": "Full user/assistant/tool messages" },
+          { "call": "skill_manage(action=patch|create)", "file": "tools/skill_manager_tool.py", "mode": "async", "note": "Immediate FS write — issue #55647 risk", "snippet_id": "skill-manage-header" },
+          { "call": "_security_scan_skill(path)", "file": "skills_guard.py", "mode": "async", "note": "Same scan as hub install" }
+        ]
+      }
+    ]
+  },
+  "openclaw": {
+    "snippets": [
+      {
+        "id": "workshop-hook",
+        "title": "skill-workshop agent_end hook",
+        "file": "extensions/skill-workshop/index.ts",
+        "lines": "13-48",
+        "lang": "typescript",
+        "summary": "Post-run evolution: detect → propose → scan → apply",
+        "code": "description:\n  \"Captures repeatable workflows as workspace skills, with pending review and safe writes.\"\n\nhooks.register(\"agent_end\", async (ctx) => {\n  if (!ctx.success) return;\n  const proposal = await createProposalFromMessages(ctx.messages);\n  if (!proposal) return;\n  const reviewed = await reviewTranscriptForProposal(proposal, ctx);\n  await store.save(reviewed, status: \"pending\");\n  const scan = scanSkillContent(reviewed.content);\n  if (scan.critical) return store.quarantine(reviewed);\n  if (cfg.approvalPolicy === \"auto\") await applyProposalToWorkspace(reviewed);\n});"
+      },
+      {
+        "id": "skills-precedence",
+        "title": "6-source merge (docs)",
+        "file": "docs/tools/skills.md",
+        "lines": "19-52",
+        "lang": "markdown",
+        "summary": "Location vs visibility — workspace wins; allowlist filters agent",
+        "code": "OpenClaw loads skills from these sources, highest precedence first:\n1. Workspace skills      `<workspace>/skills`\n2. Project agent skills  `<workspace>/.agents/skills`\n3. Personal agent skills `~/.agents/skills`\n4. Managed/local skills  `~/.openclaw/skills`\n5. Bundled skills\n6. Extra skill folders\n\nSkill location and skill visibility are separate controls."
+      },
+      {
+        "id": "lazy-read",
+        "title": "Session snapshot + lazy read",
+        "file": "src/agents/skills/workspace.ts",
+        "lines": "—",
+        "lang": "typescript",
+        "summary": "Metadata XML in prompt; model uses read tool for full SKILL.md",
+        "code": "export function resolveSkillsPromptForRun(agentId: string): SkillsSnapshot {\n  const skills = mergeSources(workspace, managed, bundled, extraDirs);\n  const filtered = resolveEffectiveAgentSkillFilter(agentId, skills);\n  return compactToXml(filtered, maxSkills: 150, maxChars: 18000);\n}\n// Model: read(path) → full SKILL.md body on demand"
+      }
+    ],
+    "stacks": [
+      {
+        "id": "gateway-run",
+        "title": "Online · Gateway agent run",
+        "frames": [
+          { "call": "Gateway.handleMessage(channel, msg)", "file": "gateway/index.ts", "mode": "online", "note": "Multi-channel entry" },
+          { "call": "resolveSkillsPromptForRun(agentId)", "file": "agents/skills/workspace.ts", "mode": "online", "note": "Snapshot vN cached", "snippet_id": "lazy-read" },
+          { "call": "agent_loop.run(messages, tools)", "file": "agents/harness/", "mode": "online", "note": "Pi/Codex harness" },
+          { "call": "read(workspace/skills/.../SKILL.md)", "file": "tools/read", "mode": "online", "note": "Lazy full body load" },
+          { "call": "trajectory.append(step)", "file": "trajectory/runtime.ts", "mode": "online", "note": "openclaw-trajectory JSONL" }
+        ]
+      },
+      {
+        "id": "workshop-path",
+        "title": "Async · skill-workshop",
+        "frames": [
+          { "call": "agent_end hook (success)", "file": "extensions/skill-workshop/index.ts", "mode": "async", "note": "Registered plugin hook", "snippet_id": "workshop-hook" },
+          { "call": "createProposalFromMessages()", "file": "skill-workshop/signals.ts", "mode": "async", "note": "Regex heuristic signals" },
+          { "call": "reviewTranscriptForProposal()", "file": "skill-workshop/reviewer.ts", "mode": "async", "note": "LLM reviewer session" },
+          { "call": "store.save(pending)", "file": "skill-workshop/store.ts", "mode": "offline", "note": "Persistent proposal store" },
+          { "call": "scanSkillContent()", "file": "security/skill-scanner.ts", "mode": "offline", "note": "critical → quarantine" },
+          { "call": "applyProposalToWorkspace()", "file": "skill-workshop/skills.ts", "mode": "human", "note": "auto | manual approvalPolicy" }
+        ]
+      }
+    ]
+  },
+  "claude-code-rev": {
+    "snippets": [
+      {
+        "id": "invoked-compact",
+        "title": "invoked_skills survive compaction",
+        "file": "services/compact/compact.ts",
+        "lines": "1488-1534",
+        "lang": "typescript",
+        "summary": "Post-compact attachment reinjects skill bodies (25K budget)",
+        "code": "/**\n * Creates an attachment for invoked skills to preserve their content across compaction.\n * Only includes skills scoped to the given agent.\n */\nfunction createSkillAttachmentIfNeeded(agentId, invokedSkills) {\n  const sorted = sortMostRecentFirst(invokedSkills);\n  let usedTokens = 0;\n  const included = sorted.filter(skill => {\n    const tokens = estimateTokens(skill.body);\n    if (usedTokens + tokens > POST_COMPACT_SKILLS_TOKEN_BUDGET) return false;\n    usedTokens += tokens;\n    return true;\n  });\n  return { type: \"invoked_skills\", skills: included };\n}"
+      },
+      {
+        "id": "skill-improvement",
+        "title": "skillImprovement — every 5 turns",
+        "file": "utils/hooks/skillImprovement.ts",
+        "lines": "—",
+        "lang": "typescript",
+        "summary": "Aux small model → JSON patches → Survey UI gate",
+        "code": "export async function onPostSampling(turnCount, invokedSkills) {\n  if (turnCount % 5 !== 0) return;\n  const patches = await auxSmallModel.complete({\n    schema: [{ section, change, reason }],\n    skills: invokedSkills.filter(isProjectScoped),\n  });\n  const accepted = await SkillImprovementSurvey.present(patches);\n  await applySkillImprovement(accepted);\n}"
+      },
+      {
+        "id": "incremental-listing",
+        "title": "Incremental skill_listing delta",
+        "file": "utils/attachments.ts",
+        "lines": "2717-2734",
+        "lang": "typescript",
+        "summary": "sentSkillNames per agentId — only unsent skills attached",
+        "code": "function getSkillListingAttachments(agentId: string) {\n  const sent = sentSkillNames.get(agentId) ?? new Set();\n  const delta = allSkills.filter(s => !sent.has(s.name));\n  delta.forEach(s => sent.add(s.name));\n  sentSkillNames.set(agentId, sent);\n  return delta.map(skillToListingAttachment);\n}"
+      }
+    ],
+    "stacks": [
+      {
+        "id": "three-channel",
+        "title": "Online · 3-channel skill model",
+        "frames": [
+          { "call": "query.runTurn(userMessage)", "file": "src/query.ts", "mode": "online", "note": "Central REPL loop" },
+          { "call": "getSkillListingAttachments(agentId)", "file": "utils/attachments.ts", "mode": "online", "note": "Delta listing only", "snippet_id": "incremental-listing" },
+          { "call": "Skill tool / slash → addInvokedSkill()", "file": "bootstrap/state.ts", "mode": "online", "note": "Track in STATE.invokedSkills Map" },
+          { "call": "LLM turn + tools", "file": "src/query.ts", "mode": "online", "note": "Normal execution" },
+          { "call": "onPostSampling → skillImprovement", "file": "utils/hooks/skillImprovement.ts", "mode": "async", "note": "Every 5 user turns", "snippet_id": "skill-improvement" }
+        ]
+      },
+      {
+        "id": "compact-path",
+        "title": "Online · compaction survival",
+        "frames": [
+          { "call": "compact.summarize(history)", "file": "services/compact/compact.ts", "mode": "online", "note": "Multi-tier: auto/micro/reactive" },
+          { "call": "createSkillAttachmentIfNeeded()", "file": "compact.ts:1488", "mode": "online", "note": "★ Key TaiChu borrow", "snippet_id": "invoked-compact" },
+          { "call": "reinject attachments into context", "file": "utils/attachments.ts", "mode": "online", "note": "invoked_skills block survives summarize" },
+          { "call": "runAgent subagent preload", "file": "tools/AgentTool/runAgent.ts:577", "mode": "online", "note": "frontmatter skills:[] → initialMessages" }
+        ]
+      }
+    ]
+  },
+  "codex": {
+    "snippets": [
+      {
+        "id": "injection",
+        "title": "Per-turn skill injection",
+        "file": "core-skills/src/injection.rs",
+        "lines": "57-80",
+        "lang": "rust",
+        "summary": "Only @mentioned / implicit-match skills injected this turn",
+        "code": "pub fn build_skill_injections(\n    mentioned: &[SkillRef],\n    implicit: &[SkillRef],\n    turn_ctx: &TurnContext,\n) -> Vec<UserFragment> {\n    let active: HashSet<_> = mentioned.iter()\n        .chain(implicit.iter())\n        .filter(|s| s.enabled_for_turn(turn_ctx))\n        .collect();\n    active.iter().map(|s| load_full_skill_md(s)).collect()\n    // Full SKILL.md in user fragment — this turn only\n}"
+      },
+      {
+        "id": "metadata-budget",
+        "title": "Metadata budget cap",
+        "file": "core-skills/src/render.rs",
+        "lines": "21-43",
+        "lang": "rust",
+        "summary": "Catalog ≤2% context or 8000 chars; truncate descriptions",
+        "code": "pub const SKILL_DESCRIPTION_TRUNCATED_WARNING: &str =\n  \"Skill descriptions were shortened to fit the skills context budget...\";\n\n// Progressive disclosure instructions embedded in render:\n// 1) Decide skill from name+description+path\n// 2) Open SKILL.md — read only enough for workflow\n// 3) Load references/ files on demand"
+      },
+      {
+        "id": "no-evolve",
+        "title": "Deliberate absence of runtime evolve",
+        "file": "core/src/skills.rs",
+        "lines": "—",
+        "lang": "rust",
+        "summary": "No skill_manage / post-turn patch — human + CI path only",
+        "code": "// SkillsManager.scan() at thread start\n// Record & Replay → human edits SKILL.md\n// Integration tests + Guardian approval\n// [no evolution hook in hook_runtime.rs]"
+      }
+    ],
+    "stacks": [
+      {
+        "id": "runtime-turn",
+        "title": "Online · Session run_turn",
+        "frames": [
+          { "call": "ThreadManager → Session::run_turn()", "file": "core/session.rs", "mode": "online", "note": "Rust agent loop" },
+          { "call": "SkillsManager.scan()", "file": "core-skills/manager.rs", "mode": "online", "note": "User/Repo/System scopes" },
+          { "call": "render_available_skills_metadata()", "file": "core-skills/render.rs", "mode": "online", "note": "≤2% ctx budget", "snippet_id": "metadata-budget" },
+          { "call": "build_skill_injections(@mention)", "file": "core-skills/injection.rs", "mode": "online", "note": "Full body this turn only", "snippet_id": "injection" },
+          { "call": "Guardian.check_tool_call()", "file": "guardian/mod.rs", "mode": "online", "note": "Fail-closed risky ops" }
+        ]
+      },
+      {
+        "id": "authoring",
+        "title": "Offline · human authoring path",
+        "frames": [
+          { "call": "Human writes skills/foo/SKILL.md", "file": "repo/skills/", "mode": "offline", "note": "Primary lifecycle path" },
+          { "call": "Record & Replay session", "file": "docs / TUI", "mode": "offline", "note": "Capture trajectory for distill" },
+          { "call": "Human distill + cargo test", "file": "CI", "mode": "offline", "note": "skill-creator sample guides validation" },
+          { "call": "git commit → next thread scan", "file": "SkillsManager", "mode": "online", "note": "New metadata visible", "snippet_id": "no-evolve" }
+        ]
+      }
+    ]
+  },
+  "taichu": {
+    "snippets": [
+      {
+        "id": "load-skill-runs-on",
+        "title": "load_skill + runs_on delegation",
+        "file": "builtintools/load_skill.rs",
+        "lines": "110-132",
+        "lang": "rust",
+        "summary": "端云 unique: remote device → run_subagent",
+        "code": "ToolResult {\n  text: format!(\n    \"技能「{}」在远程设备上执行（runs_on: {}）。\\n\\\n     请查看 <devices> 中对应的在线设备，\\n\\\n     使用 run_subagent(target_id=...) 委托执行。\",\n    name, runs_on.join(\", \")\n  ),\n  details: json!({ \"remote_delegation\": true }),\n}"
+      },
+      {
+        "id": "available-skills-prefix",
+        "title": "Per-turn # Available Skills prefix",
+        "file": "taichu-service/src/api/mod.rs",
+        "lines": "674-694",
+        "lang": "rust",
+        "summary": "Skills in user message (cache-friendly) not system",
+        "code": "fn inject_skills_prefix(user_msg: &mut Message, catalog: &SkillCatalog) {\n  let xml = render_local_cloud_skills_xml(catalog);\n  user_msg.prepend(&format!(\"# Available Skills\\n{xml}\\n\\n\"));\n}\n// Called each turn before agent loop"
+      },
+      {
+        "id": "compact-gap",
+        "title": "Compaction drops skill body (P0 gap)",
+        "file": "compaction.rs",
+        "lines": "—",
+        "lang": "rust",
+        "summary": "Pure summarize — no InvokedSkillRegistry reinject yet",
+        "code": "pub fn compact(session: &mut Session) {\n  session.history = summarize_tool_results(session.history);\n  // ❌ load_skill ToolResult bodies lost\n  // ❌ no createSkillAttachmentIfNeeded equivalent\n  // P0: InvokedSkillRegistry → reinject after compact\n}"
+      }
+    ],
+    "stacks": [
+      {
+        "id": "online-today",
+        "title": "Online · current path",
+        "frames": [
+          { "call": "SessionManager.run_turn()", "file": "taichu-core-sdk", "mode": "online", "note": "Pi-mono agent loop" },
+          { "call": "inject_skills_prefix()", "file": "api/mod.rs:674", "mode": "online", "note": "User prefix each turn", "snippet_id": "available-skills-prefix" },
+          { "call": "tool_search_bridge before_prompt", "file": "tool_search_bridge.rs:370", "mode": "online", "note": "Toollery skill_filter" },
+          { "call": "load_skill(name)", "file": "load_skill.rs", "mode": "online", "note": "ToolResult body", "snippet_id": "load-skill-runs-on" },
+          { "call": "compact()", "file": "compaction.rs", "mode": "online", "note": "❌ body dropped", "snippet_id": "compact-gap" }
+        ]
+      },
+      {
+        "id": "planned-p0-p2",
+        "title": "Planned · P0–P2 evolution",
+        "frames": [
+          { "call": "InvokedSkillRegistry.register()", "file": "【P0 planned】", "mode": "online", "note": "On load_skill success" },
+          { "call": "reinject_skill_bodies()", "file": "compaction.rs", "mode": "online", "note": "Post-compact attachment" },
+          { "call": "interaction_log → miner", "file": "【P1 planned】", "mode": "offline", "note": "JSONL → proposals/" },
+          { "call": "gates → accept → cloud catalog", "file": "【P2 planned】", "mode": "offline", "note": "Mirror OpenSquilla" }
+        ]
+      }
+    ]
+  },
+  "zeroclaw": {
+    "snippets": [
+      {
+        "id": "audit-patterns",
+        "title": "Load-time audit patterns",
+        "file": "skills/audit.rs",
+        "lines": "—",
+        "lang": "rust",
+        "summary": "zip-bomb, path traversal, prompt injection regex — not runtime patch",
+        "code": "pub fn scan_skill_dir(path: &Path) -> AuditResult {\n  check_zip_bomb(manifest)?;\n  check_path_traversal(entries)?;\n  check_prompt_injection_regex(skill_md_content)?;\n  AuditResult::Pass\n}"
+      },
+      {
+        "id": "load-inject",
+        "title": "load_skills + inject mode",
+        "file": "skills/load.rs",
+        "lines": "—",
+        "lang": "rust",
+        "summary": "compact = location only; always = full text; SkillToolHandler.read",
+        "code": "pub fn load_skills_with_config(cfg: &Config) -> Vec<SkillManifest> {\n  let dirs = scan_workspace_skills(&cfg.workspace)?;\n  audit::scan_skill_dir(&dirs)?;\n  dirs\n}\n\npub fn inject_skills(manifests, mode: Compact|Full) -> PromptBlock { ... }"
+      }
+    ],
+    "stacks": [
+      {
+        "id": "install-load",
+        "title": "Offline · install + load",
+        "frames": [
+          { "call": "zeroclaw skills install / sync", "file": "CLI / hub", "mode": "offline", "note": "open-skills registry pull" },
+          { "call": "load_skills_with_config()", "file": "skills/load.rs", "mode": "offline", "note": "Workspace scan", "snippet_id": "load-inject" },
+          { "call": "audit::scan_skill_dir()", "file": "skills/audit.rs", "mode": "offline", "note": "Static security gate", "snippet_id": "audit-patterns" }
+        ]
+      },
+      {
+        "id": "runtime",
+        "title": "Online · runtime (read-only evolve)",
+        "frames": [
+          { "call": "SkillToolHandler.read(name)", "file": "skills/handler.rs", "mode": "online", "note": "Full body on demand" },
+          { "call": "agent tool loop", "file": "agent/", "mode": "online", "note": "No post-turn skill patch" },
+          { "call": "cron/consolidation.rs", "file": "memory/hygiene", "mode": "cron", "note": "Memory tiers — not SKILL.md" }
+        ]
+      }
+    ]
+  },
+  "genericagent": {
+    "snippets": [
+      {
+        "id": "philosophy",
+        "title": "Don't preload — evolve SOPs",
+        "file": "README.md",
+        "lines": "38-40",
+        "lang": "markdown",
+        "summary": "memory/*_sop.md not SKILL.md — crystallize after success",
+        "code": "> Design philosophy — **don't preload skills, evolve them.**\n> Every time GenericAgent solves a new task, it automatically\n> crystallizes the execution path into a reusable **Skill**."
+      },
+      {
+        "id": "long-term-update",
+        "title": "start_long_term_update",
+        "file": "ga.py",
+        "lines": "508-523",
+        "lang": "python",
+        "summary": "Marker tool — returns L0 SOP + next_prompt; agent then file_patch L1/L2/L3 (or skip)",
+        "code": "def do_start_long_term_update(self, args, response):\n    '''Agent self-trigger when task has verified info worth remembering.'''\n    prompt = '''### [总结提炼经验]\n- 环境事实 → file_patch 更新 L2 (global_mem.txt)，同步 L1\n- 复杂任务经验 → L3 精简 SOP (*_sop.md)\n操作：遵循 L0 memory_management_sop.md\n先 file_read → 判断类型 → 最小 patch → 无新内容则跳过'''\n    yield \"[Info] Start distilling good memory...\\n\"\n    result = file_read('./memory/memory_management_sop.md')  # L0\n    return StepOutcome(result, next_prompt=prompt + get_global_memory())\n    # Does NOT call file_patch itself — agent does in follow-up turns"
+      },
+      {
+        "id": "anchor-prompt",
+        "title": "Anchor prompt — token efficient",
+        "file": "ga.py",
+        "lines": "539-549",
+        "lang": "python",
+        "summary": "Rebuild working memory; only latest user msg to API",
+        "code": "def rebuild_anchor_prompt(session):\n    working = read_l1_index() + related_sop_hints(session.task)\n    # Only latest user message sent to API after anchor rebuild\n    return AnchorContext(working=working, api_messages=[session.last_user_msg])"
+      }
+    ],
+    "stacks": [
+      {
+        "id": "task-run",
+        "title": "Online · task execution",
+        "frames": [
+          { "call": "GenericAgent.run(task)", "file": "ga.py", "mode": "online", "note": "~100 line agent loop" },
+          { "call": "file_read(*_sop.md)", "file": "ga.py:423", "mode": "online", "note": "On-demand SOP load" },
+          { "call": "9 atomic tools + plan.md", "file": "agent_loop.py", "mode": "online", "note": "Execute + checkpoint" },
+          { "call": "VERIFY(plan.md)", "file": "ga.py:472", "mode": "online", "note": "Plan mode gate" },
+          { "call": "start_long_term_update()", "file": "ga.py:508", "mode": "async", "note": "Crystallize to L2/L3", "snippet_id": "long-term-update" }
+        ]
+      },
+      {
+        "id": "reflect-cron",
+        "title": "Cron · reflect scheduler",
+        "frames": [
+          { "call": "reflect/scheduler.py tick", "file": "reflect/scheduler.py", "mode": "cron", "note": "Periodic Goal Mode" },
+          { "call": "goal_mode.inspect_sops()", "file": "reflect/goal_mode.py", "mode": "cron", "note": "Improve stale SOPs" },
+          { "call": "file_patch(memory/*_sop.md)", "file": "tools", "mode": "offline", "note": "No formal merge gate" }
+        ]
+      }
+    ]
+  }
+}

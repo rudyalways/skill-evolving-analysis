@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Claude Code Rev 架构调研（7.7） — Skill-Evolving</title>
+  <link rel="alternate" hreflang="en" href="/html/site/notes/synthesis/survey-reports/claude-code-rev.html">
+  <link rel="alternate" hreflang="zh-Hans" href="/html/site/zh/notes/synthesis/survey-reports/claude-code-rev.html">
+  <link rel="alternate" hreflang="x-default" href="/html/site/notes/synthesis/survey-reports/claude-code-rev.html">
+  <link rel="stylesheet" href="../../../../css/viewer.css">
+</head>
+<body class="page-compact page-survey-report" data-doc-locale="en" data-content-lang="en">
+  <div class="viewer-layout">
+    <nav>
+      <div data-lang-switch class="lang-switch-host"></div>
+      <h1 data-i18n="nav.docs">Docs</h1>
+      <div class="title" data-i18n="nav.rendered">Rendered HTML</div>
+      <section class="highlight-section"><h2 data-i18n="nav.compare">nav.compare</h2><ul><li><a href="../agent-skill-architecture-survey-matrix.html" data-i18n="nav.matrix165">nav.matrix165</a></li><li><a href="../skill-lifecycle-full-matrix.html" data-i18n="nav.lifecycle">nav.lifecycle</a></li><li><a href="../web-expanded-lifecycle-matrix-merged.html" data-i18n="nav.web_l3">nav.web_l3</a></li><li><a href="../eight-repo-comprehensive-survey.html" data-i18n="nav.survey20">nav.survey20</a></li><li><a href="../skill-lifecycle-and-dynamic-loading-survey.html" data-i18n="nav.per_turn">nav.per_turn</a></li><li><a href="../eight-repo-deep-source-analysis.html" data-i18n="nav.deep_source">nav.deep_source</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.per_repo">nav.per_repo</h2><ul><li><a href="./opensquilla.html">OpenSquilla (9.0)</a></li><li><a href="./hermes-agent.html">Hermes (8.1)</a></li><li><a href="./openclaw.html">OpenClaw (8.0)</a></li><li><a class="active" href="./claude-code-rev.html">Claude Rev (7.7)</a></li><li><a href="./codex.html">Codex (7.2)</a></li><li><a href="./taichu.html">TaiChu (5.0)</a></li><li><a href="./zeroclaw.html">ZeroClaw (5.0)</a></li><li><a href="./genericagent.html">GenericAgent (4.8)</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.papers">nav.papers</h2><ul><li><a href="../../../topics/skill-rl/overview.html">SkillRL</a></li><li><a href="../../../topics/claw-r1/overview.html">Claw-R1</a></li><li><a href="../comparison.html" data-i18n="nav.comparison">nav.comparison</a></li><li><a href="../combined-pipeline.html" data-i18n="nav.pipeline">nav.pipeline</a></li><li><a href="../l3-comprehensive-skill-analysis.html" data-i18n="nav.l3">nav.l3</a></li><li><a href="../taichu-p0-skill-compaction-spec.html" data-i18n="nav.taichu_p0">nav.taichu_p0</a></li></ul></section><section><h2 data-i18n="nav.more">More</h2><ul>
+    <li><a href="/html/docs.html" data-i18n="nav.sitemap">Sitemap</a></li>
+    <li><a href="/html/i18n-coverage.html" data-i18n="nav.i18n_coverage">i18n coverage</a></li>
+    <li><a href="/html/index.html" data-i18n="nav.dashboard">Dashboard</a></li>
+    <li><a href="/html/deck/index.html" data-i18n="nav.decks">Slide decks</a></li>
+  </ul></section>
+    </nav>
+    <div class="viewer-main">
+      <div class="viewer-toolbar">
+        <div>
+          <h1>Claude Code Rev 架构调研（7.7）</h1>
+          <div class="path">notes/synthesis/survey-reports/claude-code-rev.md</div>
+        </div>
+        <a class="btn" href="/html/docs.html" data-i18n="toolbar.sitemap">Sitemap</a>
+        <a class="btn primary" href="../agent-skill-architecture-survey-matrix.html" data-i18n="toolbar.matrix">165-dim matrix</a>
+      </div>
+      <p id="i18n-fallback-notice" class="i18n-notice" hidden data-i18n="content.fallback">content.fallback</p>
+      <article class="md-body"><h1>Claude Code Rev 架构调研（7.7）</h1>
+<blockquote>
+<p><strong>Compact 后 invoked_skills 存活 + skillImprovement Survey 门控 — Compact/Evolve 领先</strong><br>oboard 完整 skill runtime：增量 listing、Skill tool、post-compact invoked_skills reinject。</p>
+</blockquote>
+<blockquote>
+<p><strong>Local</strong>: <code>/Users/maybewu/Documents/Projects/oss/experimental/claude-code-rev</code><br><strong>Upstream</strong>: <a href="https://github.com/oboard/claude-code-rev">oboard/claude-code-rev</a><br><strong>Note</strong>: Community source-map restoration — <strong>not</strong> Anthropic official. Distinct from <a href="https://github.com/Yuyz0112/claude-code-reverse">Yuyz0112/claude-code-reverse</a> (LLM viz tool only).<br><strong>Matrix</strong>: <a href="../agent-skill-architecture-survey-matrix.html">agent-skill-architecture-survey-matrix.md</a></p>
+</blockquote>
+<h2>1. Architecture</h2>
+<p class="zh-lead"><strong>中文</strong> multi-root：project/user/bundled/plugin loadSkillsDir。</p>
+
+
+<p>TypeScript/Bun CLI with React Ink REPL. Skills use a <strong>three-channel model</strong>:</p>
+<ol>
+<li><strong>skill_listing</strong> — incremental attachment per <code>agentId</code></li>
+<li><strong>Skill tool</strong> / slash commands</li>
+<li><strong>invoked_skills</strong> — post-compaction attachment preserving loaded bodies</li>
+</ol>
+<p>State tracked in <code>STATE.invokedSkills</code> Map; compaction is multi-tier (auto, micro, reactive, collapse).</p>
+<pre><code class="language-text">Turn → skill_listing (delta) → Skill tool → addInvokedSkill()
+                                              ↓
+Compact → summarize history → createSkillAttachmentIfNeeded()
+                                              ↓
+                                    invoked_skills attachment survives
+</code></pre>
+<p><strong>Evidence</strong>: <code>utils/attachments.ts</code>, <code>services/compact/compact.ts</code>, <code>bootstrap/state.ts</code></p>
+<h2>2. Skill Runtime</h2>
+<p class="zh-lead"><strong>中文</strong> 三通道：listing attachment / Skill tool / invoked_skills；sentSkillNames 增量。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Pattern</th>
+<th>Implementation</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Incremental listing</td>
+<td><code>getSkillListingAttachments()</code> — only unsent skills</td>
+<td><code>attachments.ts:2717-2734</code></td>
+</tr>
+<tr>
+<td>Per-agent sent map</td>
+<td><code>sentSkillNames</code> per <code>agentId</code></td>
+<td><code>attachments.ts:2699-2704</code></td>
+</tr>
+<tr>
+<td>Invoked registry</td>
+<td><code>addInvokedSkill()</code> on Skill tool / slash</td>
+<td><code>bootstrap/state.ts</code></td>
+</tr>
+<tr>
+<td>Usage ranking</td>
+<td>7-day half-life decay</td>
+<td><code>skillUsageTracking.ts:44-54</code></td>
+</tr>
+<tr>
+<td>Subagent preload</td>
+<td>frontmatter <code>skills:[]</code> → initialMessages</td>
+<td><code>runAgent.ts:577-639</code></td>
+</tr>
+</tbody></table></div>
+<details class="evidence-block"><summary>💬 引用 / Quote</summary><pre><code class="language-typescript">// src/services/compact/compact.ts:1488-1492
+/**
+ * Creates an attachment for invoked skills to preserve their content across compaction.
+ * Only includes skills scoped to the given agent (or main session when agentId is null/undefined).
+ * This ensures skill guidelines remain available after the conversation is summarized
+ */
+</code></pre></details>
+<details class="evidence-block"><summary>💬 引用 / Quote</summary><pre><code class="language-typescript">// compact.ts:1503-1520
+// Sorted most-recent-first so budget pressure drops the least-relevant skills.
+// Per-skill truncation keeps the head of each file ...
+if (usedTokens + tokens &gt; POST_COMPACT_SKILLS_TOKEN_BUDGET) {
+  return false;
+}
+</code></pre></details>
+<p><strong>Standout</strong>: Compact ★ · Per-turn delta listing ★ · Subagent preload ★</p>
+<p><strong>Known gap</strong>: preload from frontmatter ≠ <code>addInvokedSkill</code> — compact may not protect preload-only skills (<code>repos/claude-code-rev.md</code>)</p>
+<h2>3. Skill Lifecycle</h2>
+<p class="zh-lead"><strong>中文</strong> skillImprovement 每 5 turn → JSON patches → Survey UI gate。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Stage</th>
+<th>Claude Rev</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Human written</td>
+<td>project/user skills</td>
+<td><code>loadSkillsDir.ts</code></td>
+</tr>
+<tr>
+<td>Generated</td>
+<td>skillify bundled workflow</td>
+<td><code>skills/bundled/skillify.ts</code></td>
+</tr>
+<tr>
+<td>Reviewed</td>
+<td>SkillImprovementSurvey UI</td>
+<td><code>SkillImprovementSurvey.tsx</code></td>
+</tr>
+<tr>
+<td>Published</td>
+<td>user applies patch to disk</td>
+<td><code>applySkillImprovement</code></td>
+</tr>
+<tr>
+<td>Deleted</td>
+<td>user removes project skill</td>
+<td>FS</td>
+</tr>
+</tbody></table></div>
+<p><strong>Lifecycle score</strong>: <strong>8/13</strong> — strong improve path; no proposal store / formal version</p>
+<h2>4. Skill Evolution</h2>
+<p class="zh-lead"><strong>中文</strong> skillify 会话→新 skill；7-day decay usage 排序。</p>
+
+
+<pre><code class="language-text">Every 5 user turns (post-sampling hook)
+        ↓
+skillImprovement.ts — aux small/fast model
+        ↓
+JSON [{section, change, reason}]
+        ↓
+SkillImprovementSurvey UI (user gate)
+        ↓
+applySkillImprovement → patch project SKILL.md
+</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>File</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>utils/hooks/skillImprovement.ts</code></td>
+<td>trigger + aux model</td>
+</tr>
+<tr>
+<td><code>hooks/useSkillImprovementSurvey.ts</code></td>
+<td>UI gate</td>
+</tr>
+<tr>
+<td><code>skills/bundled/skillify.ts</code></td>
+<td>session → new skill</td>
+</tr>
+</tbody></table></div>
+<p><strong>Matrix §9</strong>: Reflection ★ · Teacher ★ (aux model) · Preference ★ (survey) · Auto Patch ◐ (after user)</p>
+<p><strong>Not</strong>: RL, GRPO, or automated merge without user.</p>
+<h2>5. Multi-Agent Skill</h2>
+<p class="zh-lead"><strong>中文</strong> subagent frontmatter preload；Task 隔离。</p>
+
+
+<details class="evidence-block"><summary>💬 引用 / Quote</summary><pre><code class="language-typescript">// src/tools/AgentTool/runAgent.ts:577-578
+// Preload skills from agent frontmatter
+const skillsToPreload = agentDefinition.skills ?? []
+</code></pre></details>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Pattern</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Task tool isolation</td>
+<td>★ dirty context stays in subagent</td>
+</tr>
+<tr>
+<td>frontmatter <code>skills:[]</code></td>
+<td>★ preload to child initialMessages</td>
+</tr>
+<tr>
+<td>per-agent listing</td>
+<td>★ separate <code>sentSkillNames</code></td>
+</tr>
+<tr>
+<td>EXPERIMENTAL_SKILL_SEARCH</td>
+<td>bundled+MCP only for subagent turn-0</td>
+</tr>
+</tbody></table></div>
+<p><strong>Yuyz0112 viz tool</strong> documents Task/subagent offload pattern (<a href="https://github.com/Yuyz0112/claude-code-reverse">GitHub</a>) — harness insight only; oboard has full skill runtime.</p>
+<h2>6. Skill Governance</h2>
+<p class="zh-lead"><strong>中文</strong> project scope；Survey UI 人工 apply。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Control</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Project-scoped improvement</td>
+<td>only project invoked skills in skillImprovement</td>
+</tr>
+<tr>
+<td>User survey gate</td>
+<td>★ before apply</td>
+</tr>
+<tr>
+<td>Hooks schema</td>
+<td>skill-scoped hooks <code>utils/settings/types.ts</code></td>
+</tr>
+<tr>
+<td>Formal audit/registry</td>
+<td>·</td>
+</tr>
+</tbody></table></div>
+<h2>7. Harness Integration</h2>
+<p class="zh-lead"><strong>中文</strong> SideQuery 小模型；compact + invoked_skills attachment。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Path</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Central loop</td>
+<td><code>src/query.ts</code></td>
+</tr>
+<tr>
+<td>Post-sampling hooks</td>
+<td><code>utils/hooks/postSamplingHooks.ts</code></td>
+</tr>
+<tr>
+<td>Attachments per turn</td>
+<td><code>utils/attachments.ts</code></td>
+</tr>
+<tr>
+<td>Multi-tier compact</td>
+<td><code>services/compact/</code>, <code>contextCollapse/</code></td>
+</tr>
+<tr>
+<td>Session restore</td>
+<td><code>utils/sessionStorage.ts</code></td>
+</tr>
+</tbody></table></div>
+<p>Skills are <strong>first-class attachments</strong>, not only tool results — key architectural difference from TaiChu today.</p>
+<h2>8. RL Readiness</h2>
+<p class="zh-lead"><strong>中文</strong> session JSONL export；step 级 traces。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Signal</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Session JSONL</td>
+<td>★ export</td>
+</tr>
+<tr>
+<td>Step traces</td>
+<td>★ in session</td>
+</tr>
+<tr>
+<td>Reward / RL trainer</td>
+<td>·</td>
+</tr>
+<tr>
+<td>SkillRL</td>
+<td>◐ traces only</td>
+</tr>
+<tr>
+<td>Claw-R1</td>
+<td>◐ good step capture, no gateway middleware</td>
+</tr>
+</tbody></table></div>
+<p>Value is <strong>runtime skill survival + subagent patterns</strong>, not RL training infra.</p>
+<h2>9. Borrow for TaiChu</h2>
+<p class="zh-lead"><strong>中文</strong> TaiChu P0 核心借：InvokedSkillRegistry + post-compact reinject。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Pattern</th>
+<th>Priority</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>InvokedSkillRegistry</code> + post-compact attachment</td>
+<td><strong>P0</strong></td>
+</tr>
+<tr>
+<td>Per-turn incremental skill listing (delta)</td>
+<td>P0</td>
+</tr>
+<tr>
+<td><code>ChildSessionSpec.skills: Vec&lt;String&gt;</code> preload</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>skillImprovement 5-turn + SideQuery small model</td>
+<td>P1</td>
+</tr>
+<tr>
+<td>Usage decay ranking for Flutter picker</td>
+<td>P2</td>
+</tr>
+</tbody></table></div>
+<p>Spec: <a href="../taichu-p0-skill-compaction-spec.html">taichu-p0-skill-compaction-spec.md</a></p>
+<h2>10. Implement in TaiChu</h2>
+<p class="zh-lead"><strong>中文</strong> P0 invoked_skills；P1 skillImprovement survey gate。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>P</th>
+<th>What</th>
+<th>File</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>P0</td>
+<td><code>record_invoked_skill</code> on load_skill success</td>
+<td><code>load_skill.rs</code> + session state</td>
+</tr>
+<tr>
+<td>P0</td>
+<td>Post-compact reinject (5K/skill, 25K total)</td>
+<td><code>compaction.rs</code></td>
+</tr>
+<tr>
+<td>P0</td>
+<td>Child preload</td>
+<td><code>session/manager.rs</code></td>
+</tr>
+<tr>
+<td>P1</td>
+<td>5-turn improvement hook</td>
+<td>align <code>big-small-model-collaboration.md</code></td>
+</tr>
+</tbody></table></div>
+<h2>11. Do NOT Borrow</h2>
+<p class="zh-lead"><strong>中文</strong> 勿假设 Yuyz0112 可视化 repo 等同本 runtime。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Pattern</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Assume preload = invoked for compact</td>
+<td>documented gap in oboard</td>
+</tr>
+<tr>
+<td>Skip user gate on auto-patch</td>
+<td>Hermes-class risk</td>
+</tr>
+<tr>
+<td>Confuse with Yuyz0112 viz repo</td>
+<td>no skill runtime there</td>
+</tr>
+</tbody></table></div>
+<h2>12. Score (1–10)</h2>
+<p class="zh-lead"><strong>中文</strong> 总分 7.7：Compact 9/9 领先；无 formal proposal store。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Category</th>
+<th align="center">Score</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Data Model</td>
+<td align="center">7</td>
+<td>Standard SKILL.md</td>
+</tr>
+<tr>
+<td>Runtime</td>
+<td align="center">9</td>
+<td>3-channel + compact ★</td>
+</tr>
+<tr>
+<td>Lifecycle</td>
+<td align="center">8</td>
+<td>survey-gated improve</td>
+</tr>
+<tr>
+<td>Evolution</td>
+<td align="center">7</td>
+<td>UI gate strong; no proposals</td>
+</tr>
+<tr>
+<td>Governance</td>
+<td align="center">6</td>
+<td>user gate; light audit</td>
+</tr>
+<tr>
+<td>Agent Integration</td>
+<td align="center">9</td>
+<td>subagent preload ★</td>
+</tr>
+<tr>
+<td>RL Readiness</td>
+<td align="center">4</td>
+<td>traces only</td>
+</tr>
+<tr>
+<td><strong>Overall</strong></td>
+<td align="center"><strong>7.7</strong></td>
+<td><strong>#1 for compaction survival</strong></td>
+</tr>
+</tbody></table></div>
+<h2>Evidence index</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Claim</th>
+<th>Path / URL</th>
+<th>Level</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>CR-01</td>
+<td>invoked_skills compact</td>
+<td><code>compact.ts:1488-1534</code></td>
+<td>L3</td>
+</tr>
+<tr>
+<td>CR-02</td>
+<td>Subagent preload</td>
+<td><code>runAgent.ts:577-578</code></td>
+<td>L3</td>
+</tr>
+<tr>
+<td>CR-03</td>
+<td>skillImprovement</td>
+<td><code>hooks/skillImprovement.ts</code></td>
+<td>L3</td>
+</tr>
+<tr>
+<td>CR-04</td>
+<td>Incremental listing</td>
+<td><code>attachments.ts:2717-2734</code></td>
+<td>L3</td>
+</tr>
+<tr>
+<td>CR-05</td>
+<td>Usage decay</td>
+<td><code>skillUsageTracking.ts</code></td>
+<td>L3</td>
+</tr>
+<tr>
+<td>CR-06</td>
+<td>Upstream repo</td>
+<td><a href="https://github.com/oboard/claude-code-rev">https://github.com/oboard/claude-code-rev</a></td>
+<td>L0</td>
+</tr>
+</tbody></table></div>
+</article>
+    </div>
+  </div>
+  <script src="../../../../js/i18n.js"></script>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
+  </script>
+</body>
+</html>

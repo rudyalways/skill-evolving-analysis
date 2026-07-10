@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZeroClaw 架构调研（5.0） — Skill-Evolving</title>
+  <link rel="alternate" hreflang="en" href="/html/site/notes/synthesis/survey-reports/zeroclaw.html">
+  <link rel="alternate" hreflang="zh-Hans" href="/html/site/zh/notes/synthesis/survey-reports/zeroclaw.html">
+  <link rel="alternate" hreflang="x-default" href="/html/site/notes/synthesis/survey-reports/zeroclaw.html">
+  <link rel="stylesheet" href="../../../../css/viewer.css">
+</head>
+<body class="page-compact page-survey-report" data-doc-locale="en" data-content-lang="en">
+  <div class="viewer-layout">
+    <nav>
+      <div data-lang-switch class="lang-switch-host"></div>
+      <h1 data-i18n="nav.docs">Docs</h1>
+      <div class="title" data-i18n="nav.rendered">Rendered HTML</div>
+      <section class="highlight-section"><h2 data-i18n="nav.compare">nav.compare</h2><ul><li><a href="../agent-skill-architecture-survey-matrix.html" data-i18n="nav.matrix165">nav.matrix165</a></li><li><a href="../skill-lifecycle-full-matrix.html" data-i18n="nav.lifecycle">nav.lifecycle</a></li><li><a href="../web-expanded-lifecycle-matrix-merged.html" data-i18n="nav.web_l3">nav.web_l3</a></li><li><a href="../eight-repo-comprehensive-survey.html" data-i18n="nav.survey20">nav.survey20</a></li><li><a href="../skill-lifecycle-and-dynamic-loading-survey.html" data-i18n="nav.per_turn">nav.per_turn</a></li><li><a href="../eight-repo-deep-source-analysis.html" data-i18n="nav.deep_source">nav.deep_source</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.per_repo">nav.per_repo</h2><ul><li><a href="./opensquilla.html">OpenSquilla (9.0)</a></li><li><a href="./hermes-agent.html">Hermes (8.1)</a></li><li><a href="./openclaw.html">OpenClaw (8.0)</a></li><li><a href="./claude-code-rev.html">Claude Rev (7.7)</a></li><li><a href="./codex.html">Codex (7.2)</a></li><li><a href="./taichu.html">TaiChu (5.0)</a></li><li><a class="active" href="./zeroclaw.html">ZeroClaw (5.0)</a></li><li><a href="./genericagent.html">GenericAgent (4.8)</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.papers">nav.papers</h2><ul><li><a href="../../../topics/skill-rl/overview.html">SkillRL</a></li><li><a href="../../../topics/claw-r1/overview.html">Claw-R1</a></li><li><a href="../comparison.html" data-i18n="nav.comparison">nav.comparison</a></li><li><a href="../combined-pipeline.html" data-i18n="nav.pipeline">nav.pipeline</a></li><li><a href="../l3-comprehensive-skill-analysis.html" data-i18n="nav.l3">nav.l3</a></li><li><a href="../taichu-p0-skill-compaction-spec.html" data-i18n="nav.taichu_p0">nav.taichu_p0</a></li></ul></section><section><h2 data-i18n="nav.more">More</h2><ul>
+    <li><a href="/html/docs.html" data-i18n="nav.sitemap">Sitemap</a></li>
+    <li><a href="/html/i18n-coverage.html" data-i18n="nav.i18n_coverage">i18n coverage</a></li>
+    <li><a href="/html/index.html" data-i18n="nav.dashboard">Dashboard</a></li>
+    <li><a href="/html/deck/index.html" data-i18n="nav.decks">Slide decks</a></li>
+  </ul></section>
+    </nav>
+    <div class="viewer-main">
+      <div class="viewer-toolbar">
+        <div>
+          <h1>ZeroClaw 架构调研（5.0）</h1>
+          <div class="path">notes/synthesis/survey-reports/zeroclaw.md</div>
+        </div>
+        <a class="btn" href="/html/docs.html" data-i18n="toolbar.sitemap">Sitemap</a>
+        <a class="btn primary" href="../agent-skill-architecture-survey-matrix.html" data-i18n="toolbar.matrix">165-dim matrix</a>
+      </div>
+      <p id="i18n-fallback-notice" class="i18n-notice" hidden data-i18n="content.fallback">content.fallback</p>
+      <article class="md-body"><h1>ZeroClaw 架构调研（5.0）</h1>
+<blockquote>
+<p><strong>Registry/audit 治理强；Evolve 仅 audit 无闭环</strong><br>workspace skills SKILL.md/toml；compact/full injection；zeroclaw-skills CI 扫描。</p>
+</blockquote>
+<blockquote>
+<p><strong>Local</strong>: <code>/Users/maybewu/Documents/Projects/oss/zeroclaw</code><br><strong>Upstream</strong>: <a href="https://github.com/zeroclaw-labs/zeroclaw">zeroclaw-labs/zeroclaw</a><br><strong>Registry</strong>: <a href="https://github.com/zeroclaw-labs/zeroclaw-skills">zeroclaw-labs/zeroclaw-skills</a> (community; <strong>not cloned locally</strong> — DNS timeout in session)<br><strong>Matrix</strong>: <a href="../agent-skill-architecture-survey-matrix.html">agent-skill-architecture-survey-matrix.md</a></p>
+</blockquote>
+<h2>1. Architecture</h2>
+<p class="zh-lead"><strong>中文</strong> open-skills sync；manifest version；always 在 compact 仍全文。</p>
+
+
+<p>Rust modular runtime: agent loop, tools, memory (pluggable backends), <strong>skills module</strong>, gateway, goals/SOP engine, subagent registry. Skills are <code>SKILL.md</code> or <code>SKILL.toml</code> in workspace with <strong>Full vs Compact injection modes</strong> and a dedicated <strong><code>skills/audit.rs</code></strong> security scanner. Evolution is <strong>not</strong> a focus — governance at install/load time is.</p>
+<pre><code class="language-text">workspace/skills/ → load_skills_with_config
+        ↓
+prompt_injection_mode: Full | Compact
+        ↓
+SkillToolHandler (placeholder → native tool schema)
+        ↓
+zeroclaw skills audit &lt;name&gt;  [user responsibility]
+</code></pre>
+<p><strong>Evidence</strong>: <code>src/skills/mod.rs</code>, <code>src/skills/audit.rs</code>, <code>src/skills/tool_handler.rs</code></p>
+<h2>2. Skill Runtime</h2>
+<p class="zh-lead"><strong>中文</strong> Compact 读 location；SkillToolHandler placeholder→native tool。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Pattern</th>
+<th>Implementation</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Full injection</td>
+<td>preload instructions+tools in prompt</td>
+<td><code>skills/mod.rs:800-814</code></td>
+</tr>
+<tr>
+<td>Compact injection</td>
+<td>summary + on-demand read at location</td>
+<td>same</td>
+</tr>
+<tr>
+<td><code>always</code> flag</td>
+<td>full text even in compact mode</td>
+<td><code>skills/mod.rs</code></td>
+</tr>
+<tr>
+<td>Per-turn filter</td>
+<td>· session-level only</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Loop detection</td>
+<td>warn → hard stop on tool stagnation</td>
+<td><code>agent/loop_/detection.rs</code></td>
+</tr>
+</tbody></table></div>
+<details class="evidence-block"><summary>💬 引用 / Quote</summary><pre><code class="language-rust">// src/skills/audit.rs:16-20
+/// Maximum number of entries allowed in a skill zip archive.
+const ZIP_MAX_ENTRIES: usize = 1_000;
+/// Maximum total decompressed size across all entries (50 MB).
+/// Prevents zip-bomb extraction from filling disk.
+</code></pre></details>
+<p><strong>Standout</strong>: Audit ★ · Compact/Full mode ★ · Loop detection ★</p>
+<h2>3. Skill Lifecycle</h2>
+<p class="zh-lead"><strong>中文</strong> 用户删目录；hygiene cron 归档 memory。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Stage</th>
+<th>ZeroClaw</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Installed</td>
+<td>workspace copy / open-skills sync</td>
+<td><code>skills/mod.rs</code></td>
+</tr>
+<tr>
+<td>Audited</td>
+<td><code>audit_skill_directory</code></td>
+<td><code>skills/audit.rs</code></td>
+</tr>
+<tr>
+<td>Loaded</td>
+<td>runtime scan</td>
+<td><code>load_skills_with_config</code></td>
+</tr>
+<tr>
+<td>Evolved</td>
+<td>·</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Deleted</td>
+<td>user removes dir</td>
+<td>FS</td>
+</tr>
+<tr>
+<td>Memory consolidated</td>
+<td>nightly cron (memory, not skills)</td>
+<td><code>cron/consolidation.rs</code></td>
+</tr>
+</tbody></table></div>
+<p><strong>Lifecycle score</strong>: <strong>5/13</strong></p>
+<h2>4. Skill Evolution</h2>
+<p class="zh-lead"><strong>中文</strong> Audit only（zip-bomb/traversal/injection）；nightly memory 合并。</p>
+
+
+<p><strong>No runtime evolution loop.</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Mechanism</th>
+<th>Target</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>skills/audit.rs</code></td>
+<td>security at load</td>
+</tr>
+<tr>
+<td><code>cron/consolidation.rs</code></td>
+<td><strong>memory</strong> hygiene</td>
+</tr>
+<tr>
+<td><code>memory/hygiene.rs</code></td>
+<td>archival</td>
+</tr>
+</tbody></table></div>
+<p>Skills are <strong>governed objects</strong>, not self-modifying agents.</p>
+<p><strong>Matrix §9</strong>: 2/16 — audit only.</p>
+<h2>5. Multi-Agent Skill</h2>
+<p class="zh-lead"><strong>中文</strong> SubAgentRegistry spawn；channel SOP。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Pattern</th>
+<th>Status</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>SubAgentRegistry</td>
+<td>★ concurrency limits</td>
+<td><code>tools/subagent_spawn.rs</code></td>
+</tr>
+<tr>
+<td>Team topology</td>
+<td>Single/LeadSubagent/StarTeam/MeshTeam</td>
+<td><code>agent/team_orchestration.rs</code></td>
+</tr>
+<tr>
+<td>Per-subagent skills param</td>
+<td>·</td>
+<td>—</td>
+</tr>
+<tr>
+<td>SOP engine</td>
+<td>goals + step gate eval</td>
+<td><code>goals/engine.rs</code></td>
+</tr>
+</tbody></table></div>
+<p>Skills attach to <strong>workspace</strong>, not subagent role bundles.</p>
+<h2>6. Skill Governance</h2>
+<p class="zh-lead"><strong>中文</strong> skills/audit.rs；registry disclaimer。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Control</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Zip-bomb / traversal / injection patterns</td>
+<td><code>skills/audit.rs</code></td>
+</tr>
+<tr>
+<td>Registry disclaimer</td>
+<td>zeroclaw-skills README (Web L0)</td>
+</tr>
+<tr>
+<td>Economic threshold</td>
+<td><code>economic/mod.rs</code></td>
+</tr>
+<tr>
+<td>SOP audit logger</td>
+<td><code>tools/sop_execute.rs</code> with_audit</td>
+</tr>
+</tbody></table></div>
+<p><strong>Quote — registry realism (Web / README)</strong></p>
+<blockquote>
+<p>Registry CI does <strong>structure validation, secret detection, dangerous regex, file-policy</strong> — but registry is <strong>not a vetted security boundary</strong>; users must <code>zeroclaw skills audit &lt;name&gt;</code> and read SKILL.md themselves.<br>— <a href="https://github.com/zeroclaw-labs/zeroclaw-skills">zeroclaw-labs/zeroclaw-skills</a> (L0, not locally cloned)</p>
+</blockquote>
+<p><strong>TaiChu lesson</strong>: CI scan ≠ security boundary — same as enterprise marketplace risk (cf. OpenClaw Verge article).</p>
+<h2>7. Harness Integration</h2>
+<p class="zh-lead"><strong>中文</strong> auto_compact_history + fact extraction。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Path</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Agent loop</td>
+<td><code>agent/loop_.rs</code> (~7000 lines)</td>
+</tr>
+<tr>
+<td>auto_compact_history</td>
+<td><code>agent/loop_/history.rs</code></td>
+</tr>
+<tr>
+<td>HookHandler trait</td>
+<td><code>hooks/traits.rs</code></td>
+</tr>
+<tr>
+<td>SessionMemoryHook</td>
+<td>placeholder/no-op — weakness</td>
+</tr>
+<tr>
+<td>MCP</td>
+<td><code>tools/mod.rs</code></td>
+</tr>
+</tbody></table></div>
+<h2>8. RL Readiness</h2>
+<p class="zh-lead"><strong>中文</strong> OTel；economic 指标。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Signal</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>OTEL / runtime_trace</td>
+<td>◐ <code>observability/</code></td>
+</tr>
+<tr>
+<td>Economic tracker</td>
+<td>◐ task payment model — not RL</td>
+</tr>
+<tr>
+<td>Trajectory export</td>
+<td>·</td>
+</tr>
+<tr>
+<td>SkillRL / Claw-R1</td>
+<td>·</td>
+</tr>
+</tbody></table></div>
+<p>Low RL readiness; value is <strong>Rust audit patterns</strong> for TaiChu.</p>
+<h2>9. Borrow for TaiChu</h2>
+<p class="zh-lead"><strong>中文</strong> 借 audit 模式 + registry 结构。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Pattern</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>audit_skill_directory</code> patterns</td>
+<td>pre-load community skills on device</td>
+</tr>
+<tr>
+<td>Full vs Compact injection config</td>
+<td>user-tunable token policy</td>
+</tr>
+<tr>
+<td>Zip-bomb / path traversal checks</td>
+<td>HarmonyOS device safety</td>
+</tr>
+<tr>
+<td>LoopDetector stagnation stop</td>
+<td>long-running agent sessions</td>
+</tr>
+<tr>
+<td>trust_tier + <code>mutable_by_agent: false</code> metadata</td>
+<td>schema design</td>
+</tr>
+<tr>
+<td>Registry disclaimer pattern</td>
+<td>honest community skill UX</td>
+</tr>
+</tbody></table></div>
+<h2>10. Implement in TaiChu</h2>
+<p class="zh-lead"><strong>中文</strong> P2 audit 集成；Evolve 非 P0。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>P</th>
+<th>What</th>
+<th>Seam</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>P1</td>
+<td>Port audit checks to skill loader</td>
+<td>before canonical publish</td>
+</tr>
+<tr>
+<td>P2</td>
+<td><code>prompt_injection_mode</code> config</td>
+<td>prompt_builder</td>
+</tr>
+<tr>
+<td>P2</td>
+<td>Loop detection on tool repeat</td>
+<td>agent-loop</td>
+</tr>
+<tr>
+<td>P1</td>
+<td>trust_tier in SkillManifest</td>
+<td>registry schema</td>
+</tr>
+</tbody></table></div>
+<h2>11. Do NOT Borrow</h2>
+<p class="zh-lead"><strong>中文</strong> 勿假设 CI scan = 安全边界。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Pattern</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Assume registry CI = safe</td>
+<td>explicit disclaimer</td>
+</tr>
+<tr>
+<td>SessionMemoryHook as-is</td>
+<td>no-op in upstream</td>
+</tr>
+<tr>
+<td>SOP-only without SKILL.md evolution</td>
+<td>TaiChu uses SKILL.md standard</td>
+</tr>
+</tbody></table></div>
+<h2>12. Score (1–10)</h2>
+<p class="zh-lead"><strong>中文</strong> 总分 5.0：Governance 7；Evolve 2。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Category</th>
+<th align="center">Score</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Data Model</td>
+<td align="center">6</td>
+<td>md/toml; version field</td>
+</tr>
+<tr>
+<td>Runtime</td>
+<td align="center">5</td>
+<td>session inject; no per-turn rank</td>
+</tr>
+<tr>
+<td>Lifecycle</td>
+<td align="center">5</td>
+<td>load/audit only</td>
+</tr>
+<tr>
+<td>Evolution</td>
+<td align="center">2</td>
+<td>none</td>
+</tr>
+<tr>
+<td>Governance</td>
+<td align="center">7</td>
+<td>audit ★</td>
+</tr>
+<tr>
+<td>Agent Integration</td>
+<td align="center">4</td>
+<td>subagent no skill API</td>
+</tr>
+<tr>
+<td>RL Readiness</td>
+<td align="center">2</td>
+<td>minimal</td>
+</tr>
+<tr>
+<td><strong>Overall</strong></td>
+<td align="center"><strong>5.0</strong></td>
+<td><strong>Best audit template for TaiChu</strong></td>
+</tr>
+</tbody></table></div>
+<h2>Evidence index</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Claim</th>
+<th>Path / URL</th>
+<th>Level</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>ZC-01</td>
+<td>Zip audit limits</td>
+<td><code>src/skills/audit.rs:16-28</code></td>
+<td>L3</td>
+</tr>
+<tr>
+<td>ZC-02</td>
+<td>Skills module</td>
+<td><code>src/skills/mod.rs</code></td>
+<td>L3</td>
+</tr>
+<tr>
+<td>ZC-03</td>
+<td>Loop detection</td>
+<td><code>agent/loop_/detection.rs</code></td>
+<td>L2</td>
+</tr>
+<tr>
+<td>ZC-04</td>
+<td>Registry repo</td>
+<td><a href="https://github.com/zeroclaw-labs/zeroclaw-skills">https://github.com/zeroclaw-labs/zeroclaw-skills</a></td>
+<td>L0</td>
+</tr>
+<tr>
+<td>ZC-05</td>
+<td>Main repo</td>
+<td><a href="https://github.com/zeroclaw-labs/zeroclaw">https://github.com/zeroclaw-labs/zeroclaw</a></td>
+<td>L0</td>
+</tr>
+</tbody></table></div>
+</article>
+    </div>
+  </div>
+  <script src="../../../../js/i18n.js"></script>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
+  </script>
+</body>
+</html>

@@ -1,0 +1,28 @@
+# Frontmatter schema for notes and data entries
+# Copy into YAML frontmatter at top of .md files
+
+required:
+  - id          # e.g. D001, N2026-07-08-001
+  - title
+  - date        # ISO 8601
+  - tags        # list, see config/tags.yaml
+  - status      # inbox | raw | processed | archived
+
+optional:
+  - source      # URL, file path, or citation
+  - topic       # T001, T002, ...
+  - related     # list of other IDs
+  - summary     # one-line description
+
+example: |
+  ---
+  id: N2026-07-08-001
+  title: SkillRL recursive evolution deep dive
+  date: 2026-07-08
+  tags: [skillrl, recursive-evolution, grpo]
+  status: processed
+  topic: T001
+  source: arxiv:2602.08234
+  related: [T002, N2026-07-08-002]
+  summary: Analysis of validation-triggered SkillBank updates
+  ---

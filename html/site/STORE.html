@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>STORE — Quick Reference — Skill-Evolving</title>
+  <link rel="alternate" hreflang="en" href="/html/site/STORE.html">
+  <link rel="alternate" hreflang="x-default" href="/html/site/STORE.html">
+  <link rel="stylesheet" href="../css/viewer.css">
+</head>
+<body class="" data-doc-locale="en" data-content-lang="en">
+  <div class="viewer-layout">
+    <nav>
+      <div data-lang-switch class="lang-switch-host"></div>
+      <h1 data-i18n="nav.docs">Docs</h1>
+      <div class="title" data-i18n="nav.rendered">Rendered HTML</div>
+      <section class="highlight-section"><h2 data-i18n="nav.compare">nav.compare</h2><ul><li><a href="./notes/synthesis/agent-skill-architecture-survey-matrix.html" data-i18n="nav.matrix165">nav.matrix165</a></li><li><a href="./notes/synthesis/skill-lifecycle-full-matrix.html" data-i18n="nav.lifecycle">nav.lifecycle</a></li><li><a href="./notes/synthesis/web-expanded-lifecycle-matrix-merged.html" data-i18n="nav.web_l3">nav.web_l3</a></li><li><a href="./notes/synthesis/eight-repo-comprehensive-survey.html" data-i18n="nav.survey20">nav.survey20</a></li><li><a href="./notes/synthesis/skill-lifecycle-and-dynamic-loading-survey.html" data-i18n="nav.per_turn">nav.per_turn</a></li><li><a href="./notes/synthesis/eight-repo-deep-source-analysis.html" data-i18n="nav.deep_source">nav.deep_source</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.per_repo">nav.per_repo</h2><ul><li><a href="./notes/synthesis/survey-reports/opensquilla.html">OpenSquilla (9.0)</a></li><li><a href="./notes/synthesis/survey-reports/hermes-agent.html">Hermes (8.1)</a></li><li><a href="./notes/synthesis/survey-reports/openclaw.html">OpenClaw (8.0)</a></li><li><a href="./notes/synthesis/survey-reports/claude-code-rev.html">Claude Rev (7.7)</a></li><li><a href="./notes/synthesis/survey-reports/codex.html">Codex (7.2)</a></li><li><a href="./notes/synthesis/survey-reports/taichu.html">TaiChu (5.0)</a></li><li><a href="./notes/synthesis/survey-reports/zeroclaw.html">ZeroClaw (5.0)</a></li><li><a href="./notes/synthesis/survey-reports/genericagent.html">GenericAgent (4.8)</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.papers">nav.papers</h2><ul><li><a href="./topics/skill-rl/overview.html">SkillRL</a></li><li><a href="./topics/claw-r1/overview.html">Claw-R1</a></li><li><a href="./notes/synthesis/comparison.html" data-i18n="nav.comparison">nav.comparison</a></li><li><a href="./notes/synthesis/combined-pipeline.html" data-i18n="nav.pipeline">nav.pipeline</a></li><li><a href="./notes/synthesis/l3-comprehensive-skill-analysis.html" data-i18n="nav.l3">nav.l3</a></li><li><a href="./notes/synthesis/taichu-p0-skill-compaction-spec.html" data-i18n="nav.taichu_p0">nav.taichu_p0</a></li></ul></section><section><h2 data-i18n="nav.more">More</h2><ul>
+    <li><a href="/html/docs.html" data-i18n="nav.sitemap">Sitemap</a></li>
+    <li><a href="/html/i18n-coverage.html" data-i18n="nav.i18n_coverage">i18n coverage</a></li>
+    <li><a href="/html/index.html" data-i18n="nav.dashboard">Dashboard</a></li>
+    <li><a href="/html/deck/index.html" data-i18n="nav.decks">Slide decks</a></li>
+  </ul></section>
+    </nav>
+    <div class="viewer-main">
+      <div class="viewer-toolbar">
+        <div>
+          <h1>STORE — Quick Reference</h1>
+          <div class="path">STORE.md</div>
+        </div>
+        <a class="btn" href="/html/docs.html" data-i18n="toolbar.sitemap">Sitemap</a>
+        <a class="btn primary" href="./notes/synthesis/agent-skill-architecture-survey-matrix.html" data-i18n="toolbar.matrix">165-dim matrix</a>
+      </div>
+      <p id="i18n-fallback-notice" class="i18n-notice" hidden data-i18n="content.fallback">content.fallback</p>
+      <article class="md-body"><h1>STORE — Quick Reference</h1>
+<p><strong>All research is persisted on disk.</strong> Chat transcripts are supplementary, not authoritative.</p>
+<h2>Where things live</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Content</th>
+<th>Location</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Master human index</td>
+<td><a href="./INDEX.html">INDEX.md</a></td>
+</tr>
+<tr>
+<td>Machine catalog</td>
+<td><a href="store/manifest.yaml">store/manifest.yaml</a></td>
+</tr>
+<tr>
+<td>Session archives</td>
+<td><a href="store/sessions/">store/sessions/</a></td>
+</tr>
+<tr>
+<td>Analysis notes</td>
+<td><a href="notes/synthesis/">notes/synthesis/</a></td>
+</tr>
+<tr>
+<td>Per-repo deep dives</td>
+<td><a href="notes/synthesis/repos/">notes/synthesis/repos/</a></td>
+</tr>
+<tr>
+<td>Daily logs</td>
+<td><a href="notes/daily/">notes/daily/</a></td>
+</tr>
+<tr>
+<td>Raw inputs (immutable)</td>
+<td><a href="data/raw/">data/raw/</a></td>
+</tr>
+<tr>
+<td>Processed exports</td>
+<td><a href="data/processed/">data/processed/</a></td>
+</tr>
+<tr>
+<td>Future recording protocol</td>
+<td><a href="./store/protocols/recording.html">store/protocols/recording.md</a></td>
+</tr>
+</tbody></table></div>
+<h2>Record new work</h2>
+<pre><code class="language-bash"># 1. Write your note
+vim notes/synthesis/my-new-analysis.md
+
+# 2. Register it
+./scripts/record.sh notes/synthesis/my-new-analysis.md L2 synthesis
+
+# 3. Paste printed rows into manifest.yaml + INDEX.md
+</code></pre>
+<h2>2026-07-08 session (archived)</h2>
+<p>Full session log: <a href="./store/sessions/2026-07-08-eight-repo-l3-research.html">store/sessions/2026-07-08-eight-repo-l3-research.md</a></p>
+</article>
+    </div>
+  </div>
+  <script src="../js/i18n.js"></script>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
+  </script>
+</body>
+</html>

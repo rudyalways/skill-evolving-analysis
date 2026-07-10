@@ -1,0 +1,30 @@
+{
+  "generated": "2026-07-08T13:12:30.960Z",
+  "enOnly": [
+    "INDEX.md",
+    "README.md",
+    "STORE.md",
+    "notes/daily/2026-07-08.md",
+    "notes/synthesis/local-oss-repo-inventory.md",
+    "notes/synthesis/paper-index.md",
+    "notes/synthesis/proposed-skill-lifecycle-architecture.md",
+    "notes/synthesis/survey-reports/README.md",
+    "notes/synthesis/survey-reports/claude-code-rev.md",
+    "notes/synthesis/survey-reports/codex.md",
+    "notes/synthesis/survey-reports/genericagent.md",
+    "notes/synthesis/survey-reports/hermes-agent.md",
+    "notes/synthesis/survey-reports/openclaw-rl.md",
+    "notes/synthesis/survey-reports/openclaw.md",
+    "notes/synthesis/survey-reports/opensquilla.md",
+    "notes/synthesis/survey-reports/taichu.md",
+    "notes/synthesis/survey-reports/zeroclaw.md",
+    "notes/synthesis/taichu-p0-skill-compaction-spec.md",
+    "topics/claw-r1/overview.md",
+    "topics/skill-rl/overview.md"
+  ],
+  "priorityGaps": [
+    "notes/synthesis/taichu-p0-skill-compaction-spec.md",
+    "topics/skill-rl/overview.md",
+    "topics/claw-r1/overview.md"
+  ]
+}

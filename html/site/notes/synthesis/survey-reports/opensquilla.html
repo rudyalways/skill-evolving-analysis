@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OpenSquilla 架构调研（9.0） — Skill-Evolving</title>
+  <link rel="alternate" hreflang="en" href="/html/site/notes/synthesis/survey-reports/opensquilla.html">
+  <link rel="alternate" hreflang="zh-Hans" href="/html/site/zh/notes/synthesis/survey-reports/opensquilla.html">
+  <link rel="alternate" hreflang="x-default" href="/html/site/notes/synthesis/survey-reports/opensquilla.html">
+  <link rel="stylesheet" href="../../../../css/viewer.css">
+</head>
+<body class="page-compact page-survey-report" data-doc-locale="en" data-content-lang="en">
+  <div class="viewer-layout">
+    <nav>
+      <div data-lang-switch class="lang-switch-host"></div>
+      <h1 data-i18n="nav.docs">Docs</h1>
+      <div class="title" data-i18n="nav.rendered">Rendered HTML</div>
+      <section class="highlight-section"><h2 data-i18n="nav.compare">nav.compare</h2><ul><li><a href="../agent-skill-architecture-survey-matrix.html" data-i18n="nav.matrix165">nav.matrix165</a></li><li><a href="../skill-lifecycle-full-matrix.html" data-i18n="nav.lifecycle">nav.lifecycle</a></li><li><a href="../web-expanded-lifecycle-matrix-merged.html" data-i18n="nav.web_l3">nav.web_l3</a></li><li><a href="../eight-repo-comprehensive-survey.html" data-i18n="nav.survey20">nav.survey20</a></li><li><a href="../skill-lifecycle-and-dynamic-loading-survey.html" data-i18n="nav.per_turn">nav.per_turn</a></li><li><a href="../eight-repo-deep-source-analysis.html" data-i18n="nav.deep_source">nav.deep_source</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.per_repo">nav.per_repo</h2><ul><li><a class="active" href="./opensquilla.html">OpenSquilla (9.0)</a></li><li><a href="./hermes-agent.html">Hermes (8.1)</a></li><li><a href="./openclaw.html">OpenClaw (8.0)</a></li><li><a href="./claude-code-rev.html">Claude Rev (7.7)</a></li><li><a href="./codex.html">Codex (7.2)</a></li><li><a href="./taichu.html">TaiChu (5.0)</a></li><li><a href="./zeroclaw.html">ZeroClaw (5.0)</a></li><li><a href="./genericagent.html">GenericAgent (4.8)</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.papers">nav.papers</h2><ul><li><a href="../../../topics/skill-rl/overview.html">SkillRL</a></li><li><a href="../../../topics/claw-r1/overview.html">Claw-R1</a></li><li><a href="../comparison.html" data-i18n="nav.comparison">nav.comparison</a></li><li><a href="../combined-pipeline.html" data-i18n="nav.pipeline">nav.pipeline</a></li><li><a href="../l3-comprehensive-skill-analysis.html" data-i18n="nav.l3">nav.l3</a></li><li><a href="../taichu-p0-skill-compaction-spec.html" data-i18n="nav.taichu_p0">nav.taichu_p0</a></li></ul></section><section><h2 data-i18n="nav.more">More</h2><ul>
+    <li><a href="/html/docs.html" data-i18n="nav.sitemap">Sitemap</a></li>
+    <li><a href="/html/i18n-coverage.html" data-i18n="nav.i18n_coverage">i18n coverage</a></li>
+    <li><a href="/html/index.html" data-i18n="nav.dashboard">Dashboard</a></li>
+    <li><a href="/html/deck/index.html" data-i18n="nav.decks">Slide decks</a></li>
+  </ul></section>
+    </nav>
+    <div class="viewer-main">
+      <div class="viewer-toolbar">
+        <div>
+          <h1>OpenSquilla 架构调研（9.0）</h1>
+          <div class="path">notes/synthesis/survey-reports/opensquilla.md</div>
+        </div>
+        <a class="btn" href="/html/docs.html" data-i18n="toolbar.sitemap">Sitemap</a>
+        <a class="btn primary" href="../agent-skill-architecture-survey-matrix.html" data-i18n="toolbar.matrix">165-dim matrix</a>
+      </div>
+      <p id="i18n-fallback-notice" class="i18n-notice" hidden data-i18n="content.fallback">content.fallback</p>
+      <article class="md-body"><h1>OpenSquilla 架构调研（9.0）</h1>
+<blockquote>
+<p><strong>八框架 Skill 进化产品化最强：每轮 RRF 推荐 + proposals 四关 + E2E 晋升</strong><br>显式 Agent FSM 分阶段 harness；SkillSpec + 6 层优先级；每轮 filter_skills → 注入；proposals/ 多关 accept 写入 MANAGED。</p>
+</blockquote>
+<blockquote>
+<p>Local: <code>/Users/maybewu/Documents/Projects/oss/opensquilla</code>   ·  Upstream: <a href="https://github.com/opensquilla/opensquilla">opensquilla/opensquilla</a>   ·  Matrix: <a href="../agent-skill-architecture-survey-matrix.html">agent-skill-architecture-survey-matrix.md</a>   ·  Detail card: <a href="../repos/opensquilla.html">repos/opensquilla.md</a></p>
+</blockquote>
+<h2>1. Architecture</h2>
+<p class="zh-lead"><strong>中文</strong> 分阶段 harness：Gateway → TurnRunner → Pipeline(filter→inject) → FSM。6 层优先级：EXTRA → BUNDLED → MANAGED → PERSONAL → PROJECT → WORKSPACE。</p>
+
+
+<p>OpenSquilla is a <strong>staged harness</strong> around an explicit Agent FSM (<code>IDLE→THINKING→TOOL_CALLING→DONE</code>). Skills are first-class <code>SkillSpec</code> objects loaded through a <strong>6-layer precedence</strong> system, filtered <strong>every turn</strong> by pipeline step <code>filter_skills</code>, injected via <code>SkillInjector</code>, and evolved through a <strong>proposals directory</strong> with multi-gate acceptance.</p>
+<pre><code class="language-text">Gateway → TurnRunnerHarness → Pipeline (filter_skills → inject) → Agent FSM
+                                              ↓
+                                    proposals/ → accept → MANAGED
+</code></pre>
+<p><strong>Evidence</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Claim</th>
+<th>Source</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>6-layer precedence</td>
+<td><code>src/opensquilla/skills/loader.py:184-244</code> — <code>EXTRA &lt; BUNDLED &lt; MANAGED &lt; PERSONAL &lt; PROJECT &lt; WORKSPACE</code></td>
+</tr>
+<tr>
+<td>Per-turn filter step</td>
+<td><code>src/opensquilla/engine/steps/skills_filter.py:1</code> — <em>&quot;Step 3: Gate skills deterministically, optionally filter by relevance, inject.&quot;</em></td>
+</tr>
+<tr>
+<td>MetaSkill DAG</td>
+<td><code>src/opensquilla/skills/meta/orchestrator.py</code></td>
+</tr>
+<tr>
+<td>Docs</td>
+<td><a href="https://www.opensquilla.ai/docs/features/meta-skills/">Meta-Skills</a> — <em>&quot;Meta-skills package repeatable multi-step work as reusable, inspectable workflows&quot;</em></td>
+</tr>
+</tbody></table></div>
+<p><strong>Matrix</strong>: §1 Data Model 9/14 ★ · §2 Discovery 15/17 ★</p>
+<h2>2. Skill Runtime</h2>
+<p class="zh-lead"><strong>中文</strong> 每轮 HybridRetriever（词法+语义 RRF top-5）；compact/full 渐进披露；meta_invoke 跑 DAG；collect_invoked_skills 遥测。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Pattern</th>
+<th>Implementation</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Per-turn catalog</strong></td>
+<td>★ <code>filter_skills()</code> runs each turn in pipeline</td>
+<td><code>skills_filter.py:1</code>, tests <code>test_skills_default_prompt_contract.py</code></td>
+</tr>
+<tr>
+<td><strong>Recommendation</strong></td>
+<td>★ <code>HybridRetriever</code> lexical + semantic RRF, top-k default 5</td>
+<td><code>skills_filter.py:22-45</code>, <code>_get_retriever()</code></td>
+</tr>
+<tr>
+<td><strong>Progressive disclosure</strong></td>
+<td><code>inject_full</code> / <code>inject_compact</code> (name+location only)</td>
+<td><code>skills/injector.py</code></td>
+</tr>
+<tr>
+<td><strong>Pinned skills</strong></td>
+<td><code>always</code>, meta_match bypass retrieval</td>
+<td><code>skills_filter.py</code> (pinned block ~162-188 per lifecycle survey)</td>
+</tr>
+<tr>
+<td><strong>Invoked tracking</strong></td>
+<td><code>collect_invoked_skills(turn_segments)</code></td>
+<td><code>engine/runtime.py:250</code>, tests <code>test_decision_log_skills_invoked.py</code></td>
+</tr>
+<tr>
+<td><strong>Meta invoke</strong></td>
+<td><code>meta_invoke(name)</code> runs DAG, not skill_view on meta</td>
+<td><code>injector.py:40-49</code></td>
+</tr>
+</tbody></table></div>
+<details class="evidence-block"><summary>💬 引用 / Quote</summary><pre><code class="language-python"># src/opensquilla/engine/steps/skills_filter.py:1
+&quot;&quot;&quot;Step 3: Gate skills deterministically, optionally filter by relevance, inject.&quot;&quot;&quot;
+</code></pre></details>
+<p><strong>Standout dimensions</strong>: Per Turn Loading ★ · Recommend ★ · Skill Graph ★ · Refresh Policy ★</p>
+<h2>3. Skill Lifecycle</h2>
+<p class="zh-lead"><strong>中文</strong> hub 安装 → auto_propose/Dream → gates.json 四关 → accept→MANAGED；skills-lock SHA256。生命周期 12/13。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Stage</th>
+<th>OpenSquilla</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Human / imported</td>
+<td>hub install → layers</td>
+<td><code>skills/loader.py</code></td>
+</tr>
+<tr>
+<td>Generated</td>
+<td><code>auto_propose</code>, Dream hook</td>
+<td><code>skills/creator/auto_propose.py</code>, <code>memory/dream/runner.py</code></td>
+</tr>
+<tr>
+<td>Reviewed</td>
+<td><code>evaluate_proposal_gates</code></td>
+<td><code>skills/proposals_lib.py</code></td>
+</tr>
+<tr>
+<td>Published</td>
+<td><code>accept_proposal()</code> → MANAGED</td>
+<td><code>proposals_lib.py:425</code></td>
+</tr>
+<tr>
+<td>Deleted</td>
+<td><code>reject_proposal()</code></td>
+<td><code>proposals_lib.py</code></td>
+</tr>
+<tr>
+<td>Versioned</td>
+<td><code>skills-lock.json</code> SHA256</td>
+<td><code>skills/hub/lockfile.py</code></td>
+</tr>
+</tbody></table></div>
+<p><strong>Lifecycle score</strong>: <strong>12/13</strong> (rollback ◐)</p>
+<details class="evidence-block"><summary>💬 引用 / Quote</summary><pre><code class="language-python"># src/opensquilla/skills/loader.py:184-189
+SkillLayer.EXTRA,
+SkillLayer.BUNDLED,
+SkillLayer.MANAGED,
+# ... PERSONAL, PROJECT, WORKSPACE
+</code></pre></details>
+<h2>4. Skill Evolution</h2>
+<p class="zh-lead"><strong>中文</strong> 决策日志/Dream → proposals/ → runtime_e2e 对照 → accept。eval_prompts 回归 + meta vs baseline A/B。</p>
+
+
+<p><strong>Strongest productized loop</strong> among the 8 frameworks:</p>
+<pre><code class="language-text">Decision log / Dream signal
+        ↓
+auto_propose / meta-skill-creator
+        ↓
+~/.opensquilla/proposals/{id}/ + gates.json
+        ↓
+evaluate_proposal_gates (4 gates)
+        ↓
+runtime_e2e meta vs baseline judge
+        ↓
+accept_proposal → MANAGED skills
+</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Mechanism</th>
+<th>Path</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Auto propose</td>
+<td><code>skills/creator/auto_propose.py</code></td>
+</tr>
+<tr>
+<td>Gates</td>
+<td><code>skills/proposals_lib.py</code></td>
+</tr>
+<tr>
+<td>E2E judge</td>
+<td><code>skills/creator/runtime_e2e.py</code></td>
+</tr>
+<tr>
+<td>Dream reflection</td>
+<td><code>memory/dream/runner.py</code>, <code>dream/candidates.py</code></td>
+</tr>
+</tbody></table></div>
+<p><strong>Matrix §9</strong>: Candidate ★ · Merge ★ · Pairwise ★ (meta vs baseline) · Auto Version ★</p>
+<p><strong>Quality §10</strong>: Regression ★ (<code>eval_prompts</code>) · A/B ★ · Integration Test ★ (<code>runtime_e2e</code>)</p>
+<h2>5. Multi-Agent Skill</h2>
+<p class="zh-lead"><strong>中文</strong> MetaOrchestrator DAG（skill_exec/agent/tool_call）；子 agent one-shot，无 skill preload 列表。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Pattern</th>
+<th>Status</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>MetaOrchestrator DAG</td>
+<td>★ skill_exec + agent + tool_call steps</td>
+<td><code>skills/meta/orchestrator.py</code></td>
+</tr>
+<tr>
+<td>Subagent one-shot</td>
+<td>◐ meta agent executor, not skill preload list</td>
+<td><code>meta/executors/agent.py</code></td>
+</tr>
+<tr>
+<td>Complementary skills</td>
+<td>◐ via DAG composition</td>
+<td>meta steps reference multiple skills</td>
+</tr>
+<tr>
+<td>Skill isolation</td>
+<td>one-shot subagent contexts</td>
+<td><code>engine/subagent.py</code></td>
+</tr>
+</tbody></table></div>
+<p><strong>Docs quote</strong>: MetaSkill = <em>&quot;reusable workflow made of multiple steps / skills / checks / outputs&quot;</em> (<a href="https://www.opensquilla.ai/docs/features/meta-skills/">OpenSquilla Meta-Skills</a>)</p>
+<h2>6. Skill Governance</h2>
+<p class="zh-lead"><strong>中文</strong> policy chain 30+ 内置规则；gates.json；hub quarantine；requires_tools 门控。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Control</th>
+<th>Implementation</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Policy chain</td>
+<td><code>tools/policy/chain.py</code> — 30+ builtins</td>
+</tr>
+<tr>
+<td>Proposal gates</td>
+<td><code>gates.json</code> + <code>evaluate_proposal_gates</code></td>
+</tr>
+<tr>
+<td>Hub quarantine</td>
+<td>install scan</td>
+</tr>
+<tr>
+<td>requires_tools gate</td>
+<td><code>skills/eligibility.py</code></td>
+</tr>
+<tr>
+<td>Lock file provenance</td>
+<td>SHA256 pin</td>
+</tr>
+</tbody></table></div>
+<p><strong>Risk</strong>: Large <code>engine/agent.py</code> (~6000 lines) — operational complexity, not security per se.</p>
+<h2>7. Harness Integration</h2>
+<p class="zh-lead"><strong>中文</strong> Skill 是 pipeline 阶段而非外挂：filter_skills 在 LLM 看到 catalog 前确定性门控。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Hook / Stage</th>
+<th>Path</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>TurnRunnerHarness</td>
+<td><code>engine/turn_runner/harness.py</code></td>
+</tr>
+<tr>
+<td>Pipeline steps</td>
+<td><code>engine/pipeline.py</code></td>
+</tr>
+<tr>
+<td>TurnHook / ToolHook / CompactionHook</td>
+<td><code>engine/hooks/types.py</code></td>
+</tr>
+<tr>
+<td>Decision log</td>
+<td><code>observability/decision_log.py</code></td>
+</tr>
+<tr>
+<td>Context budget</td>
+<td><code>context_budget.py</code></td>
+</tr>
+</tbody></table></div>
+<p>Skills are <strong>not bolted on</strong> — they are a pipeline stage with deterministic gating before LLM sees catalog.</p>
+<h2>8. RL Readiness</h2>
+<p class="zh-lead"><strong>中文</strong> PipelineStepRecord + decision_log skills_invoked；Claw-R1 兼容 step 级记录最强之一。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Signal</th>
+<th>Status</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Step trace</td>
+<td>★ <code>PipelineStepRecord</code></td>
+<td><code>observability/trace.py</code></td>
+</tr>
+<tr>
+<td>Trajectory</td>
+<td>★ <code>TraceContext</code></td>
+<td>pipeline log</td>
+</tr>
+<tr>
+<td>Tool trace</td>
+<td>★ decision log <code>skills_invoked</code></td>
+<td>tests <code>test_decision_log_skills_invoked.py</code></td>
+</tr>
+<tr>
+<td>Reward</td>
+<td>·</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Offline RL</td>
+<td>◐ traces exportable</td>
+<td>no trainer in-repo</td>
+</tr>
+<tr>
+<td>SkillRL</td>
+<td>◐ proposals + eval mirror SkillBank update</td>
+<td>conceptual fit</td>
+</tr>
+<tr>
+<td>Claw-R1</td>
+<td>★ step-level pipeline records</td>
+<td>best OSS middleware alongside OpenClaw trajectory</td>
+</tr>
+</tbody></table></div>
+<p><strong>Note</strong>: Squilla Router LightGBM (<code>squilla_router/</code>) is <strong>model routing</strong>, not skill RL.</p>
+<h2>9. Borrow for TaiChu</h2>
+<p class="zh-lead"><strong>中文</strong> TaiChu 借：proposals+gates、RRF+always pin、invoked 遥测、runtime_e2e、inject_compact。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Pattern</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>proposals/</code> + <code>gates.json</code> + <code>accept_proposal</code></td>
+<td>Safest evolution publish path</td>
+</tr>
+<tr>
+<td>Per-turn <code>HybridRetriever</code> + pinned always</td>
+<td>Best OSS skill recommendation</td>
+</tr>
+<tr>
+<td><code>collect_invoked_skills</code> telemetry</td>
+<td>Feeds miner + compact survival</td>
+</tr>
+<tr>
+<td><code>runtime_e2e</code> judge</td>
+<td>Promotion A/B before publish</td>
+</tr>
+<tr>
+<td><code>inject_compact</code> + user_message injection</td>
+<td>Aligns with TaiChu user prefix philosophy</td>
+</tr>
+<tr>
+<td>MetaSkill DAG</td>
+<td>P3 workflow layer after atomic skills stable</td>
+</tr>
+</tbody></table></div>
+<h2>10. Implement in TaiChu</h2>
+<p class="zh-lead"><strong>中文</strong> P1 proposals 目录+gates；P1 Toollery RRF；P2 interaction_log；P3 MetaSkill。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Priority</th>
+<th>What</th>
+<th>TaiChu seam</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>P1</td>
+<td><code>~/.taichu/proposals/</code> + gates</td>
+<td>new module; mirror <code>proposals_lib.py</code></td>
+</tr>
+<tr>
+<td>P1</td>
+<td>RRF on Toollery <code>before_prompt</code></td>
+<td><code>tool_search_bridge.rs:370-382</code></td>
+</tr>
+<tr>
+<td>P2</td>
+<td><code>skills_invoked</code> in interaction_log</td>
+<td>JSONL schema extension</td>
+</tr>
+<tr>
+<td>P2</td>
+<td><code>runtime_e2e</code> harness</td>
+<td>integration test crate</td>
+</tr>
+<tr>
+<td>P3</td>
+<td>MetaSkill orchestrator</td>
+<td>new <code>meta/</code> after P0/P1</td>
+</tr>
+</tbody></table></div>
+<h2>11. Do NOT Borrow</h2>
+<p class="zh-lead"><strong>中文</strong> 勿搬 6000 行 agent 单体；勿无 gate 自动 accept。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Pattern</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Full 6000-line agent FSM monolith</td>
+<td>TaiChu Pi-mono loop is different; take patterns not structure</td>
+</tr>
+<tr>
+<td>Dream cron complexity wholesale</td>
+<td>adopt gate concept first, Dream later</td>
+</tr>
+<tr>
+<td>Auto-accept without human policy</td>
+<td>gates are the point — keep human/policy path for <code>critical</code> skills</td>
+</tr>
+</tbody></table></div>
+<h2>12. Score (1–10)</h2>
+<p class="zh-lead"><strong>中文</strong> 总分 9.0：Runtime/Evolution 双 9；RL 6（轨迹强、无训练器）。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Category</th>
+<th align="center">Score</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Data Model</td>
+<td align="center">9</td>
+<td>SkillSpec + MetaSkill + lock SHA</td>
+</tr>
+<tr>
+<td>Runtime</td>
+<td align="center">9</td>
+<td>Per-turn RRF ★</td>
+</tr>
+<tr>
+<td>Lifecycle</td>
+<td align="center">12/13 → <strong>9</strong></td>
+<td>Near-complete</td>
+</tr>
+<tr>
+<td>Evolution</td>
+<td align="center">9</td>
+<td>4-gate + E2E</td>
+</tr>
+<tr>
+<td>Governance</td>
+<td align="center">8</td>
+<td>gates + policy chain</td>
+</tr>
+<tr>
+<td>Agent Integration</td>
+<td align="center">9</td>
+<td>MetaSkill DAG</td>
+</tr>
+<tr>
+<td>RL Readiness</td>
+<td align="center">6</td>
+<td>traces strong; no RL trainer</td>
+</tr>
+<tr>
+<td><strong>Overall</strong></td>
+<td align="center"><strong>9.0</strong></td>
+<td>Best single-repo skill evolution productization</td>
+</tr>
+</tbody></table></div>
+<h2>Evidence index</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Claim</th>
+<th>Path / URL</th>
+<th>Level</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>OS-01</td>
+<td>6-layer loader</td>
+<td><code>skills/loader.py:184-244</code></td>
+<td>L3</td>
+</tr>
+<tr>
+<td>OS-02</td>
+<td>Per-turn filter</td>
+<td><code>engine/steps/skills_filter.py:1</code></td>
+<td>L3</td>
+</tr>
+<tr>
+<td>OS-03</td>
+<td>accept_proposal</td>
+<td><code>skills/proposals_lib.py:425</code></td>
+<td>L3</td>
+</tr>
+<tr>
+<td>OS-04</td>
+<td>collect_invoked_skills</td>
+<td><code>engine/runtime.py:250</code> + tests</td>
+<td>L3</td>
+</tr>
+<tr>
+<td>OS-05</td>
+<td>MetaSkill docs</td>
+<td><a href="https://www.opensquilla.ai/docs/features/meta-skills/">https://www.opensquilla.ai/docs/features/meta-skills/</a></td>
+<td>L0</td>
+</tr>
+<tr>
+<td>OS-06</td>
+<td>HybridRetriever</td>
+<td><code>skills_filter.py:22-45</code></td>
+<td>L3</td>
+</tr>
+</tbody></table></div>
+</article>
+    </div>
+  </div>
+  <script src="../../../../js/i18n.js"></script>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
+  </script>
+</body>
+</html>

@@ -1,0 +1,1839 @@
+{
+  "exact": {
+    "·": "·",
+    "—": "—",
+    "★": "★",
+    "◐": "◐",
+    "❌ needed": "❌ 待建",
+    "❌ rescans only": "❌ 仅重扫",
+    "partial": "部分",
+    "human": "人工",
+    "manual": "人工",
+    "bundled": "内置",
+    "managed": "MANAGED 托管",
+    "proposals": "proposals 候选",
+    "proposals/": "proposals/ 目录",
+    "pipeline": "pipeline 流水线",
+    "Dream": "Dream 反思",
+    "dream": "Dream",
+    "Hub": "Hub 中心",
+    "filter": "过滤",
+    "registry": "注册表",
+    "compaction": "compaction 压缩",
+    "consolidation": "consolidation 合并",
+    "distill": "蒸馏",
+    "compress": "压缩",
+    "history": "历史",
+    "field": "字段",
+    "hash": "哈希",
+    "contributor": "贡献者",
+    "community": "社区",
+    "project": "项目",
+    "BBS": "BBS 协作",
+    "P3": "P3 规划",
+    "PERSONAL": "PERSONAL 个人层",
+    "MANAGED": "MANAGED 托管层",
+    "Toollery": "Toollery",
+    "JSONL": "JSONL",
+    "OTel": "OTel",
+    "pytest": "pytest",
+    "morphling": "morphling",
+    "ToolDomains": "ToolDomains",
+    "FS scopes": "文件系统作用域",
+    "multi-root scan": "多根目录扫描",
+    "multi-root merge": "多根目录合并",
+    "6-source merge": "六源合并",
+    "6-layer loader": "六层加载器",
+    "6-layer precedence dirs": "六层优先级目录",
+    "workspace scan": "工作区扫描",
+    "canonical + cloud catalog": "canonical + 云目录",
+    "canonical only": "仅 canonical",
+    "canonical deploy": "canonical 部署",
+    "17 canonical": "17 个 canonical",
+    "system roots only": "仅 system 根",
+    "single home dir": "单一主目录",
+    "single tree": "单一目录树",
+    "scope order": "作用域顺序",
+    "source order": "源顺序",
+    "higher scope wins": "高作用域优先",
+    "scope precedence": "作用域优先级",
+    "last write": "后写胜出",
+    "merge by name+priority": "按名+优先级合并",
+    "incremental listing": "增量 listing",
+    "watcher refresh": "watcher 刷新",
+    "on change": "变更时",
+    "on file_read": "file_read 时",
+    "session frozen": "session 冻结",
+    "index at session": "session 建索引",
+    "scan at session": "session 扫描",
+    "scan at load": "加载时扫描",
+    "load at start": "启动时加载",
+    "snapshot at session start": "session 开始时快照",
+    "next-turn refresh": "下轮刷新",
+    "per-turn delta": "每轮增量",
+    "per-turn inject": "每轮注入",
+    "pipeline rebuild": "pipeline 重建",
+    "sync interval": "同步间隔",
+    "session isolated": "session 隔离",
+    "cloud sync": "云同步",
+    "cloud catalog": "云目录",
+    "cloud deploy": "云部署",
+    "cloud origin": "云来源",
+    "remote node refresh": "远程节点刷新",
+    "hub install": "hub 安装",
+    "open-skills sync": "open-skills 同步",
+    "agent-created": "Agent 创建",
+    "agent patch": "Agent patch",
+    "crystallized SOP": "结晶 SOP",
+    "seed SOPs": "种子 SOP",
+    "lowest priority": "最低优先级",
+    "workspace highest": "工作区最高",
+    "workspace over remote": "工作区高于远程",
+    "WORKSPACE highest": "WORKSPACE 最高",
+    "memory/ listing": "memory/ 列表",
+    "memory/ user": "memory/ 用户",
+    "L1 index": "L1 索引",
+    "L-tier": "L 层级",
+    "metadata block": "元数据块",
+    "metadata index": "元数据索引",
+    "metadata XML": "元数据 XML",
+    "listing attachment": "listing 附件",
+    "listing metadata": "listing 元数据",
+    "memory dir list": "memory 目录列表",
+    "injector output": "injector 输出",
+    "full or compact": "完整或 compact",
+    "XML + user prefix": "XML + user prefix",
+    "compact XML": "compact XML",
+    "compact mode": "compact 模式",
+    "compact summary": "compact 摘要",
+    "compact injector": "compact injector",
+    "compact attachment": "compact 附件",
+    "compact hooks": "compact hooks",
+    "compact/full": "compact/完整",
+    "title only": "仅标题",
+    "read tool lazy": "read tool 懒加载",
+    "read tool": "read tool",
+    "read file": "read file",
+    "read content": "read content",
+    "read at location": "按路径 read",
+    "read→prompt": "read→prompt",
+    "Skill tool": "Skill tool",
+    "Skill tool body": "Skill tool 正文",
+    "Skill as tool": "Skill 即 tool",
+    "skills as tools": "skills 即 tools",
+    "skill_view body": "skill_view 正文",
+    "load_skill body": "load_skill 正文",
+    "load_skill result": "load_skill 结果",
+    "load_skill tool": "load_skill tool",
+    "load skill": "加载 skill",
+    "file_read path": "file_read 路径",
+    "file_read": "file_read",
+    "file tree": "文件树",
+    "file delete": "文件删除",
+    "file_patch": "file_patch",
+    "disabled gate": "disabled 门控",
+    "frontmatter hide": "frontmatter 隐藏",
+    "default expose": "默认暴露",
+    "initial catalog": "初始 catalog",
+    "shell pattern match": "shell 模式匹配",
+    "auto from desc": "描述自动触发",
+    "related_sop hint": "related_sop 提示",
+    "auto_trigger meta": "auto_trigger meta",
+    "mention / shell": "mention / shell",
+    "usage decay UI": "usage decay UI",
+    "slash / nudge": "slash / nudge",
+    "lexical leg": "词法 leg",
+    "semantic leg RRF": "语义 leg RRF",
+    "plugin slot": "plugin 槽位",
+    "model picks mention": "模型选 mention",
+    "agent picks SOP": "Agent 选 SOP",
+    "review agent": "review agent",
+    "Dream classify": "Dream 分类",
+    "NLU context": "NLU 上下文",
+    "shell regex": "shell 正则",
+    "skillFilter whitelist": "skillFilter 白名单",
+    "pinned always": "始终 pin",
+    "workshop regex": "workshop 正则",
+    "review prompt": "review prompt",
+    "goal mode": "goal 模式",
+    "auto_propose chains": "auto_propose 链",
+    "requires_tools gate": "requires_tools 门控",
+    "depends_on_tools soft": "depends_on_tools 软门控",
+    "7d decay score": "7 日 decay 分",
+    "session_search FTS": "session_search FTS",
+    "access stats": "访问统计",
+    "Dream co-occurrence": "Dream 共现",
+    "TUI enabled set": "TUI 启用集",
+    "survey apply": "survey 应用",
+    "agent config": "Agent 配置",
+    "device profile": "设备 profile",
+    "decay ranking": "decay 排序",
+    "decay sort": "decay 排序",
+    "trigger accuracy": "触发准确率",
+    "budget truncate": "预算截断",
+    "alpha + budget": "alpha + 预算",
+    "RRF fusion": "RRF 融合",
+    "top-k=5": "top-k=5",
+    "multi filter": "multi 过滤",
+    "2% / 8K cap": "2% / 8K 上限",
+    "attachment budget": "attachment 预算",
+    "150 / 18K cap": "150 / 18K 上限",
+    "size limit": "大小限制",
+    "anchor prompt": "anchor prompt",
+    "injector truncate": "injector 截断",
+    "mentioned only": "仅 mention",
+    "delta listing": "增量 listing",
+    "snapshot reuse": "快照复用",
+    "frozen index": "冻结索引",
+    "filter+inject": "filter+inject",
+    "user prefix": "user prefix",
+    "SkillsManager cache": "SkillsManager 缓存",
+    "sentSkillNames map": "sentSkillNames map",
+    "frozen prefix": "冻结 prefix",
+    "anchor rebuild": "anchor 重建",
+    "snapshot cache": "快照缓存",
+    "turn_skills config": "turn_skills 配置",
+    "per agentId map": "per agentId map",
+    "same index": "同一索引",
+    "agent FSM": "Agent FSM",
+    "session instance": "session 实例",
+    "child turn_skills": "子 turn_skills",
+    "frontmatter preload": "frontmatter 预载",
+    "filter inherit": "filter 继承",
+    "meta agent step": "meta agent 步骤",
+    "not in turn": "不在 turn 内",
+    "lazy default": "懒加载默认",
+    "ToolResult only": "仅 ToolResult",
+    "multi mention": "多 mention",
+    "multi invoked": "多 invoked",
+    "multi read": "多 read",
+    "multi view": "多 view",
+    "multi load": "多 load",
+    "meta parallel steps": "meta 并行步骤",
+    "MetaSkill steps": "MetaSkill 步骤",
+    "SOP chain": "SOP 链",
+    "MetaOrchestrator DAG": "MetaOrchestrator DAG",
+    "snapshot prompt": "快照 prompt",
+    "frozen memory": "冻结 memory",
+    "working dict": "working dict",
+    "prefix cache": "prefix 缓存",
+    "metadata cap": "元数据上限",
+    "per-skill cap": "每 skill 上限",
+    "char/skill cap": "字符/skill 上限",
+    "path compress": "路径压缩",
+    "history tags": "history 标签",
+    "session compact": "session compact",
+    "auto_compact": "auto_compact",
+    "LLM compact": "LLM compact",
+    "ContextCompressor": "ContextCompressor",
+    "compaction-safeguard": "compaction 防护",
+    "omit from catalog": "从 catalog 省略",
+    "binary search drop": "二分丢弃",
+    "gate disabled": "gate 禁用",
+    "skill_name_filter": "skill_name_filter",
+    "Task spawn": "Task 派生",
+    "Task tool isolate": "Task tool 隔离",
+    "subagent session": "subagent session",
+    "delegate_task": "delegate_task",
+    "subprocess": "subprocess",
+    "SubAgentRegistry": "SubAgentRegistry",
+    "run_subagent": "run_subagent",
+    "read/MCP": "read/MCP",
+    "skill_exec": "skill_exec",
+    "SkillToolHandler": "SkillToolHandler",
+    "update_plan": "update_plan",
+    "cron isolated": "cron 隔离",
+    "plan.md": "plan.md",
+    "MetaSkill": "MetaSkill",
+    "channel SOP": "channel SOP",
+    "generate_memories": "generate_memories",
+    "TodoWrite JSON": "TodoWrite JSON",
+    "memory search": "memory 搜索",
+    "MEMORY.md frozen": "MEMORY.md 冻结",
+    "L2/L3 SOP": "L2/L3 SOP",
+    "Dream→MEMORY": "Dream→MEMORY",
+    "fact extract": "fact 提取",
+    "MCP tools": "MCP tools",
+    "MCP in search": "MCP 搜索",
+    "MCP plugins": "MCP 插件",
+    "MCP planned": "MCP 规划中",
+    "Guardian approval": "Guardian 审批",
+    "Survey UI": "Survey UI",
+    "workshop pending": "workshop pending",
+    "gate refuse": "gate 拒绝",
+    "audit user": "audit 用户",
+    "SOP text": "SOP 文本",
+    "primary form": "主要形式",
+    "multi_agents": "multi_agents",
+    "subagent": "subagent",
+    "subagent spawn": "subagent 派生",
+    "subagent relay": "subagent 中继",
+    "team BBS": "team BBS",
+    "meta agent": "meta agent",
+    "meta steps": "meta 步骤",
+    "meta_invoke": "meta_invoke",
+    "implicit shell": "隐式 shell",
+    "zeroclaw CLI": "zeroclaw CLI",
+    "device SkillLoad": "device SkillLoad",
+    "human / skill-creator": "人工 / skill-creator",
+    "skillify / human": "skillify / 人工",
+    "workshop / human": "workshop / 人工",
+    "agent skill_manage": "agent skill_manage",
+    "agent crystallize": "agent 结晶",
+    "auto_propose / meta-creator": "auto_propose / meta-creator",
+    "human canonical": "人工 canonical",
+    "FS copy": "FS 复制",
+    "project add": "project 添加",
+    "ClawHub / extraDirs": "ClawHub / extraDirs",
+    "Hub install": "Hub 安装",
+    "Record&Replay": "Record&Replay",
+    "skillify session": "skillify session",
+    "workshop heuristic": "workshop 启发式",
+    "background review": "后台 review",
+    "long_term_update": "long_term_update",
+    "Dream / auto_propose": "Dream / auto_propose",
+    "project skills": "project skills",
+    "workspace files": "工作区文件",
+    "user workspace": "用户工作区",
+    "SOP write": "SOP 写入",
+    "workshop apply": "workshop 应用",
+    "Guardian (tools)": "Guardian (tools)",
+    "LLM reviewer": "LLM reviewer",
+    "bg review agent": "bg review agent",
+    "L0 protocol": "L0 协议",
+    "4-gate + E2E": "四关 + E2E",
+    "audit scan": "audit 扫描",
+    "TUI test / user": "TUI 测试 / 用户",
+    "user survey": "用户 survey",
+    "auto/manual policy": "自动/人工策略",
+    "agent self": "Agent 自审",
+    "gates.json pass": "gates.json 通过",
+    "user audit": "用户 audit",
+    "FS write": "FS 写入",
+    "apply patch": "应用 patch",
+    "apply proposal": "应用 proposal",
+    "immediate write": "立即写入",
+    "accept→MANAGED": "accept→MANAGED",
+    "disable toggle": "禁用开关",
+    "write_skill_enabled": "write_skill_enabled",
+    "cleanup SOP": "清理 SOP",
+    "reject": "reject",
+    "skill_manage delete": "skill_manage 删除",
+    "reject + rm": "reject + 删除",
+    "rm dir": "删除目录",
+    "quarantine store": "隔离存储",
+    "L4 sessions": "L4 sessions",
+    "proposals history": "proposals 历史",
+    "hygiene cron": "hygiene cron",
+    "JSONL log": "JSONL 日志",
+    "git / manual": "git / 人工",
+    "ReviewTask code": "ReviewTask 代码",
+    "5-turn hook": "5-turn hook",
+    "skillImprovement": "skillImprovement",
+    "workshop self": "workshop 自审",
+    "bg review": "bg review",
+    "reflect cron": "reflect cron",
+    "loop detect": "loop 检测",
+    "aux small model": "辅助小模型",
+    "E2E judge": "E2E judge",
+    "OpenClaw-RL ext": "OpenClaw-RL 扩展",
+    "RL tool": "RL tool",
+    "survey accept": "survey 接受",
+    "meta vs baseline": "meta vs baseline",
+    "JSON patches": "JSON patches",
+    "proposals store": "proposals 存储",
+    "direct create": "直接创建",
+    "SOP draft": "SOP 草稿",
+    "accept_proposal": "accept_proposal",
+    "append/replace": "append/replace",
+    "replace mode": "replace 模式",
+    "section patches": "section patches",
+    "meta rewrite": "meta 重写",
+    "Dream summary": "Dream 摘要",
+    "meta-skill-creator": "meta-skill-creator",
+    "after gates": "gate 之后",
+    "after survey": "survey 之后",
+    "auto policy": "自动策略",
+    "skill_manage": "skill_manage",
+    "integration tests": "集成测试",
+    "bench plan": "bench 计划",
+    "eval_prompts": "eval_prompts",
+    "session JSONL": "session JSONL",
+    "JSONL+DB": "JSONL+DB",
+    "decision log": "decision log",
+    "Rust tests": "Rust 测试",
+    "e2e ext": "e2e 扩展",
+    "runtime_e2e": "runtime_e2e",
+    "audit tests": "audit 测试",
+    "Atropos env": "Atropos 环境",
+    "usage decay": "usage decay",
+    "trigger acc": "trigger 准确率",
+    "economic": "economic",
+    "verify axiom": "verify 公理",
+    "gate metrics": "gate 指标",
+    "trajectory reward": "trajectory reward",
+    "RL reward": "RL reward",
+    "budget cap": "预算上限",
+    "attachment cap": "attachment 上限",
+    "char cap": "字符上限",
+    "SideQuery small": "SideQuery 小模型",
+    "bg async": "bg 异步",
+    "TUI approval": "TUI 审批",
+    "project scope": "project 作用域",
+    "tool allow": "tool 允许",
+    "tool + read": "tool + read",
+    "toolsets": "toolsets",
+    "policy chain": "policy 链",
+    "requires_tools": "requires_tools",
+    "scanner quarantine": "scanner 隔离",
+    "skills_guard": "skills_guard",
+    "hub quarantine": "hub 隔离",
+    "audit patterns": "audit 模式",
+    "skills/audit.rs": "skills/audit.rs",
+    "proposal metadata": "proposal 元数据",
+    "origin hash": "origin 哈希",
+    "proposal source": "proposal 来源",
+    "skill_catalog.json": "skill_catalog.json",
+    "ClawHub risk": "ClawHub 风险",
+    "CI structure": "CI 结构",
+    "team curated": "团队 curated",
+    "repo LICENSE": "repo LICENSE",
+    "L-tree": "L-tree",
+    "nested SOP": "嵌套 SOP",
+    "step refs": "step 引用",
+    "meta multi-skill": "meta 多 skill",
+    "filter diff": "filter 差异",
+    "child subset": "子集",
+    "preload list": "预载列表",
+    "tool result": "tool 结果",
+    "delegate summary": "delegate 摘要",
+    "subagent report": "subagent 报告",
+    "child no parent skills": "子无父 skills",
+    "sub context": "sub 上下文",
+    "subagent prompt": "subagent prompt",
+    "one-shot agent": "one-shot agent",
+    "thread history": "thread 历史",
+    "trajectory": "trajectory",
+    "session DB": "session DB",
+    "hybrid FTS+vec": "hybrid FTS+vec",
+    "hybrid chunks": "hybrid chunks",
+    "retrieval": "retrieval",
+    "skillImprove": "skillImprove",
+    "L3 SOP tree": "L3 SOP 树",
+    "memory hygiene": "memory hygiene",
+    "dispatch trace": "dispatch trace",
+    "session steps": "session steps",
+    "trajectory metadata": "trajectory 元数据",
+    "model log": "model 日志",
+    "PipelineStepRecord": "PipelineStepRecord",
+    "interaction_log": "interaction_log",
+    "tool log": "tool 日志",
+    "tool results": "tool 结果",
+    "trajectory tools": "trajectory tools",
+    "openclaw-trajectory": "openclaw-trajectory",
+    "Atropos traj": "Atropos traj",
+    "qa-lab": "qa-lab",
+    "env verify": "env verify",
+    "session replay": "session replay",
+    "decision replay": "decision replay",
+    "log replay": "log replay",
+    "trajectory export": "trajectory 导出",
+    "RL datasets": "RL datasets",
+    "OpenClaw-RL repo": "OpenClaw-RL repo",
+    "rl_training_tool": "rl_training_tool",
+    "traces only": "仅 traces",
+    "SOP mine": "SOP 挖掘",
+    "log only": "仅 log",
+    "best OSS": "最佳 OSS",
+    "pipeline log": "pipeline log",
+    "hooks": "hooks",
+    "9 atomic tools": "9 个原子 tools",
+    "BUNDLED layer": "BUNDLED 层",
+    "DAG steps": "DAG 步骤",
+    "Dream promote": "Dream 提升",
+    "EXPERIMENTAL search": "实验性 search",
+    "FS delete": "FS 删除",
+    "FSM agent": "FSM Agent",
+    "FTS5 search": "FTS5 搜索",
+    "JSONL export": "JSONL 导出",
+    "JSONL steps": "JSONL 步骤",
+    "L-tier tags": "L 层级 tags",
+    "L2 facts": "L2 事实",
+    "MD + YAML FM": "MD + YAML 前置元数据",
+    "MD SOP prose": "MD SOP 散文体",
+    "PERSONAL layer": "PERSONAL 个人层",
+    "SKILL.md dir": "SKILL.md 目录",
+    "SKILL.md file": "SKILL.md 文件",
+    "SOP title": "SOP 标题",
+    "SkillSpec typed": "SkillSpec 类型化",
+    "TUI skill toggle": "TUI skill 开关",
+    "UI skill picker": "UI skill 选择器",
+    "User/Repo/System/Admin": "User/Repo/System/Admin 作用域",
+    "`memory/` L0–L4 tree": "`memory/` L0–L4 树",
+    "`~/.hermes` scan": "`~/.hermes` 扫描",
+    "always-flag full": "always-flag 完整",
+    "bundled sync": "内置 sync",
+    "catalog desc": "catalog 描述",
+    "disableModelInvocation equiv": "disableModelInvocation 等价",
+    "facts": "事实",
+    "meta roles": "meta 角色",
+    "meta step params": "meta step 参数",
+    "meta step→skill ref": "meta step→skill 引用",
+    "model logs": "model 日志",
+    "per-agent ws": "per-agent 工作区",
+    "plan mode": "plan 模式",
+    "project/user/bundled/plugin roots": "project/user/bundled/plugin 根",
+    "session scan": "session 扫描",
+    "sync source": "同步 source",
+    "team topology": "team 拓扑",
+    "user created": "user 创建",
+    "user delete": "user 删除",
+    "version in manifest": "manifest 内版本"
+  },
+  "phrases": [
+    [
+      "every turn",
+      "每轮"
+    ],
+    [
+      "per-turn",
+      "每轮"
+    ],
+    [
+      "per turn",
+      "每轮"
+    ],
+    [
+      "per session",
+      "每 session"
+    ],
+    [
+      "per agent",
+      "每 Agent"
+    ],
+    [
+      "at session start",
+      "session 开始时"
+    ],
+    [
+      "session start",
+      "session 开始"
+    ],
+    [
+      "snapshot at",
+      "快照于"
+    ],
+    [
+      "snapshot version bump",
+      "快照版本递增"
+    ],
+    [
+      "version bump",
+      "版本递增"
+    ],
+    [
+      "workspace",
+      "工作区"
+    ],
+    [
+      "workshop",
+      "workshop 工坊"
+    ],
+    [
+      "proposals",
+      "proposals 候选"
+    ],
+    [
+      "background",
+      "后台"
+    ],
+    [
+      "canonical",
+      "canonical"
+    ],
+    [
+      "compact",
+      "compact"
+    ],
+    [
+      "frozen",
+      "冻结"
+    ],
+    [
+      "incremental",
+      "增量"
+    ],
+    [
+      "implicit",
+      "隐式"
+    ],
+    [
+      "explicit",
+      "显式"
+    ],
+    [
+      "experimental",
+      "实验"
+    ],
+    [
+      "external",
+      "外部"
+    ],
+    [
+      "isolated",
+      "隔离"
+    ],
+    [
+      "delegat",
+      "委托"
+    ],
+    [
+      "refresh",
+      "刷新"
+    ],
+    [
+      "scanner",
+      "scanner"
+    ],
+    [
+      "quarantine",
+      "隔离"
+    ],
+    [
+      "audit",
+      "audit"
+    ],
+    [
+      "review",
+      "review"
+    ],
+    [
+      "approve",
+      "批准"
+    ],
+    [
+      "publish",
+      "发布"
+    ],
+    [
+      "deprecated",
+      "弃用"
+    ],
+    [
+      "archived",
+      "归档"
+    ],
+    [
+      "rollback",
+      "回滚"
+    ],
+    [
+      "benchmark",
+      "基准"
+    ],
+    [
+      "regression",
+      "回归"
+    ],
+    [
+      "replay",
+      "回放"
+    ],
+    [
+      "simulation",
+      "仿真"
+    ],
+    [
+      "sandbox",
+      "沙箱"
+    ],
+    [
+      "offline",
+      "离线"
+    ],
+    [
+      "online",
+      "在线"
+    ],
+    [
+      "compatible",
+      "兼容"
+    ],
+    [
+      "partial",
+      "部分"
+    ],
+    [
+      "primary",
+      "主要"
+    ],
+    [
+      "secondary",
+      "次要"
+    ],
+    [
+      "planned",
+      "规划中"
+    ],
+    [
+      "needed",
+      "待建"
+    ],
+    [
+      "issue:",
+      "问题:"
+    ],
+    [
+      "highest",
+      "最高"
+    ],
+    [
+      "lowest",
+      "最低"
+    ],
+    [
+      "over remote",
+      "高于远程"
+    ],
+    [
+      "wins",
+      "优先"
+    ],
+    [
+      "watcher",
+      "watcher"
+    ],
+    [
+      "listing",
+      "listing"
+    ],
+    [
+      "injector",
+      "injector"
+    ],
+    [
+      "metadata",
+      "元数据"
+    ],
+    [
+      "description",
+      "描述"
+    ],
+    [
+      "trigger",
+      "触发"
+    ],
+    [
+      "routing signal",
+      "路由信号"
+    ],
+    [
+      "catalog",
+      "catalog"
+    ],
+    [
+      "summary",
+      "摘要"
+    ],
+    [
+      "disclosure",
+      "披露"
+    ],
+    [
+      "invocation",
+      "调用"
+    ],
+    [
+      "recommendation",
+      "推荐"
+    ],
+    [
+      "ranking",
+      "排序"
+    ],
+    [
+      "budget",
+      "预算"
+    ],
+    [
+      "truncate",
+      "截断"
+    ],
+    [
+      "compression",
+      "压缩"
+    ],
+    [
+      "summarization",
+      "摘要化"
+    ],
+    [
+      "pruning",
+      "剪枝"
+    ],
+    [
+      "offload",
+      "卸载"
+    ],
+    [
+      "subagent",
+      "subagent"
+    ],
+    [
+      "crystallize",
+      "结晶"
+    ],
+    [
+      "crystallized",
+      "结晶"
+    ],
+    [
+      "evolution",
+      "进化"
+    ],
+    [
+      "governance",
+      "治理"
+    ],
+    [
+      "permission",
+      "权限"
+    ],
+    [
+      "capability",
+      "能力"
+    ],
+    [
+      "provenance",
+      "溯源"
+    ],
+    [
+      "marketplace",
+      "市场"
+    ],
+    [
+      "license",
+      "许可证"
+    ],
+    [
+      "dependency",
+      "依赖"
+    ],
+    [
+      "complementary",
+      "互补"
+    ],
+    [
+      "alternative",
+      "替代"
+    ],
+    [
+      "shared",
+      "共享"
+    ],
+    [
+      "private",
+      "私有"
+    ],
+    [
+      "isolation",
+      "隔离"
+    ],
+    [
+      "negotiation",
+      "协商"
+    ],
+    [
+      "transfer",
+      "传递"
+    ],
+    [
+      "broadcast",
+      "广播"
+    ],
+    [
+      "episodic",
+      "情节"
+    ],
+    [
+      "semantic",
+      "语义"
+    ],
+    [
+      "vector",
+      "向量"
+    ],
+    [
+      "long-term",
+      "长期"
+    ],
+    [
+      "reflection",
+      "反思"
+    ],
+    [
+      "teacher",
+      "教师"
+    ],
+    [
+      "preference",
+      "偏好"
+    ],
+    [
+      "pairwise",
+      "成对"
+    ],
+    [
+      "candidate",
+      "候选"
+    ],
+    [
+      "merge",
+      "合并"
+    ],
+    [
+      "split",
+      "拆分"
+    ],
+    [
+      "rewrite",
+      "重写"
+    ],
+    [
+      "summarize",
+      "摘要"
+    ],
+    [
+      "refactor",
+      "重构"
+    ],
+    [
+      "latency",
+      "延迟"
+    ],
+    [
+      "success rate",
+      "成功率"
+    ],
+    [
+      "token cost",
+      "Token 成本"
+    ],
+    [
+      "step trace",
+      "Step 轨迹"
+    ],
+    [
+      "tool trace",
+      "Tool 轨迹"
+    ],
+    [
+      "verifier",
+      "验证器"
+    ],
+    [
+      "dataset",
+      "数据集"
+    ],
+    [
+      "skillify",
+      "skillify"
+    ],
+    [
+      "skill manage",
+      "skill_manage"
+    ],
+    [
+      "skill manage",
+      "skill_manage"
+    ],
+    [
+      "skill_view",
+      "skill_view"
+    ],
+    [
+      "load_skill",
+      "load_skill"
+    ],
+    [
+      "filter_skills",
+      "filter_skills"
+    ],
+    [
+      "runs_on",
+      "runs_on"
+    ],
+    [
+      "depends_on_tools",
+      "depends_on_tools"
+    ],
+    [
+      "interaction log",
+      "interaction_log"
+    ],
+    [
+      "decision log",
+      "decision log"
+    ],
+    [
+      "user prefix",
+      "user prefix"
+    ],
+    [
+      "cloud catalog",
+      "云目录"
+    ],
+    [
+      "agent-created",
+      "Agent 创建"
+    ],
+    [
+      "agent patch",
+      "Agent patch"
+    ],
+    [
+      "6-level explicit",
+      "六级显式"
+    ],
+    [
+      "6-level",
+      "六级"
+    ],
+    [
+      "4-gate",
+      "四关"
+    ],
+    [
+      "multi-root",
+      "多根"
+    ],
+    [
+      "6-source",
+      "六源"
+    ],
+    [
+      "6-layer",
+      "六层"
+    ],
+    [
+      "17 canonical",
+      "17 个 canonical"
+    ],
+    [
+      "open-skills",
+      "open-skills"
+    ],
+    [
+      "zeroclaw-skills",
+      "zeroclaw-skills"
+    ],
+    [
+      "skills_sync",
+      "skills_sync"
+    ],
+    [
+      "file_patch",
+      "file_patch"
+    ],
+    [
+      "Record&Replay",
+      "Record&Replay"
+    ],
+    [
+      "skillImprovement",
+      "skillImprovement"
+    ],
+    [
+      "skillImprove",
+      "skillImprove"
+    ],
+    [
+      "MetaOrchestrator",
+      "MetaOrchestrator"
+    ],
+    [
+      "MetaSkill",
+      "MetaSkill"
+    ],
+    [
+      "SkillsManager",
+      "SkillsManager"
+    ],
+    [
+      "sentSkillNames",
+      "sentSkillNames"
+    ],
+    [
+      "Toollery decide",
+      "Toollery 决策"
+    ],
+    [
+      "Toollery hook",
+      "Toollery hook"
+    ],
+    [
+      "Toollery",
+      "Toollery"
+    ],
+    [
+      "Guardian",
+      "Guardian"
+    ],
+    [
+      "Dream",
+      "Dream"
+    ],
+    [
+      "Atropos",
+      "Atropos"
+    ],
+    [
+      "ClawHub",
+      "ClawHub"
+    ],
+    [
+      "Hermes Hub",
+      "Hermes Hub"
+    ],
+    [
+      "zeroclaw",
+      "zeroclaw"
+    ],
+    [
+      "OpenSquilla",
+      "OpenSquilla"
+    ],
+    [
+      "GenericAgent",
+      "GenericAgent"
+    ],
+    [
+      "OpenClaw",
+      "OpenClaw"
+    ],
+    [
+      "Codex",
+      "Codex"
+    ],
+    [
+      "project dir",
+      "project 目录"
+    ],
+    [
+      "user dir",
+      "user 目录"
+    ],
+    [
+      "repo scope",
+      "repo 作用域"
+    ],
+    [
+      "User scope",
+      "User 作用域"
+    ],
+    [
+      "System scope",
+      "System 作用域"
+    ],
+    [
+      "Admin scope",
+      "Admin 作用域"
+    ],
+    [
+      "project vs bundled",
+      "project vs 内置"
+    ],
+    [
+      "bundled vs user",
+      "内置 vs 用户"
+    ],
+    [
+      "managed + bundled",
+      "托管 + 内置"
+    ],
+    [
+      "managed tiers",
+      "托管层级"
+    ],
+    [
+      "registry disclaimer",
+      "注册表免责声明"
+    ],
+    [
+      "team curated",
+      "团队 curated"
+    ],
+    [
+      "human written",
+      "人工编写"
+    ],
+    [
+      "AI written",
+      "AI 编写"
+    ],
+    [
+      "human canonical",
+      "人工 canonical"
+    ],
+    [
+      "immediate write",
+      "立即写入"
+    ],
+    [
+      "lock SHA pin",
+      "lock SHA 锁定"
+    ],
+    [
+      "lock SHA",
+      "lock SHA"
+    ],
+    [
+      "schema v11",
+      "schema v11"
+    ],
+    [
+      "snapshot v11 cache",
+      "snapshot v11 缓存"
+    ],
+    [
+      "filter+inject",
+      "filter+inject"
+    ],
+    [
+      "★ filter+inject",
+      "★ filter+inject"
+    ],
+    [
+      "★ every turn",
+      "★ 每轮"
+    ],
+    [
+      "★ per-turn pipeline",
+      "★ 每轮 pipeline"
+    ],
+    [
+      "★ user prefix",
+      "★ user prefix"
+    ],
+    [
+      "★ RRF fusion",
+      "★ RRF 融合"
+    ],
+    [
+      "★ semantic leg RRF",
+      "★ 语义 leg RRF"
+    ],
+    [
+      "★ 7d decay score",
+      "★ 7 日 decay 分"
+    ],
+    [
+      "★ delta listing",
+      "★ 增量 listing"
+    ],
+    [
+      "★ mentioned only",
+      "★ 仅 mention"
+    ],
+    [
+      "★ snapshot",
+      "★ 快照"
+    ],
+    [
+      "★ skillFilter",
+      "★ skillFilter"
+    ],
+    [
+      "★ frontmatter preload",
+      "★ frontmatter 预载"
+    ],
+    [
+      "★ child turn_skills",
+      "★ 子 turn_skills"
+    ],
+    [
+      "★ Task spawn",
+      "★ Task 派生"
+    ],
+    [
+      "★ Task tool isolate",
+      "★ Task tool 隔离"
+    ],
+    [
+      "★ delegate_task",
+      "★ delegate_task"
+    ],
+    [
+      "★ L2/L3 SOP",
+      "★ L2/L3 SOP"
+    ],
+    [
+      "★ MCP tools",
+      "★ MCP tools"
+    ],
+    [
+      "★ MCP",
+      "★ MCP"
+    ],
+    [
+      "★ Survey UI",
+      "★ Survey UI"
+    ],
+    [
+      "★ injected",
+      "★ 注入"
+    ],
+    [
+      "★ update_plan",
+      "★ update_plan"
+    ],
+    [
+      "★ primary",
+      "★ 主要"
+    ],
+    [
+      "★ primary form",
+      "★ 主要形式"
+    ],
+    [
+      "★ multi_agents",
+      "★ multi_agents"
+    ],
+    [
+      "★ subagent",
+      "★ subagent"
+    ],
+    [
+      "★ agent skill_manage",
+      "★ agent skill_manage"
+    ],
+    [
+      "★ agent crystallize",
+      "★ agent crystallize"
+    ],
+    [
+      "★ project skills",
+      "★ project skills"
+    ],
+    [
+      "★ SOP write",
+      "★ SOP write"
+    ],
+    [
+      "★ skill_manage",
+      "★ skill_manage"
+    ],
+    [
+      "★ file_patch",
+      "★ file_patch"
+    ],
+    [
+      "★ 5-turn hook",
+      "★ 5-turn hook"
+    ],
+    [
+      "★ review prompt",
+      "★ review prompt"
+    ],
+    [
+      "★ Dream",
+      "★ Dream"
+    ],
+    [
+      "★ bg review",
+      "★ bg review"
+    ],
+    [
+      "★ eval_prompts",
+      "★ eval_prompts"
+    ],
+    [
+      "★ extensive",
+      "★ 广泛"
+    ],
+    [
+      "★ runtime_e2e",
+      "★ runtime_e2e"
+    ],
+    [
+      "★ meta vs baseline",
+      "★ meta vs baseline"
+    ],
+    [
+      "★ MetaSkill steps",
+      "★ MetaSkill 步骤"
+    ],
+    [
+      "★ MetaOrchestrator DAG",
+      "★ MetaOrchestrator DAG"
+    ],
+    [
+      "★ MetaOrchestrator",
+      "★ MetaOrchestrator"
+    ],
+    [
+      "★ MetaSkill",
+      "★ MetaSkill"
+    ],
+    [
+      "★ meta_invoke",
+      "★ meta_invoke"
+    ],
+    [
+      "★ hybrid FTS+vec",
+      "★ hybrid FTS+vec"
+    ],
+    [
+      "★ retrieval",
+      "★ retrieval"
+    ],
+    [
+      "★ frozen prefix",
+      "★ 冻结 prefix"
+    ],
+    [
+      "★ LLM compact",
+      "★ LLM compact"
+    ],
+    [
+      "★ load_skill",
+      "★ load_skill"
+    ],
+    [
+      "★ implicit shell",
+      "★ 隐式 shell"
+    ],
+    [
+      "★ default",
+      "★ 默认"
+    ],
+    [
+      "★ default expose",
+      "★ 默认暴露"
+    ],
+    [
+      "★ initial catalog",
+      "★ 初始 catalog"
+    ],
+    [
+      "★ listing→tool",
+      "★ listing→tool"
+    ],
+    [
+      "★ catalog→read",
+      "★ catalog→read"
+    ],
+    [
+      "★ list→view",
+      "★ list→view"
+    ],
+    [
+      "★ compact→view",
+      "★ compact→view"
+    ],
+    [
+      "★ catalog→load_skill",
+      "★ catalog→load_skill"
+    ],
+    [
+      "★ desc→full",
+      "★ desc→full"
+    ],
+    [
+      "★ implicit shell",
+      "★ 隐式 shell"
+    ],
+    [
+      "★ shell pattern match",
+      "★ shell 模式匹配"
+    ],
+    [
+      "★ Skill tool slash",
+      "★ Skill tool slash"
+    ],
+    [
+      "★ `/` `@skill`",
+      "★ `/` `@skill`"
+    ],
+    [
+      "★ `/<skill>`",
+      "★ `/<skill>`"
+    ],
+    [
+      "★ repo ",
+      "★ 仓库 "
+    ],
+    [
+      "★ project dir",
+      "★ project 目录"
+    ],
+    [
+      "★ user dir",
+      "★ user 目录"
+    ],
+    [
+      "★ User scope",
+      "★ User 作用域"
+    ],
+    [
+      "★ System scope",
+      "★ System 作用域"
+    ],
+    [
+      "★ workspace",
+      "★ 工作区"
+    ],
+    [
+      "★ WORKSPACE layer",
+      "★ WORKSPACE 层"
+    ],
+    [
+      "★ `~/.hermes`",
+      "★ `~/.hermes`"
+    ],
+    [
+      "★ bundled",
+      "★ 内置"
+    ],
+    [
+      "★ system",
+      "★ system"
+    ],
+    [
+      "★ system/",
+      "★ system/"
+    ],
+    [
+      "★ skills_sync",
+      "★ skills_sync"
+    ],
+    [
+      "★ zeroclaw-skills",
+      "★ zeroclaw-skills"
+    ],
+    [
+      "★ cloud catalog + device",
+      "★ 云目录 + 设备"
+    ],
+    [
+      "★ agent-created",
+      "★ Agent 创建"
+    ],
+    [
+      "★ crystallized SOP",
+      "★ 结晶 SOP"
+    ],
+    [
+      "★ 6-level explicit",
+      "★ 六级显式"
+    ],
+    [
+      "★同名高优先级覆盖",
+      "★ 同名高优先级覆盖"
+    ],
+    [
+      "★ chokidar",
+      "★ chokidar"
+    ],
+    [
+      "★ snapshot at session start",
+      "★ session 开始时快照"
+    ],
+    [
+      "★ next-turn refresh",
+      "★ 下轮刷新"
+    ],
+    [
+      "★ frontmatter hide",
+      "★ frontmatter 隐藏"
+    ],
+    [
+      "★ attachment",
+      "★ attachment"
+    ],
+    [
+      "★ Skill tool",
+      "★ Skill tool"
+    ],
+    [
+      "★ load_skill",
+      "★ load_skill"
+    ],
+    [
+      "★ top-k=5",
+      "★ top-k=5"
+    ],
+    [
+      "★ delegate",
+      "★ delegate"
+    ],
+    [
+      "★ sub context",
+      "★ sub 上下文"
+    ],
+    [
+      "★ subagent prompt",
+      "★ subagent prompt"
+    ],
+    [
+      "★ child no parent skills",
+      "★ 子无父 skills"
+    ],
+    [
+      "★ PipelineStepRecord",
+      "★ PipelineStepRecord"
+    ],
+    [
+      "★ trajectory metadata",
+      "★ trajectory 元数据"
+    ],
+    [
+      "★ openclaw-trajectory",
+      "★ openclaw-trajectory"
+    ],
+    [
+      "★ Atropos",
+      "★ Atropos"
+    ],
+    [
+      "★ best OSS",
+      "★ 最佳 OSS"
+    ],
+    [
+      "★ pipeline log",
+      "★ pipeline log"
+    ],
+    [
+      "★ MetaSkill type",
+      "★ MetaSkill 类型"
+    ],
+    [
+      "★ meta steps",
+      "★ meta 步骤"
+    ],
+    [
+      "★ preload list",
+      "★ 预载列表"
+    ],
+    [
+      "★ hybrid",
+      "★ hybrid"
+    ],
+    [
+      "★ decay ranking",
+      "★ decay 排序"
+    ],
+    [
+      "★ 2% / 8K cap",
+      "★ 2% / 8K 上限"
+    ],
+    [
+      "◐ Record&Replay",
+      "◐ Record&Replay"
+    ],
+    [
+      "◐ skillify",
+      "◐ skillify"
+    ],
+    [
+      "◐ patches",
+      "◐ patches"
+    ],
+    [
+      "◐ workshop apply",
+      "◐ workshop 应用"
+    ],
+    [
+      "◐ watcher",
+      "◐ watcher"
+    ],
+    [
+      "◐ delta listing",
+      "◐ 增量 listing"
+    ],
+    [
+      "◐ snapshot reuse",
+      "◐ 快照复用"
+    ],
+    [
+      "◐ filter inherit",
+      "◐ filter 继承"
+    ],
+    [
+      "◐ delegate",
+      "◐ delegate"
+    ],
+    [
+      "◐ spawn",
+      "◐ spawn"
+    ],
+    [
+      "◐ per-turn prefix",
+      "◐ 每轮 prefix"
+    ],
+    [
+      "◐ sync interval",
+      "◐ 同步间隔"
+    ],
+    [
+      "◐ implicit",
+      "◐ 隐式"
+    ],
+    [
+      "◐ lexical leg",
+      "◐ 词法 leg"
+    ],
+    [
+      "◐ plugin slot",
+      "◐ plugin 槽位"
+    ],
+    [
+      "◐ auto from desc",
+      "◐ 描述自动触发"
+    ],
+    [
+      "◐ auto_trigger meta",
+      "◐ auto_trigger meta"
+    ],
+    [
+      "◐ Toollery decide",
+      "◐ Toollery 决策"
+    ],
+    [
+      "◐ access stats",
+      "◐ 访问统计"
+    ],
+    [
+      "◐ stats",
+      "◐ 统计"
+    ],
+    [
+      "◐ decay sort",
+      "◐ decay 排序"
+    ],
+    [
+      "◐ embedding",
+      "◐ embedding"
+    ],
+    [
+      "◐ multi filter",
+      "◐ multi 过滤"
+    ],
+    [
+      "◐ dreaming",
+      "◐ dreaming"
+    ],
+    [
+      "◐ trajectory",
+      "◐ trajectory"
+    ],
+    [
+      "◐ RL tool",
+      "◐ RL tool"
+    ],
+    [
+      "◐ after survey",
+      "◐ survey 之后"
+    ],
+    [
+      "◐ auto policy",
+      "◐ 自动策略"
+    ],
+    [
+      "◐ patches",
+      "◐ patches"
+    ],
+    [
+      "◐ interaction_log",
+      "◐ interaction_log"
+    ],
+    [
+      "◐ traces only",
+      "◐ 仅 traces"
+    ],
+    [
+      "◐ traj no SkillBank",
+      "◐ traj 无 SkillBank"
+    ],
+    [
+      "◐ SOP mine",
+      "◐ SOP 挖掘"
+    ],
+    [
+      "◐ log only",
+      "◐ 仅 log"
+    ],
+    [
+      "◐ hooks",
+      "◐ hooks"
+    ],
+    [
+      "◐ MCP",
+      "◐ MCP"
+    ],
+    [
+      "◐ spawn",
+      "◐ spawn"
+    ],
+    [
+      "◐ filter inherit",
+      "◐ filter 继承"
+    ],
+    [
+      "◐ issue: symlink",
+      "◐ 问题: symlink"
+    ],
+    [
+      "◐ manifest field",
+      "◐ manifest 字段"
+    ],
+    [
+      "◐ manifest origin hash",
+      "◐ manifest origin 哈希"
+    ],
+    [
+      "◐ snapshot version#",
+      "◐ snapshot 版本#"
+    ],
+    [
+      "◐ roadmap P3",
+      "◐ 路线图 P3"
+    ],
+    [
+      "◐ L-tree parent/child",
+      "◐ L-tree 父子"
+    ],
+    [
+      "◐ integration",
+      "◐ 集成"
+    ],
+    [
+      "◐ ",
+      "◐ "
+    ],
+    [
+      "❌ needed",
+      "❌ 待建"
+    ],
+    [
+      "❌ rescans only",
+      "❌ 仅重扫"
+    ],
+    [
+      "· session isolated",
+      "· session 隔离"
+    ],
+    [
+      "· frozen index",
+      "· 冻结索引"
+    ],
+    [
+      "· session",
+      "· session"
+    ],
+    [
+      "· ",
+      "· "
+    ]
+  ]
+}

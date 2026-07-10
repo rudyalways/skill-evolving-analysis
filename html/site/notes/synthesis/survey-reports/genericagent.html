@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GenericAgent 架构调研（4.8） — Skill-Evolving</title>
+  <link rel="alternate" hreflang="en" href="/html/site/notes/synthesis/survey-reports/genericagent.html">
+  <link rel="alternate" hreflang="zh-Hans" href="/html/site/zh/notes/synthesis/survey-reports/genericagent.html">
+  <link rel="alternate" hreflang="x-default" href="/html/site/notes/synthesis/survey-reports/genericagent.html">
+  <link rel="stylesheet" href="../../../../css/viewer.css">
+</head>
+<body class="page-compact page-survey-report" data-doc-locale="en" data-content-lang="en">
+  <div class="viewer-layout">
+    <nav>
+      <div data-lang-switch class="lang-switch-host"></div>
+      <h1 data-i18n="nav.docs">Docs</h1>
+      <div class="title" data-i18n="nav.rendered">Rendered HTML</div>
+      <section class="highlight-section"><h2 data-i18n="nav.compare">nav.compare</h2><ul><li><a href="../agent-skill-architecture-survey-matrix.html" data-i18n="nav.matrix165">nav.matrix165</a></li><li><a href="../skill-lifecycle-full-matrix.html" data-i18n="nav.lifecycle">nav.lifecycle</a></li><li><a href="../web-expanded-lifecycle-matrix-merged.html" data-i18n="nav.web_l3">nav.web_l3</a></li><li><a href="../eight-repo-comprehensive-survey.html" data-i18n="nav.survey20">nav.survey20</a></li><li><a href="../skill-lifecycle-and-dynamic-loading-survey.html" data-i18n="nav.per_turn">nav.per_turn</a></li><li><a href="../eight-repo-deep-source-analysis.html" data-i18n="nav.deep_source">nav.deep_source</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.per_repo">nav.per_repo</h2><ul><li><a href="./opensquilla.html">OpenSquilla (9.0)</a></li><li><a href="./hermes-agent.html">Hermes (8.1)</a></li><li><a href="./openclaw.html">OpenClaw (8.0)</a></li><li><a href="./claude-code-rev.html">Claude Rev (7.7)</a></li><li><a href="./codex.html">Codex (7.2)</a></li><li><a href="./taichu.html">TaiChu (5.0)</a></li><li><a href="./zeroclaw.html">ZeroClaw (5.0)</a></li><li><a class="active" href="./genericagent.html">GenericAgent (4.8)</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.papers">nav.papers</h2><ul><li><a href="../../../topics/skill-rl/overview.html">SkillRL</a></li><li><a href="../../../topics/claw-r1/overview.html">Claw-R1</a></li><li><a href="../comparison.html" data-i18n="nav.comparison">nav.comparison</a></li><li><a href="../combined-pipeline.html" data-i18n="nav.pipeline">nav.pipeline</a></li><li><a href="../l3-comprehensive-skill-analysis.html" data-i18n="nav.l3">nav.l3</a></li><li><a href="../taichu-p0-skill-compaction-spec.html" data-i18n="nav.taichu_p0">nav.taichu_p0</a></li></ul></section><section><h2 data-i18n="nav.more">More</h2><ul>
+    <li><a href="/html/docs.html" data-i18n="nav.sitemap">Sitemap</a></li>
+    <li><a href="/html/i18n-coverage.html" data-i18n="nav.i18n_coverage">i18n coverage</a></li>
+    <li><a href="/html/index.html" data-i18n="nav.dashboard">Dashboard</a></li>
+    <li><a href="/html/deck/index.html" data-i18n="nav.decks">Slide decks</a></li>
+  </ul></section>
+    </nav>
+    <div class="viewer-main">
+      <div class="viewer-toolbar">
+        <div>
+          <h1>GenericAgent 架构调研（4.8）</h1>
+          <div class="path">notes/synthesis/survey-reports/genericagent.md</div>
+        </div>
+        <a class="btn" href="/html/docs.html" data-i18n="toolbar.sitemap">Sitemap</a>
+        <a class="btn primary" href="../agent-skill-architecture-survey-matrix.html" data-i18n="toolbar.matrix">165-dim matrix</a>
+      </div>
+      <p id="i18n-fallback-notice" class="i18n-notice" hidden data-i18n="content.fallback">content.fallback</p>
+      <article class="md-body"><h1>GenericAgent 架构调研（4.8）</h1>
+<blockquote>
+<p><strong>Mine→Evolve SOP 哲学强，但非 SKILL.md 标准生命周期</strong><br>memory/*_sop.md L0–L4；crystallize 成功写 L2/L3；无 formal skill CRUD。</p>
+</blockquote>
+<blockquote>
+<p><strong>Local</strong>: <code>/Users/maybewu/Documents/Projects/oss/genericagent</code><br><strong>Upstream</strong>: <a href="https://github.com/lsdefine/genericagent">lsdefine/genericagent</a><br><strong>Paper</strong>: <a href="https://arxiv.org/abs/2604.17091">arXiv:2604.17091</a><br><strong>Matrix</strong>: <a href="../agent-skill-architecture-survey-matrix.html">agent-skill-architecture-survey-matrix.md</a></p>
+</blockquote>
+<h2>1. Architecture</h2>
+<p class="zh-lead"><strong>中文</strong> 非 SKILL.md：L-tier memory 树 + anchor prompt 每 10 turn。</p>
+
+
+<p>Minimal Python framework (~3K LOC seed): <strong>9 atomic tools</strong> + ~100-line agent loop. <strong>Does not use SKILL.md</strong> — skills are <strong><code>memory/*_sop.md</code> procedures</strong> in an L0–L4 tiered tree, loaded on demand via <code>file_read</code>. Philosophy: <strong>don&#39;t preload skills, evolve them</strong> by crystallizing execution paths after tasks.</p>
+<pre><code class="language-text">Task → agent loop → file_read(SOP) on demand
+        ↓ success
+start_long_term_update → L2/L3 memory (action-verified)
+        ↓
+personal skill tree grows
+</code></pre>
+<details class="evidence-block"><summary>💬 引用 / Quote</summary><pre><code class="language-markdown"># README.md:38-40
+&gt; Design philosophy — **don&#39;t preload skills, evolve them.**
+Every time GenericAgent solves a new task, it automatically crystallizes the
+execution path into a reusable **Skill**.
+</code></pre></details>
+<p><strong>Evidence</strong>: <code>ga.py</code>, <code>memory/memory_management_sop.md</code>, <code>agent_loop.py</code></p>
+<h2>2. Skill Runtime</h2>
+<p class="zh-lead"><strong>中文</strong> file_read 加载 SOP；related_sop 弱推荐。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Pattern</th>
+<th>Implementation</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Discovery</td>
+<td>L1 index ≤30 lines → pick SOP</td>
+<td><code>memory_management_sop.md</code></td>
+</tr>
+<tr>
+<td>Load</td>
+<td><code>file_read</code> full SOP</td>
+<td><code>ga.py:423-425</code></td>
+</tr>
+<tr>
+<td>Anchor prompt</td>
+<td>rebuild working memory; <strong>only latest user msg to API</strong></td>
+<td><code>ga.py:539-549</code></td>
+</tr>
+<tr>
+<td>Per-turn catalog</td>
+<td>· related_sop hints</td>
+<td><code>ga.py:547</code></td>
+</tr>
+<tr>
+<td>Access stats</td>
+<td><code>file_access_stats.json</code> weak ranking</td>
+<td><code>log_memory_access</code></td>
+</tr>
+</tbody></table></div>
+<p><strong>Quote — anchor cost control</strong></p>
+<p>Only latest user message sent to API after anchor rebuild — <strong>6× token reduction</strong> claimed in README (L0 marketing; mechanism in <code>ga.py</code> L3).</p>
+<p><strong>Standout</strong>: Skill Miner philosophy ★ · Token-efficient anchor ★<br><strong>Weakness</strong>: Not agentskills.io compatible · no gates</p>
+<h2>3. Skill Lifecycle</h2>
+<p class="zh-lead"><strong>中文</strong> start_long_term_update 验证后写；memory_cleanup_sop。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Stage</th>
+<th>GenericAgent</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Human seed</td>
+<td>L0 protocols in memory/</td>
+<td><code>memory/*.md</code></td>
+</tr>
+<tr>
+<td>AI crystallize</td>
+<td><code>start_long_term_update</code></td>
+<td><code>ga.py:508-523</code></td>
+</tr>
+<tr>
+<td>Verified write</td>
+<td>only <strong>action-verified</strong> axioms</td>
+<td><code>memory_management_sop.md</code></td>
+</tr>
+<tr>
+<td>Morphling</td>
+<td>long-horizon SOP <code>/morphling</code></td>
+<td><code>morphling_sop.md</code></td>
+</tr>
+<tr>
+<td>Formal approve/rollback</td>
+<td>·</td>
+<td>—</td>
+</tr>
+</tbody></table></div>
+<p><strong>Lifecycle score</strong>: <strong>7/13</strong> — strong mine/write; weak governance</p>
+<details class="evidence-block"><summary>💬 引用 / Quote</summary><pre><code class="language-python"># ga.py:508-523 (paraphrased from lifecycle survey)
+# start_long_term_update: agent self-trigger; only verified-success info → L2/L3
+</code></pre></details>
+<h2>4. Skill Evolution</h2>
+<p class="zh-lead"><strong>中文</strong> /morphling 结晶；plan mode plan.md checkpoint。</p>
+
+
+<p><strong>Closest to SkillRL &quot;trajectory → abstraction&quot; spirit</strong> among surveyed repos — but <strong>without</strong> formal candidate pool, eval harness, or versioned SkillBank.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Mechanism</th>
+<th>Path</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Crystallize on success</td>
+<td><code>start_long_term_update</code></td>
+</tr>
+<tr>
+<td>Goal Mode inspect/improve</td>
+<td><code>reflect/goal_mode.py</code></td>
+</tr>
+<tr>
+<td>Reflect scheduler</td>
+<td><code>reflect/scheduler.py</code></td>
+</tr>
+<tr>
+<td>Plan VERIFY gate</td>
+<td><code>ga.py:472-475</code></td>
+</tr>
+</tbody></table></div>
+<p><strong>Matrix §9</strong>: Reflection ◐ · Candidate ◐ (implicit) · Auto Patch ◐ · <strong>no</strong> merge/gate/RL</p>
+<h2>5. Multi-Agent Skill</h2>
+<p class="zh-lead"><strong>中文</strong> subprocess 隔离；team BBS。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Pattern</th>
+<th>Status</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Agent team BBS</td>
+<td>◐ coordination</td>
+<td><code>reflect/agent_team_worker.py</code></td>
+</tr>
+<tr>
+<td>Checklist subprocess</td>
+<td>◐ workers</td>
+<td>reflect/</td>
+</tr>
+<tr>
+<td>Skill bundles per role</td>
+<td>·</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Skill transfer</td>
+<td>· summary only</td>
+<td>—</td>
+</tr>
+</tbody></table></div>
+<p>Not a multi-agent <strong>skill architecture</strong> — team features are reflect-oriented.</p>
+<h2>6. Skill Governance</h2>
+<p class="zh-lead"><strong>中文</strong> L0 protocol；无 marketplace。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Control</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>L0 memory_management_sop protocol</td>
+<td>★ documentation</td>
+</tr>
+<tr>
+<td>Plan VERIFY</td>
+<td>◐ plan mode only</td>
+</tr>
+<tr>
+<td>Versioning / audit / trust tier</td>
+<td>·</td>
+</tr>
+<tr>
+<td>Critical skill protection</td>
+<td>·</td>
+</tr>
+</tbody></table></div>
+<p>Weakest governance in survey except evolution <strong>intent</strong>.</p>
+<h2>7. Harness Integration</h2>
+<p class="zh-lead"><strong>中文</strong> 9 atomic tools；reflect cron。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Path</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Agent loop</td>
+<td><code>agent_loop.py:42-107</code></td>
+</tr>
+<tr>
+<td>Handler dispatch</td>
+<td><code>ga.py</code> do_* tools</td>
+</tr>
+<tr>
+<td>Plugin hooks</td>
+<td><code>plugins/hooks.py</code> — agent/turn/tool events</td>
+</tr>
+<tr>
+<td>Reflect cron</td>
+<td><code>reflect/scheduler.py</code></td>
+</tr>
+<tr>
+<td>Context compress</td>
+<td><code>llmcore.py:40-111</code></td>
+</tr>
+</tbody></table></div>
+<p>Simple harness — useful as <strong>miner philosophy</strong>, not runtime template.</p>
+<h2>8. RL Readiness</h2>
+<p class="zh-lead"><strong>中文</strong> model log；无 RL pipeline。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Signal</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Model response logs</td>
+<td>◐ <code>temp/model_responses/</code></td>
+</tr>
+<tr>
+<td>Trajectory schema</td>
+<td>·</td>
+</tr>
+<tr>
+<td>Reward</td>
+<td>·</td>
+</tr>
+<tr>
+<td>SkillRL</td>
+<td>◐ conceptual (SOP mine)</td>
+</tr>
+<tr>
+<td>Claw-R1</td>
+<td>·</td>
+</tr>
+</tbody></table></div>
+<h2>9. Borrow for TaiChu</h2>
+<p class="zh-lead"><strong>中文</strong> 借 task→path→reusable skill Miner 思想。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Pattern</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Skill Miner: task→trajectory→candidate</td>
+<td>SkillRL alignment</td>
+</tr>
+<tr>
+<td>Action-verified write axiom</td>
+<td>only publish after regression pass</td>
+</tr>
+<tr>
+<td>L0 skill-update SOP markdown</td>
+<td>human-readable governance doc</td>
+</tr>
+<tr>
+<td>Anchor prompt pattern</td>
+<td>mobile token savings</td>
+</tr>
+<tr>
+<td>Reflect scheduler</td>
+<td>periodic review cron (HarmonyOS health)</td>
+</tr>
+<tr>
+<td><code>/morphling</code> long-horizon crystallize</td>
+<td>MetaSkill inspiration</td>
+</tr>
+</tbody></table></div>
+<h2>10. Implement in TaiChu</h2>
+<p class="zh-lead"><strong>中文</strong> P2 SOP 结晶流程；非 P0。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>P</th>
+<th>What</th>
+<th>Seam</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>P2</td>
+<td>FailureMiner / SuccessMiner on interaction_log</td>
+<td>post-turn job</td>
+</tr>
+<tr>
+<td>P2</td>
+<td>L0 <code>skill-update-sop.md</code> in docs</td>
+<td>docs/architecture</td>
+</tr>
+<tr>
+<td>P3</td>
+<td>Anchor-style context rebuild option</td>
+<td>session config</td>
+</tr>
+<tr>
+<td><strong>Never</strong></td>
+<td>direct crystallize → canonical</td>
+<td>use proposals path</td>
+</tr>
+</tbody></table></div>
+<h2>11. Do NOT Borrow</h2>
+<p class="zh-lead"><strong>中文</strong> 勿 ungated crystallize 直接生产。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Pattern</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Ungated <code>file_patch</code> to production SOP/skill</td>
+<td>固化错误 workaround</td>
+</tr>
+<tr>
+<td>Non-SKILL.md as primary format</td>
+<td>TaiChu standard is SKILL.md</td>
+</tr>
+<tr>
+<td>Sync blocking loop</td>
+<td>TaiChu is async Rust</td>
+</tr>
+</tbody></table></div>
+<h2>12. Score (1–10)</h2>
+<p class="zh-lead"><strong>中文</strong> 总分 4.8：理念强、标准 skill 生命周期弱。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Category</th>
+<th align="center">Score</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Data Model</td>
+<td align="center">5</td>
+<td>SOP not SKILL.md</td>
+</tr>
+<tr>
+<td>Runtime</td>
+<td align="center">5</td>
+<td>on-demand read; no catalog rank</td>
+</tr>
+<tr>
+<td>Lifecycle</td>
+<td align="center">7</td>
+<td>crystallize strong</td>
+</tr>
+<tr>
+<td>Evolution</td>
+<td align="center">6</td>
+<td>philosophy ★; engineering weak</td>
+</tr>
+<tr>
+<td>Governance</td>
+<td align="center">2</td>
+<td>protocol doc only</td>
+</tr>
+<tr>
+<td>Agent Integration</td>
+<td align="center">3</td>
+<td>weak multi-agent skills</td>
+</tr>
+<tr>
+<td>RL Readiness</td>
+<td align="center">2</td>
+<td>minimal</td>
+</tr>
+<tr>
+<td><strong>Overall</strong></td>
+<td align="center"><strong>4.8</strong></td>
+<td><strong>Best SkillRL-style miner inspiration</strong></td>
+</tr>
+</tbody></table></div>
+<h2>Evidence index</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Claim</th>
+<th>Path / URL</th>
+<th>Level</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>GA-01</td>
+<td>Don&#39;t preload, evolve</td>
+<td><code>README.md:38-40</code></td>
+<td>L0</td>
+</tr>
+<tr>
+<td>GA-02</td>
+<td>L0–L4 memory tiers</td>
+<td><code>memory/memory_management_sop.md</code></td>
+<td>L3</td>
+</tr>
+<tr>
+<td>GA-03</td>
+<td>start_long_term_update</td>
+<td><code>ga.py:508-523</code></td>
+<td>L3</td>
+</tr>
+<tr>
+<td>GA-04</td>
+<td>Plan VERIFY</td>
+<td><code>ga.py:472-475</code></td>
+<td>L3</td>
+</tr>
+<tr>
+<td>GA-05</td>
+<td>Paper</td>
+<td><a href="https://arxiv.org/abs/2604.17091">https://arxiv.org/abs/2604.17091</a></td>
+<td>L0</td>
+</tr>
+<tr>
+<td>GA-06</td>
+<td>Upstream</td>
+<td><a href="https://github.com/lsdefine/genericagent">https://github.com/lsdefine/genericagent</a></td>
+<td>L0</td>
+</tr>
+</tbody></table></div>
+</article>
+    </div>
+  </div>
+  <script src="../../../../js/i18n.js"></script>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
+  </script>
+</body>
+</html>

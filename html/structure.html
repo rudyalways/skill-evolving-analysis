@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Directory Map — Skill-Evolving Analysis</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body data-i18n-page="host" data-content-lang="en">
+  <div class="layout">
+    <nav>
+      <div data-lang-switch class="lang-switch-host"></div>
+      <h1 data-i18n="nav.research">Research</h1>
+      <div class="title" data-i18n="site.title">Skill-Evolving Analysis</div>
+      <section>
+        <h2 data-i18n="nav.overview">Overview</h2>
+        <ul>
+          <li><a href="index.html" data-page="index.html" data-i18n="nav.dashboard">Dashboard</a></li>
+          <li><a href="structure.html" data-page="structure.html" class="active" data-i18n="nav.directory">Directory map</a></li>
+          <li><a href="workflow.html" data-page="workflow.html" data-i18n="nav.workflow">Workflow</a></li>
+        </ul>
+      </section>
+    </nav>
+
+    <main>
+      <header class="page-header">
+        <h1 data-i18n="nav.directory">Directory map</h1>
+        <p><span data-lang-only="en">Where everything lives — expand as data accumulates</span><span data-lang-only="zh" hidden>各目录用途 — 随数据增长持续扩展</span></p>
+      </header>
+
+      <pre class="tree"><span class="dir">skill-evolving-analysis/</span>
+├── <span class="file">README.md</span>                 <span class="dir"># project intro + conventions</span>
+├── <span class="file">INDEX.md</span>                  <span class="dir"># master catalog — update for every artifact</span>
+│
+├── <span class="dir">config/</span>
+│   ├── <span class="file">tags.yaml</span>               <span class="dir"># taxonomy</span>
+│   └── <span class="file">metadata-schema.yaml</span>    <span class="dir"># frontmatter schema for .md entries</span>
+│
+├── <span class="dir">topics/</span>                     <span class="dir"># one folder per research thread</span>
+│   ├── <span class="dir">skill-rl/</span>           <span class="dir"># algorithm layer</span>
+│   │   └── <span class="file">overview.md</span>
+│   └── <span class="dir">claw-r1/</span>            <span class="dir"># infrastructure layer</span>
+│       └── <span class="file">overview.md</span>
+│
+├── <span class="dir">notes/</span>
+│   ├── <span class="dir">daily/</span>                  <span class="dir"># YYYY-MM-DD logs</span>
+│   └── <span class="dir">synthesis/</span>              <span class="dir"># cross-topic write-ups</span>
+│       └── <span class="file">comparison.md</span>
+│
+├── <span class="dir">data/</span>
+│   ├── <span class="dir">inbox/</span>                  <span class="dir"># ← DROP NEW FILES HERE</span>
+│   ├── <span class="dir">raw/</span>                    <span class="dir"># filed originals (never edit)</span>
+│   │   ├── <span class="dir">papers/</span>               <span class="dir"># PDFs, HTML snapshots</span>
+│   │   ├── <span class="dir">repos/</span>                <span class="dir"># cloned repos, exports</span>
+│   │   ├── <span class="dir">experiments/</span>          <span class="dir"># logs, JSONL, CSV</span>
+│   │   └── <span class="dir">web/</span>                  <span class="dir"># scraped pages, API dumps</span>
+│   ├── <span class="dir">processed/</span>              <span class="dir"># derived from raw</span>
+│   │   ├── <span class="dir">extractions/</span>          <span class="dir"># parsed text, structured JSON</span>
+│   │   ├── <span class="dir">tables/</span>               <span class="dir"># benchmark results, comparisons</span>
+│   │   └── <span class="dir">embeddings/</span>           <span class="dir"># vector indexes</span>
+│   └── <span class="dir">archive/</span>                <span class="dir"># superseded material</span>
+│
+├── <span class="dir">assets/</span>
+│   ├── <span class="dir">figures/</span>
+│   └── <span class="dir">screenshots/</span>
+│
+├── <span class="dir">html/</span>                       <span class="dir"># browsable dashboard</span>
+│   ├── <span class="file">index.html</span>
+│   ├── <span class="file">structure.html</span>
+│   ├── <span class="file">workflow.html</span>
+│   ├── <span class="dir">css/</span>
+│   └── <span class="dir">js/</span>
+│
+├── <span class="dir">templates/</span>                  <span class="dir"># copy for new entries</span>
+│   ├── <span class="file">paper-note.md</span>
+│   ├── <span class="file">data-entry.md</span>
+│   ├── <span class="file">experiment-log.md</span>
+│   └── <span class="file">daily-log.md</span>
+│
+└── <span class="dir">scripts/</span>
+    └── <span class="file">ingest.sh</span>               <span class="dir"># inbox → raw filing helper</span></pre>
+
+      <section class="block" style="margin-top:2rem">
+        <h2>Naming conventions</h2>
+        <table>
+          <thead>
+            <tr><th>Kind</th><th>Pattern</th><th>Example</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Paper PDF</td><td><code>YYYY-MM-shortname-source.ext</code></td><td><code>2026-02-skillrl-arxiv.pdf</code></td></tr>
+            <tr><td>Experiment log</td><td><code>YYYY-MM-DD-exp-name.jsonl</code></td><td><code>2026-07-08-alfworld-grpo.jsonl</code></td></tr>
+            <tr><td>Daily note</td><td><code>notes/daily/YYYY-MM-DD.md</code></td><td><code>notes/daily/2026-07-08.md</code></td></tr>
+            <tr><td>Extraction</td><td><code>data/processed/extractions/YYYY-MM-source/</code></td><td><code>.../2026-02-skillrl/sections.json</code></td></tr>
+            <tr><td>Entry ID</td><td><code>D-</code> data, <code>N-</code> note, <code>E-</code> experiment, <code>T</code> topic</td><td><code>D-2026-07-08-001</code></td></tr>
+          </tbody>
+        </table>
+      </section>
+    </main>
+  </div>
+  <script src="js/render.js"></script>
+  <script src="js/i18n.js"></script>
+  <script src="js/i18n.js"></script>
+</body>
+</html>

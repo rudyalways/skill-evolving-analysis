@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Codex 架构调研（7.2） — Skill-Evolving</title>
+  <link rel="alternate" hreflang="en" href="/html/site/notes/synthesis/survey-reports/codex.html">
+  <link rel="alternate" hreflang="zh-Hans" href="/html/site/zh/notes/synthesis/survey-reports/codex.html">
+  <link rel="alternate" hreflang="x-default" href="/html/site/notes/synthesis/survey-reports/codex.html">
+  <link rel="stylesheet" href="../../../../css/viewer.css">
+</head>
+<body class="page-compact page-survey-report" data-doc-locale="en" data-content-lang="en">
+  <div class="viewer-layout">
+    <nav>
+      <div data-lang-switch class="lang-switch-host"></div>
+      <h1 data-i18n="nav.docs">Docs</h1>
+      <div class="title" data-i18n="nav.rendered">Rendered HTML</div>
+      <section class="highlight-section"><h2 data-i18n="nav.compare">nav.compare</h2><ul><li><a href="../agent-skill-architecture-survey-matrix.html" data-i18n="nav.matrix165">nav.matrix165</a></li><li><a href="../skill-lifecycle-full-matrix.html" data-i18n="nav.lifecycle">nav.lifecycle</a></li><li><a href="../web-expanded-lifecycle-matrix-merged.html" data-i18n="nav.web_l3">nav.web_l3</a></li><li><a href="../eight-repo-comprehensive-survey.html" data-i18n="nav.survey20">nav.survey20</a></li><li><a href="../skill-lifecycle-and-dynamic-loading-survey.html" data-i18n="nav.per_turn">nav.per_turn</a></li><li><a href="../eight-repo-deep-source-analysis.html" data-i18n="nav.deep_source">nav.deep_source</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.per_repo">nav.per_repo</h2><ul><li><a href="./opensquilla.html">OpenSquilla (9.0)</a></li><li><a href="./hermes-agent.html">Hermes (8.1)</a></li><li><a href="./openclaw.html">OpenClaw (8.0)</a></li><li><a href="./claude-code-rev.html">Claude Rev (7.7)</a></li><li><a class="active" href="./codex.html">Codex (7.2)</a></li><li><a href="./taichu.html">TaiChu (5.0)</a></li><li><a href="./zeroclaw.html">ZeroClaw (5.0)</a></li><li><a href="./genericagent.html">GenericAgent (4.8)</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.papers">nav.papers</h2><ul><li><a href="../../../topics/skill-rl/overview.html">SkillRL</a></li><li><a href="../../../topics/claw-r1/overview.html">Claw-R1</a></li><li><a href="../comparison.html" data-i18n="nav.comparison">nav.comparison</a></li><li><a href="../combined-pipeline.html" data-i18n="nav.pipeline">nav.pipeline</a></li><li><a href="../l3-comprehensive-skill-analysis.html" data-i18n="nav.l3">nav.l3</a></li><li><a href="../taichu-p0-skill-compaction-spec.html" data-i18n="nav.taichu_p0">nav.taichu_p0</a></li></ul></section><section><h2 data-i18n="nav.more">More</h2><ul>
+    <li><a href="/html/docs.html" data-i18n="nav.sitemap">Sitemap</a></li>
+    <li><a href="/html/i18n-coverage.html" data-i18n="nav.i18n_coverage">i18n coverage</a></li>
+    <li><a href="/html/index.html" data-i18n="nav.dashboard">Dashboard</a></li>
+    <li><a href="/html/deck/index.html" data-i18n="nav.decks">Slide decks</a></li>
+  </ul></section>
+    </nav>
+    <div class="viewer-main">
+      <div class="viewer-toolbar">
+        <div>
+          <h1>Codex 架构调研（7.2）</h1>
+          <div class="path">notes/synthesis/survey-reports/codex.md</div>
+        </div>
+        <a class="btn" href="/html/docs.html" data-i18n="toolbar.sitemap">Sitemap</a>
+        <a class="btn primary" href="../agent-skill-architecture-survey-matrix.html" data-i18n="toolbar.matrix">165-dim matrix</a>
+      </div>
+      <p id="i18n-fallback-notice" class="i18n-notice" hidden data-i18n="content.fallback">content.fallback</p>
+      <article class="md-body"><h1>Codex 架构调研（7.2）</h1>
+<blockquote>
+<p><strong>SKILL.md 标准 + progressive disclosure + 2% ctx cap — 刻意不做 runtime evolve</strong><br>User/Repo/System/Admin scope；metadata block；@mention 全文注入；shell implicit invoke。</p>
+</blockquote>
+<blockquote>
+<p><strong>Local</strong>: <code>/Users/maybewu/Documents/Projects/oss/codex</code><br><strong>Upstream</strong>: <a href="https://github.com/openai/codex">openai/codex</a><br><strong>Official docs</strong>: <a href="https://developers.openai.com/codex/skills">Agent Skills – Codex</a><br><strong>Matrix</strong>: <a href="../agent-skill-architecture-survey-matrix.html">agent-skill-architecture-survey-matrix.md</a></p>
+</blockquote>
+<h2>1. Architecture</h2>
+<p class="zh-lead"><strong>中文</strong> skills/<name>/ 布局 + scripts/refs/assets/agents；Record&Replay 人工路径。</p>
+
+
+<p>Rust monorepo: <code>ThreadManager → Session → run_turn</code>. Skills live in <code>core-skills</code> crate with <strong>scope-based discovery</strong> (User/Repo/System/Admin), <strong>metadata budget</strong>, <strong>progressive disclosure</strong>, and <strong>per-turn injection</strong> for mentioned/implicit skills. Codex <strong>deliberately does not</strong> implement runtime skill self-evolution — skills are filesystem assets + optional Record &amp; Replay authoring.</p>
+<pre><code class="language-text">SkillsManager scan → AvailableSkills metadata (≤2% ctx)
+        ↓ explicit $skill or implicit match
+build_skill_injections() → full SKILL.md in user fragment (this turn only)
+</code></pre>
+<p><strong>Quote — official progressive disclosure</strong></p>
+<blockquote>
+<p><em>&quot;Skills use progressive disclosure to manage context efficiently: Codex starts with each skill&#39;s name, description, and file path. Codex loads the full SKILL.md instructions only when it decides to use a skill.&quot;</em><br>— <a href="https://developers.openai.com/codex/skills">developers.openai.com/codex/skills</a></p>
+</blockquote>
+<p><strong>Quote — metadata budget</strong></p>
+<blockquote>
+<p><em>&quot;this list uses at most 2% of the model&#39;s context window, or 8,000 characters when the context window is unknown.&quot;</em><br>— same URL</p>
+</blockquote>
+<h2>2. Skill Runtime</h2>
+<p class="zh-lead"><strong>中文</strong> 2% context / 8K budget 截断；watcher 刷新；child turn_skills 独立集。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Pattern</th>
+<th>Implementation</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Metadata budget</td>
+<td><code>SkillMetadataBudget</code>, truncate descriptions</td>
+<td><code>core-skills/src/render.rs</code>, <code>manager.rs</code></td>
+</tr>
+<tr>
+<td>Per-turn injection</td>
+<td>only mentioned/implicit skills this turn</td>
+<td><code>core-skills/src/injection.rs:57-80</code></td>
+</tr>
+<tr>
+<td>Implicit invoke</td>
+<td>shell command pattern → skill</td>
+<td><code>core/src/skills.rs:48-95</code></td>
+</tr>
+<tr>
+<td>Child turn_skills</td>
+<td>independent enable set per child</td>
+<td><code>core-skills/manager_tests.rs:805</code></td>
+</tr>
+<tr>
+<td>Progressive disclosure</td>
+<td>documented in render constants</td>
+<td><code>render.rs:27-43</code></td>
+</tr>
+</tbody></table></div>
+<details class="evidence-block"><summary>💬 引用 / Quote</summary><pre><code class="language-rust">// codex-rs/core-skills/src/render.rs:30-33
+// - How to use a skill (progressive disclosure):
+//   1) After deciding to use a skill, open its `SKILL.md`. Read only enough to follow the workflow.
+//   3) If `SKILL.md` points to extra folders such as `references/`, load only the specific files needed
+</code></pre></details>
+<details class="evidence-block"><summary>💬 引用 / Quote</summary><pre><code class="language-rust">// render.rs:21
+pub const SKILL_DESCRIPTION_TRUNCATED_WARNING: &amp;str =
+  &quot;Skill descriptions were shortened to fit the skills context budget...&quot;;
+</code></pre></details>
+<p><strong>Standout</strong>: Description as routing signal ★ · Budget aware ★ · Per-turn offload ★</p>
+<h2>3. Skill Lifecycle</h2>
+<p class="zh-lead"><strong>中文</strong> TUI toggle；Guardian JSON risk；无 agent CRUD 闭环。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Stage</th>
+<th>Codex</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Human written</td>
+<td>★ primary path</td>
+<td>FS + <code>$skill-creator</code></td>
+</tr>
+<tr>
+<td>Record &amp; Replay</td>
+<td>◐ demo → draft skill</td>
+<td>official docs</td>
+</tr>
+<tr>
+<td>Generated in core</td>
+<td>·</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Published</td>
+<td>FS write</td>
+<td>user/git</td>
+</tr>
+<tr>
+<td>Disabled</td>
+<td><code>skills.config</code> enabled=false</td>
+<td><code>~/.codex/config.toml</code></td>
+</tr>
+<tr>
+<td>Deleted</td>
+<td>FS delete</td>
+<td>—</td>
+</tr>
+</tbody></table></div>
+<p><strong>Lifecycle score</strong>: <strong>6/13</strong> — strong authoring standard; weak evolve/approve/rollback</p>
+<p><strong>Quote — trigger rules</strong></p>
+<blockquote>
+<p><em>&quot;Explicit invocation: <code>/skills</code> or <code>$</code> mention. Implicit invocation: Codex can choose a skill when your task matches the skill description.&quot;</em><br>— official docs</p>
+</blockquote>
+<h2>4. Skill Evolution</h2>
+<p class="zh-lead"><strong>中文</strong> skill-creator 样本；integration tests 强。</p>
+
+
+<p><strong>Intentionally absent</strong> in core runtime.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Path</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>$skill-creator</code></td>
+<td>★ sample / built-in guidance</td>
+</tr>
+<tr>
+<td>Record &amp; Replay</td>
+<td>★ authoring assist (docs)</td>
+</tr>
+<tr>
+<td>Auto patch / review loop</td>
+<td>·</td>
+</tr>
+<tr>
+<td>skillImprovement / skill_manage</td>
+<td>·</td>
+</tr>
+</tbody></table></div>
+<p>Sample: <code>skill-creator/SKILL.md</code> — instructs human+subagent validation, not closed-loop.</p>
+<p><strong>Matrix §9</strong>: Evolution 3/16 — by design.</p>
+<h2>5. Multi-Agent Skill</h2>
+<p class="zh-lead"><strong>中文</strong> Task spawn 子 agent；不含 parent skills block。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Pattern</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Child <strong>excludes</strong> parent skills block</td>
+<td>tests <code>!body_contains_text(&quot;&lt;skills_instructions&gt;&quot;)</code> — <code>subagent_notifications.rs:1180</code></td>
+</tr>
+<tr>
+<td>Child <code>turn_skills</code> independent subset</td>
+<td><code>core-skills/manager_tests.rs:805</code></td>
+</tr>
+<tr>
+<td>MultiAgent v2 spawn</td>
+<td><code>tools/handlers/multi_agents_v2.rs</code></td>
+</tr>
+<tr>
+<td>Guardian on risky ops</td>
+<td><code>guardian/mod.rs</code></td>
+</tr>
+</tbody></table></div>
+<p><strong>Design choice</strong>: subagent skills <strong>deliberately decoupled</strong> from parent — complementary bundles via config, not inheritance.</p>
+<h2>6. Skill Governance</h2>
+<p class="zh-lead"><strong>中文</strong> Guardian approval；TUI write_skill_enabled。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Control</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Guardian JSON risk assessment</td>
+<td><code>guardian/mod.rs</code> — fail-closed</td>
+</tr>
+<tr>
+<td>TUI skill approval tests</td>
+<td><code>core/tests/suite/skill_approval.rs</code></td>
+</tr>
+<tr>
+<td><code>allow_implicit_invocation: false</code></td>
+<td><code>agents/openai.yaml</code> policy in docs</td>
+</tr>
+<tr>
+<td>Typed hooks (10 types)</td>
+<td><code>hook_runtime.rs</code>, <code>hook_config.rs</code></td>
+</tr>
+</tbody></table></div>
+<details class="evidence-block"><summary>💬 引用 / Quote</summary><pre><code class="language-yaml"># developers.openai.com/codex/skills — agents/openai.yaml
+policy:
+  allow_implicit_invocation: false
+</code></pre></details>
+<h2>7. Harness Integration</h2>
+<p class="zh-lead"><strong>中文</strong> build_skill_injections；update_plan planner。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Path</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Hook runtime</td>
+<td><code>hook_runtime.rs</code> — Pre/PostToolUse, Compact, SessionStart</td>
+</tr>
+<tr>
+<td>Tool dispatch trace</td>
+<td><code>tools/tool_dispatch_trace.rs</code></td>
+</tr>
+<tr>
+<td>Context manager</td>
+<td><code>context_manager/</code></td>
+</tr>
+<tr>
+<td>TestCodex fixture</td>
+<td><code>core/tests/common/test_codex.rs</code></td>
+</tr>
+</tbody></table></div>
+<p>Best-in-class <strong>typed hook</strong> model for TaiChu Agent Hook Gateway alignment.</p>
+<h2>8. RL Readiness</h2>
+<p class="zh-lead"><strong>中文</strong> tool_dispatch_trace；Record&Replay。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Signal</th>
+<th>Status</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>tool_dispatch_trace</td>
+<td>◐</td>
+<td><code>tool_dispatch_trace.rs</code></td>
+</tr>
+<tr>
+<td>Rollout metadata</td>
+<td>◐</td>
+<td><code>turn_metadata.rs</code></td>
+</tr>
+<tr>
+<td>OTEL</td>
+<td>◐</td>
+<td>telemetry</td>
+</tr>
+<tr>
+<td>Reward / trainer</td>
+<td>·</td>
+<td>—</td>
+</tr>
+<tr>
+<td>SkillRL / Claw-R1</td>
+<td>◐ traces only</td>
+<td>not middleware-first</td>
+</tr>
+</tbody></table></div>
+<p>Codex optimizes <strong>production harness</strong>, not RL dataset export.</p>
+<h2>9. Borrow for TaiChu</h2>
+<p class="zh-lead"><strong>中文</strong> 借 SKILL.md 布局、progressive disclosure、implicit shell trigger。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Pattern</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>SKILL.md directory standard + scripts/refs/assets</td>
+<td>industry baseline</td>
+</tr>
+<tr>
+<td>2% metadata budget + description truncation</td>
+<td>scale to many skills</td>
+</tr>
+<tr>
+<td>description = routing signal</td>
+<td>Toollery / NLU router</td>
+</tr>
+<tr>
+<td>Per-turn inject mentioned only</td>
+<td>token hygiene</td>
+</tr>
+<tr>
+<td>Implicit shell → load_skill</td>
+<td>device CLI patterns</td>
+</tr>
+<tr>
+<td>Child independent skill enable set</td>
+<td>subagent profiles</td>
+</tr>
+<tr>
+<td>Typed hook runtime</td>
+<td>extension-hooks design</td>
+</tr>
+<tr>
+<td>Guardian-style secondary approval</td>
+<td>high-risk tools</td>
+</tr>
+</tbody></table></div>
+<h2>10. Implement in TaiChu</h2>
+<p class="zh-lead"><strong>中文</strong> P0 2% cap 模式；P1 child session skills preload。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>P</th>
+<th>What</th>
+<th>Seam</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>P1</td>
+<td>Metadata budget on <code># Available Skills</code></td>
+<td>user prefix renderer</td>
+</tr>
+<tr>
+<td>P1</td>
+<td>Implicit trigger from shell/device command</td>
+<td>load_skill auto</td>
+</tr>
+<tr>
+<td>P2</td>
+<td><code>turn_skills</code> equivalent on ChildSessionSpec</td>
+<td>subagent config</td>
+</tr>
+<tr>
+<td>P2</td>
+<td>Hook types mirroring Codex</td>
+<td>hook gateway</td>
+</tr>
+</tbody></table></div>
+<h2>11. Do NOT Borrow</h2>
+<p class="zh-lead"><strong>中文</strong> 勿期望 runtime evolve — Codex 刻意不做。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Pattern</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>&quot;No evolution&quot; as product goal</td>
+<td>TaiChu needs candidate/PR evolution</td>
+</tr>
+<tr>
+<td>Manual-only skill-creator</td>
+<td>need automated miner too</td>
+</tr>
+<tr>
+<td>Assuming Codex does skill_manage</td>
+<td>it doesn&#39;t</td>
+</tr>
+</tbody></table></div>
+<h2>12. Score (1–10)</h2>
+<p class="zh-lead"><strong>中文</strong> 总分 7.2：Data Model 9；Evolution 3。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Category</th>
+<th align="center">Score</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Data Model</td>
+<td align="center">9</td>
+<td>Reference standard</td>
+</tr>
+<tr>
+<td>Runtime</td>
+<td align="center">8</td>
+<td>Progressive disclosure ★</td>
+</tr>
+<tr>
+<td>Lifecycle</td>
+<td align="center">6</td>
+<td>Authoring only</td>
+</tr>
+<tr>
+<td>Evolution</td>
+<td align="center">3</td>
+<td>By design</td>
+</tr>
+<tr>
+<td>Governance</td>
+<td align="center">8</td>
+<td>Guardian ★</td>
+</tr>
+<tr>
+<td>Agent Integration</td>
+<td align="center">7</td>
+<td>child decoupling ★</td>
+</tr>
+<tr>
+<td>RL Readiness</td>
+<td align="center">4</td>
+<td>traces only</td>
+</tr>
+<tr>
+<td><strong>Overall</strong></td>
+<td align="center"><strong>7.2</strong></td>
+<td><strong>Best packaging/harness baseline</strong></td>
+</tr>
+</tbody></table></div>
+<h2>Evidence index</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Claim</th>
+<th>Path / URL</th>
+<th>Level</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>CX-01</td>
+<td>Progressive disclosure</td>
+<td><a href="https://developers.openai.com/codex/skills">https://developers.openai.com/codex/skills</a></td>
+<td>L0</td>
+</tr>
+<tr>
+<td>CX-02</td>
+<td>2% / 8K budget</td>
+<td><a href="https://developers.openai.com/codex/skills">https://developers.openai.com/codex/skills</a></td>
+<td>L0</td>
+</tr>
+<tr>
+<td>CX-03</td>
+<td>render.rs disclosure text</td>
+<td><code>core-skills/src/render.rs:27-43</code></td>
+<td>L3</td>
+</tr>
+<tr>
+<td>CX-04</td>
+<td>Budget warning</td>
+<td><code>core-skills/src/render.rs:21</code></td>
+<td>L3</td>
+</tr>
+<tr>
+<td>CX-05</td>
+<td>injection</td>
+<td><code>core-skills/src/injection.rs</code></td>
+<td>L3</td>
+</tr>
+<tr>
+<td>CX-06</td>
+<td>Child no parent skills</td>
+<td><code>subagent_notifications.rs:1180</code></td>
+<td>L3</td>
+</tr>
+<tr>
+<td>CX-07</td>
+<td>Guardian</td>
+<td><code>guardian/mod.rs</code></td>
+<td>L2</td>
+</tr>
+</tbody></table></div>
+</article>
+    </div>
+  </div>
+  <script src="../../../../js/i18n.js"></script>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
+  </script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Redirecting…</title>
+  <script>
+    (function () {
+      var q = new URLSearchParams(location.search).get('path');
+      if (q) {
+        var html = 'site/' + q.replace(/^\/+/, '').replace(/\.md$/i, '.html');
+        location.replace(html);
+      } else {
+        location.replace('site/notes/synthesis/agent-skill-architecture-survey-matrix.html');
+      }
+    })();
+  </script>
+</head>
+<body data-i18n-page="host" data-content-lang="en">
+  <p><span data-lang-only="en">Redirecting to rendered HTML…</span><span data-lang-only="zh" hidden>正在跳转到渲染 HTML…</span> <a href="site/notes/synthesis/agent-skill-architecture-survey-matrix.html">165-dim matrix</a></p>
+  <script src="js/i18n.js"></script>
+  <script src="js/i18n.js"></script>
+</body>
+</html>

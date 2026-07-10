@@ -1,0 +1,120 @@
+{
+  "title": "Skill Self-Evolution — 8 Repos Compared",
+  "subtitle": "One slide per repo · Walkthrough + Auto Explain popups",
+  "panel": {
+    "w5": "① 5W",
+    "meth": "② Methodology",
+    "comp": "③ Components",
+    "walk": "⑤ Walkthrough — cross-turn example",
+    "code": "④ Code & call stacks",
+    "explain": "⑥ Auto Explain"
+  },
+  "labels": {
+    "why": "Why",
+    "what": "What",
+    "who": "Who",
+    "where": "Where",
+    "when": "When",
+    "how": "How",
+    "lifecycle": "Lifecycle",
+    "timeline": "Timeline"
+  },
+  "repos": {
+    "opensquilla": {
+      "headline": "OpenSquilla — Productized 4-gate promotion",
+      "tagline": "Trajectory → proposals → 4-gate + E2E → MANAGED",
+      "five_w": {
+        "why": "Turn success/failure into reusable skills without polluting production dirs",
+        "what": "auto_propose → gates.json (4 gates) → accept → MANAGED",
+        "who": "Main agent + Dream/auto_propose + runtime_e2e judge",
+        "where": "~/.opensquilla/proposals/{id}/ → MANAGED skills/",
+        "when": "Post-turn decision log; Dream cron; user accept",
+        "how": "Heuristics + LLM reflection → structured proposal → deterministic gates + paired E2E"
+      }
+    },
+    "hermes-agent": {
+      "headline": "Hermes — Online CRUD self-evolution",
+      "tagline": "Background review agent writes via skill_manage",
+      "five_w": {
+        "why": "Agent should improve skills from use, not read-only catalog",
+        "what": "skill_manage create/edit/patch/delete → immediate ~/.hermes/skills/",
+        "who": "Main agent + _spawn_background_review quiet sub-agent",
+        "where": "~/.hermes/skills/{name}/SKILL.md",
+        "when": "Post-turn when tool-loop iters ≥10; or memory every 10 user turns",
+        "how": "Daemon thread → review AIAgent reads full messages → skill_manage; skills_guard scan"
+      }
+    },
+    "openclaw": {
+      "headline": "OpenClaw — skill-workshop proposals",
+      "tagline": "6-source merge + agent_end hook → pending → apply",
+      "five_w": {
+        "why": "Capture repeatable workspace workflows after successful runs",
+        "what": "skill-workshop: detect → LLM review → store → scanner → apply",
+        "who": "Gateway agent + workshop extension + human/auto approvalPolicy",
+        "where": "workspace/skills/ + proposals store",
+        "when": "agent_end hook after successful run",
+        "how": "Regex signals + reviewer session + skill-scanner quarantine"
+      }
+    },
+    "claude-code-rev": {
+      "headline": "Claude Code Rev — Compact + skillImprovement",
+      "tagline": "invoked_skills survive compaction; Survey UI gate",
+      "five_w": {
+        "why": "Skills used in session must survive context compression",
+        "what": "Post-compact invoked_skills attachment + skillImprovement every 5 turns",
+        "who": "Main agent + aux small model + Survey UI",
+        "where": "Project-scoped skills + bootstrap state Map",
+        "when": "On compact; every 5 user turns for improvement",
+        "how": "25K token budget reinject; JSON patches → user accept in UI"
+      }
+    },
+    "codex": {
+      "headline": "Codex — Authoring + runtime disclosure",
+      "tagline": "SKILL.md authoring tools + per-turn skill listing delta",
+      "five_w": {
+        "why": "Separate skill authoring from execution disclosure",
+        "what": "Authoring channel vs runtime incremental skill_listing",
+        "who": "Codex agent + skill tools",
+        "where": "Project skills + bundled catalog",
+        "when": "Authoring on demand; listing delta each turn",
+        "how": "Progressive disclosure; frozen prefix cache friendly metadata"
+      }
+    },
+    "taichu": {
+      "headline": "TaiChu — Store/Expose/Use strong; Compact gap",
+      "tagline": "Per-turn prefix + load_skill; no evolution loop yet",
+      "five_w": {
+        "why": "HarmonyOS agent needs cloud+device skill routing",
+        "what": "17 canonical skills; load_skill progressive; runs_on delegation",
+        "who": "Main agent + Toollery filter + run_subagent",
+        "where": "skills/system/ + cloud skill_catalog.json",
+        "when": "Every turn expose; compaction drops skill body (P0)",
+        "how": "XML catalog in user prefix; file_read full SKILL.md on demand"
+      }
+    },
+    "zeroclaw": {
+      "headline": "ZeroClaw — Registry + audit governance",
+      "tagline": "workspace skills + CI scan; evolve audit-only",
+      "five_w": {
+        "why": "Strong install-time governance for community skills",
+        "what": "Registry load + zeroclaw-skills CI + audit trail",
+        "who": "Agent + registry + audit hooks",
+        "where": "workspace skills SKILL.md/toml",
+        "when": "Install/load; audit on change",
+        "how": "compact/full injection; no closed evolution loop"
+      }
+    },
+    "genericagent": {
+      "headline": "GenericAgent — L-tier memory SOPs",
+      "tagline": "Task path → start_long_term_update → L2/L3 memory",
+      "five_w": {
+        "why": "Don't preload skills — crystallize from successful task paths",
+        "what": "memory/*_sop.md → L2 facts / L3 SOP tree",
+        "who": "Main agent + reflect scheduler + goal mode",
+        "where": "memory/ L0–L4 tier tree",
+        "when": "After VERIFY success; reflect cron",
+        "how": "file_patch writes SOP; no SKILL.md / no gate"
+      }
+    }
+  }
+}

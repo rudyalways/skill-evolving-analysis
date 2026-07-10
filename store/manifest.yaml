@@ -1,0 +1,252 @@
+# Skill-Evolving Analysis — Artifact Manifest
+# Machine-readable catalog. Updated by ./scripts/record.sh
+# Last full sync: 2026-07-08
+
+workspace: skill-evolving-analysis
+last_updated: "2026-07-08"
+
+sessions:
+  - id: S2026-07-08-001
+    path: store/sessions/2026-07-08-eight-repo-l3-research.md
+    date: "2026-07-08"
+    evidence_level: L3
+    summary: Eight-repo L3 skill evolution research — full session archive
+
+topics:
+  - id: T001
+    path: topics/skill-rl/overview.md
+    title: SkillRL — Recursive Skill-Augmented RL
+    evidence_level: L0
+    arxiv: "2602.08234"
+  - id: T002
+    path: topics/claw-r1/overview.md
+    title: Claw-R1 — Step-Level Data Middleware
+    evidence_level: L0
+    arxiv: "2606.09138"
+  - id: T003
+    path: notes/synthesis/combined-pipeline.md
+    title: Combined pipeline (Claw-R1 + SkillRL)
+    evidence_level: L1
+  - id: T004
+    path: notes/synthesis/industry-harness-survey.md
+    title: Industry harness & skill self-evolution survey
+    evidence_level: L1
+  - id: T005
+    path: notes/synthesis/proposed-skill-lifecycle-architecture.md
+    title: Proposed 2026–2027 online skill lifecycle
+    evidence_level: L1
+  - id: T006
+    path: notes/synthesis/skill-evolution-taxonomy.md
+    title: Skill evolution taxonomy (6 routes)
+    evidence_level: L1
+
+synthesis:
+  - id: N2026-07-08-001
+    path: notes/synthesis/comparison.md
+    category: synthesis
+    evidence_level: L1
+    title: SkillRL vs Claw-R1 comparison
+  - id: N2026-07-08-002
+    path: notes/synthesis/combined-pipeline.md
+    category: synthesis
+    evidence_level: L1
+    title: Combined pipeline architecture
+  - id: N2026-07-08-003
+    path: notes/synthesis/industry-harness-survey.md
+    category: survey
+    evidence_level: L1
+    title: Industry Agent Harness survey
+  - id: N2026-07-08-004
+    path: notes/synthesis/skill-evolution-taxonomy.md
+    category: taxonomy
+    evidence_level: L1
+    title: Six-route skill evolution taxonomy
+  - id: N2026-07-08-005
+    path: notes/synthesis/proposed-skill-lifecycle-architecture.md
+    category: architecture
+    evidence_level: L1
+    title: Proposed 7-layer skill lifecycle
+  - id: N2026-07-08-006
+    path: notes/synthesis/paper-index.md
+    category: synthesis
+    evidence_level: L0
+    title: Paper & system index
+  - id: N2026-07-08-007
+    path: notes/synthesis/official-blog-skill-evolution.md
+    category: survey
+    evidence_level: L0
+    title: Official blog skill evolution analysis
+  - id: N2026-07-08-008
+    path: notes/synthesis/official-product-gap-consensus.md
+    category: survey
+    evidence_level: L0
+    title: No official skill self-evolution product
+  - id: N2026-07-08-009
+    path: notes/synthesis/local-oss-repo-inventory.md
+    category: survey
+    evidence_level: L1
+    title: Eight-repo quick lookup
+  - id: N2026-07-08-010
+    path: notes/synthesis/eight-repo-source-analysis-framework.md
+    category: survey
+    evidence_level: L1
+    title: Identity + analysis framework
+  - id: N2026-07-08-011
+    path: notes/synthesis/eight-repo-deep-source-analysis.md
+    category: survey
+    evidence_level: L2
+    title: 8×7 matrix deep source analysis
+  - id: N2026-07-08-012
+    path: notes/synthesis/eight-repo-comprehensive-survey.md
+    category: survey
+    evidence_level: L2
+    title: 20-dimension comprehensive survey
+  - id: N2026-07-08-013
+    path: notes/synthesis/skill-lifecycle-and-dynamic-loading-survey.md
+    category: survey
+    evidence_level: L2
+    title: Per-turn/dynamic/subagent/lifecycle survey
+  - id: N2026-07-08-014
+    path: notes/synthesis/survey-methodology-and-repo-confirmation.md
+    category: survey
+    evidence_level: L2
+    title: Evidence levels + repo confirmation
+  - id: N2026-07-08-015
+    path: notes/synthesis/web-vs-local-reconciliation.md
+    category: survey
+    evidence_level: L2
+    title: Web research vs local L2 merge
+  - id: N2026-07-08-L3
+    path: notes/synthesis/l3-comprehensive-skill-analysis.md
+    category: synthesis
+    evidence_level: L3
+    title: L3 merged deep analysis (~15 pages)
+  - id: N2026-07-08-P0
+    path: notes/synthesis/taichu-p0-skill-compaction-spec.md
+    category: spec
+    evidence_level: L3
+    title: TaiChu P0 InvokedSkillRegistry + compaction spec
+    related_repo: drafts/zk/TaiChu
+
+repos:
+  - id: R-openclaw
+    path: notes/synthesis/repos/openclaw.md
+    local_path: oss/openclaw
+    evidence_level: L3
+  - id: R-hermes
+    path: notes/synthesis/repos/hermes-agent.md
+    local_path: oss/hermes-agent
+    evidence_level: L3
+  - id: R-codex
+    path: notes/synthesis/repos/codex.md
+    local_path: oss/codex
+    evidence_level: L2
+  - id: R-opensquilla
+    path: notes/synthesis/repos/opensquilla.md
+    local_path: oss/opensquilla
+    evidence_level: L3
+  - id: R-genericagent
+    path: notes/synthesis/repos/genericagent.md
+    local_path: oss/genericagent
+    evidence_level: L2
+  - id: R-zeroclaw
+    path: notes/synthesis/repos/zeroclaw.md
+    local_path: oss/zeroclaw
+    evidence_level: L2
+  - id: R-claude-rev
+    path: notes/synthesis/repos/claude-code-rev.md
+    local_path: oss/experimental/claude-code-rev
+    evidence_level: L3
+  - id: R-taichu
+    path: notes/synthesis/repos/taichu.md
+    local_path: drafts/zk/TaiChu
+    evidence_level: L3
+
+  - id: N2026-07-08-WEB-DEEP
+    path: notes/synthesis/web-deep-taichu-borrowing-guide.md
+    category: synthesis
+    evidence_level: L0
+    title: Web 深度版 — 八仓横向结论与 TaiChu 借鉴指南
+    date: "2026-07-08"
+    note: L0 public sources; appendix reconciled with local L3
+
+  - id: N2026-07-08-LIFECYCLE-MATRIX
+    path: notes/synthesis/skill-lifecycle-full-matrix.md
+    category: survey
+    evidence_level: L3
+    title: Skill 全生命周期矩阵 — 八仓 × 九阶段
+    date: "2026-07-08"
+
+  - id: T007
+    path: notes/synthesis/agent-skill-architecture-survey-matrix.md
+    title: Agent Skill Architecture Survey Matrix (165 dimensions)
+    evidence_level: L3
+    date: "2026-07-08"
+
+  - id: N2026-07-08-WEB-LIFECYCLE
+    path: notes/synthesis/web-expanded-lifecycle-matrix-merged.md
+    category: synthesis
+    evidence_level: L0+L3
+    title: Web 扩展 lifecycle matrix 合并版
+    date: "2026-07-08"
+
+survey_reports:
+  - id: SR-opensquilla-001
+    path: notes/synthesis/survey-reports/opensquilla.md
+    score: 9.0
+  - id: SR-hermes-001
+    path: notes/synthesis/survey-reports/hermes-agent.md
+    score: 8.1
+  - id: SR-openclaw-001
+    path: notes/synthesis/survey-reports/openclaw.md
+    score: 8.0
+  - id: SR-claude-rev-001
+    path: notes/synthesis/survey-reports/claude-code-rev.md
+    score: 7.7
+  - id: SR-codex-001
+    path: notes/synthesis/survey-reports/codex.md
+    score: 7.2
+  - id: SR-taichu-001
+    path: notes/synthesis/survey-reports/taichu.md
+    score: 5.0
+  - id: SR-zeroclaw-001
+    path: notes/synthesis/survey-reports/zeroclaw.md
+    score: 5.0
+  - id: SR-genericagent-001
+    path: notes/synthesis/survey-reports/genericagent.md
+    score: 4.8
+  - id: SR-openclaw-rl-001
+    path: notes/synthesis/survey-reports/openclaw-rl.md
+    score: 8.0
+    note: RL layer only
+
+daily:
+  - id: N2026-07-08-DAILY
+    path: notes/daily/2026-07-08.md
+    date: "2026-07-08"
+
+protocols:
+  - path: store/protocols/recording.md
+  - path: store/protocols/evidence-levels.md
+
+config:
+  - path: config/tags.yaml
+  - path: config/metadata-schema.yaml
+
+scripts:
+  - path: scripts/ingest.sh
+    purpose: inbox → data/raw/
+  - path: scripts/record.sh
+    purpose: register artifact → manifest reminder
+
+external_refs:
+  - path: drafts/zk/TaiChu/docs/architecture/skill-system-cross-repo-comparison.md
+    note: 1000+ line cross-repo comparison (not duplicated here)
+  - path: agent-transcripts/98132ca9-6424-4168-a38f-f9493b440c76.jsonl
+    note: Full Cursor session transcript
+
+pending_clone:
+  - repo: NousResearch/hermes-agent-self-evolution
+    status: web-only
+  - repo: zeroclaw-labs/zeroclaw-skills
+    status: clone-failed

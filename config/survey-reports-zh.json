@@ -1,0 +1,162 @@
+{
+  "opensquilla": {
+    "score": "9.0",
+    "title_zh": "OpenSquilla 架构调研",
+    "tagline": "八框架 Skill 进化产品化最强：每轮 RRF 推荐 + proposals 四关 + E2E 晋升",
+    "intro_zh": "显式 Agent FSM 分阶段 harness；SkillSpec + 6 层优先级；每轮 filter_skills → 注入；proposals/ 多关 accept 写入 MANAGED。",
+    "sections": {
+      "1": "分阶段 harness：Gateway → TurnRunner → Pipeline(filter→inject) → FSM。6 层优先级：EXTRA → BUNDLED → MANAGED → PERSONAL → PROJECT → WORKSPACE。",
+      "2": "每轮 HybridRetriever（词法+语义 RRF top-5）；compact/full 渐进披露；meta_invoke 跑 DAG；collect_invoked_skills 遥测。",
+      "3": "hub 安装 → auto_propose/Dream → gates.json 四关 → accept→MANAGED；skills-lock SHA256。生命周期 12/13。",
+      "4": "决策日志/Dream → proposals/ → runtime_e2e 对照 → accept。eval_prompts 回归 + meta vs baseline A/B。",
+      "5": "MetaOrchestrator DAG（skill_exec/agent/tool_call）；子 agent one-shot，无 skill preload 列表。",
+      "6": "policy chain 30+ 内置规则；gates.json；hub quarantine；requires_tools 门控。",
+      "7": "Skill 是 pipeline 阶段而非外挂：filter_skills 在 LLM 看到 catalog 前确定性门控。",
+      "8": "PipelineStepRecord + decision_log skills_invoked；Claw-R1 兼容 step 级记录最强之一。",
+      "9": "TaiChu 借：proposals+gates、RRF+always pin、invoked 遥测、runtime_e2e、inject_compact。",
+      "10": "P1 proposals 目录+gates；P1 Toollery RRF；P2 interaction_log；P3 MetaSkill。",
+      "11": "勿搬 6000 行 agent 单体；勿无 gate 自动 accept。",
+      "12": "总分 9.0：Runtime/Evolution 双 9；RL 6（轨迹强、无训练器）。"
+    }
+  },
+  "hermes-agent": {
+    "score": "8.1",
+    "title_zh": "Hermes Agent 架构调研",
+    "tagline": "运行时 Skill CRUD + 后台自进化最强，但缺 proposal 队列与 read-before-write 硬门禁",
+    "intro_zh": "~/.hermes/skills SKILL.md；metadata index + skill_view 渐进披露；skill_manage 全 CRUD + 后台 review。",
+    "sections": {
+      "1": "CLI/Gateway 一体；skills 目录扫描；bundled manifest hash 同步。",
+      "2": "session 冻结 index；skill_view 按需 body；slash 与 --skills preload。",
+      "3": "agent skill_manage create/patch/delete；skills_guard 扫描；无 formal proposal store。",
+      "4": "nudge + _spawn_background_review → 直接 patch；Atropos RL 扩展。",
+      "5": "delegate_task 隔离 context；无 skill preload 参数。",
+      "6": "skills_guard 写后扫描；issue 风险：无 critical-skill lock。",
+      "7": "TurnRunner + toolsets；skill 为一等工具。",
+      "8": "JSONL + session DB；Atropos 轨迹；RL tool 在线训练。",
+      "9": "借 CRUD 面与 review 思路；TaiChu 需加 gate 而非直接生产 patch。",
+      "10": "P1 read-before-write gate；P2 skill_manage 候选流。",
+      "11": "勿无 gate 直接生产 patch；勿忽略 hallucinated deletion 风险。",
+      "12": "总分 8.1：Evolution 9；Governance 5 拉低。"
+    }
+  },
+  "openclaw": {
+    "score": "8.0",
+    "title_zh": "OpenClaw 架构调研",
+    "tagline": "6 源 merge + skill-workshop 进化 + per-agent skillFilter",
+    "intro_zh": "多源 SKILL.md merge；metadata XML catalog；read tool 懒加载 body；workshop proposals。",
+    "sections": {
+      "1": "6 源优先级 merge；chokidar watcher；session snapshot。",
+      "2": "150 skill / 18K 上限；compact XML；per-agent skillFilter 白名单。",
+      "3": "workshop agent_end → reviewer → proposals → scanner → append/replace。",
+      "4": "LLM reviewer + regex；auto/manual 策略；trajectory 元数据。",
+      "5": "subagent 缩减 system prompt；skillFilter 继承。",
+      "6": "skill-scanner quarantine；workshop pending。",
+      "7": "Gateway + agent loop；skill-workshop 与 compact 并行。",
+      "8": "openclaw-trajectory JSONL；OpenClaw-RL 离线 RL 层。",
+      "9": "借 6 源 precedence、workshop 闭环、trajectory schema。",
+      "10": "P1 workshop-style proposals；P2 skillFilter 子 agent。",
+      "11": "勿全盘 marketplace 信任模型。",
+      "12": "总分 8.0：Lifecycle 9/13；Compact-skill 弱。"
+    }
+  },
+  "claude-code-rev": {
+    "score": "7.7",
+    "title_zh": "Claude Code Rev 架构调研",
+    "tagline": "Compact 后 invoked_skills 存活 + skillImprovement Survey 门控 — Compact/Evolve 领先",
+    "intro_zh": "oboard 完整 skill runtime：增量 listing、Skill tool、post-compact invoked_skills reinject。",
+    "sections": {
+      "1": "multi-root：project/user/bundled/plugin loadSkillsDir。",
+      "2": "三通道：listing attachment / Skill tool / invoked_skills；sentSkillNames 增量。",
+      "3": "skillImprovement 每 5 turn → JSON patches → Survey UI gate。",
+      "4": "skillify 会话→新 skill；7-day decay usage 排序。",
+      "5": "subagent frontmatter preload；Task 隔离。",
+      "6": "project scope；Survey UI 人工 apply。",
+      "7": "SideQuery 小模型；compact + invoked_skills attachment。",
+      "8": "session JSONL export；step 级 traces。",
+      "9": "TaiChu P0 核心借：InvokedSkillRegistry + post-compact reinject。",
+      "10": "P0 invoked_skills；P1 skillImprovement survey gate。",
+      "11": "勿假设 Yuyz0112 可视化 repo 等同本 runtime。",
+      "12": "总分 7.7：Compact 9/9 领先；无 formal proposal store。"
+    }
+  },
+  "codex": {
+    "score": "7.2",
+    "title_zh": "Codex 架构调研",
+    "tagline": "SKILL.md 标准 + progressive disclosure + 2% ctx cap — 刻意不做 runtime evolve",
+    "intro_zh": "User/Repo/System/Admin scope；metadata block；@mention 全文注入；shell implicit invoke。",
+    "sections": {
+      "1": "skills/<name>/ 布局 + scripts/refs/assets/agents；Record&Replay 人工路径。",
+      "2": "2% context / 8K budget 截断；watcher 刷新；child turn_skills 独立集。",
+      "3": "TUI toggle；Guardian JSON risk；无 agent CRUD 闭环。",
+      "4": "skill-creator 样本；integration tests 强。",
+      "5": "Task spawn 子 agent；不含 parent skills block。",
+      "6": "Guardian approval；TUI write_skill_enabled。",
+      "7": "build_skill_injections；update_plan planner。",
+      "8": "tool_dispatch_trace；Record&Replay。",
+      "9": "借 SKILL.md 布局、progressive disclosure、implicit shell trigger。",
+      "10": "P0 2% cap 模式；P1 child session skills preload。",
+      "11": "勿期望 runtime evolve — Codex 刻意不做。",
+      "12": "总分 7.2：Data Model 9；Evolution 3。"
+    }
+  },
+  "taichu": {
+    "score": "5.0",
+    "title_zh": "TaiChu 架构调研",
+    "tagline": "Store/Expose/Use 强；Compact 丢 skill body 是 P0 缺口",
+    "intro_zh": "17 canonical skills；每 turn user prefix # Available Skills；load_skill + runs_on 端云路由。",
+    "sections": {
+      "1": "skills/system/<name>/SKILL.md；Toollery before_prompt filter。",
+      "2": "XML catalog + load_skill 渐进披露；Toollery embedding 可选。",
+      "3": "无 agent CRUD；canonical 人工 curated；cloud catalog。",
+      "4": "无 runtime evolve；roadmap proposals store。",
+      "5": "run_subagent 中继；❌ 无 complementary skill preload。",
+      "6": "ToolDomains；depends_on_tools soft gate。",
+      "7": "Pi-mono loop + Toollery；compaction.rs 纯 summarize。",
+      "8": "interaction_log JSONL；bench plan。",
+      "9": "对齐 OpenSquilla gates + Claude invoked_skills + Codex disclosure。",
+      "10": "P0 InvokedSkillRegistry；P1 RRF；P2 proposals。",
+      "11": "勿照搬 Hermes 无 gate patch。",
+      "12": "总分 5.0：Compact/Evolve/Delete 缺口；P0 spec 已写。"
+    }
+  },
+  "zeroclaw": {
+    "score": "5.0",
+    "title_zh": "ZeroClaw 架构调研",
+    "tagline": "Registry/audit 治理强；Evolve 仅 audit 无闭环",
+    "intro_zh": "workspace skills SKILL.md/toml；compact/full injection；zeroclaw-skills CI 扫描。",
+    "sections": {
+      "1": "open-skills sync；manifest version；always 在 compact 仍全文。",
+      "2": "Compact 读 location；SkillToolHandler placeholder→native tool。",
+      "3": "用户删目录；hygiene cron 归档 memory。",
+      "4": "Audit only（zip-bomb/traversal/injection）；nightly memory 合并。",
+      "5": "SubAgentRegistry spawn；channel SOP。",
+      "6": "skills/audit.rs；registry disclaimer。",
+      "7": "auto_compact_history + fact extraction。",
+      "8": "OTel；economic 指标。",
+      "9": "借 audit 模式 + registry 结构。",
+      "10": "P2 audit 集成；Evolve 非 P0。",
+      "11": "勿假设 CI scan = 安全边界。",
+      "12": "总分 5.0：Governance 7；Evolve 2。"
+    }
+  },
+  "genericagent": {
+    "score": "4.8",
+    "title_zh": "GenericAgent 架构调研",
+    "tagline": "Mine→Evolve SOP 哲学强，但非 SKILL.md 标准生命周期",
+    "intro_zh": "memory/*_sop.md L0–L4；crystallize 成功写 L2/L3；无 formal skill CRUD。",
+    "sections": {
+      "1": "非 SKILL.md：L-tier memory 树 + anchor prompt 每 10 turn。",
+      "2": "file_read 加载 SOP；related_sop 弱推荐。",
+      "3": "start_long_term_update 验证后写；memory_cleanup_sop。",
+      "4": "/morphling 结晶；plan mode plan.md checkpoint。",
+      "5": "subprocess 隔离；team BBS。",
+      "6": "L0 protocol；无 marketplace。",
+      "7": "9 atomic tools；reflect cron。",
+      "8": "model log；无 RL pipeline。",
+      "9": "借 task→path→reusable skill Miner 思想。",
+      "10": "P2 SOP 结晶流程；非 P0。",
+      "11": "勿 ungated crystallize 直接生产。",
+      "12": "总分 4.8：理念强、标准 skill 生命周期弱。"
+    }
+  }
+}

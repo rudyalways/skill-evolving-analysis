@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>组合流水线：Claw-R1 + SkillRL — Skill-Evolving</title>
+  <link rel="alternate" hreflang="en" href="/html/site/notes/synthesis/combined-pipeline.html">
+  <link rel="alternate" hreflang="zh-Hans" href="/html/site/zh/notes/synthesis/combined-pipeline.html">
+  <link rel="alternate" hreflang="x-default" href="/html/site/notes/synthesis/combined-pipeline.html">
+  <link rel="stylesheet" href="../../../../css/viewer.css">
+</head>
+<body class="" data-doc-locale="zh" data-content-lang="zh">
+  <div class="viewer-layout">
+    <nav>
+      <div data-lang-switch class="lang-switch-host"></div>
+      <h1 data-i18n="nav.docs">Docs</h1>
+      <div class="title" data-i18n="nav.rendered">Rendered HTML</div>
+      <section class="highlight-section"><h2 data-i18n="nav.compare">nav.compare</h2><ul><li><a href="./agent-skill-architecture-survey-matrix.html" data-i18n="nav.matrix165">nav.matrix165</a></li><li><a href="./skill-lifecycle-full-matrix.html" data-i18n="nav.lifecycle">nav.lifecycle</a></li><li><a href="./web-expanded-lifecycle-matrix-merged.html" data-i18n="nav.web_l3">nav.web_l3</a></li><li><a href="./eight-repo-comprehensive-survey.html" data-i18n="nav.survey20">nav.survey20</a></li><li><a href="./skill-lifecycle-and-dynamic-loading-survey.html" data-i18n="nav.per_turn">nav.per_turn</a></li><li><a href="./eight-repo-deep-source-analysis.html" data-i18n="nav.deep_source">nav.deep_source</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.per_repo">nav.per_repo</h2><ul><li><a href="./survey-reports/opensquilla.html">OpenSquilla (9.0)</a></li><li><a href="./survey-reports/hermes-agent.html">Hermes (8.1)</a></li><li><a href="./survey-reports/openclaw.html">OpenClaw (8.0)</a></li><li><a href="./survey-reports/claude-code-rev.html">Claude Rev (7.7)</a></li><li><a href="./survey-reports/codex.html">Codex (7.2)</a></li><li><a href="./survey-reports/taichu.html">TaiChu (5.0)</a></li><li><a href="./survey-reports/zeroclaw.html">ZeroClaw (5.0)</a></li><li><a href="./survey-reports/genericagent.html">GenericAgent (4.8)</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.papers">nav.papers</h2><ul><li><a href="../../../topics/skill-rl/overview.html">SkillRL</a></li><li><a href="../../../topics/claw-r1/overview.html">Claw-R1</a></li><li><a href="./comparison.html" data-i18n="nav.comparison">nav.comparison</a></li><li><a class="active" href="./combined-pipeline.html" data-i18n="nav.pipeline">nav.pipeline</a></li><li><a href="./l3-comprehensive-skill-analysis.html" data-i18n="nav.l3">nav.l3</a></li><li><a href="../../../notes/synthesis/taichu-p0-skill-compaction-spec.html" data-i18n="nav.taichu_p0">nav.taichu_p0</a></li></ul></section><section><h2 data-i18n="nav.more">More</h2><ul>
+    <li><a href="/html/docs.html" data-i18n="nav.sitemap">Sitemap</a></li>
+    <li><a href="/html/i18n-coverage.html" data-i18n="nav.i18n_coverage">i18n coverage</a></li>
+    <li><a href="/html/index.html" data-i18n="nav.dashboard">Dashboard</a></li>
+    <li><a href="/html/deck/index.html" data-i18n="nav.decks">Slide decks</a></li>
+  </ul></section>
+    </nav>
+    <div class="viewer-main">
+      <div class="viewer-toolbar">
+        <div>
+          <h1>组合流水线：Claw-R1 + SkillRL</h1>
+          <div class="path">notes/synthesis/combined-pipeline.zh.md</div>
+        </div>
+        <a class="btn" href="/html/docs.html" data-i18n="toolbar.sitemap">Sitemap</a>
+        <a class="btn primary" href="./agent-skill-architecture-survey-matrix.html" data-i18n="toolbar.matrix">165-dim matrix</a>
+      </div>
+      
+      <article class="md-body"><h1>组合流水线：Claw-R1 + SkillRL</h1>
+<p>全栈 Agentic RL — 基础设施（数据）+ 算法（学习）。</p>
+<h2>架构</h2>
+<pre><code>┌─────────────────────────────────────────────────────────┐
+│                      Claw-R1                            │
+│              （数据生命周期层）                            │
+├─────────────────────────────────────────────────────────┤
+│   Agents → Gateway → Step Data Pool → Trajectory Builder│
+└──────┼──────────────────────────────────────────────────┘
+       ▼
+┌─────────────────────────────────────────────────────────┐
+│                      SkillRL                            │
+│              （学习算法层）                                │
+├─────────────────────────────────────────────────────────┤
+│   Trajectory → Teacher LLM → SkillBank → GRPO → Policy  │
+│   新数据 ─────────────────────────────────→ 回到 Claw-R1 │
+└─────────────────────────────────────────────────────────┘
+</code></pre>
+<h2>分工</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>层次</th>
+<th>系统</th>
+<th>职责</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>采集</td>
+<td>Claw-R1 Gateway</td>
+<td>从异构 Agent 捕获每一步</td>
+</tr>
+<tr>
+<td>存储</td>
+<td>Claw-R1 Data Pool</td>
+<td>版本化、过滤、标注、查询 step 记录</td>
+</tr>
+<tr>
+<td>组装</td>
+<td>Trajectory Builder</td>
+<td>将 step 组成可训练轨迹</td>
+</tr>
+<tr>
+<td>抽象</td>
+<td>SkillRL 蒸馏</td>
+<td>轨迹 → 紧凑 Skill + 失败教训</td>
+</tr>
+<tr>
+<td>记忆</td>
+<td>SkillRL SkillBank</td>
+<td>分层、可检索 Skill 库</td>
+</tr>
+<tr>
+<td>优化</td>
+<td>SkillRL GRPO</td>
+<td>Skill 增强上下文下的策略更新</td>
+</tr>
+<tr>
+<td>进化</td>
+<td>SkillRL 递归循环</td>
+<td>SkillBank 与策略协同进化</td>
+</tr>
+<tr>
+<td>反馈</td>
+<td>Claw-R1</td>
+<td>改进策略的新 rollout 回到 Data Pool</td>
+</tr>
+</tbody></table></div>
+<h2>为何这一组合有效</h2>
+<ol>
+<li><strong>Claw-R1 解决 SkillRL 默认假设的数据问题</strong> — step 级多样成功/失败轨迹。</li>
+<li><strong>SkillRL 解决 Claw-R1 不做的压缩问题</strong> — 原始 step 无限增长；SkillBank 蒸馏为可复用 Skill。</li>
+<li><strong>失败处理互补</strong> — Claw-R1 记录/查询失败 step；SkillRL 蒸馏为策略上下文中的失败教训。</li>
+<li><strong>两者均兼容 GRPO</strong> — Claw-R1 TrainingBackend 可服务 GRPO batch；SkillRL 带 Skill 增强消费。</li>
+</ol>
+<h2>开放设计问题</h2>
+<ul>
+<li>Trajectory Builder 放在 Claw-R1 扩展还是 SkillRL 预处理？</li>
+<li>Skill 是否作为新资产类型写回 Data Pool？</li>
+<li>Step 级训练 vs 轨迹级 Skill 增强 GRPO — 混合？</li>
+<li>在线进化：Data Pool 发现新失败模式时触发 SkillBank 更新？</li>
+</ul>
+<h2>相关</h2>
+<ul>
+<li><a href="./comparison.html">对比分析</a></li>
+<li><a href="../../../topics/skill-rl/overview.html">SkillRL 概览</a></li>
+<li><a href="../../../topics/claw-r1/overview.html">Claw-R1 概览</a></li>
+</ul>
+</article>
+    </div>
+  </div>
+  <script src="../../../../js/i18n.js"></script>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
+  </script>
+</body>
+</html>

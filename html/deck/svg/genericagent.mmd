@@ -1,0 +1,14 @@
+sequenceDiagram
+  autonumber
+  participant U as User
+  participant G as GenericAgent
+  participant M as memory/
+  participant R as reflect cron
+  U->>G: New task: scrape product prices
+  G->>M: file_read(web-scrape_sop.md)
+  G->>G: 9 atomic tools execute
+  G->>G: VERIFY plan success
+  G->>G: start_long_term_update()
+  G->>M: file_patch L2 facts + new sop
+  Note over R: later · cron
+  R->>G: Goal Mode inspect/improve SOP

@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Claw-R1 — Skill-Evolving</title>
+  <link rel="alternate" hreflang="en" href="/html/site/topics/claw-r1/overview.html">
+  <link rel="alternate" hreflang="x-default" href="/html/site/topics/claw-r1/overview.html">
+  <link rel="stylesheet" href="../../../css/viewer.css">
+</head>
+<body class="" data-doc-locale="en" data-content-lang="en">
+  <div class="viewer-layout">
+    <nav>
+      <div data-lang-switch class="lang-switch-host"></div>
+      <h1 data-i18n="nav.docs">Docs</h1>
+      <div class="title" data-i18n="nav.rendered">Rendered HTML</div>
+      <section class="highlight-section"><h2 data-i18n="nav.compare">nav.compare</h2><ul><li><a href="../../notes/synthesis/agent-skill-architecture-survey-matrix.html" data-i18n="nav.matrix165">nav.matrix165</a></li><li><a href="../../notes/synthesis/skill-lifecycle-full-matrix.html" data-i18n="nav.lifecycle">nav.lifecycle</a></li><li><a href="../../notes/synthesis/web-expanded-lifecycle-matrix-merged.html" data-i18n="nav.web_l3">nav.web_l3</a></li><li><a href="../../notes/synthesis/eight-repo-comprehensive-survey.html" data-i18n="nav.survey20">nav.survey20</a></li><li><a href="../../notes/synthesis/skill-lifecycle-and-dynamic-loading-survey.html" data-i18n="nav.per_turn">nav.per_turn</a></li><li><a href="../../notes/synthesis/eight-repo-deep-source-analysis.html" data-i18n="nav.deep_source">nav.deep_source</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.per_repo">nav.per_repo</h2><ul><li><a href="../../notes/synthesis/survey-reports/opensquilla.html">OpenSquilla (9.0)</a></li><li><a href="../../notes/synthesis/survey-reports/hermes-agent.html">Hermes (8.1)</a></li><li><a href="../../notes/synthesis/survey-reports/openclaw.html">OpenClaw (8.0)</a></li><li><a href="../../notes/synthesis/survey-reports/claude-code-rev.html">Claude Rev (7.7)</a></li><li><a href="../../notes/synthesis/survey-reports/codex.html">Codex (7.2)</a></li><li><a href="../../notes/synthesis/survey-reports/taichu.html">TaiChu (5.0)</a></li><li><a href="../../notes/synthesis/survey-reports/zeroclaw.html">ZeroClaw (5.0)</a></li><li><a href="../../notes/synthesis/survey-reports/genericagent.html">GenericAgent (4.8)</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.papers">nav.papers</h2><ul><li><a href="../skill-rl/overview.html">SkillRL</a></li><li><a class="active" href="./overview.html">Claw-R1</a></li><li><a href="../../notes/synthesis/comparison.html" data-i18n="nav.comparison">nav.comparison</a></li><li><a href="../../notes/synthesis/combined-pipeline.html" data-i18n="nav.pipeline">nav.pipeline</a></li><li><a href="../../notes/synthesis/l3-comprehensive-skill-analysis.html" data-i18n="nav.l3">nav.l3</a></li><li><a href="../../notes/synthesis/taichu-p0-skill-compaction-spec.html" data-i18n="nav.taichu_p0">nav.taichu_p0</a></li></ul></section><section><h2 data-i18n="nav.more">More</h2><ul>
+    <li><a href="/html/docs.html" data-i18n="nav.sitemap">Sitemap</a></li>
+    <li><a href="/html/i18n-coverage.html" data-i18n="nav.i18n_coverage">i18n coverage</a></li>
+    <li><a href="/html/index.html" data-i18n="nav.dashboard">Dashboard</a></li>
+    <li><a href="/html/deck/index.html" data-i18n="nav.decks">Slide decks</a></li>
+  </ul></section>
+    </nav>
+    <div class="viewer-main">
+      <div class="viewer-toolbar">
+        <div>
+          <h1>Claw-R1</h1>
+          <div class="path">topics/claw-r1/overview.md</div>
+        </div>
+        <a class="btn" href="/html/docs.html" data-i18n="toolbar.sitemap">Sitemap</a>
+        <a class="btn primary" href="../../notes/synthesis/agent-skill-architecture-survey-matrix.html" data-i18n="toolbar.matrix">165-dim matrix</a>
+      </div>
+      <p id="i18n-fallback-notice" class="i18n-notice" hidden data-i18n="content.fallback">content.fallback</p>
+      <article class="md-body"><h1>Claw-R1</h1>
+<p><strong>Full title:</strong> A Step-Level Data Middleware System for Agentic Reinforcement Learning<br><strong>Authors:</strong> Wang et al. (AgentR1)<br><strong>Code:</strong> <a href="https://github.com/AgentR1/Claw-R1">github.com/AgentR1/Claw-R1</a><br><strong>Demo video:</strong> <a href="https://youtu.be/Pw47dAOw6B0">youtu.be/Pw47dAOw6B0</a></p>
+<h2>Layer in the stack</h2>
+<p><strong>Infrastructure / data system</strong> — not a new RL algorithm.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Paper</th>
+<th>Focus</th>
+<th>Layer</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>SkillRL</td>
+<td>How the policy learns from experience</td>
+<td>RL algorithm / training method</td>
+</tr>
+<tr>
+<td><strong>Claw-R1</strong></td>
+<td>How agent interaction data is collected, managed, fed into RL</td>
+<td>Infrastructure / data system</td>
+</tr>
+</tbody></table></div>
+<h2>One-line thesis</h2>
+<p>Treat agent interaction traces as <strong>persistent, managed data assets</strong> — not transient logs — via a Gateway + Data Pool middleware layer.</p>
+<h2>Problem</h2>
+<p>Agent RL is becoming a <strong>data engineering problem</strong>. With 10,000 agents producing millions of steps, current systems treat interactions as temporary stdout that gets deleted. You lose granularity, queryability, and curation.</p>
+<h2>Core architecture</h2>
+<pre><code>Agent → Gateway Server → Step records → Data Pool → RL Trainer
+</code></pre>
+<h3>Gateway Server</h3>
+<p>All agent requests pass through a unified API entry point:</p>
+<pre><code>Agent → Gateway → LLM   (not Agent → LLM directly)
+</code></pre>
+<p>Automatically records: prompt, response, reward, tool calls, metadata, timestamps.</p>
+<p>Supports white-box agents (API submit), black-box agents (point <code>base_url</code> to gateway), and online live interactions.</p>
+<h3>Step-level data</h3>
+<p>Instead of storing only whole trajectories, each step is an independent data asset:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Step</th>
+<th>State</th>
+<th>Action</th>
+<th>Reward</th>
+<th>Prompt ID</th>
+<th>Response ID</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td>…</td>
+<td>Search</td>
+<td>0</td>
+<td>…</td>
+<td>…</td>
+</tr>
+<tr>
+<td>2</td>
+<td>…</td>
+<td>Read webpage</td>
+<td>1</td>
+<td>…</td>
+<td>…</td>
+</tr>
+<tr>
+<td>3</td>
+<td>…</td>
+<td>Answer</td>
+<td>1</td>
+<td>…</td>
+<td>…</td>
+</tr>
+</tbody></table></div>
+<p>Queryable: <em>&quot;Show all failed search steps where reward &lt; 0 and tool = browser&quot;</em></p>
+<h3>Data Pool (Replay Buffer++)</h3>
+<pre><code>Step → Metadata → Filtering → Versioning → Quality labels → Training readiness
+</code></pre>
+<p>Traditional replay buffer stores trajectories. Claw-R1&#39;s Data Pool adds:</p>
+<ul>
+<li>Multi-dimensional rewards (rule-based / discriminative RM / generative RM)</li>
+<li>Human feedback integration</li>
+<li>Policy version tracking (freshness-aware curation)</li>
+<li>Channel-based partitioning (train/val isolation)</li>
+<li>Pluggable <code>TrainingBackend</code> → GRPO, PPO, DPO, or any downstream RL</li>
+</ul>
+<h2>Why step-level?</h2>
+<p>A 20-step trajectory with 19 correct steps and 1 wrong step — trajectory-level storage loses granularity. Step-level lets you train <strong>only the wrong step</strong>.</p>
+<h2>Algorithm-agnostic</h2>
+<p>Claw-R1 does not care which RL algorithm you use. It prepares data; the trainer selects steps → batches → GRPO/PPO/DPO/etc.</p>
+<h2>Analogy</h2>
+<p>Infrastructure analogous to:</p>
+<ul>
+<li>Feature stores (recommendation systems)</li>
+<li>Data lakes (analytics)</li>
+<li>Experience replay buffers (classical RL)</li>
+</ul>
+<p>…but designed specifically for LLM agents.</p>
+<h2>Pros / cons</h2>
+<p><strong>Pros</strong></p>
+<ul>
+<li>Step-level granularity for credit assignment</li>
+<li>Queryable, filterable, versioned data</li>
+<li>Works with heterogeneous agents (white-box + black-box)</li>
+<li>Decouples data collection from training engine</li>
+<li>Interactive inspection and curation UI</li>
+</ul>
+<p><strong>Cons</strong></p>
+<ul>
+<li>Does not improve policy by itself (indirect)</li>
+<li>Requires gateway integration</li>
+<li>Data quality / reward labeling still a bottleneck</li>
+<li>Storage and lifecycle management overhead at scale</li>
+</ul>
+<h2>Open questions</h2>
+<ul>
+<li><input disabled="" type="checkbox"> Data Pool schema — exact step record format</li>
+<li><input disabled="" type="checkbox"> Integration path with SkillRL trajectory builder</li>
+<li><input disabled="" type="checkbox"> Relationship to OpenClaw-RL (online RL) vs Claw-R1 (data middleware)</li>
+<li><input disabled="" type="checkbox"> Curation policies — how does freshness-aware filtering work in practice?</li>
+</ul>
+<h2>Related notes</h2>
+<ul>
+<li><a href="../../notes/synthesis/comparison.html">Cross-paper comparison</a></li>
+<li><a href="../../notes/synthesis/combined-pipeline.html">Combined architecture</a></li>
+</ul>
+</article>
+    </div>
+  </div>
+  <script src="../../../js/i18n.js"></script>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
+  </script>
+</body>
+</html>

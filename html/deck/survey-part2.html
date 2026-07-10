@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Architecture Survey — Part 2 + TaiChu</title>
+  <link rel="stylesheet" href="css/deck.css">
+</head>
+<body data-i18n-page="deck" data-content-lang="bi">
+  <div class="lang-switch-deck" data-lang-switch aria-label="Language"></div>
+  <a class="hub-link" href="index.html" data-i18n="deck.hubs">← Decks</a>
+
+  <div class="deck">
+
+    <!-- SLIDE 1: TaiChu current state -->
+    <section class="slide theme-taichu">
+      <div class="slide-inner">
+        <header class="slide-header">
+          <div>
+            <div class="kicker">TaiChu · L3 evidence · survey-reports/taichu.md</div>
+            <h1><span data-lang-only="en">TaiChu Current State — Strengths vs Gaps</span><span data-lang-only="zh" hidden>TaiChu 现状 — 优势与缺口</span></h1>
+            <p class="subtitle"><span data-lang-only="en">Rust L1–L5 SDK · 17 canonical <code>skills/system/</code> + cloud catalog · per-turn expose + progressive <code>load_skill</code> · no versioned lifecycle yet</span><span data-lang-only="zh" hidden>Rust L1–L5 SDK · 17 个 canonical <code>skills/system/</code> + 云目录 · 每 turn 暴露 + 渐进式 <code>load_skill</code> · 尚无版本化生命周期</span></p>
+          </div>
+          <span class="slide-num">1 / 7</span>
+        </header>
+
+        <div class="slide-body"><div data-lang-only="en"><div class="stat-row">
+            <div class="stat green"><div class="val">5.0</div><div class="lbl"><span data-i18n="deck.stat.overall">Overall score</span></div></div>
+            <div class="stat"><div class="val">4/13</div><div class="lbl"><span data-i18n="deck.stat.lifecycle">Lifecycle</span></div></div>
+            <div class="stat"><div class="val">1/16</div><div class="lbl"><span data-i18n="deck.stat.evolution">Evolution</span></div></div>
+            <div class="stat"><div class="val">★</div><div class="lbl">runs_on unique</div></div>
+          </div>
+
+          <div class="compare">
+            <div class="panel before accent-taichu">
+              <h3 data-i18n="deck.strengths">Strengths (keep)</h3>
+              <ul>
+                <li><strong>runs_on</strong> — only repo with 端云 skill routing; remote delegation via <code>run_subagent</code></li>
+                <li><strong>Per-turn user prefix</strong> — <code># Available Skills</code> in user msg (cache-friendly, not system); <code>transform_context</code> + Toollery filter</li>
+                <li><strong>load_skill</strong> — XML metadata → full SKILL.md body; progressive disclosure wired</li>
+                <li><strong>Cloud catalog</strong> — <code>skill_catalog.json</code> + device sync; 17 system skills canonical</li>
+                <li><strong>interaction_log</strong> — JSONL trace foundation for Claw-R1 / SkillRL export</li>
+              </ul>
+            </div>
+            <div class="compare-mid">→</div>
+            <div class="panel after accent-warn">
+              <h3 data-i18n="deck.gaps">Gaps (P0–P3)</h3>
+              <ul>
+                <li><span class="gap">❌</span> <strong>No invoked_skills compact survival</strong> — compaction summarizes <code>load_skill</code> ToolResult; multi-turn fidelity lost</li>
+                <li><span class="gap">❌</span> <strong>No evolution loop</strong> — no proposals, gates, miner, or eval-gated publish</li>
+                <li><span class="gap">❌</span> <strong>No subagent skill preload</strong> — <code>ChildSessionSpec</code> lacks <code>skills: Vec&lt;String&gt;</code>; child rescans canonical only</li>
+                <li><span class="gap">❌</span> No trust_tier / audit / rollback on skill store</li>
+                <li><span class="gap">◐</span> No SkillRouter (RRF) — static catalog + filter only</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="mono" style="margin-top:0.35rem;color:var(--muted)">
+            Flow: session scan → XML catalog → per-turn user prefix → load_skill → compaction.rs ❌ drops body
+          </div>
+
+          <div class="chip-row">
+            <span class="evidence-chip" data-evidence="load_skill.rs — runs_on remote delegation"
+              data-quote="技能「{}」在远程设备上执行（runs_on: {}）。请查看 &lt;devices&gt; 中对应的在线设备，使用 run_subagent(target_id=...) 委托执行。"
+              data-source="core/builtintools/src/skill/load_skill.rs:120-131&#10;details: json!({ &quot;remote_delegation&quot;: true })"
+              data-link="https://taichu.fun/gitea/SystemAgentDev/TaiChu">load_skill.rs runs_on ★</span>
+            <span class="evidence-chip" data-evidence="Compact risk — context-and-skills.md"
+              data-quote="After compaction, load_skill ToolResult content may be summarized away — multi-turn skill-guided tasks lose procedural fidelity."
+              data-source="docs/architecture/context-and-skills.md:64-68 · compaction.rs:252-257"
+              data-link="../site/notes/synthesis/taichu-p0-skill-compaction-spec.html">compact drops body ❌</span>
+            <span class="evidence-chip" data-evidence="Per-turn user prefix"
+              data-quote="# Available Skills injected via SessionOptions.transform_context — skills in user message, not system prompt."
+              data-source="taichu-service/src/api/mod.rs:674-694 · agent-plugin/tool_search_bridge.rs:370-382"
+              data-link="../site/notes/synthesis/survey-reports/taichu.html">per-turn prefix ★</span>
+            <span class="evidence-chip" data-evidence="Child session gap"
+              data-quote="No ChildSessionSpec.skills preload — child rescans canonical only; no inherit parent invoked skills."
+              data-source="core/agent-framework/src/session/manager.rs:1736-1796"
+              data-link="https://github.com/oboard/claude-code-rev">vs Claude Rev preload</span>
+          </div></div><div data-lang-only="zh" hidden>
+          <div class="stat-row"><div class="stat"><div class="val">5.0</div><div class="lbl">总分</div></div><div class="stat"><div class="val">4/13</div><div class="lbl">生命周期</div></div><div class="stat"><div class="val">1/16</div><div class="lbl">进化</div></div><div class="stat green"><div class="val">★</div><div class="lbl">runs_on 独有</div></div></div>
+          <div class="compare">
+            <div class="panel before accent-taichu">
+              <h3 data-i18n="deck.strengths">优势（保留）</h3>
+              <ul><li><strong>runs_on</strong> — 唯一具备端云 skill 路由；经 <code>run_subagent</code> 远程委托</li><li><strong>每 turn user prefix</strong> — user 消息内 <code># Available Skills</code>（cache 友好，非 system）；<code>transform_context</code> + Toollery 过滤</li><li><strong>load_skill</strong> — XML 元数据 → 完整 SKILL.md；渐进披露已接通</li><li><strong>云目录</strong> — <code>skill_catalog.json</code> + 设备同步；17 个 system skill 为 canonical</li><li><strong>interaction_log</strong> — JSONL 轨迹，Claw-R1 / SkillRL 导出基础</li></ul>
+            </div>
+            <div class="compare-mid">→</div>
+            <div class="panel after accent-warn">
+              <h3 data-i18n="deck.gaps">缺口（P0–P3）</h3>
+              <ul><li><span class="gap">❌</span> <strong>无 invoked_skills compact 存活</strong> — compaction 会摘要 <code>load_skill</code> ToolResult；多轮保真丢失</li><li><span class="gap">❌</span> <strong>无进化闭环</strong> — 无 proposals、gates、miner 或 eval 门控发布</li><li><span class="gap">❌</span> <strong>无 subagent skill 预载</strong> — <code>ChildSessionSpec</code> 缺 <code>skills: Vec&lt;String&gt;</code></li><li><span class="gap">❌</span> skill store 无 trust_tier / audit / rollback</li><li><span class="gap">◐</span> 无 SkillRouter (RRF) — 仅静态 catalog + filter</li></ul>
+            </div>
+          </div>
+          <div class="mono" style="margin-top:0.35rem;color:var(--muted)">流程：session 扫描 → XML catalog → 每 turn user prefix → load_skill → compaction.rs ❌ 丢弃 body</div>
+        </div></div>
+
+        <footer class="slide-footer">
+          <span>Matrix §1 6/14 · §9 1/16 · Keep runs_on + user prefix</span>
+          <span>P0 spec → taichu-p0-skill-compaction-spec.md</span>
+        </footer>
+      </div>
+    </section>
+
+    <!-- SLIDE 2: Six-layer target -->
+    <section class="slide theme-taichu">
+      <div class="slide-inner">
+        <header class="slide-header">
+          <div>
+            <div class="kicker">TaiChu target architecture · web-deep-taichu-borrowing-guide §10</div>
+            <h1><span data-lang-only="en">Six-Layer Skill Lifecycle System</span><span data-lang-only="zh" hidden>六层 Skill 生命周期系统</span></h1>
+            <p class="subtitle"><span data-lang-only="en">Not a <code>skills/</code> folder — versioned, routable, traceable, evolvable, governed software assets</span><span data-lang-only="zh" hidden>不是 <code>skills/</code> 文件夹 — 而是可版本化、可路由、可追溯、可进化、可治理的软件资产</span></p>
+          </div>
+          <span class="slide-num">2 / 7</span>
+        </header>
+
+        <div class="slide-body">
+          <div class="grid-3">
+            <div class="panel accent-taichu">
+              <h3>SkillRegistry</h3>
+              <p>Multi-root scan, precedence merge, <code>SkillManifest</code> (version, scope, trust_tier, risk_level, allowed_tools) — borrow OpenClaw 6-source + ZeroClaw metadata</p>
+            </div>
+            <div class="panel accent-taichu">
+              <h3>SkillRouter</h3>
+              <p>Per-turn / per-agent / per-subagent selection — explicit <code>/skill</code>, implicit description match, role filter, context budget cap — target OpenSquilla RRF top-k</p>
+            </div>
+            <div class="panel accent-taichu">
+              <h3>SkillLoader</h3>
+              <p>Progressive disclosure: name+description+path → full SKILL.md on activation — Codex 2% ctx / 8K cap pattern; <code>load_skill</code> + <code>runs_on</code> delegation preserved</p>
+            </div>
+            <div class="panel accent-taichu">
+              <h3>SkillTrace</h3>
+              <p><code>interaction_log</code> JSONL + HookChain — turn/tool/failure capture; Claw-R1 step schema export; foundation for mining &amp; RL datasets</p>
+            </div>
+            <div class="panel accent-taichu">
+              <h3>SkillEvolution</h3>
+              <p>Trace → candidate → dedupe → regression eval → policy gates → versioned publish — candidate/PR mode only (Hermes #55647 lesson: never direct canonical patch)</p>
+            </div>
+            <div class="panel accent-taichu">
+              <h3>SkillGovernance</h3>
+              <p>allow/deny tools · risk tier · owner · audit pre-load · human approval for generated skills · rollback — ZeroClaw <code>audit.rs</code> + OpenSquilla 4-gate</p>
+            </div>
+          </div>
+
+          <div class="eli5" style="margin-top:0.5rem">
+            <strong>Seams (L3 verified):</strong>
+            <code>Runtime::add_tool_factory</code> · <code>SessionOptions.transform_context</code> · Toollery <code>before_prompt</code> · <code>set_skill_name_filter</code> · <code>enable_interaction_log</code> · <code>subagent_relay</code>
+          </div>
+
+          <div class="chip-row">
+            <span class="evidence-chip" data-evidence="Target six layers"
+              data-quote="SkillRegistry → SkillRouter → SkillLoader → SkillTrace → SkillEvolution → SkillGovernance"
+              data-source="web-expanded-lifecycle-matrix-merged.md §4.1 · web-deep-taichu-borrowing-guide §10"
+              data-link="../site/notes/synthesis/web-expanded-lifecycle-matrix-merged.html">§4.1 six layers</span>
+            <span class="evidence-chip" data-evidence="SkillManifest schema"
+              data-quote="name, description, version, source, scope, trust_tier, risk_level, allowed_tools, denied_tools, mutable_by_agent, requires_approval"
+              data-source="web-deep-taichu-borrowing-guide §10 Layer 1"
+              data-link="../site/notes/synthesis/web-deep-taichu-borrowing-guide.html">SkillManifest</span>
+          </div>
+        </div>
+
+        <footer class="slide-footer">
+          <span>Complementary subagent bundles — main sees MetaSkill, child sees AtomicSkills</span>
+          <span>proposed-skill-lifecycle-architecture.md L0–L6 stack</span>
+        </footer>
+      </div>
+    </section>
+
+    <!-- SLIDE 3: P0-P3 roadmap -->
+    <section class="slide theme-taichu">
+      <div class="slide-inner">
+        <header class="slide-header">
+          <div>
+            <div class="kicker">Implementation roadmap · taichu-p0-skill-compaction-spec.md</div>
+            <h1><span data-lang-only="en">P0–P3 Roadmap — Borrow Stack → Ship Order</span><span data-lang-only="zh" hidden>P0–P3 路线图 — 借鉴栈 → 交付顺序</span></h1>
+            <p class="subtitle"><span data-lang-only="en">Fix compaction survival first; governance before evolution; MetaSkill last</span><span data-lang-only="zh" hidden>先修 compaction 存活；进化前上治理；MetaSkill 最后</span></p>
+          </div>
+          <span class="slide-num">3 / 7</span>
+        </header>
+
+        <div class="slide-body">
+          <div class="tbl-wrap">
+            <table class="dense">
+              <thead>
+                <tr>
+                  <th>Priority</th>
+                  <th>Component</th>
+                  <th>Borrow from</th>
+                  <th>TaiChu target file / store</th>
+                  <th>Acceptance</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><span class="tag" style="color:var(--red)">P0</span></td>
+                  <td><strong>InvokedSkillRegistry</strong> + post-compact reinject</td>
+                  <td>oboard Claude Rev <code>compact.ts:1488-1534</code></td>
+                  <td><code>agent-session/src/invoked_skills.rs</code> · <code>compaction.rs</code></td>
+                  <td>Load → compact → next turn still sees skill body (≤25K budget, 5K/skill)</td>
+                </tr>
+                <tr>
+                  <td><span class="tag" style="color:var(--red)">P0</span></td>
+                  <td><strong>ChildSessionSpec.skills</strong> preload</td>
+                  <td>Claude Rev <code>runAgent.ts:577</code></td>
+                  <td><code>session/mod.rs</code> · <code>build_child_session_prompt</code></td>
+                  <td>Child with <code>skills: ["foo"]</code> gets metadata + compact survival if loaded</td>
+                </tr>
+                <tr>
+                  <td><span class="tag" style="color:var(--clawr1)">P1</span></td>
+                  <td><strong>proposals/</strong> + <code>gates.json</code></td>
+                  <td>OpenSquilla <code>proposals_lib.py</code></td>
+                  <td><code>~/.taichu/proposals/</code> · candidate-only writes</td>
+                  <td>Agent proposes; system validates; no direct canonical patch</td>
+                </tr>
+                <tr>
+                  <td><span class="tag" style="color:var(--clawr1)">P1</span></td>
+                  <td><strong>skill_manage</strong> (candidate) + audit + trust_tier</td>
+                  <td>Hermes + ZeroClaw <code>audit.rs</code></td>
+                  <td><code>builtintools/</code> · pre-load scan</td>
+                  <td>read-before-write · schema validation · generated = requires_human_approval</td>
+                </tr>
+                <tr>
+                  <td><span class="tag" style="color:var(--skillrl)">P2</span></td>
+                  <td><strong>RRF SkillRouter</strong></td>
+                  <td>OpenSquilla <code>skills_filter.py</code> per-turn top-k</td>
+                  <td><code>tool_search_bridge.rs</code></td>
+                  <td>Task-conditioned skill selection beyond static filter</td>
+                </tr>
+                <tr>
+                  <td><span class="tag" style="color:var(--skillrl)">P2</span></td>
+                  <td><strong>SkillMiner</strong></td>
+                  <td>GenericAgent crystallize + interaction_log</td>
+                  <td>async job → <code>.taichu/skill-candidates/</code></td>
+                  <td>trajectory → candidate → dedupe → regression → gates (not ungated SOP write)</td>
+                </tr>
+                <tr>
+                  <td><span class="tag" style="color:var(--accent2)">P3</span></td>
+                  <td><strong>MetaSkill DAG</strong></td>
+                  <td>OpenSquilla <code>meta/orchestrator.py</code></td>
+                  <td>new <code>meta/</code> workflow layer</td>
+                  <td>AtomicSkill + MetaSkill two-tier; workflow topology evolution separate from atomic patches</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="chip-row">
+            <span class="evidence-chip" data-evidence="Claude Rev invoked_skills"
+              data-quote="Creates an attachment for invoked skills to preserve their content across compaction"
+              data-source="oboard/claude-code-rev compact.ts:1488-1492"
+              data-link="https://github.com/oboard/claude-code-rev">compact.ts ★ P0</span>
+            <span class="evidence-chip" data-evidence="OpenSquilla RRF"
+              data-quote="Step 3: Gate skills deterministically, optionally filter by relevance, inject."
+              data-source="opensquilla/skills_filter.py:1"
+              data-link="https://github.com/opensquilla/opensquilla">skills_filter.py P2</span>
+            <span class="evidence-chip" data-evidence="Hermes patch risk"
+              data-quote="background review may patch skill without reading current SKILL.md — hallucinated deletions"
+              data-source="GitHub NousResearch/hermes-agent #55647"
+              data-link="https://github.com/NousResearch/hermes-agent/issues/55647">Hermes #55647 ⚠ P1 gate</span>
+            <span class="evidence-chip" data-evidence="GenericAgent crystallize"
+              data-quote="automatically crystallizes the execution path into a reusable Skill"
+              data-source="lsdefine/genericagent README · ga.py:508-523"
+              data-link="https://github.com/lsdefine/genericagent">SkillMiner insp P2</span>
+          </div>
+        </div>
+
+        <footer class="slide-footer">
+          <span>P0 out of scope: skill_manage CRUD · proposals store · GEPA · MetaSkill</span>
+          <span>Resume restore: InvokedSkillsAttachment in JSONL</span>
+        </footer>
+      </div>
+    </section>
+
+    <!-- SLIDE 4: Combined pipeline -->
+    <section class="slide theme-survey">
+      <div class="slide-inner">
+        <header class="slide-header">
+          <div>
+            <div class="kicker">T003 combined-pipeline.md · SkillRL + Claw-R1 · complementary not competing</div>
+            <h1><span data-lang-only="en">Combined Pipeline — Data Layer + Learning Layer</span><span data-lang-only="zh" hidden>组合流水线 — 数据层 + 学习层</span></h1>
+            <p class="subtitle"><span data-lang-only="en">Full-stack agentic RL: Claw-R1 solves data problem SkillRL assumes; SkillRL compresses what Claw-R1 cannot</span><span data-lang-only="zh" hidden>全栈 agentic RL：Claw-R1 解决 SkillRL 假设的数据问题；SkillRL 压缩 Claw-R1 无法压缩的经验</span></p>
+          </div>
+          <span class="slide-num">4 / 7</span>
+        </header>
+
+        <div class="slide-body">
+          <div class="grid-2">
+            <div class="flow-vertical">
+              <div class="flow-step theme-clawr1">
+                <span class="num">1</span>
+                <div>
+                  <strong>Agents (heterogeneous)</strong>
+                  <span>White-box + black-box · TaiChu interaction_log · OpenClaw trajectory JSONL</span>
+                </div>
+              </div>
+              <div class="flow-step theme-clawr1">
+                <span class="num">2</span>
+                <div>
+                  <strong>Claw-R1 Gateway Server</strong>
+                  <span>Unified API · capture every step · prompt_id, response_id, reward, tool, metadata, timestamp</span>
+                </div>
+              </div>
+              <div class="flow-step theme-clawr1">
+                <span class="num">3</span>
+                <div>
+                  <strong>Step Data Pool</strong>
+                  <span>Version · filter · label · query step records · failure steps indexed</span>
+                </div>
+              </div>
+              <div class="flow-step theme-clawr1">
+                <span class="num">4</span>
+                <div>
+                  <strong>Trajectory Builder</strong>
+                  <span>Assemble success + failure step streams into trainable trajectories</span>
+                </div>
+              </div>
+              <div class="flow-step theme-skillrl">
+                <span class="num">5</span>
+                <div>
+                  <strong>SkillRL Teacher Distillation</strong>
+                  <span>Trajectories → compact skills + failure lessons · 10–20× compression claim</span>
+                </div>
+              </div>
+              <div class="flow-step theme-skillrl">
+                <span class="num">6</span>
+                <div>
+                  <strong>SkillBank (S_g + S_k)</strong>
+                  <span>Hierarchical general + task-specific · retrievable memory · co-evolves with policy</span>
+                </div>
+              </div>
+              <div class="flow-step theme-skillrl">
+                <span class="num">7</span>
+                <div>
+                  <strong>GRPO Policy Update</strong>
+                  <span>Skill-augmented context · recursive validation epoch · updated policy</span>
+                </div>
+              </div>
+              <div class="flow-step theme-survey">
+                <span class="num">8</span>
+                <div>
+                  <strong>Recursive loop ↺</strong>
+                  <span>Improved policy rollouts → back to Gateway / Data Pool · SkillBank + policy co-evolution</span>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div class="panel accent-clawr1" style="margin-bottom:0.65rem">
+                <h3>Claw-R1 — Infrastructure</h3>
+                <p>arXiv <a href="https://arxiv.org/abs/2606.09138" target="_blank" rel="noopener">2606.09138</a> · AgentR1/Claw-R1 · step-level data middleware · algorithm-agnostic (GRPO/PPO/DPO)</p>
+                <p style="margin-top:0.35rem">Thesis: interaction traces as managed data assets — not stdout to delete</p>
+              </div>
+              <div class="panel accent-skillrl" style="margin-bottom:0.65rem">
+                <h3>SkillRL — Algorithm</h3>
+                <p>arXiv <a href="https://arxiv.org/abs/2602.08234" target="_blank" rel="noopener">2602.08234</a> · aiming-lab/SkillRL · recursive skill-augmented RL · +15.3% benchmarks</p>
+                <p style="margin-top:0.35rem">Thesis: co-evolve SkillBank with GRPO policy — diary → recipe cards</p>
+              </div>
+              <div class="panel accent-survey">
+                <h3>OpenClaw-RL — RL harness layer (note)</h3>
+                <p><a href="https://github.com/Gen-Verse/OpenClaw-RL" target="_blank" rel="noopener">Gen-Verse/OpenClaw-RL</a> · conversation → training signals · async serving/rollout/PRM/policy loops</p>
+                <p style="margin-top:0.35rem"><strong>Not</strong> a SKILL.md lifecycle — complements OpenClaw <code>openclaw-trajectory</code> JSONL as feedback plane for personalized agent training</p>
+              </div>
+
+              <div class="chip-row">
+                <span class="evidence-chip" data-evidence="Claw-R1 division of labor"
+                  data-quote="Claw-R1 solves the data problem SkillRL assumes away. SkillRL solves the compression problem Claw-R1 doesn't address."
+                  data-source="combined-pipeline.md · comparison.md"
+                  data-link="https://arxiv.org/abs/2606.09138">Claw-R1 arXiv</span>
+                <span class="evidence-chip" data-evidence="SkillRL recursive loop"
+                  data-quote="SkillBank co-evolves with policy through recursive validation epochs."
+                  data-source="topics/skill-rl/overview.md · SkillRL paper"
+                  data-link="https://arxiv.org/abs/2602.08234">SkillRL arXiv</span>
+                <span class="evidence-chip" data-evidence="OpenClaw-RL scope"
+                  data-quote="Train any agent simply by talking — async decoupling of serving, rollout, PRM, policy training."
+                  data-source="Gen-Verse/OpenClaw-RL README (L0)"
+                  data-link="https://github.com/Gen-Verse/OpenClaw-RL">OpenClaw-RL GitHub</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <footer class="slide-footer">
+          <span>Both GRPO-compatible · failure lessons + step records complementary</span>
+          <span>Open Q: Trajectory Builder in Claw-R1 ext vs SkillRL preprocessor?</span>
+        </footer>
+      </div>
+    </section>
+
+    <!-- SLIDE 5: Borrow matrix -->
+    <section class="slide">
+      <div class="slide-inner">
+        <header class="slide-header">
+          <div>
+            <div class="kicker">web-deep-taichu-borrowing-guide §12 · L3 appendix merged</div>
+            <h1><span data-lang-only="en">Borrow Matrix — What to Take vs Reject</span><span data-lang-only="zh" hidden>借鉴矩阵 — 取什么 vs 拒什么</span></h1>
+            <p class="subtitle"><span data-lang-only="en">TaiChu optimal route = Registry + Router + Subagent bundles + Trace mining + Eval-gated evolution + Governance</span><span data-lang-only="zh" hidden>TaiChu 最优路径 = Registry + Router + Subagent bundles + Trace 挖掘 + Eval 门控进化 + 治理</span></p>
+          </div>
+          <span class="slide-num">5 / 7</span>
+        </header>
+
+        <div class="slide-body">
+          <div class="tbl-wrap">
+            <table class="dense">
+              <thead>
+                <tr>
+                  <th>Source</th>
+                  <th>Score</th>
+                  <th>Borrow ✓</th>
+                  <th>Do NOT borrow ✗</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Codex</strong></td>
+                  <td>7.2</td>
+                  <td>SKILL.md standard · progressive disclosure · description-as-router · 2% ctx cap · Record&amp;Replay</td>
+                  <td>Manual-only skill creator · no closed-loop evolution</td>
+                </tr>
+                <tr>
+                  <td><strong>OpenClaw</strong></td>
+                  <td>8.0</td>
+                  <td>6-source precedence · per-agent visibility · session snapshot · watcher refresh · trajectory JSONL · skill-workshop</td>
+                  <td>Marketplace trust model · unvetted third-party skills</td>
+                </tr>
+                <tr>
+                  <td><strong>Hermes</strong></td>
+                  <td>8.1</td>
+                  <td>skill_manage API shape · agent-created skills · background review · progressive disclosure</td>
+                  <td>Agent delete-any · patch without read (#55647) · direct canonical write</td>
+                </tr>
+                <tr>
+                  <td><strong>OpenSquilla</strong></td>
+                  <td>9.0</td>
+                  <td>MetaSkill DAG · per-turn RRF · 4-gate proposals · auto_propose · runtime_e2e</td>
+                  <td>Scattered prompt workflows · skip eval gates</td>
+                </tr>
+                <tr>
+                  <td><strong>Claude Rev</strong> (oboard)</td>
+                  <td>7.7</td>
+                  <td>invoked_skills compact survival · ChildSessionSpec preload · skillImprovement 5-turn · 3-channel expose</td>
+                  <td>Confuse with Yuyz0112 viz tool · expose all skills to all subagents</td>
+                </tr>
+                <tr>
+                  <td><strong>ZeroClaw</strong></td>
+                  <td>5.0</td>
+                  <td>registry audit · pin version · trust_tier metadata · zip-bomb limits · Full/Compact injection</td>
+                  <td>CI scan = security boundary · ungated community install</td>
+                </tr>
+                <tr>
+                  <td><strong>GenericAgent</strong></td>
+                  <td>4.8</td>
+                  <td>trajectory → reusable skill philosophy · Skill Miner inspiration · crystallize on success</td>
+                  <td>Ungated auto-SOP write · weak governance · env-specific workaround固化</td>
+                </tr>
+                <tr>
+                  <td><strong>TaiChu native</strong></td>
+                  <td>5.0</td>
+                  <td><span class="star">★</span> runs_on · per-turn user prefix · load_skill wire · Toollery filter · interaction_log</td>
+                  <td>— keep while building six layers</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="chip-row">
+            <span class="evidence-chip" data-evidence="Codex progressive disclosure"
+              data-quote="Codex loads the full SKILL.md instructions only when it decides to use a skill."
+              data-source="OpenAI Developers — Agent Skills"
+              data-link="https://developers.openai.com/codex/skills">Codex docs</span>
+            <span class="evidence-chip" data-evidence="OpenClaw precedence"
+              data-quote="When the same skill name appears in multiple places, the highest source wins."
+              data-source="docs.openclaw.ai/tools/skills"
+              data-link="https://docs.openclaw.ai/tools/skills">OpenClaw docs</span>
+            <span class="evidence-chip" data-evidence="OpenSquilla MetaSkill"
+              data-quote="A MetaSkill preserves a way of doing high-value work."
+              data-source="opensquilla meta-skill-user-guide.md"
+              data-link="https://github.com/opensquilla/opensquilla">MetaSkill</span>
+            <span class="evidence-chip" data-evidence="ZeroClaw audit"
+              data-quote="Run zeroclaw skills audit before installing a new skill. Registry is NOT a vetted security boundary."
+              data-source="zeroclaw-labs/zeroclaw-skills README"
+              data-link="https://github.com/zeroclaw-labs/zeroclaw-skills">audit ★</span>
+          </div>
+        </div>
+
+        <footer class="slide-footer">
+          <span>Yuyz0112/claude-code-reverse → subagent context offload only (not skill runtime)</span>
+          <span>One line: skill = 可评测·可审计·可版本化·可回滚 software asset</span>
+        </footer>
+      </div>
+    </section>
+
+    <!-- SLIDE 6: Lifecycle merged table -->
+    <section class="slide theme-survey">
+      <div class="slide-inner">
+        <header class="slide-header">
+          <div>
+            <div class="kicker">web-expanded-lifecycle-matrix-merged.md §3 · Author → Governance</div>
+            <h1><span data-lang-only="en">Skill Lifecycle — Merged Stage Matrix</span><span data-lang-only="zh" hidden>Skill 生命周期 — 合并阶段矩阵</span></h1>
+            <p class="subtitle"><span data-lang-only="en">Who leads each stage across 8 repos + TaiChu target · L0 public + L3 cross-check</span><span data-lang-only="zh" hidden>8 仓 + TaiChu 目标各阶段领先者 · L0 公开 + L3 交叉校验</span></p>
+          </div>
+          <span class="slide-num">6 / 7</span>
+        </header>
+
+        <div class="slide-body">
+          <div class="tbl-wrap">
+            <table class="dense">
+              <thead>
+                <tr>
+                  <th>Stage</th>
+                  <th>Codex</th>
+                  <th>OpenClaw</th>
+                  <th>Hermes</th>
+                  <th>OpenSquilla</th>
+                  <th>Claude Rev</th>
+                  <th>TaiChu target</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Author</strong></td>
+                  <td>human / skill-creator</td>
+                  <td>human / workshop</td>
+                  <td>human / hub / agent</td>
+                  <td>human+AI / auto_propose</td>
+                  <td>skillify / human</td>
+                  <td>human + agent candidate</td>
+                </tr>
+                <tr>
+                  <td><strong>Store</strong></td>
+                  <td>folder SKILL.md</td>
+                  <td>6-root merge</td>
+                  <td>~/.hermes/skills</td>
+                  <td>6-layer + proposals/</td>
+                  <td>multi-root SKILL.md</td>
+                  <td><code>.taichu/skills</code> + manifest DB</td>
+                </tr>
+                <tr>
+                  <td><strong>Discover</strong></td>
+                  <td>scope scan</td>
+                  <td>precedence + filter</td>
+                  <td>dir scan</td>
+                  <td><span class="star">★</span> per-turn pipeline</td>
+                  <td>incremental listing</td>
+                  <td>SkillRegistry multi-root</td>
+                </tr>
+                <tr>
+                  <td><strong>Expose</strong></td>
+                  <td>name/desc/path</td>
+                  <td>compact XML</td>
+                  <td>metadata index</td>
+                  <td>injector compact/full</td>
+                  <td>3-channel attachment</td>
+                  <td>user prefix + XML</td>
+                </tr>
+                <tr>
+                  <td><strong>Recommend</strong></td>
+                  <td>description implicit</td>
+                  <td>allowlist</td>
+                  <td>explicit / auto</td>
+                  <td><span class="star">★</span> RRF top-k</td>
+                  <td>decay score 7d</td>
+                  <td>SkillRouter</td>
+                </tr>
+                <tr>
+                  <td><strong>Load</strong></td>
+                  <td>full after pick</td>
+                  <td>read tool lazy</td>
+                  <td>skill_view</td>
+                  <td>skill_view / meta_invoke</td>
+                  <td>Skill tool</td>
+                  <td>load_skill + runs_on</td>
+                </tr>
+                <tr>
+                  <td><strong>Use</strong></td>
+                  <td>prompt+scripts</td>
+                  <td>prompt+env</td>
+                  <td>skill_manage</td>
+                  <td>MetaSkill DAG</td>
+                  <td>prompt+tools</td>
+                  <td>prompt+tools+workflow</td>
+                </tr>
+                <tr>
+                  <td><strong>Observe</strong></td>
+                  <td>dispatch trace</td>
+                  <td>trajectory JSONL</td>
+                  <td>JSONL+DB</td>
+                  <td>decision log</td>
+                  <td>session JSONL</td>
+                  <td><span class="star">★</span> interaction_log</td>
+                </tr>
+                <tr>
+                  <td><strong>Compact</strong></td>
+                  <td>metadata budget</td>
+                  <td>compact XML</td>
+                  <td>compressor</td>
+                  <td>per-turn rebuild</td>
+                  <td><span class="star">★</span> invoked_skills</td>
+                  <td>reinject P0</td>
+                </tr>
+                <tr>
+                  <td><strong>Evolve</strong></td>
+                  <td>creator/replay</td>
+                  <td>workshop+scanner</td>
+                  <td>manage+GEPA</td>
+                  <td>gates+E2E</td>
+                  <td>survey UI</td>
+                  <td>eval-gated PR</td>
+                </tr>
+                <tr>
+                  <td><strong>Delete</strong></td>
+                  <td>FS/config</td>
+                  <td>FS+quarantine</td>
+                  <td>agent delete</td>
+                  <td>reject_proposal</td>
+                  <td>user delete</td>
+                  <td>disable/archive/rollback</td>
+                </tr>
+                <tr>
+                  <td><strong>Governance</strong></td>
+                  <td>Guardian</td>
+                  <td>allowlist+scanner</td>
+                  <td>skills_guard ◐</td>
+                  <td><span class="star">★</span> 4-gate</td>
+                  <td>survey gate</td>
+                  <td>policy+approval</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="eli5" style="margin-top:0.4rem;font-size:0.75rem">
+            <strong>L3 corrections:</strong> oboard ≠ Yuyz0112 · OpenClaw workshop auto at agent_end · OpenSquilla reject_proposal · ZeroClaw Full/Compact modes · TaiChu P0 compact gap
+          </div>
+        </div>
+
+        <footer class="slide-footer">
+          <span>9-stage superset: Store→Expose→Discover→Recommend→Offload→Use→Compact→Delete→Evolve</span>
+          <span>skill-lifecycle-full-matrix.md · 165-dim §8–§11 mapping</span>
+        </footer>
+      </div>
+    </section>
+
+    <!-- SLIDE 7: Evidence index -->
+    <section class="slide theme-survey">
+      <div class="slide-inner">
+        <header class="slide-header">
+          <div>
+            <div class="kicker">Evidence index · synthesis corpus · survey-reports/</div>
+            <h1><span data-lang-only="en">Source Index &amp; Next Decks</span><span data-lang-only="zh" hidden>来源索引与后续 Deck</span></h1>
+            <p class="subtitle"><span data-lang-only="en">All markdown synthesis + per-repo L3 reports · papers as standalone deep dives</span><span data-lang-only="zh" hidden>全部 markdown 综合 + 各仓 L3 报告 · 论文为独立深度阅读</span></p>
+          </div>
+          <span class="slide-num">7 / 7</span>
+        </header>
+
+        <div class="slide-body">
+          <div class="grid-2">
+            <div class="panel accent-survey">
+              <h3>Synthesis markdown</h3>
+              <ul style="font-size:0.72rem;line-height:1.5">
+                <li><a href="../site/notes/synthesis/agent-skill-architecture-survey-matrix.html">agent-skill-architecture-survey-matrix.md</a> — 165 dim × 8 repos</li>
+                <li><a href="../site/notes/synthesis/web-expanded-lifecycle-matrix-merged.html">web-expanded-lifecycle-matrix-merged.md</a> — lifecycle merge L0+L3</li>
+                <li><a href="../site/notes/synthesis/web-deep-taichu-borrowing-guide.html">web-deep-taichu-borrowing-guide.md</a> — borrow guide + appendix</li>
+                <li><a href="../site/notes/synthesis/taichu-p0-skill-compaction-spec.html">taichu-p0-skill-compaction-spec.md</a> — P0 InvokedSkillRegistry</li>
+                <li><a href="../site/notes/synthesis/combined-pipeline.html">combined-pipeline.md</a> — Claw-R1 + SkillRL stack</li>
+                <li><a href="../site/notes/synthesis/comparison.html">comparison.md</a> — two-paper comparison</li>
+                <li><a href="../site/notes/synthesis/l3-comprehensive-skill-analysis.html">l3-comprehensive-skill-analysis.md</a> — L3 deep merge</li>
+                <li><a href="../site/notes/synthesis/proposed-skill-lifecycle-architecture.html">proposed-skill-lifecycle-architecture.md</a> — L0–L6 online arch</li>
+                <li><a href="../site/notes/synthesis/web-vs-local-reconciliation.html">web-vs-local-reconciliation.md</a> — Web vs L3 reconcile</li>
+                <li><a href="../site/notes/synthesis/skill-lifecycle-full-matrix.html">skill-lifecycle-full-matrix.md</a> — 9-stage full matrix</li>
+                <li><a href="../site/notes/synthesis/eight-repo-comprehensive-survey.html">eight-repo-comprehensive-survey.md</a> · <a href="../site/notes/synthesis/paper-index.html">paper-index.md</a></li>
+              </ul>
+            </div>
+
+            <div class="panel accent-taichu">
+              <h3>Survey reports (L3 per-repo)</h3>
+              <ul style="font-size:0.72rem;line-height:1.5">
+                <li><a href="../site/notes/synthesis/survey-reports/README.html">README.md</a> — index + borrow stack</li>
+                <li><a href="../site/notes/synthesis/survey-reports/opensquilla.html">opensquilla.md</a> (9.0) · <a href="../site/notes/synthesis/survey-reports/hermes-agent.html">hermes-agent.md</a> (8.1)</li>
+                <li><a href="../site/notes/synthesis/survey-reports/openclaw.html">openclaw.md</a> (8.0) · <a href="../site/notes/synthesis/survey-reports/claude-code-rev.html">claude-code-rev.md</a> (7.7)</li>
+                <li><a href="../site/notes/synthesis/survey-reports/codex.html">codex.md</a> (7.2) · <a href="../site/notes/synthesis/survey-reports/taichu.html">taichu.md</a> (5.0)</li>
+                <li><a href="../site/notes/synthesis/survey-reports/zeroclaw.html">zeroclaw.md</a> (5.0) · <a href="../site/notes/synthesis/survey-reports/genericagent.html">genericagent.md</a> (4.8)</li>
+                <li><a href="../site/notes/synthesis/survey-reports/openclaw-rl.html">openclaw-rl.md</a> (RL layer L0)</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="grid-2" style="margin-top:0.65rem">
+            <div class="panel accent-skillrl">
+              <h3>Papers · arXiv</h3>
+              <p style="font-size:0.78rem">
+                <a href="https://arxiv.org/abs/2602.08234" target="_blank" rel="noopener">SkillRL 2602.08234</a> ·
+                <a href="https://arxiv.org/abs/2606.09138" target="_blank" rel="noopener">Claw-R1 2606.09138</a>
+              </p>
+              <p style="font-size:0.72rem;color:var(--muted);margin-top:0.35rem">
+                GitHub: <a href="https://github.com/aiming-lab/SkillRL" target="_blank" rel="noopener">aiming-lab/SkillRL</a> ·
+                <a href="https://github.com/AgentR1/Claw-R1" target="_blank" rel="noopener">AgentR1/Claw-R1</a>
+              </p>
+            </div>
+            <div class="panel accent-clawr1">
+              <h3>Next · paper decks</h3>
+              <p style="font-size:0.78rem">
+                <a href="paper-skillrl.html">③ Paper Deep Dive — SkillRL</a> (5 slides)<br>
+                <a href="paper-claw-r1.html">④ Paper Deep Dive — Claw-R1</a> (5 slides)
+              </p>
+              <p style="font-size:0.72rem;color:var(--muted);margin-top:0.35rem">
+                ← <a href="survey-part1.html">Part 1</a> stack + matrix + repo rankings
+              </p>
+            </div>
+          </div>
+
+          <div class="chip-row">
+            <span class="evidence-chip" data-evidence="Evidence levels"
+              data-quote="L0 public docs · L1 docs+issues · L2 partial clone · L3 full local source · L4 runtime capture"
+              data-source="store/protocols/evidence-levels.md"
+              data-link="../../store/protocols/evidence-levels.md">L0–L4 levels</span>
+            <span class="evidence-chip" data-evidence="Session archive"
+              data-quote="Eight-repo L3 research session — 2026-07-08"
+              data-source="store/sessions/2026-07-08-eight-repo-l3-research.md"
+              data-link="../../store/sessions/2026-07-08-eight-repo-l3-research.md">session archive</span>
+            <span class="evidence-chip" data-evidence="INDEX.md master catalog"
+              data-quote="Master catalog — topics T001-T007, papers, synthesis, survey reports"
+              data-source="INDEX.md · STORE.md"
+              data-link="../site/INDEX.html">INDEX.md</span>
+          </div>
+        </div>
+
+        <footer class="slide-footer">
+          <span>Evidence chips throughout deck → click for quotes + file:line + links</span>
+          <span>Keyboard ← → · Serve: python3 scripts/serve.py</span>
+        </footer>
+      </div>
+    </section>
+
+  </div>
+
+  <nav class="deck-nav">
+    <button id="nav-prev" type="button">← Prev</button>
+    <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+    <span class="progress-label" id="progress-label">1/7</span>
+    <button id="nav-next" type="button">Next →</button>
+  </nav>
+
+  <div class="modal-overlay" id="evidence-modal">
+    <div class="modal">
+      <button class="close-btn" type="button" onclick="closeModal()">×</button>
+      <h2 id="modal-title">Evidence</h2>
+      <div id="modal-body"></div>
+    </div>
+  </div>
+
+  <script src="js/deck.js"></script>
+  <script src="../js/i18n.js"></script>
+</body>
+</html>

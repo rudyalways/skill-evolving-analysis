@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>八仓库综合架构调研 — Skill-Evolving</title>
+  <link rel="alternate" hreflang="en" href="/html/site/notes/synthesis/eight-repo-comprehensive-survey.html">
+  <link rel="alternate" hreflang="zh-Hans" href="/html/site/zh/notes/synthesis/eight-repo-comprehensive-survey.html">
+  <link rel="alternate" hreflang="x-default" href="/html/site/notes/synthesis/eight-repo-comprehensive-survey.html">
+  <link rel="stylesheet" href="../../../css/viewer.css">
+</head>
+<body class="" data-doc-locale="en" data-content-lang="zh">
+  <div class="viewer-layout">
+    <nav>
+      <div data-lang-switch class="lang-switch-host"></div>
+      <h1 data-i18n="nav.docs">Docs</h1>
+      <div class="title" data-i18n="nav.rendered">Rendered HTML</div>
+      <section class="highlight-section"><h2 data-i18n="nav.compare">nav.compare</h2><ul><li><a href="./agent-skill-architecture-survey-matrix.html" data-i18n="nav.matrix165">nav.matrix165</a></li><li><a href="./skill-lifecycle-full-matrix.html" data-i18n="nav.lifecycle">nav.lifecycle</a></li><li><a href="./web-expanded-lifecycle-matrix-merged.html" data-i18n="nav.web_l3">nav.web_l3</a></li><li><a class="active" href="./eight-repo-comprehensive-survey.html" data-i18n="nav.survey20">nav.survey20</a></li><li><a href="./skill-lifecycle-and-dynamic-loading-survey.html" data-i18n="nav.per_turn">nav.per_turn</a></li><li><a href="./eight-repo-deep-source-analysis.html" data-i18n="nav.deep_source">nav.deep_source</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.per_repo">nav.per_repo</h2><ul><li><a href="./survey-reports/opensquilla.html">OpenSquilla (9.0)</a></li><li><a href="./survey-reports/hermes-agent.html">Hermes (8.1)</a></li><li><a href="./survey-reports/openclaw.html">OpenClaw (8.0)</a></li><li><a href="./survey-reports/claude-code-rev.html">Claude Rev (7.7)</a></li><li><a href="./survey-reports/codex.html">Codex (7.2)</a></li><li><a href="./survey-reports/taichu.html">TaiChu (5.0)</a></li><li><a href="./survey-reports/zeroclaw.html">ZeroClaw (5.0)</a></li><li><a href="./survey-reports/genericagent.html">GenericAgent (4.8)</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.papers">nav.papers</h2><ul><li><a href="../../topics/skill-rl/overview.html">SkillRL</a></li><li><a href="../../topics/claw-r1/overview.html">Claw-R1</a></li><li><a href="./comparison.html" data-i18n="nav.comparison">nav.comparison</a></li><li><a href="./combined-pipeline.html" data-i18n="nav.pipeline">nav.pipeline</a></li><li><a href="./l3-comprehensive-skill-analysis.html" data-i18n="nav.l3">nav.l3</a></li><li><a href="./taichu-p0-skill-compaction-spec.html" data-i18n="nav.taichu_p0">nav.taichu_p0</a></li></ul></section><section><h2 data-i18n="nav.more">More</h2><ul>
+    <li><a href="/html/docs.html" data-i18n="nav.sitemap">Sitemap</a></li>
+    <li><a href="/html/i18n-coverage.html" data-i18n="nav.i18n_coverage">i18n coverage</a></li>
+    <li><a href="/html/index.html" data-i18n="nav.dashboard">Dashboard</a></li>
+    <li><a href="/html/deck/index.html" data-i18n="nav.decks">Slide decks</a></li>
+  </ul></section>
+    </nav>
+    <div class="viewer-main">
+      <div class="viewer-toolbar">
+        <div>
+          <h1>八仓库综合架构调研</h1>
+          <div class="path">notes/synthesis/eight-repo-comprehensive-survey.md</div>
+        </div>
+        <a class="btn" href="/html/docs.html" data-i18n="toolbar.sitemap">Sitemap</a>
+        <a class="btn primary" href="./agent-skill-architecture-survey-matrix.html" data-i18n="toolbar.matrix">165-dim matrix</a>
+      </div>
+      <p id="i18n-zh-native-notice" class="i18n-notice zh-native" hidden data-i18n="content.zh_native">content.zh_native</p>
+      <article class="md-body"><h1>八仓库综合架构调研</h1>
+<blockquote>
+<p><strong>方法</strong>：本机全量源码访问（<code>/Users/maybewu/Documents/Projects/</code>），非 GitHub 网页增量阅读。<br><strong>Claude Code 逆向</strong>：确认为 <strong><a href="https://github.com/oboard/claude-code-rev">oboard/claude-code-rev</a></strong>（社区 source-map 还原，非 Anthropic 官方）。<br><strong>TaiChu</strong>：私有 Gitea，路径 <code>drafts/zk/TaiChu</code>。<br><strong>Cursor</strong>：非开源，本调研不含源码级分析（仅官方 blog 结论见 <code>official-product-gap-consensus.md</code>）。</p>
+</blockquote>
+<hr>
+<h2>文档结构</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>文件</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>本文</td>
+<td>总览矩阵、Skill Evolution 流水线、评级、TaiChu 集成优先级</td>
+</tr>
+<tr>
+<td><a href="./repos/openclaw.html">repos/openclaw.md</a></td>
+<td>OpenClaw 20 维度详析</td>
+</tr>
+<tr>
+<td><a href="./repos/hermes-agent.html">repos/hermes-agent.md</a></td>
+<td>Hermes 20 维度详析</td>
+</tr>
+<tr>
+<td><a href="./repos/codex.html">repos/codex.md</a></td>
+<td>Codex 20 维度详析</td>
+</tr>
+<tr>
+<td><a href="./repos/opensquilla.html">repos/opensquilla.md</a></td>
+<td>OpenSquilla 20 维度详析</td>
+</tr>
+<tr>
+<td><a href="./repos/genericagent.html">repos/genericagent.md</a></td>
+<td>GenericAgent 20 维度详析</td>
+</tr>
+<tr>
+<td><a href="./repos/zeroclaw.html">repos/zeroclaw.md</a></td>
+<td>ZeroClaw 20 维度详析</td>
+</tr>
+<tr>
+<td><a href="./repos/claude-code-rev.html">repos/claude-code-rev.md</a></td>
+<td>Claude Code Rev 20 维度详析</td>
+</tr>
+<tr>
+<td><a href="./repos/taichu.html">repos/taichu.md</a></td>
+<td>TaiChu 20 维度详析</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2>一、总览对比矩阵</h2>
+<h3>1.1 核心能力（★ = 强 / ◐ = 部分 / · = 无）</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Project</th>
+<th align="center">Skills</th>
+<th align="center">Memory</th>
+<th align="center">Reflection</th>
+<th align="center">Skill Evolution</th>
+<th align="center">Harness</th>
+<th align="center">Workflow</th>
+<th align="center">RL Ready</th>
+<th align="center">综合</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>OpenClaw</strong></td>
+<td align="center">★★★</td>
+<td align="center">★★★</td>
+<td align="center">★★</td>
+<td align="center">★★★</td>
+<td align="center">★★★</td>
+<td align="center">★★</td>
+<td align="center">◐</td>
+<td align="center"><strong>A</strong></td>
+</tr>
+<tr>
+<td><strong>Hermes</strong></td>
+<td align="center">★★★</td>
+<td align="center">★★★</td>
+<td align="center">★★</td>
+<td align="center">★★★</td>
+<td align="center">★★★</td>
+<td align="center">★★</td>
+<td align="center">★★★</td>
+<td align="center"><strong>A+</strong></td>
+</tr>
+<tr>
+<td><strong>Codex</strong></td>
+<td align="center">★★★</td>
+<td align="center">★★</td>
+<td align="center">★</td>
+<td align="center">·</td>
+<td align="center">★★★</td>
+<td align="center">★★</td>
+<td align="center">◐</td>
+<td align="center"><strong>A-</strong></td>
+</tr>
+<tr>
+<td><strong>OpenSquilla</strong></td>
+<td align="center">★★★</td>
+<td align="center">★★★</td>
+<td align="center">★★</td>
+<td align="center">★★★</td>
+<td align="center">★★★</td>
+<td align="center">★★★</td>
+<td align="center">◐</td>
+<td align="center"><strong>A+</strong></td>
+</tr>
+<tr>
+<td><strong>GenericAgent</strong></td>
+<td align="center">◐</td>
+<td align="center">★★</td>
+<td align="center">★★</td>
+<td align="center">·</td>
+<td align="center">◐</td>
+<td align="center">★★</td>
+<td align="center">·</td>
+<td align="center"><strong>B</strong></td>
+</tr>
+<tr>
+<td><strong>ZeroClaw</strong></td>
+<td align="center">★★</td>
+<td align="center">★★★</td>
+<td align="center">◐</td>
+<td align="center">·</td>
+<td align="center">★★</td>
+<td align="center">★★</td>
+<td align="center">·</td>
+<td align="center"><strong>B+</strong></td>
+</tr>
+<tr>
+<td><strong>Claude Code Rev</strong></td>
+<td align="center">★★★</td>
+<td align="center">★★★</td>
+<td align="center">★★</td>
+<td align="center">★★</td>
+<td align="center">★★★</td>
+<td align="center">★★</td>
+<td align="center">·</td>
+<td align="center"><strong>A</strong></td>
+</tr>
+<tr>
+<td><strong>TaiChu</strong></td>
+<td align="center">★★★</td>
+<td align="center">◐</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">★★</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center"><strong>B+</strong></td>
+</tr>
+</tbody></table></div>
+<p><em>TaiChu Skills/Harness 强在端云执行与 catalog；Evolution/Reflection 为明确缺口。</em></p>
+<h3>1.2 Skill Evolution 专项矩阵</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Project</th>
+<th align="center">表示</th>
+<th align="center">加载</th>
+<th align="center">自动生成</th>
+<th align="center">自动更新</th>
+<th align="center">版本</th>
+<th align="center">排序</th>
+<th align="center">候选池</th>
+<th align="center">自动合并</th>
+<th align="center">Gate</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>OpenClaw</td>
+<td align="center">SKILL.md</td>
+<td align="center">lazy+snapshot</td>
+<td align="center">skill-workshop</td>
+<td align="center">append/replace</td>
+<td align="center">snapshot#</td>
+<td align="center">·</td>
+<td align="center">proposals</td>
+<td align="center">auto policy</td>
+<td align="center">scanner</td>
+</tr>
+<tr>
+<td>Hermes</td>
+<td align="center">SKILL.md</td>
+<td align="center">progressive</td>
+<td align="center">background review</td>
+<td align="center">skill_manage</td>
+<td align="center">manifest hash</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">skills_guard</td>
+</tr>
+<tr>
+<td>Codex</td>
+<td align="center">SKILL.md</td>
+<td align="center">metadata budget</td>
+<td align="center">skill-creator 样本</td>
+<td align="center">文件系统</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">approval test</td>
+</tr>
+<tr>
+<td>OpenSquilla</td>
+<td align="center">SKILL.md+meta</td>
+<td align="center">6-layer+RRF</td>
+<td align="center">auto_propose</td>
+<td align="center">accept_proposal</td>
+<td align="center">lock SHA</td>
+<td align="center">RRF+Dream</td>
+<td align="center">proposals</td>
+<td align="center">accept</td>
+<td align="center">4-gate</td>
+</tr>
+<tr>
+<td>GenericAgent</td>
+<td align="center">*_sop.md</td>
+<td align="center">on-demand read</td>
+<td align="center">·</td>
+<td align="center">file_patch</td>
+<td align="center">·</td>
+<td align="center">access stats</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td>ZeroClaw</td>
+<td align="center">SKILL.md/toml</td>
+<td align="center">workspace sync</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">manifest field</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">audit</td>
+</tr>
+<tr>
+<td>Claude Rev</td>
+<td align="center">SKILL.md</td>
+<td align="center">3-channel</td>
+<td align="center">skillify</td>
+<td align="center">skillImprovement</td>
+<td align="center">·</td>
+<td align="center">decay 7d</td>
+<td align="center">·</td>
+<td align="center">user apply</td>
+<td align="center">survey UI</td>
+</tr>
+<tr>
+<td>TaiChu</td>
+<td align="center">SKILL.md</td>
+<td align="center">catalog+load_skill</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2>二、Skill Evolution 流水线覆盖</h2>
+<pre><code class="language-text">Trajectory → Reflection → Skill Candidate → Evaluation → Version → Deployment → Runtime Retrieval → Online Metrics
+</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Stage</th>
+<th align="center">OpenClaw</th>
+<th align="center">Hermes</th>
+<th align="center">Codex</th>
+<th align="center">OpenSquilla</th>
+<th align="center">GenericAgent</th>
+<th align="center">ZeroClaw</th>
+<th align="center">Claude Rev</th>
+<th align="center">TaiChu</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Trajectory</strong></td>
+<td align="center">★ JSONL trace</td>
+<td align="center">★ JSONL+DB</td>
+<td align="center">◐ dispatch trace</td>
+<td align="center">★ pipeline log</td>
+<td align="center">◐ model logs</td>
+<td align="center">◐ OTel</td>
+<td align="center">★ session JSONL</td>
+<td align="center">◐ interaction JSONL</td>
+</tr>
+<tr>
+<td><strong>Reflection</strong></td>
+<td align="center">◐ dreaming/MS Teams</td>
+<td align="center">★ bg review</td>
+<td align="center">·</td>
+<td align="center">★ Dream</td>
+<td align="center">◐ goal mode</td>
+<td align="center">◐ loop detect</td>
+<td align="center">★ skillImprovement</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>Skill Candidate</strong></td>
+<td align="center">★ proposals</td>
+<td align="center">◐ agent create</td>
+<td align="center">·</td>
+<td align="center">★ proposals</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">★ JSON patches</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>Evaluation</strong></td>
+<td align="center">◐ scanner</td>
+<td align="center">◐ guard</td>
+<td align="center">◐ approval</td>
+<td align="center">★ 4-gate+E2E</td>
+<td align="center">◐ VERIFY</td>
+<td align="center">◐ audit</td>
+<td align="center">◐ survey</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>Version</strong></td>
+<td align="center">◐ snapshot#</td>
+<td align="center">◐ origin hash</td>
+<td align="center">·</td>
+<td align="center">★ lock SHA</td>
+<td align="center">·</td>
+<td align="center">◐ field</td>
+<td align="center">·</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>Deployment</strong></td>
+<td align="center">★ auto/manual</td>
+<td align="center">★ skill_manage</td>
+<td align="center">◐ FS</td>
+<td align="center">★ accept</td>
+<td align="center">◐ file_patch</td>
+<td align="center">◐ load</td>
+<td align="center">◐ user apply</td>
+<td align="center">★ load_skill</td>
+</tr>
+<tr>
+<td><strong>Runtime Retrieval</strong></td>
+<td align="center">◐ lazy read</td>
+<td align="center">★ skill_view</td>
+<td align="center">★ @mention</td>
+<td align="center">★ RRF</td>
+<td align="center">◐ file_read</td>
+<td align="center">◐ inject</td>
+<td align="center">★ 3-channel</td>
+<td align="center">★ runs_on</td>
+</tr>
+<tr>
+<td><strong>Online Metrics</strong></td>
+<td align="center">◐ qa-lab</td>
+<td align="center">·</td>
+<td align="center">◐ analytics</td>
+<td align="center">◐ trigger acc</td>
+<td align="center">◐ access stats</td>
+<td align="center">◐ economic</td>
+<td align="center">★ usage decay</td>
+<td align="center">·</td>
+</tr>
+</tbody></table></div>
+<p><strong>唯一接近全链路的组合</strong>（无单仓实现）：</p>
+<pre><code>OpenClaw trajectory + OpenSquilla gates + Hermes skill_manage + Claude Rev invoked_skills compaction
+</code></pre>
+<hr>
+<h2>三、Harness + Skill Evolution 研究问题速查</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Topic</th>
+<th>最强实现</th>
+<th>关键路径</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Skill 表示</td>
+<td>通用 SKILL.md；GenericAgent 用 L3 SOP</td>
+<td><code>skill-contract.ts</code>, <code>ga.py</code> memory/</td>
+</tr>
+<tr>
+<td>Skill Loading</td>
+<td>OpenClaw lazy+snapshot；OpenSquilla 6-layer+RRF</td>
+<td><code>workspace.ts</code>, <code>skills/retrieval/</code></td>
+</tr>
+<tr>
+<td>Skill Evolution</td>
+<td>OpenSquilla proposals；OpenClaw skill-workshop；Hermes skill_manage</td>
+<td>见上表</td>
+</tr>
+<tr>
+<td>Reflection 时机</td>
+<td>Hermes post-turn；Claude Rev 每 5 turn；OpenSquilla Dream cron</td>
+<td><code>run_agent.py:9622</code>, <code>skillImprovement.ts</code></td>
+</tr>
+<tr>
+<td>Memory 类型</td>
+<td>OpenClaw/OpenSquilla hybrid FTS+vector；GenericAgent L1–L4</td>
+<td><code>memory-search.ts</code>, <code>memory/</code></td>
+</tr>
+<tr>
+<td>Harness 扩展</td>
+<td>OpenClaw plugin harness；Codex typed hooks；OpenSquilla stage harness</td>
+<td><code>harness/types.ts</code>, <code>hook_runtime.rs</code></td>
+</tr>
+<tr>
+<td>Evaluation</td>
+<td>OpenSquilla runtime_e2e judge；OpenClaw qa-lab</td>
+<td><code>runtime_e2e.py</code>, <code>qa-lab/</code></td>
+</tr>
+<tr>
+<td>Self-play</td>
+<td>全无</td>
+<td>—</td>
+</tr>
+<tr>
+<td>RL readiness</td>
+<td><strong>Hermes</strong> Atropos+RL tool；OpenClaw trajectory export</td>
+<td><code>hermes_base_env.py</code>, <code>trajectory/</code></td>
+</tr>
+<tr>
+<td>Step-level traces</td>
+<td>OpenClaw <code>openclaw-trajectory</code>；OpenSquilla <code>TraceContext</code></td>
+<td><code>trajectory/runtime.ts</code></td>
+</tr>
+<tr>
+<td>Skill versioning</td>
+<td>OpenSquilla lock SHA；OpenClaw snapshot version</td>
+<td><code>hub/lockfile.py</code>, <code>refresh-state.ts</code></td>
+</tr>
+<tr>
+<td>Skill ranking</td>
+<td>OpenSquilla RRF；Claude Rev decay；OpenClaw memory ranking only</td>
+<td><code>fusion.py</code>, <code>skillUsageTracking.ts</code></td>
+</tr>
+<tr>
+<td>Candidate skills</td>
+<td>OpenSquilla proposals；OpenClaw skill-workshop store</td>
+<td><code>proposals_lib.py</code>, <code>skill-workshop/store.ts</code></td>
+</tr>
+<tr>
+<td>Automatic merge</td>
+<td>OpenSquilla accept；OpenClaw auto policy；Hermes patch</td>
+<td><code>accept_proposal</code>, <code>workshop.ts</code></td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2>四、各仓一句话定位</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Repo</th>
+<th>定位</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>OpenClaw</strong></td>
+<td>最大开源 multi-channel gateway；memory dreaming + <strong>skill-workshop</strong> 进化；trajectory JSONL</td>
+</tr>
+<tr>
+<td><strong>Hermes</strong></td>
+<td>唯一内置 <strong>RL/Atropos</strong> 路径 + <strong>skill_manage</strong> 运行时 CRUD + 后台 review</td>
+</tr>
+<tr>
+<td><strong>Codex</strong></td>
+<td>官方生产级 Rust harness；typed hooks + Guardian；skills 故意不做自进化</td>
+</tr>
+<tr>
+<td><strong>OpenSquilla</strong></td>
+<td><strong>Skill evolution 产品化最完整</strong>：proposals + 4-gate + Dream + meta-skill DAG</td>
+</tr>
+<tr>
+<td><strong>GenericAgent</strong></td>
+<td>极简 self-evolving；L1–L4 SOP 记忆哲学；无 SKILL.md 标准</td>
+</tr>
+<tr>
+<td><strong>ZeroClaw</strong></td>
+<td>Rust 轻量 runtime；loop detection + subagent registry；skill 仅 audit/load</td>
+</tr>
+<tr>
+<td><strong>Claude Code Rev</strong></td>
+<td>逆向参考：<strong>invoked_skills compaction 存活</strong> + skillImprovement 5-turn 循环</td>
+</tr>
+<tr>
+<td><strong>TaiChu</strong></td>
+<td>端云 skill 执行最强（runs_on + load_skill wire）；evolution 全缺</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2>五、TaiChu 集成路线图（源码证据优先级）</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>P</th>
+<th>来源</th>
+<th>能力</th>
+<th>TaiChu 落点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>P0</strong></td>
+<td>Claude Rev</td>
+<td><code>invoked_skills</code> post-compaction 重注入</td>
+<td><code>compaction.rs</code> + session state</td>
+</tr>
+<tr>
+<td><strong>P0</strong></td>
+<td>Hermes</td>
+<td><code>_spawn_background_review</code> + <code>skill_manage</code></td>
+<td>taichu-service tools</td>
+</tr>
+<tr>
+<td><strong>P0</strong></td>
+<td>Claude Rev</td>
+<td>SubAgent <code>profile.skills</code> preload</td>
+<td><code>session/manager.rs</code></td>
+</tr>
+<tr>
+<td><strong>P1</strong></td>
+<td>OpenSquilla</td>
+<td><code>proposals_lib</code> + gates.json</td>
+<td><code>~/.taichu/proposals/</code></td>
+</tr>
+<tr>
+<td><strong>P1</strong></td>
+<td>OpenClaw</td>
+<td>trajectory JSONL export</td>
+<td>agent_loop observability</td>
+</tr>
+<tr>
+<td><strong>P1</strong></td>
+<td>Claude Rev</td>
+<td>usage decay ranking</td>
+<td>Flutter skill UI</td>
+</tr>
+<tr>
+<td><strong>P2</strong></td>
+<td>OpenSquilla</td>
+<td>Dream signal classification</td>
+<td>memory promotion</td>
+</tr>
+<tr>
+<td><strong>P2</strong></td>
+<td>GenericAgent</td>
+<td>L0 memory_management_sop</td>
+<td>skill update protocol</td>
+</tr>
+<tr>
+<td><strong>P2</strong></td>
+<td>ZeroClaw</td>
+<td>loop detection</td>
+<td>device automation safety</td>
+</tr>
+<tr>
+<td><strong>P3</strong></td>
+<td>OpenSquilla</td>
+<td>meta-skill DAG</td>
+<td>单 skill 生命周期稳定后</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2>六、与 SkillRL / Claw-R1 的关系</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>论文层</th>
+<th>八仓库最强覆盖</th>
+<th>仍缺</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Claw-R1 Gateway</strong></td>
+<td>OpenClaw, OpenSquilla, TaiChu</td>
+<td>Step RPC 统一 export</td>
+</tr>
+<tr>
+<td><strong>Claw-R1 Step Pool</strong></td>
+<td>OpenClaw trajectory, OpenSquilla trace</td>
+<td>无训练用 middleware</td>
+</tr>
+<tr>
+<td><strong>SkillRL SkillBank</strong></td>
+<td>Hermes/OpenSquilla managed dirs</td>
+<td>embedding retrieval + success rate</td>
+</tr>
+<tr>
+<td><strong>SkillRL Failure mining</strong></td>
+<td>GenericAgent L3, Hermes review prompt</td>
+<td>structured failure tags</td>
+</tr>
+<tr>
+<td><strong>SkillRL GRPO</strong></td>
+<td>Hermes RL tool only</td>
+<td>无 in-repo trainer</td>
+</tr>
+<tr>
+<td><strong>SkillRL Validation</strong></td>
+<td>OpenSquilla 4-gate</td>
+<td>automated benchmark on skill</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2>变更记录</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>日期</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>2026-07-08</td>
+<td>初版：20 维度调研框架 + 8 项目矩阵 + 流水线覆盖 + TaiChu 路线图</td>
+</tr>
+</tbody></table></div>
+</article>
+    </div>
+  </div>
+  <script src="../../../js/i18n.js"></script>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
+  </script>
+</body>
+</html>

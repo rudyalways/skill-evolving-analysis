@@ -1,0 +1,44 @@
+# Taxonomy for tagging notes, data, and extractions
+
+papers:
+  - skillrl
+  - claw-r1
+  - openclaw-rl  # related but distinct from claw-r1
+
+concepts:
+  - skill-discovery
+  - skillbank
+  - recursive-evolution
+  - data-pool
+  - gateway
+  - step-level
+  - middleware
+  - trajectory-builder
+  - grpo
+  - memory-vs-weights
+  - batch-rl
+  - full-stack
+
+settings:
+  - personal-agent
+  - terminal-agent
+  - gui-agent
+  - swe-agent
+  - tool-call-agent
+
+data_types:
+  - paper-pdf
+  - paper-html
+  - repo-clone
+  - experiment-log
+  - benchmark-result
+  - api-export
+  - conversation-trace
+  - figure
+  - table
+
+status:
+  - inbox
+  - raw
+  - processed
+  - archived

@@ -1,0 +1,193 @@
+{
+  "opensquilla": [
+    {
+      "lang": "python",
+      "source": "engine/steps/skills_filter.py:1",
+      "text": "\"\"\"Step 3: Gate skills deterministically,\noptionally filter by relevance, inject.\"\"\""
+    },
+    {
+      "lang": "python",
+      "source": "engine/runtime.py:250",
+      "text": "collect_invoked_skills(turn_segments)\n# → decision_log skills_invoked field"
+    },
+    {
+      "lang": "text",
+      "source": "skills/creator/auto_propose.py",
+      "text": "Decision log / Dream signal\n    ↓\nauto_propose → ~/.opensquilla/proposals/{id}/"
+    },
+    {
+      "lang": "text",
+      "source": "skills/proposals_lib.py + runtime_e2e.py",
+      "text": "evaluate_proposal_gates (4 gates)\n    ↓\nruntime_e2e: meta vs baseline judge"
+    },
+    {
+      "lang": "python",
+      "source": "skills/proposals_lib.py:425",
+      "text": "accept_proposal()  # → MANAGED layer + skills-lock.json"
+    }
+  ],
+  "hermes-agent": [
+    {
+      "lang": "python",
+      "source": "tools/skill_manager_tool.py:10-12",
+      "text": "# Skills are the agent's procedural memory: they capture\n# *how to do a specific type of task* based on proven experience."
+    },
+    {
+      "lang": "python",
+      "source": "run_agent.py:9604-9610",
+      "text": "# Post-turn: if _iters_since_skill >= _skill_nudge_interval (default 10)\n#   → _spawn_background_review(messages_snapshot=list(messages), review_skills=True)\n# No prompt injection; daemon thread \"bg-review\" — not a task queue"
+    },
+    {
+      "lang": "python",
+      "source": "run_agent.py:1773-1775",
+      "text": "\"If a relevant skill already exists, update it with what you learned. \"\n\"Otherwise, create a new skill if the approach is reusable.\""
+    },
+    {
+      "lang": "python",
+      "source": "tools/skill_manager_tool.py:47-48",
+      "text": "# Import security scanner — agent-created skills get the same scrutiny as\n# community hub installs.\n_security_scan_skill()"
+    }
+  ],
+  "openclaw": [
+    {
+      "lang": "markdown",
+      "source": "docs/tools/skills.md:19-30",
+      "text": "OpenClaw loads skills from these sources, **highest precedence first**:\n1. Workspace skills  2. Project agent skills  3. Personal …"
+    },
+    {
+      "lang": "typescript",
+      "source": "extensions/skill-workshop/index.ts:13-14",
+      "text": "description:\n  \"Captures repeatable workflows as workspace skills,\n   with pending review and safe writes.\""
+    },
+    {
+      "lang": "text",
+      "source": "skill-workshop/reviewer.ts",
+      "text": "reviewTranscriptForProposal()\n  → LLM patch / new skill draft"
+    },
+    {
+      "lang": "typescript",
+      "source": "skill-workshop/workshop.ts:54-61",
+      "text": "scanSkillContent()\n  // critical → quarantine, else applyProposalToWorkspace"
+    }
+  ],
+  "claude-code-rev": [
+    {
+      "lang": "typescript",
+      "source": "utils/attachments.ts:2717-2734",
+      "text": "getSkillListingAttachments()\n// Only unsent skills per agentId (incremental delta)"
+    },
+    {
+      "lang": "typescript",
+      "source": "utils/hooks/skillImprovement.ts",
+      "text": "// every 5 user turns → auxSmallModel\n// → [{ section, change, reason }]"
+    },
+    {
+      "lang": "typescript",
+      "source": "hooks/useSkillImprovementSurvey.ts",
+      "text": "// SkillImprovementSurvey UI\n// user accept/reject per patch before apply"
+    },
+    {
+      "lang": "typescript",
+      "source": "services/compact/compact.ts:1488-1492",
+      "text": "/**\n * Creates an attachment for invoked skills to preserve their content\n * across compaction. Only includes skills scoped to the given agent.\n */"
+    },
+    {
+      "lang": "typescript",
+      "source": "tools/AgentTool/runAgent.ts:577-578",
+      "text": "// Preload skills from agent frontmatter\nconst skillsToPreload = agentDefinition.skills ?? []"
+    }
+  ],
+  "codex": [
+    {
+      "lang": "markdown",
+      "source": "developers.openai.com/codex/skills",
+      "text": "Skills use progressive disclosure: Codex starts with each skill's\nname, description, and file path. Full SKILL.md loaded only when used."
+    },
+    {
+      "lang": "rust",
+      "source": "core-skills/src/injection.rs:57-80",
+      "text": "build_skill_injections()\n// only @mentioned / implicit-match skills this turn"
+    },
+    {
+      "lang": "yaml",
+      "source": "agents/openai.yaml",
+      "text": "policy:\n  allow_implicit_invocation: false"
+    },
+    {
+      "lang": "text",
+      "source": "core/tests — subagent",
+      "text": "Child turn excludes parent <skills_instructions> block;\nturn_skills independent subset (manager_tests.rs:805)"
+    }
+  ],
+  "taichu": [
+    {
+      "lang": "rust",
+      "source": "taichu-service/src/api/mod.rs:674-694",
+      "text": "// # Available Skills user prefix each turn\n// A-system / NLU routing"
+    },
+    {
+      "lang": "rust",
+      "source": "builtintools/load_skill.rs:120-131",
+      "text": "text: format!(\n  \"技能「{}」在远程设备上执行（runs_on: {}）。\\n\"\n  \"请使用 run_subagent(target_id=...) 委托执行。\",\n  name, runs_on.join(\", \")\n),"
+    },
+    {
+      "lang": "text",
+      "source": "compaction.rs + context-and-skills.md:64-68",
+      "text": "compact() → summarize ToolResult body\n❌ no invoked_skills reinject (P0 gap)"
+    },
+    {
+      "lang": "text",
+      "source": "taichu-p0 spec (planned)",
+      "text": "InvokedSkillRegistry::register(name)\n  → on_compact preserve ids\n  → reinject_skill_bodies()"
+    }
+  ],
+  "zeroclaw": [
+    {
+      "lang": "text",
+      "source": "hub install flow",
+      "text": "zeroclaw skills install → open-skills registry\n→ ~/.zeroclaw/workspace/skills/"
+    },
+    {
+      "lang": "rust",
+      "source": "skills/audit.rs",
+      "text": "// zip_bomb | path_traversal\n// | prompt_injection_regex"
+    },
+    {
+      "lang": "text",
+      "source": "skills/load.rs",
+      "text": "load_skills_with_config()\n  → inject(compact|full)\n  → SkillToolHandler.read()"
+    },
+    {
+      "lang": "text",
+      "source": "cron/consolidation.rs",
+      "text": "// hygiene cron archives memory tiers\n// NOT skill SKILL.md evolution"
+    }
+  ],
+  "genericagent": [
+    {
+      "lang": "markdown",
+      "source": "README.md:38-40",
+      "text": "> Design philosophy — **don't preload skills, evolve them.**\n> Every time GenericAgent solves a new task, it crystallizes the\n> execution path into a reusable **Skill**."
+    },
+    {
+      "lang": "python",
+      "source": "ga.py:472-475",
+      "text": "# Plan mode VERIFY gate\n# success conditions must pass before long-term write"
+    },
+    {
+      "lang": "python",
+      "source": "ga.py:508-523",
+      "text": "# start_long_term_update: agent self-trigger\n# only verified-success info → L2/L3 memory tiers"
+    },
+    {
+      "lang": "text",
+      "source": "reflect/scheduler.py",
+      "text": "reflect cron → goal_mode.py\n/morphling long-horizon SOP crystallization"
+    },
+    {
+      "lang": "text",
+      "source": "memory/*_sop.md",
+      "text": "file_read(SOP) on demand → file_patch\nL1 index ≤30 lines → pick related SOP"
+    }
+  ]
+}

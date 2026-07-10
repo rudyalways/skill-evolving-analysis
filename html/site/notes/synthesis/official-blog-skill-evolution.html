@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>官方博客：是否有 Skill 自进化内容？ — Skill-Evolving</title>
+  <link rel="alternate" hreflang="en" href="/html/site/notes/synthesis/official-blog-skill-evolution.html">
+  <link rel="alternate" hreflang="zh-Hans" href="/html/site/zh/notes/synthesis/official-blog-skill-evolution.html">
+  <link rel="alternate" hreflang="x-default" href="/html/site/notes/synthesis/official-blog-skill-evolution.html">
+  <link rel="stylesheet" href="../../../css/viewer.css">
+</head>
+<body class="" data-doc-locale="en" data-content-lang="zh">
+  <div class="viewer-layout">
+    <nav>
+      <div data-lang-switch class="lang-switch-host"></div>
+      <h1 data-i18n="nav.docs">Docs</h1>
+      <div class="title" data-i18n="nav.rendered">Rendered HTML</div>
+      <section class="highlight-section"><h2 data-i18n="nav.compare">nav.compare</h2><ul><li><a href="./agent-skill-architecture-survey-matrix.html" data-i18n="nav.matrix165">nav.matrix165</a></li><li><a href="./skill-lifecycle-full-matrix.html" data-i18n="nav.lifecycle">nav.lifecycle</a></li><li><a href="./web-expanded-lifecycle-matrix-merged.html" data-i18n="nav.web_l3">nav.web_l3</a></li><li><a href="./eight-repo-comprehensive-survey.html" data-i18n="nav.survey20">nav.survey20</a></li><li><a href="./skill-lifecycle-and-dynamic-loading-survey.html" data-i18n="nav.per_turn">nav.per_turn</a></li><li><a href="./eight-repo-deep-source-analysis.html" data-i18n="nav.deep_source">nav.deep_source</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.per_repo">nav.per_repo</h2><ul><li><a href="./survey-reports/opensquilla.html">OpenSquilla (9.0)</a></li><li><a href="./survey-reports/hermes-agent.html">Hermes (8.1)</a></li><li><a href="./survey-reports/openclaw.html">OpenClaw (8.0)</a></li><li><a href="./survey-reports/claude-code-rev.html">Claude Rev (7.7)</a></li><li><a href="./survey-reports/codex.html">Codex (7.2)</a></li><li><a href="./survey-reports/taichu.html">TaiChu (5.0)</a></li><li><a href="./survey-reports/zeroclaw.html">ZeroClaw (5.0)</a></li><li><a href="./survey-reports/genericagent.html">GenericAgent (4.8)</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.papers">nav.papers</h2><ul><li><a href="../../topics/skill-rl/overview.html">SkillRL</a></li><li><a href="../../topics/claw-r1/overview.html">Claw-R1</a></li><li><a href="./comparison.html" data-i18n="nav.comparison">nav.comparison</a></li><li><a href="./combined-pipeline.html" data-i18n="nav.pipeline">nav.pipeline</a></li><li><a href="./l3-comprehensive-skill-analysis.html" data-i18n="nav.l3">nav.l3</a></li><li><a href="./taichu-p0-skill-compaction-spec.html" data-i18n="nav.taichu_p0">nav.taichu_p0</a></li></ul></section><section><h2 data-i18n="nav.more">More</h2><ul>
+    <li><a href="/html/docs.html" data-i18n="nav.sitemap">Sitemap</a></li>
+    <li><a href="/html/i18n-coverage.html" data-i18n="nav.i18n_coverage">i18n coverage</a></li>
+    <li><a href="/html/index.html" data-i18n="nav.dashboard">Dashboard</a></li>
+    <li><a href="/html/deck/index.html" data-i18n="nav.decks">Slide decks</a></li>
+  </ul></section>
+    </nav>
+    <div class="viewer-main">
+      <div class="viewer-toolbar">
+        <div>
+          <h1>官方博客：是否有 Skill 自进化内容？</h1>
+          <div class="path">notes/synthesis/official-blog-skill-evolution.md</div>
+        </div>
+        <a class="btn" href="/html/docs.html" data-i18n="toolbar.sitemap">Sitemap</a>
+        <a class="btn primary" href="./agent-skill-architecture-survey-matrix.html" data-i18n="toolbar.matrix">165-dim matrix</a>
+      </div>
+      <p id="i18n-zh-native-notice" class="i18n-notice zh-native" hidden data-i18n="content.zh_native">content.zh_native</p>
+      <article class="md-body"><h1>官方博客：是否有 Skill 自进化内容？</h1>
+<h2>结论摘要</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>产品</th>
+<th>Skill 支持</th>
+<th>Skill <strong>自进化</strong>（官方）</th>
+<th>进化对象（官方实际在做）</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Claude Code / Anthropic</strong></td>
+<td>✅ 强</td>
+<td>⚠️ <strong>路线图有，产品未完全落地</strong></td>
+<td>人工/半自动迭代 + harness 进化</td>
+</tr>
+<tr>
+<td><strong>OpenAI Codex</strong></td>
+<td>✅ 强</td>
+<td>⚠️ <strong>Skill 创建有，自动进化 loop 偏 harness</strong></td>
+<td>Record &amp; Replay、Improvement Loop</td>
+</tr>
+<tr>
+<td><strong>Cursor</strong></td>
+<td>✅ 支持标准</td>
+<td>❌ <strong>无 Skill 自进化产品</strong></td>
+<td><strong>Harness 平台级进化</strong></td>
+</tr>
+</tbody></table></div>
+<p><strong>一句话</strong>：三家官方都在推 Skills，但 <strong>Skill 全自动自进化</strong> 目前主要是 <strong>Anthropic 明确写进 future roadmap</strong>；Codex 有 <strong>skill 创建 + harness improvement loop</strong>；Cursor 重点在 <strong>harness 持续改进</strong>，Skills 是静态加载/发现，不是自动演化 library。</p>
+<hr>
+<h2>1. Anthropic / Claude Code</h2>
+<h3>有相关内容的官方来源</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>来源</th>
+<th>链接</th>
+<th>关于 Skill 自进化说了什么</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Agent Skills 工程文</td>
+<td><a href="https://www.anthropic.com/engineering/equipping-agents-for-the-real-world-with-agent-skills">anthropic.com/engineering/.../agent-skills</a></td>
+<td><strong>最明确</strong>：future 希望 agent 自己 create/edit/evaluate skills</td>
+</tr>
+<tr>
+<td>Introducing Agent Skills</td>
+<td><a href="https://claude.com/blog/skills">claude.com/blog/skills</a></td>
+<td>skill-creator 交互式创建；org 级管理</td>
+</tr>
+<tr>
+<td>Building Agents with Skills</td>
+<td><a href="https://claude.com/blog/building-agents-with-skills-equipping-agents-for-specialized-work">claude.com/blog/building-agents-with-skills-...</a></td>
+<td>Skills 与 MCP/harness 分工；开放标准</td>
+</tr>
+<tr>
+<td>Long-running harnesses</td>
+<td><a href="https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents">anthropic.com/engineering/effective-harnesses-for-long-running-agents</a></td>
+<td><strong>Harness 进化</strong>（initializer + coding agent），非 SkillBank</td>
+</tr>
+<tr>
+<td>Harness design long-running apps</td>
+<td><a href="https://www.anthropic.com/engineering/harness-design-long-running-apps">anthropic.com/engineering/harness-design-long-running-apps</a></td>
+<td>planner-generator-<strong>evaluator</strong> 三 agent</td>
+</tr>
+</tbody></table></div>
+<h3>已落地 vs 路线图</h3>
+<p><strong>已落地（半自动，人 in the loop）</strong>：</p>
+<ul>
+<li><code>skill-creator</code> skill：Claude 引导你创建 SKILL.md</li>
+<li>官方建议 workflow：<blockquote>
+<p>&quot;Iterate with Claude: ask Claude to capture its successful approaches and common mistakes into reusable context and code within a skill. If it goes off track, ask it to self-reflect on what went wrong.&quot;</p>
+</blockquote>
+</li>
+<li>Progressive disclosure 检索已有 skills</li>
+</ul>
+<p><strong>明确路线图（尚未产品化）</strong>：</p>
+<blockquote>
+<p>&quot;Looking further ahead, we hope to <strong>enable agents to create, edit, and evaluate Skills on their own</strong>, letting them codify their own patterns of behavior into reusable capabilities.&quot;</p>
+</blockquote>
+<p><strong>相关但非 Skill 自进化</strong>：</p>
+<ul>
+<li>Long-running harness = session 间 artifact 传递（progress file, git commits）</li>
+<li>Evaluator agent = harness 层验证，不是 Skill Library 递归更新</li>
+</ul>
+<h3>判断</h3>
+<p>Anthropic 是三家里面 <strong>唯一在官方 engineering 文里明确写 &quot;agents create/edit/evaluate skills on their own&quot;</strong> 的。但当前产品是 <strong>人工观察 → 让 Claude 帮你改 skill</strong>，不是 SkillRL 那种自动 SkillBank co-evolve。</p>
+<hr>
+<h2>2. OpenAI Codex</h2>
+<h3>有相关内容的官方来源</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>来源</th>
+<th>链接</th>
+<th>关于 Skill 自进化说了什么</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Agent Skills 文档</td>
+<td><a href="https://developers.openai.com/codex/skills">developers.openai.com/codex/skills</a></td>
+<td>Skills 标准、$skill-creator、Record &amp; Replay</td>
+</tr>
+<tr>
+<td>Record &amp; Replay</td>
+<td><a href="https://developers.openai.com/codex/record-and-replay">developers.openai.com/codex/record-and-replay</a></td>
+<td><strong>演示 → 自动生成 skill</strong>（一次性创建）</td>
+</tr>
+<tr>
+<td>Introducing Codex app</td>
+<td><a href="https://openai.com/index/introducing-the-codex-app/">openai.com/index/introducing-the-codex-app</a></td>
+<td>Skills + Automations；内部数百 skills</td>
+</tr>
+<tr>
+<td>Changelog</td>
+<td><a href="https://developers.openai.com/codex/changelog">developers.openai.com/codex/changelog</a></td>
+<td>Agent skills、Record &amp; Replay 上线</td>
+</tr>
+<tr>
+<td>Agent Improvement Loop</td>
+<td><a href="https://developers.openai.com/cookbook/examples/agents_sdk/agent_improvement_loop">cookbook/.../agent_improvement_loop</a></td>
+<td>Traces → Evals → <strong>Harness 改进 handoff</strong></td>
+</tr>
+<tr>
+<td>Testing Skills with Evals</td>
+<td><a href="https://developers.openai.com/blog/eval-skills">developers.openai.com/blog/eval-skills</a></td>
+<td><strong>Skill 评测</strong>方法论，非自动进化</td>
+</tr>
+<tr>
+<td>Self-Evolving Agents cookbook</td>
+<td><a href="https://developers.openai.com/cookbook/examples/partners/self_evolving_agents/autonomous_agent_retraining">cookbook/.../autonomous_agent_retraining</a></td>
+<td>Prompt/harness 优化 loop（LLM-as-judge）</td>
+</tr>
+<tr>
+<td>Iterate on difficult problems</td>
+<td><a href="https://developers.openai.com/codex/use-cases/iterate-on-difficult-problems">developers.openai.com/codex/use-cases/iterate-on-difficult-problems</a></td>
+<td>Eval 驱动迭代修复 loop</td>
+</tr>
+</tbody></table></div>
+<h3>已落地 vs 未落地</h3>
+<p><strong>Skill 相关已落地</strong>：</p>
+<ul>
+<li><code>$skill-creator</code>：交互式生成 SKILL.md</li>
+<li><strong>Record &amp; Replay</strong>：macOS 上演示工作流 → Codex draft skill → 可 refine</li>
+<li>Skills 自动检测文件变更（需 restart）</li>
+<li>Eval skills：用 <code>codex exec --json</code> 对 skill 行为做 deterministic checks</li>
+</ul>
+<p><strong>Improvement Loop 已落地（但进化的是 Harness，不是 Skill Library）</strong>：</p>
+<pre><code>Traces → Human/LLM feedback → Promptfoo evals → HALO optimization → codex_handoff.md → Codex 改 harness
+</code></pre>
+<p>官方 cookbook 明确说进化的是 &quot;prompt, tools, routing rules, output requirements, validation checks&quot; — <strong>当前 agent harness</strong>。</p>
+<p><strong>没有官方博客说</strong>：</p>
+<ul>
+<li>Skill Library 自动递归更新</li>
+<li>失败 trajectory 自动 distill 成 skill 并入库</li>
+<li>Skill version chain (V1→V2→V3) 产品化</li>
+</ul>
+<h3>判断</h3>
+<p>Codex 官方 content 最接近 &quot;skill 自进化&quot; 的是 <strong>Record &amp; Replay（experience → skill 单向蒸馏）</strong> 和 <strong>eval-skills（评测 skill）</strong>。完整的 <strong>closed-loop skill library evolution</strong> 在官方文档里 <strong>没有作为产品 feature 推出</strong>，Improvement Loop 主要面向 harness。</p>
+<hr>
+<h2>3. Cursor</h2>
+<h3>有相关内容的官方来源</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>来源</th>
+<th>链接</th>
+<th>关于 Skill 自进化说了什么</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Continually improving harness</td>
+<td><a href="https://cursor.com/blog/continually-improving-agent-harness">cursor.com/blog/continually-improving-agent-harness</a></td>
+<td><strong>Harness 进化</strong>（A/B、Keep Rate、evals）</td>
+</tr>
+<tr>
+<td>Dynamic context discovery</td>
+<td><a href="https://cursor.com/blog/dynamic-context-discovery">cursor.com/blog/dynamic-context-discovery</a></td>
+<td>支持 Agent Skills <strong>开放标准 + 动态检索</strong></td>
+</tr>
+<tr>
+<td>Changelog 2.4</td>
+<td><a href="https://cursor.com/changelog/2-4">cursor.com/changelog/2-4</a></td>
+<td>Skills 支持（SKILL.md、slash command）</td>
+</tr>
+<tr>
+<td>Long-running agents</td>
+<td><a href="https://cursor.com/blog/long-running-agents">cursor.com/blog/long-running-agents</a></td>
+<td>长时 agent harness research preview</td>
+</tr>
+</tbody></table></div>
+<h3>Skills 相关内容</h3>
+<p><strong>Dynamic context discovery 博客 §3</strong>：</p>
+<ul>
+<li>支持 Agent Skills 开放标准</li>
+<li>name/description 作为 static context</li>
+<li>Agent 用 grep / semantic search <strong>动态发现</strong> relevant skills</li>
+<li>Skills 可 bundle scripts</li>
+</ul>
+<p><strong>Changelog 2.4</strong>：</p>
+<ul>
+<li>&quot;Agents can discover and apply skills&quot;</li>
+<li>用户手动定义 <code>SKILL.md</code></li>
+<li>Skills vs Rules：更适合 procedural &quot;how-to&quot;</li>
+</ul>
+<h3>Harness 进化（有，但不是 Skill）</h3>
+<p><strong>Continually improving agent harness</strong> 详细描述：</p>
+<ul>
+<li>CursorBench + 在线 A/B 实验</li>
+<li>Keep Rate（agent 生成代码留存率）</li>
+<li>LLM 读用户回复判断满意度</li>
+<li>工具错误分类 + anomaly detection</li>
+<li><strong>Weekly Automation 用 skill 查 logs 开 ticket</strong> — 这是 <em>使用</em> skill 做内部运维，不是 <em>进化</em> skill library</li>
+</ul>
+<h3>判断</h3>
+<p>Cursor 官方博客 <strong>没有任何 &quot;skill self-evolution&quot; 或 &quot;skill library grows automatically&quot; 的表述</strong>。进化的是 <strong>平台 harness</strong>（prompt、tools、context engineering），Skills 是用户/团队提供的 <strong>静态可发现资产</strong>。</p>
+<hr>
+<h2>4. 横向对比：官方到底在进化什么？</h2>
+<pre><code>                    Claude          Codex           Cursor
+                    ──────          ─────           ──────
+Skill 格式/标准      ✅ 制定者        ✅ 采用          ✅ 采用
+Skill 创建           ✅ skill-creator ✅ R&amp;R + creator  ✅ 手动 SKILL.md
+Skill 评测           ⚠️ 建议人工观察   ✅ eval-skills    ❌ 未提
+Skill 自动进化        📋 路线图        ❌ 未产品化       ❌ 未提
+Harness 进化         ✅ 长时 harness   ✅ Improvement Loop ✅ 核心重点
+Weight 进化          ❌               ⚠️ cookbook 示例   ✅ Tab RL 信号
+</code></pre>
+<hr>
+<h2>5. 与学术/开源的 gap</h2>
+<p>官方博客描述的 maturity：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>能力</th>
+<th>官方产品</th>
+<th>学术/开源</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Trajectory → Skill distill</td>
+<td>Record &amp; Replay, 人工 iterate</td>
+<td>SkillRL, Trace2Skill</td>
+</tr>
+<tr>
+<td>Failure → Skill</td>
+<td>人工 self-reflect</td>
+<td>SkillRL, HarnessFix</td>
+</tr>
+<tr>
+<td>Skill Revision (V1→Vn)</td>
+<td>人工 edit SKILL.md</td>
+<td>SkillHone</td>
+</tr>
+<tr>
+<td>Validation gate</td>
+<td>eval-skills (Codex)</td>
+<td>SkillOpt, EvoSkills</td>
+</tr>
+<tr>
+<td>Skill Graph retrieval</td>
+<td>progressive disclosure</td>
+<td>Graph of Skills, SkillRouter</td>
+</tr>
+<tr>
+<td>Closed-loop Skill Library</td>
+<td><strong>未产品化</strong></td>
+<td>SkillRL recursive evolution</td>
+</tr>
+</tbody></table></div>
+<p><strong>Gap 正是研究机会</strong>：官方提供了 Skill <strong>格式 + 创建 + 检索 + 评测</strong> 的基础设施，但 <strong>Skill Library 持续自进化闭环</strong> 仍主要在论文/开源（SkillRL、SkillHone、Trace2Skill、Memento-Skills）里。</p>
+<hr>
+<h2>References</h2>
+<ul>
+<li>Anthropic Agent Skills: <a href="https://www.anthropic.com/engineering/equipping-agents-for-the-real-world-with-agent-skills">https://www.anthropic.com/engineering/equipping-agents-for-the-real-world-with-agent-skills</a></li>
+<li>Claude blog Skills: <a href="https://claude.com/blog/skills">https://claude.com/blog/skills</a></li>
+<li>Codex Skills: <a href="https://developers.openai.com/codex/skills">https://developers.openai.com/codex/skills</a></li>
+<li>Codex Record &amp; Replay: <a href="https://developers.openai.com/codex/record-and-replay">https://developers.openai.com/codex/record-and-replay</a></li>
+<li>Codex Agent Improvement Loop: <a href="https://developers.openai.com/cookbook/examples/agents_sdk/agent_improvement_loop">https://developers.openai.com/cookbook/examples/agents_sdk/agent_improvement_loop</a></li>
+<li>Codex eval-skills: <a href="https://developers.openai.com/blog/eval-skills">https://developers.openai.com/blog/eval-skills</a></li>
+<li>Cursor harness blog: <a href="https://cursor.com/blog/continually-improving-agent-harness">https://cursor.com/blog/continually-improving-agent-harness</a></li>
+<li>Cursor dynamic context: <a href="https://cursor.com/blog/dynamic-context-discovery">https://cursor.com/blog/dynamic-context-discovery</a></li>
+<li>Cursor changelog 2.4: <a href="https://cursor.com/changelog/2-4">https://cursor.com/changelog/2-4</a></li>
+</ul>
+</article>
+    </div>
+  </div>
+  <script src="../../../js/i18n.js"></script>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
+  </script>
+</body>
+</html>

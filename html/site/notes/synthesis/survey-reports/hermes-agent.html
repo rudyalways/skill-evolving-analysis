@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hermes Agent 架构调研（8.1） — Skill-Evolving</title>
+  <link rel="alternate" hreflang="en" href="/html/site/notes/synthesis/survey-reports/hermes-agent.html">
+  <link rel="alternate" hreflang="zh-Hans" href="/html/site/zh/notes/synthesis/survey-reports/hermes-agent.html">
+  <link rel="alternate" hreflang="x-default" href="/html/site/notes/synthesis/survey-reports/hermes-agent.html">
+  <link rel="stylesheet" href="../../../../css/viewer.css">
+</head>
+<body class="page-compact page-survey-report" data-doc-locale="en" data-content-lang="en">
+  <div class="viewer-layout">
+    <nav>
+      <div data-lang-switch class="lang-switch-host"></div>
+      <h1 data-i18n="nav.docs">Docs</h1>
+      <div class="title" data-i18n="nav.rendered">Rendered HTML</div>
+      <section class="highlight-section"><h2 data-i18n="nav.compare">nav.compare</h2><ul><li><a href="../agent-skill-architecture-survey-matrix.html" data-i18n="nav.matrix165">nav.matrix165</a></li><li><a href="../skill-lifecycle-full-matrix.html" data-i18n="nav.lifecycle">nav.lifecycle</a></li><li><a href="../web-expanded-lifecycle-matrix-merged.html" data-i18n="nav.web_l3">nav.web_l3</a></li><li><a href="../eight-repo-comprehensive-survey.html" data-i18n="nav.survey20">nav.survey20</a></li><li><a href="../skill-lifecycle-and-dynamic-loading-survey.html" data-i18n="nav.per_turn">nav.per_turn</a></li><li><a href="../eight-repo-deep-source-analysis.html" data-i18n="nav.deep_source">nav.deep_source</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.per_repo">nav.per_repo</h2><ul><li><a href="./opensquilla.html">OpenSquilla (9.0)</a></li><li><a class="active" href="./hermes-agent.html">Hermes (8.1)</a></li><li><a href="./openclaw.html">OpenClaw (8.0)</a></li><li><a href="./claude-code-rev.html">Claude Rev (7.7)</a></li><li><a href="./codex.html">Codex (7.2)</a></li><li><a href="./taichu.html">TaiChu (5.0)</a></li><li><a href="./zeroclaw.html">ZeroClaw (5.0)</a></li><li><a href="./genericagent.html">GenericAgent (4.8)</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.papers">nav.papers</h2><ul><li><a href="../../../topics/skill-rl/overview.html">SkillRL</a></li><li><a href="../../../topics/claw-r1/overview.html">Claw-R1</a></li><li><a href="../comparison.html" data-i18n="nav.comparison">nav.comparison</a></li><li><a href="../combined-pipeline.html" data-i18n="nav.pipeline">nav.pipeline</a></li><li><a href="../l3-comprehensive-skill-analysis.html" data-i18n="nav.l3">nav.l3</a></li><li><a href="../taichu-p0-skill-compaction-spec.html" data-i18n="nav.taichu_p0">nav.taichu_p0</a></li></ul></section><section><h2 data-i18n="nav.more">More</h2><ul>
+    <li><a href="/html/docs.html" data-i18n="nav.sitemap">Sitemap</a></li>
+    <li><a href="/html/i18n-coverage.html" data-i18n="nav.i18n_coverage">i18n coverage</a></li>
+    <li><a href="/html/index.html" data-i18n="nav.dashboard">Dashboard</a></li>
+    <li><a href="/html/deck/index.html" data-i18n="nav.decks">Slide decks</a></li>
+  </ul></section>
+    </nav>
+    <div class="viewer-main">
+      <div class="viewer-toolbar">
+        <div>
+          <h1>Hermes Agent 架构调研（8.1）</h1>
+          <div class="path">notes/synthesis/survey-reports/hermes-agent.md</div>
+        </div>
+        <a class="btn" href="/html/docs.html" data-i18n="toolbar.sitemap">Sitemap</a>
+        <a class="btn primary" href="../agent-skill-architecture-survey-matrix.html" data-i18n="toolbar.matrix">165-dim matrix</a>
+      </div>
+      <p id="i18n-fallback-notice" class="i18n-notice" hidden data-i18n="content.fallback">content.fallback</p>
+      <article class="md-body"><h1>Hermes Agent 架构调研（8.1）</h1>
+<blockquote>
+<p><strong>运行时 Skill CRUD + 后台自进化最强，但缺 proposal 队列与 read-before-write 硬门禁</strong><br>~/.hermes/skills SKILL.md；metadata index + skill_view 渐进披露；skill_manage 全 CRUD + 后台 review。</p>
+</blockquote>
+<blockquote>
+<p><strong>Local</strong>: <code>/Users/maybewu/Documents/Projects/oss/hermes-agent</code><br><strong>Upstream</strong>: <a href="https://github.com/NousResearch/hermes-agent">NousResearch/hermes-agent</a><br><strong>Matrix</strong>: <a href="../agent-skill-architecture-survey-matrix.html">agent-skill-architecture-survey-matrix.md</a></p>
+</blockquote>
+<h2>1. Architecture</h2>
+<p class="zh-lead"><strong>中文</strong> CLI/Gateway 一体；skills 目录扫描；bundled manifest hash 同步。</p>
+
+
+<p>Hermes is a Python monolith (<code>run_agent.py</code> <del>9.8k lines) combining: OpenAI tool-calling agent loop, Gateway, <strong>40+ tools</strong>, frozen MEMORY prefix cache, and <strong>Atropos RL environment</strong>. Skills follow <a href="https://agentskills.io">agentskills.io</a>-compatible <code>SKILL.md</code> under `</del>/.hermes/skills/<code>, with **progressive disclosure** (</code>skills_list<code>→</code>skill_view<code>) and **agent-writable** procedural memory via </code>skill_manage`.</p>
+<pre><code class="language-text">AIAgent loop → tools (skills_list, skill_view, skill_manage)
+                    ↓ post-turn
+            _spawn_background_review → quiet agent → patch/create skill
+                    ↓
+            ~/.hermes/skills/  (+ skills_guard scan)
+</code></pre>
+<p><strong>Evidence</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Claim</th>
+<th>Source</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Skill manager purpose</td>
+<td><code>tools/skill_manager_tool.py:1-12</code></td>
+</tr>
+<tr>
+<td>agentskills layout</td>
+<td><code>skill_manager_tool.py:22-32</code></td>
+</tr>
+<tr>
+<td>Background review</td>
+<td><code>run_agent.py:1768-1796</code>, <code>9626</code></td>
+</tr>
+<tr>
+<td>Skills docs</td>
+<td><a href="https://github.com/NousResearch/hermes-agent/blob/main/website/docs/user-guide/features/skills.md">hermes skills.md</a></td>
+</tr>
+</tbody></table></div>
+<details class="evidence-block"><summary>💬 引用 / Quote</summary><pre><code class="language-python"># tools/skill_manager_tool.py:5-8
+&quot;&quot;&quot;
+Allows the agent to create, update, and delete skills, turning successful
+approaches into reusable procedural knowledge. New skills are created in
+~/.hermes/skills/.
+&quot;&quot;&quot;
+</code></pre></details>
+<details class="evidence-block"><summary>💬 引用 / Quote</summary><pre><code class="language-python"># tools/skill_manager_tool.py:10-12
+# Skills are the agent&#39;s procedural memory: they capture *how to do a specific
+# type of task* based on proven experience. General memory (MEMORY.md, USER.md) is
+# broad and declarative. Skills are narrow and actionable.
+</code></pre></details>
+<h2>2. Skill Runtime</h2>
+<p class="zh-lead"><strong>中文</strong> session 冻结 index；skill_view 按需 body；slash 与 --skills preload。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Pattern</th>
+<th>Implementation</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Progressive disclosure</td>
+<td>metadata index in prompt → <code>skill_view</code></td>
+<td><code>tools/skills_tool.py</code>, <code>agent/prompt_builder.py</code></td>
+</tr>
+<tr>
+<td>Session preload</td>
+<td>CLI <code>--skills a,b</code> loads full text at start</td>
+<td><code>cli.py</code> (~8999)</td>
+</tr>
+<tr>
+<td>Per-turn catalog</td>
+<td>· frozen index (prefix cache)</td>
+<td><code>prompt_caching.py</code></td>
+</tr>
+<tr>
+<td>Background evolution</td>
+<td>async review every ~10 tool iters</td>
+<td><code>run_agent.py:9604-9610</code></td>
+</tr>
+<tr>
+<td>CRUD</td>
+<td><code>skill_manage</code> create/edit/patch/delete/write_file</td>
+<td><code>skill_manager_tool.py</code></td>
+</tr>
+</tbody></table></div>
+<details class="evidence-block"><summary>💬 引用 / Quote</summary><pre><code class="language-python"># run_agent.py:1773-1775
+&quot;If a relevant skill already exists, update it with what you learned. &quot;
+&quot;Otherwise, create a new skill if the approach is reusable.&quot;
+</code></pre></details>
+<p><strong>Standout</strong>: Auto Patch ★ · Self Reflection ★ · Progressive disclosure ★<br><strong>Weakness</strong>: No RRF ranking · No proposal queue · No read-before-write enforcement</p>
+<h2>3. Skill Lifecycle</h2>
+<p class="zh-lead"><strong>中文</strong> agent skill_manage create/patch/delete；skills_guard 扫描；无 formal proposal store。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Stage</th>
+<th>Hermes</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Human written</td>
+<td>bundled + hub</td>
+<td><code>skills_sync.py</code></td>
+</tr>
+<tr>
+<td>AI written</td>
+<td>★ immediate via <code>skill_manage</code></td>
+<td><code>skill_manager_tool.py</code></td>
+</tr>
+<tr>
+<td>Reviewed</td>
+<td>◐ background review agent</td>
+<td><code>run_agent.py:_spawn_background_review</code></td>
+</tr>
+<tr>
+<td>Published</td>
+<td>★ direct to <code>~/.hermes/skills/</code></td>
+<td>no staging dir</td>
+</tr>
+<tr>
+<td>Deleted</td>
+<td>★ <code>skill_manage(delete)</code></td>
+<td><code>skill_manager_tool.py</code></td>
+</tr>
+<tr>
+<td>Versioned</td>
+<td>◐ bundled origin-hash manifest</td>
+<td><code>skills_sync.py</code></td>
+</tr>
+</tbody></table></div>
+<p><strong>Lifecycle score</strong>: <strong>10/13</strong> — missing formal approve/rollback/proposal staging</p>
+<p><strong>Known risks (public issues)</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Issue</th>
+<th>URL</th>
+<th>Problem</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>#55647</td>
+<td><a href="https://github.com/NousResearch/hermes-agent/issues/55647">skill_manage patches hallucinate</a></td>
+<td>background review patches without reading current <code>SKILL.md</code></td>
+</tr>
+<tr>
+<td>#54195</td>
+<td><a href="https://github.com/NousResearch/hermes-agent/issues/54195">symlink discovery</a></td>
+<td>skill_manage vs skill_view path mismatch</td>
+</tr>
+<tr>
+<td>#25083</td>
+<td><a href="https://github.com/NousResearch/hermes-agent/issues/25083">critical skill protection</a></td>
+<td>agent can modify governance skills</td>
+</tr>
+</tbody></table></div>
+<h2>4. Skill Evolution</h2>
+<p class="zh-lead"><strong>中文</strong> nudge + _spawn_background_review → 直接 patch；Atropos RL 扩展。</p>
+
+
+<p><strong>Most aggressive online CRUD loop</strong> in the survey:</p>
+<pre><code class="language-text">Nudge (every 10 tool calls) OR post-turn
+        ↓
+_spawn_background_review (fork quiet agent)
+        ↓
+skill_manage: create | edit | patch | delete
+        ↓
+skills_guard security scan
+        ↓
+Immediate write to ~/.hermes/skills/
+</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Dimension</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Reflection</td>
+<td>★ <code>_SKILL_REVIEW_PROMPT</code></td>
+</tr>
+<tr>
+<td>Auto Patch</td>
+<td>★ <code>patch</code> action</td>
+</tr>
+<tr>
+<td>Candidate pool</td>
+<td>· (writes directly)</td>
+</tr>
+<tr>
+<td>Merge gate</td>
+<td>·</td>
+</tr>
+<tr>
+<td>RL</td>
+<td>★ Atropos + <code>rl_training_tool</code></td>
+</tr>
+</tbody></table></div>
+<p><strong>Offline evolution</strong> (separate repo, Web L0): <a href="https://github.com/NousResearch/hermes-agent-self-evolution">hermes-agent-self-evolution</a> — GEPA/DSPy — <strong>not cloned locally</strong>.</p>
+<h2>5. Multi-Agent Skill</h2>
+<p class="zh-lead"><strong>中文</strong> delegate_task 隔离 context；无 skill preload 参数。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Pattern</th>
+<th>Status</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>delegate_task</td>
+<td>★ isolated child context, parent sees summary</td>
+<td><code>tools/delegate_tool.py</code></td>
+</tr>
+<tr>
+<td>Skill preload on delegate</td>
+<td>· no <code>skills=[]</code> param</td>
+<td>lifecycle survey</td>
+</tr>
+<tr>
+<td>Shared index</td>
+<td>child uses same skills_list/view</td>
+<td>same ~/.hermes</td>
+</tr>
+<tr>
+<td>Skill isolation</td>
+<td>★ context isolation via delegate</td>
+<td><code>delegate_tool.py</code></td>
+</tr>
+</tbody></table></div>
+<p>Subagents <strong>inherit toolsets subset</strong>, not complementary skill bundles.</p>
+<h2>6. Skill Governance</h2>
+<p class="zh-lead"><strong>中文</strong> skills_guard 写后扫描；issue 风险：无 critical-skill lock。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Control</th>
+<th>Status</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>skills_guard scan</td>
+<td>★ on write</td>
+<td><code>skill_manager_tool.py:47-50</code></td>
+</tr>
+<tr>
+<td>Security on hub install</td>
+<td>★ <code>should_allow_install</code></td>
+<td><code>skills_guard.py</code></td>
+</tr>
+<tr>
+<td>Critical skill lock</td>
+<td>❌ issue #25083</td>
+<td>public issue</td>
+</tr>
+<tr>
+<td>Read-before-write</td>
+<td>❌ issue #55647</td>
+<td>public issue</td>
+</tr>
+<tr>
+<td>Proposal staging</td>
+<td>·</td>
+<td>—</td>
+</tr>
+</tbody></table></div>
+<details class="evidence-block"><summary>💬 引用 / Quote</summary><pre><code class="language-python"># tools/skill_manager_tool.py:47-48
+# Import security scanner — agent-created skills get the same scrutiny as
+# community hub installs.
+</code></pre></details>
+<h2>7. Harness Integration</h2>
+<p class="zh-lead"><strong>中文</strong> TurnRunner + toolsets；skill 为一等工具。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Path</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Main loop</td>
+<td><code>run_agent.py</code>, <code>environments/agent_loop.py</code></td>
+</tr>
+<tr>
+<td>Prompt layers</td>
+<td><code>agent/prompt_builder.py</code></td>
+</tr>
+<tr>
+<td>Frozen prefix cache</td>
+<td><code>agent/prompt_caching.py</code>, <code>tools/memory_tool.py</code></td>
+</tr>
+<tr>
+<td>Context compression</td>
+<td><code>agent/context_compressor.py</code></td>
+</tr>
+<tr>
+<td>Gateway hooks</td>
+<td><code>gateway/hooks.py</code> — <code>agent:step</code></td>
+</tr>
+<tr>
+<td>Trajectory</td>
+<td><code>agent/trajectory.py</code> JSONL</td>
+</tr>
+</tbody></table></div>
+<p>Skills integrate as <strong>tools in the tool loop</strong>, not as a separate pipeline stage (contrast OpenSquilla).</p>
+<h2>8. RL Readiness</h2>
+<p class="zh-lead"><strong>中文</strong> JSONL + session DB；Atropos 轨迹；RL tool 在线训练。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Signal</th>
+<th>Status</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Step trace</td>
+<td>★ <code>agent:step</code> hook</td>
+<td><code>gateway/hooks.py</code></td>
+</tr>
+<tr>
+<td>Trajectory</td>
+<td>★ JSONL + SQLite</td>
+<td><code>agent/trajectory.py</code>, <code>hermes_state.py</code></td>
+</tr>
+<tr>
+<td>Reward</td>
+<td>★ Atropos env</td>
+<td><code>environments/hermes_base_env.py</code></td>
+</tr>
+<tr>
+<td>Online RL</td>
+<td>★ <code>rl_training_tool</code></td>
+<td><code>tools/rl_training_tool.py</code></td>
+</tr>
+<tr>
+<td>SkillRL</td>
+<td>◐ skills as procedural memory in traj</td>
+<td>conceptual</td>
+</tr>
+<tr>
+<td>Claw-R1</td>
+<td>★ rich step metadata</td>
+<td>strong middleware candidate</td>
+</tr>
+</tbody></table></div>
+<p><strong>Strongest RL readiness</strong> among the 8 for skill-augmented policy training.</p>
+<h2>9. Borrow for TaiChu</h2>
+<p class="zh-lead"><strong>中文</strong> 借 CRUD 面与 review 思路；TaiChu 需加 gate 而非直接生产 patch。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Pattern</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>_spawn_background_review</code> async pattern</td>
+<td>Post-turn miner without blocking user</td>
+</tr>
+<tr>
+<td><code>skill_manage</code> <strong>actions</strong> (as candidate-only tool)</td>
+<td>CRUD API design</td>
+</tr>
+<tr>
+<td><code>skills_guard</code> scan</td>
+<td>Before device load</td>
+</tr>
+<tr>
+<td>Frozen catalog + on-demand load</td>
+<td>Matches TaiChu prefix cache design</td>
+</tr>
+<tr>
+<td>Atropos env interface</td>
+<td>If pursuing SkillRL experiments</td>
+</tr>
+<tr>
+<td>Procedural vs declarative split</td>
+<td>Clear skill/memory boundary</td>
+</tr>
+</tbody></table></div>
+<h2>10. Implement in TaiChu</h2>
+<p class="zh-lead"><strong>中文</strong> P1 read-before-write gate；P2 skill_manage 候选流。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Priority</th>
+<th>What</th>
+<th>Seam</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>P1</td>
+<td><code>skill_manage</code> → writes <code>~/.taichu/proposals/</code> only</td>
+<td><code>builtintools/</code> new tool</td>
+</tr>
+<tr>
+<td>P1</td>
+<td>Post-turn async review task</td>
+<td>session handle after turn</td>
+</tr>
+<tr>
+<td>P1</td>
+<td><code>skills_guard</code>-style scanner</td>
+<td>pre-publish</td>
+</tr>
+<tr>
+<td>P2</td>
+<td>Atropos-compatible trace export</td>
+<td><code>interaction_log</code> schema</td>
+</tr>
+<tr>
+<td>P0</td>
+<td><strong>Require <code>skill_view</code> before <code>patch</code></strong></td>
+<td>hard gate (fix Hermes #55647 class)</td>
+</tr>
+</tbody></table></div>
+<h2>11. Do NOT Borrow</h2>
+<p class="zh-lead"><strong>中文</strong> 勿无 gate 直接生产 patch；勿忽略 hallucinated deletion 风险。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Pattern</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Direct production <code>skill_manage(patch)</code></td>
+<td>issue #55647 hallucinated deletes</td>
+</tr>
+<tr>
+<td>No critical-skill protection</td>
+<td>issue #25083</td>
+</tr>
+<tr>
+<td>9.8k-line monolith structure</td>
+<td>take tools/patterns only</td>
+</tr>
+<tr>
+<td>Ungated auto-merge</td>
+<td>use OpenSquilla accept_proposal instead</td>
+</tr>
+</tbody></table></div>
+<h2>12. Score (1–10)</h2>
+<p class="zh-lead"><strong>中文</strong> 总分 8.1：Evolution 9；Governance 5 拉低。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Category</th>
+<th align="center">Score</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Data Model</td>
+<td align="center">8</td>
+<td>Standard SKILL.md + assets</td>
+</tr>
+<tr>
+<td>Runtime</td>
+<td align="center">8</td>
+<td>Progressive disclosure ★; no per-turn rank</td>
+</tr>
+<tr>
+<td>Lifecycle</td>
+<td align="center">8</td>
+<td>10/13 stages</td>
+</tr>
+<tr>
+<td>Evolution</td>
+<td align="center">9</td>
+<td>Strongest CRUD; weakest gates</td>
+</tr>
+<tr>
+<td>Governance</td>
+<td align="center">5</td>
+<td>scan yes; critical lock no</td>
+</tr>
+<tr>
+<td>Agent Integration</td>
+<td align="center">7</td>
+<td>delegate yes; no skill bundles</td>
+</tr>
+<tr>
+<td>RL Readiness</td>
+<td align="center">8</td>
+<td>Atropos ★</td>
+</tr>
+<tr>
+<td><strong>Overall</strong></td>
+<td align="center"><strong>8.1</strong></td>
+<td>Best RL + online CRUD; risky ungated patch</td>
+</tr>
+</tbody></table></div>
+<h2>Evidence index</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Claim</th>
+<th>Path / URL</th>
+<th>Level</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>H-01</td>
+<td>skill_manage header</td>
+<td><code>tools/skill_manager_tool.py:1-32</code></td>
+<td>L3</td>
+</tr>
+<tr>
+<td>H-02</td>
+<td>Review prompt</td>
+<td><code>run_agent.py:1768-1775</code></td>
+<td>L3</td>
+</tr>
+<tr>
+<td>H-03</td>
+<td>Spawn review</td>
+<td><code>run_agent.py:1792</code>, <code>9626</code></td>
+<td>L3</td>
+</tr>
+<tr>
+<td>H-04</td>
+<td>Patch hallucinate issue</td>
+<td><a href="https://github.com/NousResearch/hermes-agent/issues/55647">https://github.com/NousResearch/hermes-agent/issues/55647</a></td>
+<td>L0</td>
+</tr>
+<tr>
+<td>H-05</td>
+<td>Skills user docs</td>
+<td><a href="https://github.com/NousResearch/hermes-agent/blob/main/website/docs/user-guide/features/skills.md">https://github.com/NousResearch/hermes-agent/blob/main/website/docs/user-guide/features/skills.md</a></td>
+<td>L0</td>
+</tr>
+<tr>
+<td>H-06</td>
+<td>RL tool</td>
+<td><code>tools/rl_training_tool.py</code></td>
+<td>L2</td>
+</tr>
+</tbody></table></div>
+</article>
+    </div>
+  </div>
+  <script src="../../../../js/i18n.js"></script>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
+  </script>
+</body>
+</html>

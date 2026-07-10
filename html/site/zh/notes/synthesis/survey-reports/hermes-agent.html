@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hermes Agent 架构调研（8.1） — Skill-Evolving</title>
+  <link rel="alternate" hreflang="en" href="/html/site/notes/synthesis/survey-reports/hermes-agent.html">
+  <link rel="alternate" hreflang="zh-Hans" href="/html/site/zh/notes/synthesis/survey-reports/hermes-agent.html">
+  <link rel="alternate" hreflang="x-default" href="/html/site/notes/synthesis/survey-reports/hermes-agent.html">
+  <link rel="stylesheet" href="../../../../../css/viewer.css">
+</head>
+<body class="page-compact page-survey-report" data-doc-locale="zh" data-content-lang="zh">
+  <div class="viewer-layout">
+    <nav>
+      <div data-lang-switch class="lang-switch-host"></div>
+      <h1 data-i18n="nav.docs">Docs</h1>
+      <div class="title" data-i18n="nav.rendered">Rendered HTML</div>
+      <section class="highlight-section"><h2 data-i18n="nav.compare">nav.compare</h2><ul><li><a href="../agent-skill-architecture-survey-matrix.html" data-i18n="nav.matrix165">nav.matrix165</a></li><li><a href="../skill-lifecycle-full-matrix.html" data-i18n="nav.lifecycle">nav.lifecycle</a></li><li><a href="../web-expanded-lifecycle-matrix-merged.html" data-i18n="nav.web_l3">nav.web_l3</a></li><li><a href="../eight-repo-comprehensive-survey.html" data-i18n="nav.survey20">nav.survey20</a></li><li><a href="../skill-lifecycle-and-dynamic-loading-survey.html" data-i18n="nav.per_turn">nav.per_turn</a></li><li><a href="../eight-repo-deep-source-analysis.html" data-i18n="nav.deep_source">nav.deep_source</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.per_repo">nav.per_repo</h2><ul><li><a href="./opensquilla.html">OpenSquilla (9.0)</a></li><li><a class="active" href="./hermes-agent.html">Hermes (8.1)</a></li><li><a href="./openclaw.html">OpenClaw (8.0)</a></li><li><a href="./claude-code-rev.html">Claude Rev (7.7)</a></li><li><a href="./codex.html">Codex (7.2)</a></li><li><a href="./taichu.html">TaiChu (5.0)</a></li><li><a href="./zeroclaw.html">ZeroClaw (5.0)</a></li><li><a href="./genericagent.html">GenericAgent (4.8)</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.papers">nav.papers</h2><ul><li><a href="../../../../topics/skill-rl/overview.html">SkillRL</a></li><li><a href="../../../../topics/claw-r1/overview.html">Claw-R1</a></li><li><a href="../comparison.html" data-i18n="nav.comparison">nav.comparison</a></li><li><a href="../combined-pipeline.html" data-i18n="nav.pipeline">nav.pipeline</a></li><li><a href="../l3-comprehensive-skill-analysis.html" data-i18n="nav.l3">nav.l3</a></li><li><a href="../../../../notes/synthesis/taichu-p0-skill-compaction-spec.html" data-i18n="nav.taichu_p0">nav.taichu_p0</a></li></ul></section><section><h2 data-i18n="nav.more">More</h2><ul>
+    <li><a href="/html/docs.html" data-i18n="nav.sitemap">Sitemap</a></li>
+    <li><a href="/html/i18n-coverage.html" data-i18n="nav.i18n_coverage">i18n coverage</a></li>
+    <li><a href="/html/index.html" data-i18n="nav.dashboard">Dashboard</a></li>
+    <li><a href="/html/deck/index.html" data-i18n="nav.decks">Slide decks</a></li>
+  </ul></section>
+    </nav>
+    <div class="viewer-main">
+      <div class="viewer-toolbar">
+        <div>
+          <h1>Hermes Agent 架构调研（8.1）</h1>
+          <div class="path">notes/synthesis/survey-reports/hermes-agent.md</div>
+        </div>
+        <a class="btn" href="/html/docs.html" data-i18n="toolbar.sitemap">Sitemap</a>
+        <a class="btn primary" href="../agent-skill-architecture-survey-matrix.html" data-i18n="toolbar.matrix">165-dim matrix</a>
+      </div>
+      
+      <article class="md-body"><h1>Hermes Agent 架构调研（8.1）</h1>
+<blockquote>
+<p><strong>运行时 Skill CRUD + 后台自进化最强，但缺 proposal 队列与 read-before-write 硬门禁</strong></p>
+<p>~/.hermes/skills SKILL.md；metadata index + skill_view 渐进披露；skill_manage 全 CRUD + 后台 review。</p>
+</blockquote>
+<h2>1. 架构</h2>
+<p>CLI/Gateway 一体；skills 目录扫描；bundled manifest hash 同步。</p>
+<h2>2. Skill 运行时</h2>
+<p>session 冻结 index；skill_view 按需 body；slash 与 --skills preload。</p>
+<h2>3. Skill 生命周期</h2>
+<p>agent skill_manage create/patch/delete；skills_guard 扫描；无 formal proposal store。</p>
+<h2>4. Skill 进化</h2>
+<p>nudge + _spawn_background_review → 直接 patch；Atropos RL 扩展。</p>
+<h2>5. 多 Agent Skill</h2>
+<p>delegate_task 隔离 context；无 skill preload 参数。</p>
+<h2>6. Skill 治理</h2>
+<p>skills_guard 写后扫描；issue 风险：无 critical-skill lock。</p>
+<h2>7. Harness 集成</h2>
+<p>TurnRunner + toolsets；skill 为一等工具。</p>
+<h2>8. RL 就绪度</h2>
+<p>JSONL + session DB；Atropos 轨迹；RL tool 在线训练。</p>
+<h2>9. TaiChu 可借鉴</h2>
+<p>借 CRUD 面与 review 思路；TaiChu 需加 gate 而非直接生产 patch。</p>
+<h2>10. TaiChu 落地</h2>
+<p>P1 read-before-write gate；P2 skill_manage 候选流。</p>
+<h2>11. 不应借鉴</h2>
+<p>勿无 gate 直接生产 patch；勿忽略 hallucinated deletion 风险。</p>
+<h2>12. 评分</h2>
+<p>总分 8.1：Evolution 9；Governance 5 拉低。</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Category</th>
+<th align="center">Score</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Data Model</td>
+<td align="center">8</td>
+<td>Standard SKILL.md + assets</td>
+</tr>
+<tr>
+<td>Runtime</td>
+<td align="center">8</td>
+<td>Progressive disclosure ★; no per-turn rank</td>
+</tr>
+<tr>
+<td>Lifecycle</td>
+<td align="center">8</td>
+<td>10/13 stages</td>
+</tr>
+<tr>
+<td>Evolution</td>
+<td align="center">9</td>
+<td>Strongest CRUD; weakest gates</td>
+</tr>
+<tr>
+<td>Governance</td>
+<td align="center">5</td>
+<td>scan yes; critical lock no</td>
+</tr>
+<tr>
+<td>Agent Integration</td>
+<td align="center">7</td>
+<td>delegate yes; no skill bundles</td>
+</tr>
+<tr>
+<td>RL Readiness</td>
+<td align="center">8</td>
+<td>Atropos ★</td>
+</tr>
+<tr>
+<td><strong>Overall</strong></td>
+<td align="center"><strong>8.1</strong></td>
+<td>Best RL + online CRUD; risky ungated patch</td>
+</tr>
+</tbody></table></div>
+<p><em>完整英文版含 L3 路径与引用 → <code>survey-reports/hermes-agent.md</code></em></p>
+</article>
+    </div>
+  </div>
+  <script src="../../../../../js/i18n.js"></script>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
+  </script>
+</body>
+</html>

@@ -1,0 +1,99 @@
+{
+  "survey-part2.html": [
+    {
+      "h1": "TaiChu 现状 — 优势与缺口",
+      "subtitle": "Rust L1–L5 SDK · 17 个 canonical <code>skills/system/</code> + 云目录 · 每 turn 暴露 + 渐进式 <code>load_skill</code> · 尚无版本化生命周期",
+      "body": {
+        "stats": [["5.0", "总分"], ["4/13", "生命周期"], ["1/16", "进化"], ["★", "runs_on 独有"]],
+        "strengths": [
+          "<strong>runs_on</strong> — 唯一具备端云 skill 路由；经 <code>run_subagent</code> 远程委托",
+          "<strong>每 turn user prefix</strong> — user 消息内 <code># Available Skills</code>（cache 友好，非 system）；<code>transform_context</code> + Toollery 过滤",
+          "<strong>load_skill</strong> — XML 元数据 → 完整 SKILL.md；渐进披露已接通",
+          "<strong>云目录</strong> — <code>skill_catalog.json</code> + 设备同步；17 个 system skill 为 canonical",
+          "<strong>interaction_log</strong> — JSONL 轨迹，Claw-R1 / SkillRL 导出基础"
+        ],
+        "gaps": [
+          "<span class=\"gap\">❌</span> <strong>无 invoked_skills compact 存活</strong> — compaction 会摘要 <code>load_skill</code> ToolResult；多轮保真丢失",
+          "<span class=\"gap\">❌</span> <strong>无进化闭环</strong> — 无 proposals、gates、miner 或 eval 门控发布",
+          "<span class=\"gap\">❌</span> <strong>无 subagent skill 预载</strong> — <code>ChildSessionSpec</code> 缺 <code>skills: Vec&lt;String&gt;</code>",
+          "<span class=\"gap\">❌</span> skill store 无 trust_tier / audit / rollback",
+          "<span class=\"gap\">◐</span> 无 SkillRouter (RRF) — 仅静态 catalog + filter"
+        ],
+        "flow": "流程：session 扫描 → XML catalog → 每 turn user prefix → load_skill → compaction.rs ❌ 丢弃 body",
+        "footer": ["Matrix §1 6/14 · §9 1/16 · 保留 runs_on + user prefix", "P0 规范 → taichu-p0-skill-compaction-spec.md"]
+      }
+    },
+    {
+      "h1": "六层 Skill 生命周期系统",
+      "subtitle": "不是 <code>skills/</code> 文件夹 — 而是可版本化、可路由、可追溯、可进化、可治理的软件资产"
+    },
+    {
+      "h1": "P0–P3 路线图 — 借鉴栈 → 交付顺序",
+      "subtitle": "先修 compaction 存活；进化前上治理；MetaSkill 最后"
+    },
+    {
+      "h1": "组合流水线 — 数据层 + 学习层",
+      "subtitle": "全栈 agentic RL：Claw-R1 解决 SkillRL 假设的数据问题；SkillRL 压缩 Claw-R1 无法压缩的经验"
+    },
+    {
+      "h1": "借鉴矩阵 — 取什么 vs 拒什么",
+      "subtitle": "TaiChu 最优路径 = Registry + Router + Subagent bundles + Trace 挖掘 + Eval 门控进化 + 治理"
+    },
+    {
+      "h1": "Skill 生命周期 — 合并阶段矩阵",
+      "subtitle": "8 仓 + TaiChu 目标各阶段领先者 · L0 公开 + L3 交叉校验"
+    },
+    {
+      "h1": "来源索引与后续 Deck",
+      "subtitle": "全部 markdown 综合 + 各仓 L3 报告 · 论文为独立深度阅读"
+    }
+  ],
+  "survey-part1.html": [
+    {
+      "h1": "Agent Skill 架构调研 — 第一部分",
+      "subtitle": "技术栈分层 · 165 维矩阵 · 生命周期 · 8 仓排名 · OpenSquilla/Hermes/OpenClaw 深度模式"
+    },
+    {
+      "h1": "双论文栈：SkillRL + Claw-R1",
+      "subtitle": "Agent RL 栈的两层 — 基础设施管数据生命周期；算法层改进策略学习"
+    },
+    {
+      "h1": "七大类 · 165 维",
+      "subtitle": "15 节 × 8 框架 — 架构对比，非功能清单对照"
+    },
+    {
+      "h1": "Store → Expose → Discover → Recommend → Offload → Use → Compact → Delete → Evolve",
+      "subtitle": "各阶段领先者 — 除 OpenSquilla 外无单仓 9/9"
+    },
+    {
+      "h1": "八仓排名",
+      "subtitle": "165 维矩阵覆盖度的定性汇总 — 数据模型 · 运行时 · 生命周期 · 进化 · 治理 · Agent 集成 · RL 就绪"
+    },
+    {
+      "h1": "OpenSquilla — 每轮 RRF + 四关进化",
+      "subtitle": "分阶段 harness · Agent FSM · 6 层优先级 · 每轮 filter_skills · proposals → MANAGED"
+    },
+    {
+      "h1": "Hermes + OpenClaw — CRUD 进化 vs Workshop 流水线",
+      "subtitle": "Hermes：激进在线 skill_manage + RL。OpenClaw：gateway 作用域 + skill-workshop agent_end + trajectory JSONL"
+    },
+    {
+      "h1": "Codex 渐进披露 + Claude Rev invoked_skills",
+      "subtitle": "Codex：生产 harness 基线，无 evolve。Claude Rev (oboard)：compaction 存活领先 — 不同于 Yuyz0112 可视化工具"
+    }
+  ],
+  "paper-skillrl.html": [
+    { "h1": "SkillRL", "subtitle": "通过递归 Skill 增强强化学习进化 Agent" },
+    { "h1": "原始轨迹难以泛化", "subtitle": "多数 Agent 把每任务当独立事件；记忆系统存冗长噪声 rollout — 难检索难复用" },
+    { "h1": "SkillRL 六步流水线", "subtitle": "从环境 rollout 到递归 SkillBank 更新 — 经验蒸馏包裹 GRPO" },
+    { "h1": "递归协同进化环", "subtitle": "策略与 SkillBank 共同进化 — 非一次性 RL。GRPO 标准；SkillBank 包装是创新点" },
+    { "h1": "基准与开放问题", "subtitle": "具身 + Web + 搜索增强任务 SOTA；复杂度上升时鲁棒性保持" }
+  ],
+  "paper-claw-r1.html": [
+    { "h1": "Claw-R1", "subtitle": "面向 Agentic 强化学习的 Step 级数据中间件系统" },
+    { "h1": "一万 Agent、百万 Step — 然后删除", "subtitle": "Agent RL 正在成为数据工程问题；现有系统把交互轨迹当终端 stdout" },
+    { "h1": "Gateway + Data Pool 中间件", "subtitle": "从异构 Agent 到算法无关 RL 训练器的五步流；支持白盒与黑盒 Agent" },
+    { "h1": "只训练错误的那一步", "subtitle": "轨迹级存储丢失粒度；Step 级记录支持精准 credit assignment 与可查询失败挖掘" },
+    { "h1": "Claw-R1 + SkillRL 栈", "subtitle": "数据中间件喂给学习层。OpenClaw-RL 是在线 RL 的独立议题" }
+  ]
+}

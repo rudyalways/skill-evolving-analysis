@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Claw-R1 — Step-Level Data Middleware · Paper Deep Dive</title>
+  <link rel="stylesheet" href="css/deck.css">
+</head>
+<body data-i18n-page="deck" data-content-lang="bi">
+  <div class="lang-switch-deck" data-lang-switch aria-label="Language"></div>
+  <a class="hub-link" href="index.html" data-i18n="deck.hub">← Deck Hub</a>
+
+  <div class="deck">
+
+    <!-- SLIDE 1 — Title -->
+    <section class="slide theme-clawr1" id="slide-1">
+      <div class="slide-inner">
+        <header class="slide-header">
+          <div>
+            <div class="kicker">Paper Deep Dive · arXiv:2606.09138</div>
+            <h1><span data-lang-only="en">Claw-R1</span><span data-lang-only="zh" hidden>Claw-R1</span></h1>
+            <p class="subtitle"><span data-lang-only="en">A Step-Level Data Middleware System for Agentic Reinforcement Learning</span><span data-lang-only="zh" hidden>面向 Agentic 强化学习的 Step 级数据中间件系统</span></p>
+          </div>
+          <span class="slide-num">1 / 5</span>
+        </header>
+
+        <div class="slide-body">
+          <div class="stat-row">
+            <div class="stat orange">
+              <div class="val">Infra</div>
+              <div class="lbl">Layer — not RL algorithm</div>
+            </div>
+            <div class="stat orange">
+              <div class="val">Step</div>
+              <div class="lbl">Granularity</div>
+            </div>
+            <div class="stat orange">
+              <div class="val">Agnostic</div>
+              <div class="lbl">GRPO / PPO / DPO</div>
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <div class="panel accent-clawr1">
+              <h3>Authors &amp; Ecosystem</h3>
+              <p><strong>Wang et al.</strong> · AgentR1 research group</p>
+              <p style="margin-top:0.5rem">
+                <span class="tag orange">Gateway Server</span>
+                <span class="tag orange">Data Pool</span>
+                <span class="tag orange">Curation UI</span>
+              </p>
+              <div class="chip-row" style="margin-top:0.65rem">
+                <a href="https://github.com/AgentR1/Claw-R1" target="_blank" rel="noopener" class="evidence-chip" style="text-decoration:none">GitHub · AgentR1/Claw-R1</a>
+                <a href="https://youtu.be/Pw47dAOw6B0" target="_blank" rel="noopener" class="evidence-chip" style="text-decoration:none">Demo · youtu.be/Pw47dAOw6B0</a>
+              </div>
+            </div>
+            <div class="panel accent-clawr1">
+              <h3>One-Line Thesis</h3>
+              <p class="quote-block" style="margin:0">
+                Treat agent interaction traces as <strong>managed data assets</strong> — persistent, queryable, versioned — not transient stdout deleted after each rollout.
+              </p>
+            </div>
+          </div>
+
+          <div class="eli5">
+            <strong>ELI5 positioning:</strong> Claw-R1 is the <em>plumbing</em> between agents and RL trainers. It does not invent a new policy gradient — it makes every LLM call a first-class data record you can filter, label, and feed into any training backend.
+          </div>
+
+          <div class="chip-row">
+            <span class="evidence-chip" data-evidence="Abstract — Claw-R1" data-quote="Claw-R1 treats agent interaction traces as managed data assets rather than temporary runtime logs. Through this demonstration, we hope to encourage the community to recognize the importance of data management in agentic RL." data-link="https://arxiv.org/abs/2606.09138">📄 Abstract quote</span>
+            <span class="evidence-chip" data-evidence="GitHub — AgentR1/Claw-R1" data-quote="Interactive step-level data middleware: Gateway Server captures multi-turn steps via unified LLM API; Data Pool organizes prompt IDs, response IDs, rewards, and metadata for training-ready batches." data-link="https://github.com/AgentR1/Claw-R1">🔗 GitHub repo</span>
+            <span class="evidence-chip" data-evidence="Layer distinction" data-quote="SkillRL focuses on how the policy learns from experience (RL algorithm). Claw-R1 focuses on how agent interaction data is collected, managed, and fed into RL (infrastructure / data system)." data-source="topics/claw-r1/overview.md">📐 Stack layer</span>
+          </div>
+        </div>
+
+        <footer class="slide-footer">
+          <span>Claw-R1 · Wang et al. · AgentR1</span>
+          <span>arXiv:2606.09138 · Infrastructure layer</span>
+        </footer>
+      </div>
+    </section>
+
+    <!-- SLIDE 2 — Problem ELI5 -->
+    <section class="slide theme-clawr1" id="slide-2">
+      <div class="slide-inner">
+        <header class="slide-header">
+          <div>
+            <div class="kicker">The Problem · ELI5</div>
+            <h1><span data-lang-only="en">10,000 Agents, Millions of Steps — Then Deleted</span><span data-lang-only="zh" hidden>一万 Agent、百万 Step — 然后删除</span></h1>
+            <p class="subtitle"><span data-lang-only="en">Agent RL is becoming a data engineering problem. Today's systems treat interaction traces like terminal stdout.</span><span data-lang-only="zh" hidden>Agent RL 正在成为数据工程问题；现有系统把交互轨迹当终端 stdout</span></p>
+          </div>
+          <span class="slide-num">2 / 5</span>
+        </header>
+
+        <div class="slide-body">
+          <div class="eli5">
+            <strong>Imagine a factory</strong> where 10,000 workers each take millions of actions per day — and at shift end, every record is shredded. No search, no replay of the one bad step, no version history. That is how most agent RL pipelines treat interaction data today.
+          </div>
+
+          <div class="compare">
+            <div class="panel before">
+              <h3>Before — Ephemeral Logs</h3>
+              <ul>
+                <li>Agent → LLM direct; stdout-style traces</li>
+                <li>Whole trajectories only; no step query</li>
+                <li>Rewards &amp; tool calls lost or buried</li>
+                <li>No versioning, filtering, or curation</li>
+                <li>Training re-runs from scratch each time</li>
+              </ul>
+              <p style="margin-top:0.5rem;font-size:0.75rem;color:var(--red)">Result: credit assignment blind; failure steps unrecoverable</p>
+            </div>
+            <div class="compare-mid">→</div>
+            <div class="panel after">
+              <h3>After — Managed Data Assets</h3>
+              <ul>
+                <li>Agent → Gateway → LLM; every step recorded</li>
+                <li>Step records: prompt_id, response_id, reward, tool</li>
+                <li>Data Pool: filter, version, quality labels</li>
+                <li>SQL-like queries on failure patterns</li>
+                <li>TrainingBackend serves curated batches</li>
+              </ul>
+              <p style="margin-top:0.5rem;font-size:0.75rem;color:var(--green)">Result: train only what failed; data compounds over time</p>
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <div class="panel accent-warn">
+              <h3>Scale Pain</h3>
+              <p>OpenClaw-class deployments → heterogeneous agents, multi-turn tool loops, millions of steps. Without middleware, you cannot inspect, curate, or selectively train on the 1 wrong step in a 20-step trajectory.</p>
+            </div>
+            <div class="panel accent-clawr1">
+              <h3>Reframe</h3>
+              <p><strong>Agent RL = data engineering problem.</strong> Policy algorithms (GRPO, PPO, DPO) matter — but only after you have queryable, versioned, step-level interaction data. Claw-R1 owns that lifecycle.</p>
+            </div>
+          </div>
+
+          <div class="chip-row">
+            <span class="evidence-chip" data-evidence="Problem statement — abstract" data-quote="Existing work mainly focuses on policy optimization algorithms and training frameworks, but pays less attention to the full data lifecycle of agent-environment interactions, from data production to training consumption." data-link="https://arxiv.org/abs/2606.09138">📄 Abstract — data lifecycle gap</span>
+          </div>
+        </div>
+
+        <footer class="slide-footer">
+          <span>Before vs After</span>
+          <span>Stdout deleted → managed step records</span>
+        </footer>
+      </div>
+    </section>
+
+    <!-- SLIDE 3 — Architecture -->
+    <section class="slide theme-clawr1" id="slide-3">
+      <div class="slide-inner">
+        <header class="slide-header">
+          <div>
+            <div class="kicker">Core Architecture</div>
+            <h1><span data-lang-only="en">Gateway + Data Pool Middleware</span><span data-lang-only="zh" hidden>Gateway + Data Pool 中间件</span></h1>
+            <p class="subtitle"><span data-lang-only="en">Five-step flow from heterogeneous agents to algorithm-agnostic RL trainers. White-box and black-box agent support.</span><span data-lang-only="zh" hidden>从异构 Agent 到算法无关 RL 训练器的五步流；支持白盒与黑盒 Agent</span></p>
+          </div>
+          <span class="slide-num">3 / 5</span>
+        </header>
+
+        <div class="slide-body">
+          <div class="flow">
+            <div class="flow-step theme-clawr1">
+              <div class="num">1</div>
+              <strong>Agent</strong>
+              <span>White-box API submit · black-box base_url → Gateway · online live interactions</span>
+            </div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-step theme-clawr1">
+              <div class="num">2</div>
+              <strong>Gateway Server</strong>
+              <span>Unified LLM API entry — Agent → Gateway → LLM, not direct</span>
+            </div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-step theme-clawr1">
+              <div class="num">3</div>
+              <strong>Step Records</strong>
+              <span>prompt_id · response_id · reward · tool · metadata · timestamps</span>
+            </div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-step theme-clawr1">
+              <div class="num">4</div>
+              <strong>Data Pool</strong>
+              <span>Filter · version · quality label · channel partition · training readiness</span>
+            </div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-step theme-clawr1">
+              <div class="num">5</div>
+              <strong>RL Trainer</strong>
+              <span>GRPO / PPO / DPO agnostic via pluggable TrainingBackend</span>
+            </div>
+          </div>
+
+          <div class="grid-2" style="margin-top:0.5rem">
+            <div class="panel accent-clawr1">
+              <h3>Gateway — Unified Capture</h3>
+              <p>All agent requests pass through one API surface. Automatically records prompt, response, reward signals, tool calls, and metadata — without modifying agent logic for black-box deployments (point <code class="mono">base_url</code> at Gateway).</p>
+            </div>
+            <div class="panel accent-clawr1">
+              <h3>Data Pool — Replay Buffer++</h3>
+              <p>Step → metadata → filtering → versioning → quality labels → training-ready batches. Multi-dimensional rewards (rule / discriminative RM / generative RM), human feedback, policy version tracking, train/val channel isolation.</p>
+            </div>
+          </div>
+
+          <div class="grid-3">
+            <div class="panel">
+              <h3>White-Box</h3>
+              <p>Agent submits steps via API; full state visibility for debugging and curation.</p>
+            </div>
+            <div class="panel">
+              <h3>Black-Box</h3>
+              <p>Existing agents redirect LLM endpoint to Gateway — zero code change to capture traces.</p>
+            </div>
+            <div class="panel">
+              <h3>Algorithm-Agnostic</h3>
+              <p>Claw-R1 prepares data; trainer selects steps → batches → any downstream RL algorithm.</p>
+            </div>
+          </div>
+
+          <div class="chip-row">
+            <span class="evidence-chip" data-evidence="Architecture — abstract" data-quote="Claw-R1 connects heterogeneous agent runtimes with RL training backends through two core components: a Gateway Server and a Data Pool. The Gateway Server captures multi-turn interaction steps through a unified LLM API entry point, while the Data Pool organizes them into step-level records consisting of prompt IDs, response IDs, rewards and other metadata." data-link="https://arxiv.org/abs/2606.09138">📄 Abstract — two core components</span>
+            <span class="evidence-chip" data-evidence="Demo capabilities" data-quote="Users can interactively inspect live trajectories, examine the state, action, and reward of each step, curate data by quality and readiness, and configure training-ready batches for different downstream RL algorithms." data-link="https://youtu.be/Pw47dAOw6B0">🎬 Demo UI capabilities</span>
+          </div>
+        </div>
+
+        <footer class="slide-footer">
+          <span>Agent → Gateway → Steps → Pool → Trainer</span>
+          <span>Decouples collection from training engine</span>
+        </footer>
+      </div>
+    </section>
+
+    <!-- SLIDE 4 — Step-Level Why -->
+    <section class="slide theme-clawr1" id="slide-4">
+      <div class="slide-inner">
+        <header class="slide-header">
+          <div>
+            <div class="kicker">Why Step-Level?</div>
+            <h1><span data-lang-only="en">Train Only the Wrong Step</span><span data-lang-only="zh" hidden>只训练错误的那一步</span></h1>
+            <p class="subtitle"><span data-lang-only="en">Trajectory-level storage loses granularity. Step-level records enable surgical credit assignment and queryable failure mining.</span><span data-lang-only="zh" hidden>轨迹级存储丢失粒度；Step 级记录支持精准 credit assignment 与可查询失败挖掘</span></p>
+          </div>
+          <span class="slide-num">4 / 5</span>
+        </header>
+
+        <div class="slide-body">
+          <div class="grid-2">
+            <div class="panel accent-clawr1">
+              <h3>20-Step Trajectory · 19 Correct · 1 Wrong</h3>
+              <div class="tbl-wrap">
+                <table class="dense">
+                  <thead>
+                    <tr><th>Step</th><th>Action</th><th>Reward</th><th>Train?</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr><td>1–18</td><td>Search, read, reason…</td><td class="star">+1</td><td>—</td></tr>
+                    <tr><td>19</td><td>Failed browser search</td><td class="gap">−1</td><td><strong style="color:var(--clawr1)">✓</strong></td></tr>
+                    <tr><td>20</td><td>Final answer</td><td class="star">+1</td><td>—</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <p style="margin-top:0.5rem;font-size:0.78rem">Trajectory-level RL retrains all 20 steps. Claw-R1 isolates step 19 for targeted GRPO/PPO batch.</p>
+            </div>
+            <div class="panel accent-clawr1">
+              <h3>Data Pool as Replay Buffer++</h3>
+              <p>Traditional replay buffers store whole trajectories. Claw-R1 adds:</p>
+              <ul>
+                <li>Per-step metadata &amp; multi-dimensional rewards</li>
+                <li>Policy version tracking (freshness-aware curation)</li>
+                <li>Human feedback integration</li>
+                <li>Channel-based train/val isolation</li>
+                <li>Pluggable <code class="mono">TrainingBackend</code> export</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="panel" style="border-color:rgba(249,115,22,0.35)">
+            <h3>Query Example — SQL-Like Failure Mining</h3>
+            <pre class="mono" style="background:var(--bg0);padding:0.65rem 0.85rem;border-radius:8px;margin:0;color:var(--clawr1)">SELECT * FROM step_pool
+WHERE reward &lt; 0
+  AND tool = 'browser'
+  AND action LIKE '%search%'
+  AND policy_version &gt;= 'v2.1'
+ORDER BY timestamp DESC
+LIMIT 500;</pre>
+            <p style="margin-top:0.5rem;font-size:0.78rem;color:var(--muted)">Natural language equivalent: <em>"Show all failed search steps where reward &lt; 0 and tool = browser"</em></p>
+          </div>
+
+          <div class="grid-2">
+            <div class="panel">
+              <h3>Analogy — Feature Store</h3>
+              <p>Like recommendation-system feature stores: curated, versioned, queryable inputs for downstream models — but for LLM agent steps (state, action, reward, tool metadata).</p>
+            </div>
+            <div class="panel">
+              <h3>Analogy — Data Lake</h3>
+              <p>Like analytics data lakes: ingest heterogeneous sources, partition by channel/quality, serve filtered slices to consumers — here the consumer is an RL trainer, not a BI dashboard.</p>
+            </div>
+          </div>
+
+          <div class="chip-row">
+            <span class="evidence-chip" data-evidence="Step record schema" data-quote="Step-level records consisting of prompt IDs, response IDs, rewards and other metadata — each step is an independent data asset, not just a line in a trajectory blob." data-link="https://github.com/AgentR1/Claw-R1">🔗 Step record fields</span>
+          </div>
+        </div>
+
+        <footer class="slide-footer">
+          <span>Step-level credit assignment</span>
+          <span>Feature store + data lake for agents</span>
+        </footer>
+      </div>
+    </section>
+
+    <!-- SLIDE 5 — Integration & Takeaways -->
+    <section class="slide theme-clawr1" id="slide-5">
+      <div class="slide-inner">
+        <header class="slide-header">
+          <div>
+            <div class="kicker">Integration · Takeaways</div>
+            <h1><span data-lang-only="en">Claw-R1 + SkillRL Stack</span><span data-lang-only="zh" hidden>Claw-R1 + SkillRL 栈</span></h1>
+            <p class="subtitle"><span data-lang-only="en">Data middleware feeds the learning layer. OpenClaw-RL is a separate online RL concern.</span><span data-lang-only="zh" hidden>数据中间件喂给学习层。OpenClaw-RL 是在线 RL 的独立议题</span></p>
+          </div>
+          <span class="slide-num">5 / 5</span>
+        </header>
+
+        <div class="slide-body">
+          <div class="flow-vertical">
+            <div class="flow-step theme-clawr1">
+              <div class="num">L0</div>
+              <div>
+                <strong>Claw-R1 — Step Stream</strong>
+                <span>Gateway captures → Data Pool curates → training-ready step batches</span>
+              </div>
+            </div>
+            <div class="flow-step theme-skillrl">
+              <div class="num">L1</div>
+              <div>
+                <strong>SkillRL — Distillation</strong>
+                <span>Trajectory builder groups steps → Teacher LLM → SkillBank (general + task-specific skills + failure lessons)</span>
+              </div>
+            </div>
+            <div class="flow-step theme-skillrl">
+              <div class="num">L2</div>
+              <div>
+                <strong>SkillRL — GRPO Loop</strong>
+                <span>Retrieve skills → policy update → improved rollouts feed back into Claw-R1 Data Pool</span>
+              </div>
+            </div>
+            <div class="flow-step theme-clawr1">
+              <div class="num">∥</div>
+              <div>
+                <strong>OpenClaw-RL — Separate Layer</strong>
+                <span>Online RL for live agents; complementary to Claw-R1's offline data middleware (not a replacement)</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <div class="panel accent-clawr1">
+              <h3>Key Takeaways</h3>
+              <ul>
+                <li><strong>Data first:</strong> agent RL fails without managed step traces</li>
+                <li><strong>Middleware, not algorithm:</strong> works with GRPO, PPO, DPO, or custom trainers</li>
+                <li><strong>Complements SkillRL:</strong> Claw-R1 supplies fuel; SkillRL compresses + optimizes</li>
+                <li><strong>Inspectable:</strong> demo UI for live trajectory curation by quality &amp; readiness</li>
+                <li><strong>Heterogeneous:</strong> white-box + black-box agents through one Gateway</li>
+              </ul>
+            </div>
+            <div class="panel accent-clawr1">
+              <h3>Demo UI — Curation</h3>
+              <p>Interactive inspection of live trajectories: per-step state, action, reward; filter by quality labels; configure training-ready batches for downstream RL algorithms.</p>
+              <div class="chip-row">
+                <a href="https://youtu.be/Pw47dAOw6B0" target="_blank" rel="noopener" class="evidence-chip" style="text-decoration:none">▶ Demo video</a>
+                <a href="https://github.com/AgentR1/Claw-R1" target="_blank" rel="noopener" class="evidence-chip" style="text-decoration:none">Code + UI</a>
+              </div>
+            </div>
+          </div>
+
+          <div class="quote-block">
+            "Claw-R1 treats agent interaction traces as managed data assets rather than temporary runtime logs."
+            <cite>— Abstract, arXiv:2606.09138</cite>
+          </div>
+
+          <div class="chip-row">
+            <span class="evidence-chip" data-evidence="Abstract — full thesis" data-quote="Claw-R1 treats agent interaction traces as managed data assets rather than temporary runtime logs. Through this demonstration, we hope to encourage the community to recognize the importance of data management in agentic RL." data-link="https://arxiv.org/abs/2606.09138">📄 Abstract — managed data assets</span>
+            <span class="evidence-chip" data-evidence="GitHub — AgentR1/Claw-R1" data-quote="Code available at https://github.com/AgentR1/Claw-R1. Gateway Server + Data Pool + interactive curation demo for step-level agentic RL." data-link="https://github.com/AgentR1/Claw-R1">🔗 GitHub</span>
+            <span class="evidence-chip" data-evidence="Combined pipeline" data-quote="Claw-R1 solves the data problem SkillRL assumes away. SkillRL solves the compression problem Claw-R1 doesn't address. Failure handling is complementary: Claw-R1 queries failed steps; SkillRL distills failure lessons." data-source="notes/synthesis/combined-pipeline.md">🔗 SkillRL integration</span>
+            <a href="paper-skillrl.html" class="evidence-chip" style="text-decoration:none">→ SkillRL deck</a>
+            <a href="survey-part2.html" class="evidence-chip" style="text-decoration:none">→ Combined pipeline deck</a>
+          </div>
+        </div>
+
+        <footer class="slide-footer">
+          <span>Claw-R1 → SkillRL → improved policy → Claw-R1</span>
+          <span><a href="index.html">Deck Hub</a> · <a href="https://arxiv.org/abs/2606.09138" target="_blank" rel="noopener">arXiv</a> · <a href="https://github.com/AgentR1/Claw-R1" target="_blank" rel="noopener">GitHub</a></span>
+        </footer>
+      </div>
+    </section>
+
+  </div><!-- .deck -->
+
+  <nav class="deck-nav" aria-label="Slide navigation">
+    <button type="button" id="nav-prev" aria-label="Previous slide">← Prev</button>
+    <div class="progress-bar" aria-hidden="true"><div class="progress-fill" id="progress-fill"></div></div>
+    <span class="progress-label" id="progress-label">1/5</span>
+    <button type="button" id="nav-next" aria-label="Next slide">Next →</button>
+  </nav>
+
+  <div class="modal-overlay" id="evidence-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal">
+      <button type="button" class="close-btn" onclick="closeModal()" aria-label="Close">&times;</button>
+      <h2 id="modal-title">Evidence</h2>
+      <div id="modal-body"></div>
+    </div>
+  </div>
+
+  <script src="js/deck.js"></script>
+  <script src="../js/i18n.js"></script>
+</body>
+</html>

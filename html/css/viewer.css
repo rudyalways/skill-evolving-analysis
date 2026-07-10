@@ -1,0 +1,380 @@
+/* Markdown viewer — rendered docs + wide tables */
+@import url('style.css');
+
+.viewer-layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  min-height: 100vh;
+}
+
+.viewer-layout nav {
+  height: 100vh;
+  overflow-y: auto;
+}
+
+.viewer-main {
+  padding: 1.5rem 2rem 3rem;
+  max-width: 1400px;
+  overflow-x: auto;
+}
+
+.viewer-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  margin-bottom: 1.25rem;
+  padding: 1rem 1.25rem;
+  border-bottom: none;
+  background: var(--surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+}
+
+.viewer-toolbar h1 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  flex: 1;
+  min-width: 200px;
+  color: #0f172a;
+}
+
+.viewer-toolbar .path {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--muted);
+  word-break: break-all;
+}
+
+.viewer-toolbar a.btn {
+  display: inline-block;
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  background: var(--surface2);
+  border: 1px solid var(--border-light);
+  color: var(--text-soft);
+  font-size: 0.8rem;
+  text-decoration: none;
+}
+
+.viewer-toolbar a.btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.viewer-toolbar a.btn.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.viewer-toolbar a.btn.primary:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+  color: #fff;
+}
+
+#md-content.loading {
+  color: var(--muted);
+  font-style: italic;
+}
+
+#md-content.error {
+  color: var(--red);
+}
+
+/* Rendered markdown */
+.md-body {
+  font-size: 0.92rem;
+  line-height: 1.65;
+  color: var(--text-soft);
+}
+
+.md-body h1 { font-size: 1.65rem; margin: 1.5rem 0 0.75rem; font-weight: 700; color: #0f172a; }
+.md-body h2 {
+  font-size: 1.25rem;
+  margin: 1.75rem 0 0.65rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 2px solid var(--accent-soft);
+  color: #0f172a;
+}
+.md-body h3 { font-size: 1.05rem; margin: 1.25rem 0 0.5rem; color: var(--accent); }
+.md-body h4 { font-size: 0.95rem; margin: 1rem 0 0.4rem; color: var(--text); }
+
+.md-body p { margin: 0.65rem 0; }
+.md-body ul, .md-body ol { margin: 0.5rem 0 0.75rem 1.25rem; }
+.md-body li { margin: 0.25rem 0; }
+
+.md-body a { color: var(--accent); }
+.md-body code {
+  font-family: var(--mono);
+  font-size: 0.85em;
+  background: var(--surface2);
+  padding: 0.12rem 0.35rem;
+  border-radius: 4px;
+  color: #1e40af;
+  border: 1px solid var(--border-light);
+}
+
+.md-body pre {
+  background: #f8fafc;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  padding: 1rem;
+  overflow-x: auto;
+  margin: 0.75rem 0;
+  font-size: 0.8rem;
+}
+
+.md-body pre code {
+  background: none;
+  padding: 0;
+  border: none;
+  color: var(--text-soft);
+}
+
+.md-body blockquote {
+  border-left: 4px solid var(--accent);
+  margin: 0.75rem 0;
+  padding: 0.5rem 1rem;
+  color: var(--text-soft);
+  background: var(--surface2);
+  border-radius: 0 8px 8px 0;
+}
+
+.md-body hr {
+  border: none;
+  border-top: 1px solid var(--border-light);
+  margin: 1.5rem 0;
+}
+
+/* Tables — critical for 8-repo matrices */
+.md-body .table-wrap {
+  overflow-x: auto;
+  margin: 1rem 0;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.md-body table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+  min-width: 600px;
+}
+
+.md-body th, .md-body td {
+  padding: 0.45rem 0.6rem;
+  border-bottom: 1px solid var(--border-light);
+  text-align: left;
+  vertical-align: top;
+}
+
+.md-body th {
+  background: linear-gradient(180deg, #eff6ff 0%, #dbeafe 100%);
+  color: #1e40af;
+  font-weight: 600;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.md-body tr:hover td {
+  background: #f0f7ff;
+}
+
+.md-body td:first-child {
+  font-weight: 500;
+  white-space: nowrap;
+  color: #0f172a;
+}
+
+.md-body .tag-inline {
+  display: inline-block;
+  font-size: 0.7rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  background: var(--surface2);
+  color: var(--accent2);
+}
+
+nav .highlight-section h2 {
+  color: var(--accent);
+}
+
+nav li a.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-radius: 8px;
+  font-weight: 500;
+}
+
+nav li a.view-doc {
+  font-size: 0.85rem;
+}
+
+@media (max-width: 900px) {
+  .viewer-layout { grid-template-columns: 1fr; }
+  nav { height: auto; position: relative; max-height: 40vh; }
+}
+
+.i18n-notice {
+  font-size: 0.85rem;
+  color: #92400e;
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  border-radius: 8px;
+  padding: 0.65rem 1rem;
+  margin-bottom: 1rem;
+}
+
+.i18n-notice.zh-native {
+  color: #1e40af;
+  background: var(--surface2);
+  border-color: var(--border);
+}
+
+.i18n-content[hidden] {
+  display: none !important;
+}
+
+:lang(zh-Hans) body,
+html[lang="zh-Hans"] body {
+  font-family: "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "SF Pro Text", sans-serif;
+}
+
+/* ── Compact survey reports ── */
+body.page-compact .viewer-main {
+  padding: 0.65rem 1.1rem 1.5rem;
+}
+
+body.page-compact .viewer-toolbar {
+  padding: 0.45rem 0.85rem;
+  margin-bottom: 0.5rem;
+}
+
+body.page-compact .viewer-toolbar h1 {
+  font-size: 0.95rem;
+}
+
+body.page-compact .viewer-toolbar .path {
+  font-size: 0.68rem;
+}
+
+body.page-compact .md-body {
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+body.page-compact .md-body h1 {
+  font-size: 1.25rem;
+  margin: 0.35rem 0 0.4rem;
+}
+
+body.page-compact .md-body h2 {
+  font-size: 1rem;
+  margin: 0.65rem 0 0.25rem;
+  padding-bottom: 0.2rem;
+}
+
+body.page-compact .md-body h3 {
+  font-size: 0.92rem;
+  margin: 0.5rem 0 0.25rem;
+}
+
+body.page-compact .md-body p {
+  margin: 0.3rem 0;
+}
+
+body.page-compact .md-body ul,
+body.page-compact .md-body ol {
+  margin: 0.25rem 0 0.4rem 1rem;
+}
+
+body.page-compact .md-body li {
+  margin: 0.1rem 0;
+}
+
+body.page-compact .md-body pre {
+  padding: 0.5rem 0.65rem;
+  margin: 0.35rem 0;
+  font-size: 0.72rem;
+}
+
+body.page-compact .md-body hr {
+  display: none;
+}
+
+body.page-compact .md-body blockquote {
+  margin: 0.35rem 0;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.8rem;
+}
+
+body.page-compact .md-body .table-wrap {
+  margin: 0.35rem 0;
+}
+
+body.page-compact .md-body th,
+body.page-compact .md-body td {
+  padding: 0.28rem 0.45rem;
+  font-size: 0.74rem;
+}
+
+body.page-compact .md-body th {
+  font-size: 0.68rem;
+}
+
+body.page-compact .zh-lead {
+  font-size: 0.82rem;
+  color: var(--text-soft);
+  background: linear-gradient(90deg, #eff6ff, #f8fafc);
+  padding: 0.35rem 0.55rem;
+  border-radius: 6px;
+  margin: 0.15rem 0 0.35rem !important;
+  border-left: 3px solid var(--accent);
+  line-height: 1.4;
+}
+
+body.page-compact details.evidence-block {
+  margin: 0.3rem 0;
+  border: 1px solid var(--border-light);
+  border-radius: 6px;
+  background: #fafbff;
+}
+
+body.page-compact details.evidence-block summary {
+  cursor: pointer;
+  padding: 0.35rem 0.55rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--accent);
+  user-select: none;
+}
+
+body.page-compact details.evidence-block .table-wrap,
+body.page-compact details.evidence-block pre {
+  margin: 0;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+body.page-compact details.evidence-block[open] summary {
+  border-bottom: 1px solid var(--border-light);
+}
+
+body.page-survey-report .viewer-layout nav {
+  width: 260px;
+}
+
+@media (max-width: 900px) {
+  body.page-compact .viewer-layout { grid-template-columns: 1fr; }
+}

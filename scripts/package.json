@@ -1,0 +1,8 @@
+{
+  "name": "skill-evolving-site-build",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "marked": "^15.0.0"
+  }
+}

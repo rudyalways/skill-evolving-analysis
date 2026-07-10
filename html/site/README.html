@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Skill-Evolving Analysis — Skill-Evolving</title>
+  <link rel="alternate" hreflang="en" href="/html/site/README.html">
+  <link rel="alternate" hreflang="x-default" href="/html/site/README.html">
+  <link rel="stylesheet" href="../css/viewer.css">
+</head>
+<body class="" data-doc-locale="en" data-content-lang="en">
+  <div class="viewer-layout">
+    <nav>
+      <div data-lang-switch class="lang-switch-host"></div>
+      <h1 data-i18n="nav.docs">Docs</h1>
+      <div class="title" data-i18n="nav.rendered">Rendered HTML</div>
+      <section class="highlight-section"><h2 data-i18n="nav.compare">nav.compare</h2><ul><li><a href="./notes/synthesis/agent-skill-architecture-survey-matrix.html" data-i18n="nav.matrix165">nav.matrix165</a></li><li><a href="./notes/synthesis/skill-lifecycle-full-matrix.html" data-i18n="nav.lifecycle">nav.lifecycle</a></li><li><a href="./notes/synthesis/web-expanded-lifecycle-matrix-merged.html" data-i18n="nav.web_l3">nav.web_l3</a></li><li><a href="./notes/synthesis/eight-repo-comprehensive-survey.html" data-i18n="nav.survey20">nav.survey20</a></li><li><a href="./notes/synthesis/skill-lifecycle-and-dynamic-loading-survey.html" data-i18n="nav.per_turn">nav.per_turn</a></li><li><a href="./notes/synthesis/eight-repo-deep-source-analysis.html" data-i18n="nav.deep_source">nav.deep_source</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.per_repo">nav.per_repo</h2><ul><li><a href="./notes/synthesis/survey-reports/opensquilla.html">OpenSquilla (9.0)</a></li><li><a href="./notes/synthesis/survey-reports/hermes-agent.html">Hermes (8.1)</a></li><li><a href="./notes/synthesis/survey-reports/openclaw.html">OpenClaw (8.0)</a></li><li><a href="./notes/synthesis/survey-reports/claude-code-rev.html">Claude Rev (7.7)</a></li><li><a href="./notes/synthesis/survey-reports/codex.html">Codex (7.2)</a></li><li><a href="./notes/synthesis/survey-reports/taichu.html">TaiChu (5.0)</a></li><li><a href="./notes/synthesis/survey-reports/zeroclaw.html">ZeroClaw (5.0)</a></li><li><a href="./notes/synthesis/survey-reports/genericagent.html">GenericAgent (4.8)</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.papers">nav.papers</h2><ul><li><a href="./topics/skill-rl/overview.html">SkillRL</a></li><li><a href="./topics/claw-r1/overview.html">Claw-R1</a></li><li><a href="./notes/synthesis/comparison.html" data-i18n="nav.comparison">nav.comparison</a></li><li><a href="./notes/synthesis/combined-pipeline.html" data-i18n="nav.pipeline">nav.pipeline</a></li><li><a href="./notes/synthesis/l3-comprehensive-skill-analysis.html" data-i18n="nav.l3">nav.l3</a></li><li><a href="./notes/synthesis/taichu-p0-skill-compaction-spec.html" data-i18n="nav.taichu_p0">nav.taichu_p0</a></li></ul></section><section><h2 data-i18n="nav.more">More</h2><ul>
+    <li><a href="/html/docs.html" data-i18n="nav.sitemap">Sitemap</a></li>
+    <li><a href="/html/i18n-coverage.html" data-i18n="nav.i18n_coverage">i18n coverage</a></li>
+    <li><a href="/html/index.html" data-i18n="nav.dashboard">Dashboard</a></li>
+    <li><a href="/html/deck/index.html" data-i18n="nav.decks">Slide decks</a></li>
+  </ul></section>
+    </nav>
+    <div class="viewer-main">
+      <div class="viewer-toolbar">
+        <div>
+          <h1>Skill-Evolving Analysis</h1>
+          <div class="path">README.md</div>
+        </div>
+        <a class="btn" href="/html/docs.html" data-i18n="toolbar.sitemap">Sitemap</a>
+        <a class="btn primary" href="./notes/synthesis/agent-skill-architecture-survey-matrix.html" data-i18n="toolbar.matrix">165-dim matrix</a>
+      </div>
+      <p id="i18n-fallback-notice" class="i18n-notice" hidden data-i18n="content.fallback">content.fallback</p>
+      <article class="md-body"><h1>Skill-Evolving Analysis</h1>
+<p>Deep research on <strong>SkillRL</strong> and <strong>Claw-R1</strong> — complementary layers of the agentic RL stack.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Paper</th>
+<th>Layer</th>
+<th>Question</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>SkillRL</strong></td>
+<td>RL algorithm</td>
+<td>How does the policy learn from experience?</td>
+</tr>
+<tr>
+<td><strong>Claw-R1</strong></td>
+<td>Data infrastructure</td>
+<td>How is agent interaction data collected, managed, and fed into RL?</td>
+</tr>
+</tbody></table></div>
+<p>Together: <strong>infrastructure + policy optimization = full-stack agentic RL</strong>.</p>
+<h2>Quick start</h2>
+<pre><code class="language-bash"># Drop new raw material
+cp ~/Downloads/claw-r1.pdf data/inbox/
+
+# File it
+./scripts/ingest.sh data/inbox/claw-r1.pdf papers
+
+# Open dashboard
+open html/index.html
+</code></pre>
+<h2>Key documents</h2>
+<ul>
+<li><a href="./INDEX.html">INDEX.md</a> — master catalog</li>
+<li><a href="./STORE.html">STORE.md</a> — persistent archive quick reference</li>
+<li><a href="store/manifest.yaml">store/manifest.yaml</a> — machine-readable artifact catalog</li>
+<li><a href="./notes/synthesis/agent-skill-architecture-survey-matrix.html">Agent Skill Architecture Survey Matrix</a> — <strong>165 dim × 8 repos</strong> (primary instrument)</li>
+<li><a href="./notes/synthesis/skill-lifecycle-full-matrix.html">Skill lifecycle full matrix</a> — 9-stage condensed view</li>
+<li><a href="./notes/synthesis/l3-comprehensive-skill-analysis.html">L3 merged analysis</a> — peak deliverable</li>
+<li><a href="./notes/synthesis/taichu-p0-skill-compaction-spec.html">TaiChu P0 spec</a></li>
+<li><a href="./notes/synthesis/comparison.html">Comparison</a> — SkillRL vs Claw-R1</li>
+<li><a href="./notes/synthesis/combined-pipeline.html">Combined pipeline</a> — how they fit together</li>
+<li><a href="./topics/skill-rl/overview.html">SkillRL overview</a></li>
+<li><a href="./topics/claw-r1/overview.html">Claw-R1 overview</a></li>
+</ul>
+<h2>Directory layout</h2>
+<pre><code>skill-evolving-analysis/
+├── INDEX.md              ← master catalog (human)
+├── STORE.md              ← archive quick reference
+├── store/
+│   ├── manifest.yaml     ← machine catalog
+│   ├── sessions/         ← per-session research logs
+│   └── protocols/        ← recording + evidence-level rules
+├── topics/               ← one subdir per paper/thread
+├── notes/
+│   ├── synthesis/        ← cross-paper analysis
+│   └── daily/            ← day/session logs
+├── data/
+│   ├── inbox/            ← drop zone
+│   ├── raw/              ← filed originals (immutable)
+│   ├── processed/        ← extractions, record-log.jsonl
+│   └── archive/          ← session bundles
+├── html/                 ← browsable dashboard
+├── templates/            ← copy for new entries
+├── scripts/
+│   ├── ingest.sh         ← inbox → raw
+│   └── record.sh         ← register new artifact
+</code></pre>
+<h2>Conventions</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Rule</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Raw files are immutable</td>
+<td><code>data/raw/papers/2026-06-claw-r1-arxiv.pdf</code></td>
+</tr>
+<tr>
+<td>Notes use ISO dates</td>
+<td><code>notes/daily/2026-07-08.md</code></td>
+</tr>
+<tr>
+<td>Every entry → INDEX.md row</td>
+<td>See <code>INDEX.md</code></td>
+</tr>
+<tr>
+<td>Every entry → manifest.yaml</td>
+<td>Run <code>./scripts/record.sh</code></td>
+</tr>
+<tr>
+<td>Tag with frontmatter</td>
+<td><code>tags: [claw-r1, data-pool, gateway]</code></td>
+</tr>
+<tr>
+<td>Evidence level required</td>
+<td><code>evidence_level: L2</code> — see <code>store/protocols/evidence-levels.md</code></td>
+</tr>
+<tr>
+<td>Sessions archived</td>
+<td><code>store/sessions/YYYY-MM-DD-&lt;topic&gt;.md</code></td>
+</tr>
+</tbody></table></div>
+</article>
+    </div>
+  </div>
+  <script src="../js/i18n.js"></script>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
+  </script>
+</body>
+</html>

@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Claude Code Rev — 20 维度源码分析 — Skill-Evolving</title>
+  <link rel="alternate" hreflang="en" href="/html/site/notes/synthesis/repos/claude-code-rev.html">
+  <link rel="alternate" hreflang="zh-Hans" href="/html/site/zh/notes/synthesis/repos/claude-code-rev.html">
+  <link rel="alternate" hreflang="x-default" href="/html/site/notes/synthesis/repos/claude-code-rev.html">
+  <link rel="stylesheet" href="../../../../../css/viewer.css">
+</head>
+<body class="" data-doc-locale="zh" data-content-lang="zh">
+  <div class="viewer-layout">
+    <nav>
+      <div data-lang-switch class="lang-switch-host"></div>
+      <h1 data-i18n="nav.docs">Docs</h1>
+      <div class="title" data-i18n="nav.rendered">Rendered HTML</div>
+      <section class="highlight-section"><h2 data-i18n="nav.compare">nav.compare</h2><ul><li><a href="../agent-skill-architecture-survey-matrix.html" data-i18n="nav.matrix165">nav.matrix165</a></li><li><a href="../skill-lifecycle-full-matrix.html" data-i18n="nav.lifecycle">nav.lifecycle</a></li><li><a href="../web-expanded-lifecycle-matrix-merged.html" data-i18n="nav.web_l3">nav.web_l3</a></li><li><a href="../eight-repo-comprehensive-survey.html" data-i18n="nav.survey20">nav.survey20</a></li><li><a href="../skill-lifecycle-and-dynamic-loading-survey.html" data-i18n="nav.per_turn">nav.per_turn</a></li><li><a href="../eight-repo-deep-source-analysis.html" data-i18n="nav.deep_source">nav.deep_source</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.per_repo">nav.per_repo</h2><ul><li><a href="../survey-reports/opensquilla.html">OpenSquilla (9.0)</a></li><li><a href="../survey-reports/hermes-agent.html">Hermes (8.1)</a></li><li><a href="../survey-reports/openclaw.html">OpenClaw (8.0)</a></li><li><a href="../survey-reports/claude-code-rev.html">Claude Rev (7.7)</a></li><li><a href="../survey-reports/codex.html">Codex (7.2)</a></li><li><a href="../survey-reports/taichu.html">TaiChu (5.0)</a></li><li><a href="../survey-reports/zeroclaw.html">ZeroClaw (5.0)</a></li><li><a href="../survey-reports/genericagent.html">GenericAgent (4.8)</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.papers">nav.papers</h2><ul><li><a href="../../../../topics/skill-rl/overview.html">SkillRL</a></li><li><a href="../../../../topics/claw-r1/overview.html">Claw-R1</a></li><li><a href="../comparison.html" data-i18n="nav.comparison">nav.comparison</a></li><li><a href="../combined-pipeline.html" data-i18n="nav.pipeline">nav.pipeline</a></li><li><a href="../l3-comprehensive-skill-analysis.html" data-i18n="nav.l3">nav.l3</a></li><li><a href="../../../../notes/synthesis/taichu-p0-skill-compaction-spec.html" data-i18n="nav.taichu_p0">nav.taichu_p0</a></li></ul></section><section><h2 data-i18n="nav.more">More</h2><ul>
+    <li><a href="/html/docs.html" data-i18n="nav.sitemap">Sitemap</a></li>
+    <li><a href="/html/i18n-coverage.html" data-i18n="nav.i18n_coverage">i18n coverage</a></li>
+    <li><a href="/html/index.html" data-i18n="nav.dashboard">Dashboard</a></li>
+    <li><a href="/html/deck/index.html" data-i18n="nav.decks">Slide decks</a></li>
+  </ul></section>
+    </nav>
+    <div class="viewer-main">
+      <div class="viewer-toolbar">
+        <div>
+          <h1>Claude Code Rev — 20 维度源码分析</h1>
+          <div class="path">notes/synthesis/repos/claude-code-rev.md</div>
+        </div>
+        <a class="btn" href="/html/docs.html" data-i18n="toolbar.sitemap">Sitemap</a>
+        <a class="btn primary" href="../agent-skill-architecture-survey-matrix.html" data-i18n="toolbar.matrix">165-dim matrix</a>
+      </div>
+      
+      <article class="md-body"><h1>Claude Code Rev — 20 维度源码分析</h1>
+<blockquote>
+<p>Path: <code>/Users/maybewu/Documents/Projects/oss/experimental/claude-code-rev</code><br>Upstream: <a href="https://github.com/oboard/claude-code-rev">oboard/claude-code-rev</a> — <strong>社区 source-map 还原，非 Anthropic 官方</strong></p>
+</blockquote>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Dimension</th>
+<th>Summary</th>
+<th>Key paths</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td><strong>Architecture</strong></td>
+<td>TypeScript/Bun CLI + React Ink REPL; monolithic src/</td>
+<td><code>src/main.tsx</code>, <code>src/query.ts</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>Agent loop</strong></td>
+<td>Central <code>query()</code> async generator → runTools → repeat</td>
+<td><code>src/query.ts</code>, <code>services/tools/toolOrchestration.ts</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>Harness</strong></td>
+<td>Terminal REPL + headless CLI + SDK path</td>
+<td><code>screens/REPL.tsx</code>, <code>cli/print.ts</code></td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>Session</strong></td>
+<td>Disk-backed; --resume; compact_boundary in messages</td>
+<td><code>utils/sessionStorage.ts</code>, <code>sessionRestore.ts</code></td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong>Memory</strong></td>
+<td>Auto-memory dir; <strong>auto-dream</strong> consolidation</td>
+<td><code>services/autoDream/</code>, <code>memdir/</code></td>
+</tr>
+<tr>
+<td>6</td>
+<td><strong>Skills</strong></td>
+<td>3-channel: listing attachment, Skill tool, invoked_skills post-compact</td>
+<td><code>utils/attachments.ts</code>, <code>services/compact/compact.ts</code></td>
+</tr>
+<tr>
+<td>7</td>
+<td><strong>Workflow</strong></td>
+<td>Plan mode ExitPlanMode; ultraplan feature</td>
+<td><code>utils/ultraplan/</code>, <code>compact.ts</code></td>
+</tr>
+<tr>
+<td>8</td>
+<td><strong>Reflection</strong></td>
+<td>Post-sampling hooks; advisor; forkedAgent helpers</td>
+<td><code>utils/hooks/postSamplingHooks.ts</code>, <code>forkedAgent.ts</code></td>
+</tr>
+<tr>
+<td>9</td>
+<td><strong>Self-improvement</strong></td>
+<td><strong>skillImprovement</strong> every 5 turns; skillify bundled skill</td>
+<td><code>utils/hooks/skillImprovement.ts</code>, <code>skills/bundled/skillify.ts</code></td>
+</tr>
+<tr>
+<td>10</td>
+<td><strong>Skill evolution</strong></td>
+<td>Auxiliary model JSON patches + user survey apply</td>
+<td><code>SkillImprovementSurvey.tsx</code></td>
+</tr>
+<tr>
+<td>11</td>
+<td><strong>Prompt</strong></td>
+<td>buildEffectiveSystemPrompt priority stack; attachments per turn</td>
+<td><code>utils/systemPrompt.ts</code>, <code>attachments.ts</code></td>
+</tr>
+<tr>
+<td>12</td>
+<td><strong>Evaluation</strong></td>
+<td>No in-repo benchmark harness</td>
+<td>analytics only</td>
+</tr>
+<tr>
+<td>13</td>
+<td><strong>Hooks</strong></td>
+<td>Rich HooksSchema; skill-scoped; stop hooks</td>
+<td><code>utils/settings/types.ts</code>, <code>query/stopHooks.ts</code></td>
+</tr>
+<tr>
+<td>14</td>
+<td><strong>Context</strong></td>
+<td>Multi-tier compact: auto, micro, reactive, collapse</td>
+<td><code>services/compact/</code>, <code>contextCollapse/</code></td>
+</tr>
+<tr>
+<td>15</td>
+<td><strong>Tools</strong></td>
+<td>Bash, Read, Write, Agent, Skill, MCP…</td>
+<td><code>src/tools/</code></td>
+</tr>
+<tr>
+<td>16</td>
+<td><strong>Multi-agent</strong></td>
+<td>AgentTool subagents + swarm/teammates</td>
+<td><code>tools/AgentTool/runAgent.ts</code>, <code>utils/swarm/</code></td>
+</tr>
+<tr>
+<td>17</td>
+<td><strong>Training/RL</strong></td>
+<td>None</td>
+<td>—</td>
+</tr>
+<tr>
+<td>18</td>
+<td><strong>Interesting</strong></td>
+<td><strong>invoked_skills compaction survival</strong>; usage decay 7d; dual-model split</td>
+<td><code>compact.ts:1494</code>, <code>skillUsageTracking.ts</code></td>
+</tr>
+<tr>
+<td>19</td>
+<td><strong>Weaknesses</strong></td>
+<td>Restoration gaps/shims; monolithic files; subagent preload ≠ invoke</td>
+<td><code>README.md</code></td>
+</tr>
+<tr>
+<td>20</td>
+<td><strong>For TaiChu</strong></td>
+<td>invoked_skills; skillImprovement pattern; usage decay</td>
+<td>comprehensive survey P0</td>
+</tr>
+</tbody></table></div>
+<h2>Skill evolution sub-matrix</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Sub</th>
+<th>Status</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Trigger</td>
+<td>Every 5 REPL turns; /skillify</td>
+<td><code>skillImprovement.ts:31,75-80</code></td>
+</tr>
+<tr>
+<td>Detection</td>
+<td>invokedSkills Map</td>
+<td><code>bootstrap/state.ts</code></td>
+</tr>
+<tr>
+<td>Proposal</td>
+<td>Aux model JSON {section, change, reason}[]</td>
+<td><code>skillImprovement.ts:33-37</code></td>
+</tr>
+<tr>
+<td>User gate</td>
+<td>SkillImprovementSurvey UI</td>
+<td><code>useSkillImprovementSurvey.ts</code></td>
+</tr>
+<tr>
+<td>Write-back</td>
+<td>applySkillImprovement patches disk</td>
+<td>survey hook</td>
+</tr>
+<tr>
+<td>Compaction</td>
+<td>invoked_skills attachment survives compact</td>
+<td><code>compact.ts:1494-1534</code></td>
+</tr>
+<tr>
+<td>Discovery</td>
+<td>skill_listing incremental; chokidar reload</td>
+<td><code>attachments.ts:2661</code></td>
+</tr>
+<tr>
+<td>Usage ranking</td>
+<td>7-day half-life decay score</td>
+<td><code>skillUsageTracking.ts:44-54</code></td>
+</tr>
+<tr>
+<td>SubAgent preload</td>
+<td>metadata only, not invoke registry</td>
+<td><code>runAgent.ts:577-628</code></td>
+</tr>
+</tbody></table></div>
+</article>
+    </div>
+  </div>
+  <script src="../../../../../js/i18n.js"></script>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
+  </script>
+</body>
+</html>

@@ -1,0 +1,208 @@
+{
+  "_legend": {
+    "cross_user": "Cross-user evolution — mines pooled / multi-user interaction history into shared skills (platform flywheel, marketplace auto-distill). ★ = explicit; ◐ = partial; · = none.",
+    "user_isolation": "Evolution user isolation — does NOT use other users' interaction history to generate shared skills. ★ = strong (single-user / session-scoped miner, or no auto miner); ◐ = partial; · = weak / N/A.",
+    "user_accounts": "Multi-user account system in evolution path — auth / user_id scoping for decision logs & miners.",
+    "edge_evolution": "Edge-side evolution — propose / patch / accept writes happen on local device FS (~/. or workspace/). ★ = all evolution local.",
+    "cloud_cross_device": "Cloud cross-device evolution — auto skill patch/miner runs in cloud and syncs evolved skills across devices. · = none in all 8 repos.",
+    "levels": { "strong": "★", "partial": "◐", "none": "·" }
+  },
+  "repos": {
+    "opensquilla": {
+      "user_accounts": "none",
+      "cross_user": "partial",
+      "user_isolation": "partial",
+      "cross_user_detail": "MANAGED shared layer after accept — but miner reads install-wide decision log (no user_id)",
+      "isolation_detail": "Human accept before MANAGED; PERSONAL layer exists — but no auth / per-user log partition",
+      "matrix_ref": "§13 Shared=MANAGED · no user_id in decision_log · accept_proposal human gate",
+      "cross_user_evidence": [
+        { "file": "src/opensquilla/skills/proposals_lib.py", "lines": "425", "note": "accept_proposal() promotes to MANAGED — shared tier on this install" },
+        { "file": "observability/decision_log.py", "lines": "—", "note": "decision log at ~/.opensquilla/logs/decisions-YYYYMMDD.jsonl — no user_id field in schema" },
+        { "file": "skills/creator/auto_propose.py", "lines": "—", "note": "auto_propose reads install-wide decision log + Dream co-occurrence (aggregate_co_occurrences)" }
+      ],
+      "isolation_evidence": [
+        { "file": "config/skill-evolution-glossary.json", "lines": "decision_log", "note": "JSON schema: turn_id, skills_invoked, pipeline_steps — no user_id / tenant" },
+        { "file": "skills/proposals_lib.py", "lines": "425", "note": "Human accept_proposal required before MANAGED — not auto-publish to all users" },
+        { "file": "src/opensquilla/skills/loader.py", "lines": "184-244", "note": "PERSONAL layer can hold per-user skills — but evolution miner not scoped by user account" }
+      ],
+      "edge_evolution": "strong",
+      "cloud_cross_device": "none",
+      "edge_detail": "proposals + decision_log + Dream + accept → local ~/.opensquilla/",
+      "edge_evidence": [
+        { "file": "~/.opensquilla/proposals/{id}/", "lines": "—", "note": "auto_propose writes candidate skills on device" },
+        { "file": "skills/proposals_lib.py", "lines": "425", "note": "accept_proposal → local MANAGED dir — no cloud sync step" },
+        { "file": "memory/dream/runner.py", "lines": "—", "note": "Dream cron reflection runs local — not cloud cross-device miner" }
+      ]
+    },
+    "hermes-agent": {
+      "user_accounts": "none",
+      "cross_user": "none",
+      "user_isolation": "strong",
+      "cross_user_detail": "No shared skill tier — no cross-user evolution pipeline",
+      "isolation_detail": "Background review uses messages_snapshot from current conversation only",
+      "matrix_ref": "Single ~/.hermes install · no MANAGED · review scoped to one thread",
+      "cross_user_evidence": [
+        { "file": "tools/skill_manager_tool.py", "lines": "1-12", "note": "All skill_manage writes ~/.hermes/skills/ — no team/shared promotion path" }
+      ],
+      "isolation_evidence": [
+        { "file": "run_agent.py", "lines": "1792", "note": "_spawn_background_review(messages_snapshot=list(messages)) — single conversation" },
+        { "file": "config/skill-evolution-glossary.json", "lines": "spawn_background_review", "note": "Review agent: run_conversation(history=snapshot) — not cross-user aggregate" },
+        { "file": "run_agent.py", "lines": "9604-9610", "note": "Post-turn trigger per main-agent turn — no platform-wide trajectory pool" }
+      ],
+      "edge_evolution": "strong",
+      "cloud_cross_device": "none",
+      "edge_detail": "skill_manage immediate write ~/.hermes/skills/ — bg review on device",
+      "edge_evidence": [
+        { "file": "tools/skill_manager_tool.py", "lines": "22-32", "note": "SKILL.md under ~/.hermes/skills/{name}/ on local disk" },
+        { "file": "run_agent.py", "lines": "1792", "note": "_spawn_background_review — daemon thread on same host, no cloud patch API" },
+        { "file": "notes/synthesis/survey-reports/hermes-agent.md", "lines": "92", "note": "Published ★ direct to ~/.hermes/skills/ — no staging cloud" }
+      ]
+    },
+    "openclaw": {
+      "user_accounts": "none",
+      "cross_user": "partial",
+      "user_isolation": "strong",
+      "cross_user_detail": "ClawHub external registry — human-published skills, not auto-mined from all user chats",
+      "isolation_detail": "skill-workshop mines agent_end transcript for THIS run/workspace only; manual/auto approvalPolicy",
+      "matrix_ref": "Workshop run-scoped · ClawHub manual · no platform trajectory→skill loop in-repo",
+      "cross_user_evidence": [
+        { "file": "docs/tools/skills.md", "lines": "19-30", "note": "~/.openclaw/skills managed tier — shared on install, not cloud-mined" },
+        { "file": "notes/synthesis/survey-reports/openclaw.md", "lines": "148", "note": "ClawHub marketplace — external human/registry publish, trust risk" },
+        { "file": "notes/synthesis/eight-repo-deep-source-analysis.md", "lines": "316-317", "note": "skills/ static in runtime — evolution in memory dim, not SkillBank auto-loop" }
+      ],
+      "isolation_evidence": [
+        { "file": "extensions/skill-workshop/index.ts", "lines": "13-14", "note": "agent_end hook — captures repeatable workflows from current successful run" },
+        { "file": "skill-workshop/reviewer.ts", "lines": "—", "note": "reviewTranscriptForProposal — LLM on this run's messages, not global user corpus" },
+        { "file": "skill-workshop/store.ts", "lines": "—", "note": "Pending proposal store — approvalPolicy before apply to workspace/skills" }
+      ],
+      "edge_evolution": "strong",
+      "cloud_cross_device": "none",
+      "edge_detail": "skill-workshop agent_end → workspace/skills/ local apply",
+      "edge_evidence": [
+        { "file": "skill-workshop/skills.ts", "lines": "—", "note": "applyProposalToWorkspace — writes local workspace, not cloud skill sync" },
+        { "file": "docs/tools/skills.md", "lines": "19-30", "note": "Skills loaded from local workspace + ~/.openclaw/skills" },
+        { "file": "notes/synthesis/eight-repo-deep-source-analysis.md", "lines": "283-284", "note": "No runtime skill CRUD in cloud — skill-creator is authoring guide only" }
+      ]
+    },
+    "claude-code-rev": {
+      "user_accounts": "none",
+      "cross_user": "none",
+      "user_isolation": "strong",
+      "cross_user_detail": "No auto cross-user mining — project skills shared only via human git commit",
+      "isolation_detail": "skillImprovement uses invoked skills from current REPL session; Survey UI human gate",
+      "matrix_ref": "Session-scoped improvement · project dir human publish",
+      "cross_user_evidence": [
+        { "file": "skills/loadSkillsDir.ts", "lines": "—", "note": "project skills reach team via git — opt-in human share, not platform miner" }
+      ],
+      "isolation_evidence": [
+        { "file": "utils/hooks/skillImprovement.ts", "lines": "—", "note": "Every 5 user turns — aux model patches invoked skills from this session only" },
+        { "file": "hooks/useSkillImprovementSurvey.ts", "lines": "—", "note": "User accept/reject per section before applySkillImprovement writes disk" },
+        { "file": "utils/attachments.ts", "lines": "2717-2734", "note": "getSkillListingAttachments — delta listing for current agent/session context" }
+      ],
+      "edge_evolution": "strong",
+      "cloud_cross_device": "none",
+      "edge_detail": "skillImprovement + applySkillImprovement → project/user local disk",
+      "edge_evidence": [
+        { "file": "hooks/useSkillImprovementSurvey.ts", "lines": "—", "note": "applySkillImprovement patches project/.claude/skills/ locally" },
+        { "file": "skills/loadSkillsDir.ts", "lines": "—", "note": "Discovery roots: project / user / bundled — all local FS" },
+        { "file": "config/skill-evolution-walkthroughs.json", "lines": "claude-code-rev", "note": "apply writes project skills/ disk — no cloud evolution sync" }
+      ]
+    },
+    "codex": {
+      "user_accounts": "none",
+      "cross_user": "none",
+      "user_isolation": "strong",
+      "cross_user_detail": "No runtime skill evolution — no cross-user distillation loop",
+      "isolation_detail": "Skills human-authored or Record&Replay of own session; repo skills via git opt-in",
+      "matrix_ref": "Deliberate no post-turn patch · User/Repo FS scopes only",
+      "cross_user_evidence": [
+        { "file": "codex-rs/core/src/skills.rs", "lines": "—", "note": "No skill_manage / post-turn evolution hook in hook_runtime" },
+        { "file": "notes/synthesis/survey-reports/codex.md", "lines": "22", "note": "Deliberately does not implement runtime skill self-evolution" }
+      ],
+      "isolation_evidence": [
+        { "file": "codex-rs/core-skills/src/manager.rs", "lines": "—", "note": "SkillsManager User vs Repo scope — private ~/.codex vs team repo, not platform pool" },
+        { "file": "developers.openai.com/codex/skills", "lines": "—", "note": "Record & Replay: user's own demo → draft skill — not other users' logs" },
+        { "file": "config/skill-evolution-code-detail.json", "lines": "no-evolve", "note": "Human distill + cargo test + git — closed loop per developer" }
+      ],
+      "edge_evolution": "strong",
+      "cloud_cross_device": "none",
+      "edge_detail": "Human authoring + Record&Replay on local machine — no runtime cloud evolve",
+      "edge_evidence": [
+        { "file": "codex-rs/core-skills/src/manager.rs", "lines": "—", "note": "SkillsManager scans User/Repo/System local FS only" },
+        { "file": "config/skill-evolution-walkthroughs.json", "lines": "codex", "note": "No post-turn patch hook — git commit on dev machine" },
+        { "file": "notes/synthesis/survey-reports/codex.md", "lines": "84", "note": "Lifecycle: FS write + user/git — no cloud skill evolution service" }
+      ]
+    },
+    "taichu": {
+      "user_accounts": "partial",
+      "cross_user": "none",
+      "user_isolation": "strong",
+      "cross_user_detail": "cloud skill_catalog.json — operator/human curated, not auto-mined from all user chats",
+      "isolation_detail": "No runtime skill evolution today; interaction_log JSONL per session; planned miner from own logs only",
+      "matrix_ref": "§9 evolve · · · · no agent CRUD · catalog human curated",
+      "cross_user_evidence": [
+        { "file": "skill_catalog.json", "lines": "—", "note": "Cloud catalog + device sync — publish path, not user-chat aggregation" },
+        { "file": "notes/synthesis/survey-reports/taichu.md", "lines": "88-93", "note": "Human canonical + cloud publish; Generated/reviewed/approved — none today" }
+      ],
+      "isolation_evidence": [
+        { "file": "notes/synthesis/survey-reports/taichu.md", "lines": "91", "note": "interaction_log JSONL — session telemetry, no cross-user SkillBank miner shipped" },
+        { "file": "config/skill-evolution-walkthroughs.json", "lines": "taichu P1", "note": "Planned: interaction_log → proposals/ on same device — not platform-wide pool" },
+        { "file": "core/builtintools/src/skill/load_skill.rs", "lines": "30", "note": "Name lookup does not search session workspace — limits cross-session bleed in load path" }
+      ],
+      "edge_evolution": "strong",
+      "cloud_cross_device": "none",
+      "edge_detail": "No shipped cloud evolution — cloud catalog is consume-only; P1 miner → local proposals/",
+      "edge_evidence": [
+        { "file": "notes/synthesis/survey-reports/taichu.md", "lines": "88-93", "note": "Generated/reviewed/approved evolution stages — none shipped today" },
+        { "file": "config/skill-evolution-walkthroughs.json", "lines": "taichu P1", "note": "Planned miner: interaction_log JSONL on device → local proposals/" },
+        { "file": "core/builtintools/src/skill/load_skill.rs", "lines": "110-132", "note": "runs_on = remote execution delegation — NOT cloud skill evolution sync" }
+      ]
+    },
+    "zeroclaw": {
+      "user_accounts": "none",
+      "cross_user": "none",
+      "user_isolation": "partial",
+      "cross_user_detail": "No skill evolution loop — no cross-user mining",
+      "isolation_detail": "Single workspace/skills/ — no per-user account; no miner but also no isolation layer",
+      "matrix_ref": "No propose→accept · workspace-only · no user_id",
+      "cross_user_evidence": [
+        { "file": "src/skills/mod.rs", "lines": "—", "note": "No auto_propose / skill_manage — skills from install/sync only" }
+      ],
+      "isolation_evidence": [
+        { "file": "config/skill-evolution-walkthroughs.json", "lines": "zeroclaw", "note": "No cross-session evolve; hygiene cron touches memory/ not skill CRUD" },
+        { "file": "notes/synthesis/survey-reports/zeroclaw.md", "lines": "22", "note": "Evolution not a focus — governance at install/load time" }
+      ],
+      "edge_evolution": "strong",
+      "cloud_cross_device": "none",
+      "edge_detail": "No evolve loop — skills from local workspace install/sync only",
+      "edge_evidence": [
+        { "file": "src/skills/mod.rs", "lines": "800-814", "note": "load_skills_with_config from workspace/skills/" },
+        { "file": "config/skill-evolution-walkthroughs.json", "lines": "zeroclaw", "note": "No propose→accept; hub sync is install artifact not cloud evolution" }
+      ]
+    },
+    "genericagent": {
+      "user_accounts": "none",
+      "cross_user": "none",
+      "user_isolation": "strong",
+      "cross_user_detail": "Single-user framework — no shared skill promotion from pooled users",
+      "isolation_detail": "start_long_term_update crystallizes from current task execution path only",
+      "matrix_ref": "memory/*_sop.md · single agent instance · no multi-tenant",
+      "cross_user_evidence": [
+        { "file": "notes/synthesis/survey-reports/genericagent.md", "lines": "22", "note": "Minimal single-user framework (~3K LOC) — personal skill tree on one instance" }
+      ],
+      "isolation_evidence": [
+        { "file": "ga.py", "lines": "508-523", "note": "start_long_term_update after VERIFY — from this run's validated facts only" },
+        { "file": "config/skill-evolution-glossary.json", "lines": "long_term_update", "note": "Agent decides file_patch to memory/ — no cross-user trajectory ingest" },
+        { "file": "ga.py", "lines": "539-549", "note": "Anchor prompt rebuild — only latest user msg to API; working memory from this session" }
+      ],
+      "edge_evolution": "strong",
+      "cloud_cross_device": "none",
+      "edge_detail": "Crystallize to memory/*_sop.md on local disk — single-process framework",
+      "edge_evidence": [
+        { "file": "ga.py", "lines": "508-523", "note": "start_long_term_update → file_patch memory/ locally" },
+        { "file": "memory/*_sop.md", "lines": "—", "note": "Evolved skills as local SOP files, not cloud SkillBank" },
+        { "file": "notes/synthesis/survey-reports/genericagent.md", "lines": "22", "note": "Single-user local framework — no cloud sync layer" }
+      ]
+    }
+  }
+}

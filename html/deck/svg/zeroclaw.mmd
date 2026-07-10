@@ -1,0 +1,16 @@
+sequenceDiagram
+  autonumber
+  participant U as User
+  participant Z as ZeroClaw
+  participant H as hub/sync
+  participant A as audit.rs
+  participant M as memory hygiene
+  U->>H: zeroclaw skills install foo
+  H->>A: load_skills_with_config
+  A->>A: zip/traversal/injection scan
+  U->>Z: Run task using foo skill
+  Z->>Z: compact inject (location only)
+  Z->>U: SkillToolHandler.read full body
+  Note over M: cron — memory only
+  M->>M: consolidate old memory tiers
+  Note over Z: no propose→accept

@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OpenClaw 架构调研（8.0） — Skill-Evolving</title>
+  <link rel="alternate" hreflang="en" href="/html/site/notes/synthesis/survey-reports/openclaw.html">
+  <link rel="alternate" hreflang="zh-Hans" href="/html/site/zh/notes/synthesis/survey-reports/openclaw.html">
+  <link rel="alternate" hreflang="x-default" href="/html/site/notes/synthesis/survey-reports/openclaw.html">
+  <link rel="stylesheet" href="../../../../css/viewer.css">
+</head>
+<body class="page-compact page-survey-report" data-doc-locale="en" data-content-lang="en">
+  <div class="viewer-layout">
+    <nav>
+      <div data-lang-switch class="lang-switch-host"></div>
+      <h1 data-i18n="nav.docs">Docs</h1>
+      <div class="title" data-i18n="nav.rendered">Rendered HTML</div>
+      <section class="highlight-section"><h2 data-i18n="nav.compare">nav.compare</h2><ul><li><a href="../agent-skill-architecture-survey-matrix.html" data-i18n="nav.matrix165">nav.matrix165</a></li><li><a href="../skill-lifecycle-full-matrix.html" data-i18n="nav.lifecycle">nav.lifecycle</a></li><li><a href="../web-expanded-lifecycle-matrix-merged.html" data-i18n="nav.web_l3">nav.web_l3</a></li><li><a href="../eight-repo-comprehensive-survey.html" data-i18n="nav.survey20">nav.survey20</a></li><li><a href="../skill-lifecycle-and-dynamic-loading-survey.html" data-i18n="nav.per_turn">nav.per_turn</a></li><li><a href="../eight-repo-deep-source-analysis.html" data-i18n="nav.deep_source">nav.deep_source</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.per_repo">nav.per_repo</h2><ul><li><a href="./opensquilla.html">OpenSquilla (9.0)</a></li><li><a href="./hermes-agent.html">Hermes (8.1)</a></li><li><a class="active" href="./openclaw.html">OpenClaw (8.0)</a></li><li><a href="./claude-code-rev.html">Claude Rev (7.7)</a></li><li><a href="./codex.html">Codex (7.2)</a></li><li><a href="./taichu.html">TaiChu (5.0)</a></li><li><a href="./zeroclaw.html">ZeroClaw (5.0)</a></li><li><a href="./genericagent.html">GenericAgent (4.8)</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.papers">nav.papers</h2><ul><li><a href="../../../topics/skill-rl/overview.html">SkillRL</a></li><li><a href="../../../topics/claw-r1/overview.html">Claw-R1</a></li><li><a href="../comparison.html" data-i18n="nav.comparison">nav.comparison</a></li><li><a href="../combined-pipeline.html" data-i18n="nav.pipeline">nav.pipeline</a></li><li><a href="../l3-comprehensive-skill-analysis.html" data-i18n="nav.l3">nav.l3</a></li><li><a href="../taichu-p0-skill-compaction-spec.html" data-i18n="nav.taichu_p0">nav.taichu_p0</a></li></ul></section><section><h2 data-i18n="nav.more">More</h2><ul>
+    <li><a href="/html/docs.html" data-i18n="nav.sitemap">Sitemap</a></li>
+    <li><a href="/html/i18n-coverage.html" data-i18n="nav.i18n_coverage">i18n coverage</a></li>
+    <li><a href="/html/index.html" data-i18n="nav.dashboard">Dashboard</a></li>
+    <li><a href="/html/deck/index.html" data-i18n="nav.decks">Slide decks</a></li>
+  </ul></section>
+    </nav>
+    <div class="viewer-main">
+      <div class="viewer-toolbar">
+        <div>
+          <h1>OpenClaw 架构调研（8.0）</h1>
+          <div class="path">notes/synthesis/survey-reports/openclaw.md</div>
+        </div>
+        <a class="btn" href="/html/docs.html" data-i18n="toolbar.sitemap">Sitemap</a>
+        <a class="btn primary" href="../agent-skill-architecture-survey-matrix.html" data-i18n="toolbar.matrix">165-dim matrix</a>
+      </div>
+      <p id="i18n-fallback-notice" class="i18n-notice" hidden data-i18n="content.fallback">content.fallback</p>
+      <article class="md-body"><h1>OpenClaw 架构调研（8.0）</h1>
+<blockquote>
+<p><strong>6 源 merge + skill-workshop 进化 + per-agent skillFilter</strong><br>多源 SKILL.md merge；metadata XML catalog；read tool 懒加载 body；workshop proposals。</p>
+</blockquote>
+<blockquote>
+<p><strong>Local</strong>: <code>/Users/maybewu/Documents/Projects/oss/openclaw</code><br><strong>Upstream</strong>: <a href="https://github.com/openclaw/openclaw">openclaw/openclaw</a><br><strong>Docs</strong>: <a href="https://github.com/openclaw/openclaw/blob/main/docs/tools/skills.md">docs/tools/skills.md</a><br><strong>Matrix</strong>: <a href="../agent-skill-architecture-survey-matrix.html">agent-skill-architecture-survey-matrix.md</a></p>
+</blockquote>
+<h2>1. Architecture</h2>
+<p class="zh-lead"><strong>中文</strong> 6 源优先级 merge；chokidar watcher；session snapshot。</p>
+
+
+<p>OpenClaw is a <strong>multi-channel gateway</strong> with pluggable harness (Pi/Codex), 70+ plugin hooks, hybrid memory (FTS+vector + <strong>Dreaming</strong>), and <strong>AgentSkills-compatible</strong> lazy skills. Skills use <strong>6-source merge with explicit precedence</strong>, <strong>session snapshot versioning</strong>, and optional <strong>skill-workshop</strong> extension for post-run evolution.</p>
+<pre><code class="language-text">Gateway → agent loop → skills snapshot (metadata XML)
+                              ↓ read tool
+                         full SKILL.md
+                              ↓ agent_end
+                    skill-workshop → proposals → scan → apply
+</code></pre>
+<details class="evidence-block"><summary>💬 引用 / Quote</summary><pre><code class="language-markdown"># docs/tools/skills.md:19-30
+OpenClaw loads skills from these sources, **highest precedence first**:
+1. Workspace skills      `&lt;workspace&gt;/skills`
+2. Project agent skills  `&lt;workspace&gt;/.agents/skills`
+3. Personal agent skills `~/.agents/skills`
+4. Managed/local skills  `~/.openclaw/skills`
+5. Bundled skills
+6. Extra skill folders   skills.load.extraDirs
+</code></pre></details>
+<details class="evidence-block"><summary>💬 引用 / Quote</summary><pre><code class="language-markdown"># docs/tools/skills.md:50-52
+Skill **location** and skill **visibility** are separate controls.
+Location/precedence decides which copy of a same-named skill wins; agent
+allowlists decide which skills an agent can actually use.
+</code></pre></details>
+<p><strong>Evidence</strong>: <code>src/agents/skills/workspace.ts</code>, <code>skill-contract.ts</code>, <code>docs/tools/skills.md</code></p>
+<h2>2. Skill Runtime</h2>
+<p class="zh-lead"><strong>中文</strong> 150 skill / 18K 上限；compact XML；per-agent skillFilter 白名单。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Pattern</th>
+<th>Implementation</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Lazy load</td>
+<td>metadata in prompt; model uses <strong>read tool</strong></td>
+<td><code>skill-contract.ts</code>, <code>workspace.ts</code></td>
+</tr>
+<tr>
+<td>Session snapshot</td>
+<td><code>resolveSkillsPromptForRun()</code> caches snapshot</td>
+<td><code>workspace.ts</code>, <code>refresh-state.ts</code></td>
+</tr>
+<tr>
+<td>Budget</td>
+<td>max 150 skills / 18000 chars → compact XML</td>
+<td><code>workspace.ts</code></td>
+</tr>
+<tr>
+<td>Per-agent filter</td>
+<td><code>resolveEffectiveAgentSkillFilter()</code> whitelist</td>
+<td><code>agent-filter.ts:24-36</code></td>
+</tr>
+<tr>
+<td>Hot reload</td>
+<td>chokidar → next-turn snapshot bump</td>
+<td><code>refresh-state.ts</code></td>
+</tr>
+<tr>
+<td>Recommendation</td>
+<td>· alpha sort + budget truncate only</td>
+<td>no RRF</td>
+</tr>
+</tbody></table></div>
+<details class="evidence-block"><summary>💬 引用 / Quote</summary><pre><code class="language-typescript">// extensions/skill-workshop/index.ts:13-14
+description:
+  &quot;Captures repeatable workflows as workspace skills, with pending review and safe writes.&quot;,
+</code></pre></details>
+<p><strong>Standout</strong>: Scope/Priority ★ · Lazy Offload ★ · Per-agent visibility ★</p>
+<h2>3. Skill Lifecycle</h2>
+<p class="zh-lead"><strong>中文</strong> workshop agent_end → reviewer → proposals → scanner → append/replace。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Stage</th>
+<th>OpenClaw</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Human written</td>
+<td>workspace / managed files</td>
+<td><code>docs/tools/skills.md</code></td>
+</tr>
+<tr>
+<td>Generated</td>
+<td>skill-workshop heuristic + LLM reviewer</td>
+<td><code>skill-workshop/index.ts:48+</code></td>
+</tr>
+<tr>
+<td>Reviewed</td>
+<td><code>reviewTranscriptForProposal()</code></td>
+<td><code>skill-workshop/reviewer.ts</code></td>
+</tr>
+<tr>
+<td>Published</td>
+<td><code>applyProposalToWorkspace</code> append/replace</td>
+<td><code>skill-workshop/skills.ts</code></td>
+</tr>
+<tr>
+<td>Quarantined</td>
+<td><code>scanSkillContent()</code> critical</td>
+<td><code>skill-workshop/workshop.ts:54-61</code></td>
+</tr>
+<tr>
+<td>Deleted</td>
+<td>user FS delete + workshop tool</td>
+<td><code>skill-workshop/tool.ts</code></td>
+</tr>
+</tbody></table></div>
+<p><strong>Lifecycle score</strong>: <strong>9/13</strong> — strong workshop path; no formal version rollback</p>
+<p><strong>Security context</strong>: <a href="https://www.theverge.com/news/874011/openclaw-ai-skill-clawhub-extensions-security-nightmare">The Verge — OpenClaw skill marketplace risk</a></p>
+<h2>4. Skill Evolution</h2>
+<p class="zh-lead"><strong>中文</strong> LLM reviewer + regex；auto/manual 策略；trajectory 元数据。</p>
+
+
+<pre><code class="language-text">agent_end (success)
+    ↓
+createProposalFromMessages() [regex signals]
+    ↓
+reviewTranscriptForProposal() [LLM reviewer session]
+    ↓
+proposals store: pending | applied | quarantined
+    ↓
+scanSkillContent() → apply or quarantine
+    ↓
+approvalPolicy: &quot;auto&quot; | manual
+</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>File</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>extensions/skill-workshop/index.ts</code></td>
+<td>hook registration</td>
+</tr>
+<tr>
+<td><code>skill-workshop/signals.ts</code></td>
+<td>heuristic detection</td>
+</tr>
+<tr>
+<td><code>skill-workshop/reviewer.ts</code></td>
+<td>LLM review</td>
+</tr>
+<tr>
+<td><code>skill-workshop/store.ts</code></td>
+<td>proposal persistence</td>
+</tr>
+<tr>
+<td><code>security/skill-scanner.ts</code></td>
+<td>quarantine gate</td>
+</tr>
+</tbody></table></div>
+<p><strong>Matrix §9</strong>: Candidate ★ · Reflection ◐ · Auto Patch ◐ (auto policy)</p>
+<p><strong>Separate RL repo</strong>: <a href="https://github.com/Gen-Verse/OpenClaw-RL">Gen-Verse/OpenClaw-RL</a> — training, not skill runtime.</p>
+<h2>5. Multi-Agent Skill</h2>
+<p class="zh-lead"><strong>中文</strong> subagent 缩减 system prompt；skillFilter 继承。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Pattern</th>
+<th>Status</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Per-agent workspace</td>
+<td>★ each agent own <code>&lt;ws&gt;/skills</code></td>
+<td><code>docs/tools/skills.md:34-42</code></td>
+</tr>
+<tr>
+<td>skillFilter allowlist</td>
+<td>★ <code>agents.list[].skills</code></td>
+<td><code>docs/tools/skills.md:54-60</code></td>
+</tr>
+<tr>
+<td>Subagent</td>
+<td>◐ reduced system prompt</td>
+<td><code>subagent-system-prompt.ts</code></td>
+</tr>
+<tr>
+<td>Complementary preload</td>
+<td>· no frontmatter skills list</td>
+<td>—</td>
+</tr>
+</tbody></table></div>
+<p><strong>Quote — per-agent scope table</strong> (docs/tools/skills.md:36-42)</p>
+<h2>6. Skill Governance</h2>
+<p class="zh-lead"><strong>中文</strong> skill-scanner quarantine；workshop pending。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Control</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>skill-scanner quarantine</td>
+<td><code>security/skill-scanner.ts</code></td>
+</tr>
+<tr>
+<td>Workshop pending review</td>
+<td><code>store.ts</code></td>
+</tr>
+<tr>
+<td>Agent allowlists</td>
+<td><code>agent-filter.ts</code></td>
+</tr>
+<tr>
+<td>ClawHub marketplace</td>
+<td>external — <strong>trust risk</strong> (Verge article)</td>
+</tr>
+</tbody></table></div>
+<h2>7. Harness Integration</h2>
+<p class="zh-lead"><strong>中文</strong> Gateway + agent loop；skill-workshop 与 compact 并行。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>API</th>
+<th>Path</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Plugin hooks (70+)</td>
+<td><code>plugins/hooks.ts</code></td>
+</tr>
+<tr>
+<td>Context engine</td>
+<td><code>context-engine/types.ts</code> — assemble/afterTurn/compact</td>
+</tr>
+<tr>
+<td>Trajectory export</td>
+<td><code>trajectory/runtime.ts</code> — <code>openclaw-trajectory</code> JSONL</td>
+</tr>
+<tr>
+<td>Harness trait</td>
+<td><code>agents/harness/types.ts</code></td>
+</tr>
+<tr>
+<td>before_prompt_build</td>
+<td>skill-workshop prepend guidance</td>
+</tr>
+</tbody></table></div>
+<h2>8. RL Readiness</h2>
+<p class="zh-lead"><strong>中文</strong> openclaw-trajectory JSONL；OpenClaw-RL 离线 RL 层。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Signal</th>
+<th>Status</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Trajectory JSONL</td>
+<td>★</td>
+<td><code>trajectory/types.ts</code>, <code>trajectory/export.ts</code></td>
+</tr>
+<tr>
+<td>Step metadata</td>
+<td>★</td>
+<td><code>trajectory/metadata.ts</code></td>
+</tr>
+<tr>
+<td>Reward in-repo</td>
+<td>◐</td>
+<td>trajectory fields</td>
+</tr>
+<tr>
+<td>OpenClaw-RL</td>
+<td>★ separate repo</td>
+<td>Gen-Verse/OpenClaw-RL</td>
+</tr>
+<tr>
+<td>Claw-R1</td>
+<td>★ <strong>best OSS step capture</strong> alongside OpenSquilla pipeline</td>
+<td></td>
+</tr>
+<tr>
+<td>SkillRL</td>
+<td>◐ trajectory → SkillBank manual pipeline</td>
+<td></td>
+</tr>
+</tbody></table></div>
+<h2>9. Borrow for TaiChu</h2>
+<p class="zh-lead"><strong>中文</strong> 借 6 源 precedence、workshop 闭环、trajectory schema。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Pattern</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>6-layer scope + precedence</td>
+<td>TaiChu multi-source skill dirs</td>
+</tr>
+<tr>
+<td>Location vs visibility split</td>
+<td>subagent / role allowlists</td>
+</tr>
+<tr>
+<td>Session snapshot + watcher refresh</td>
+<td>cache-friendly catalog</td>
+</tr>
+<tr>
+<td>skill-workshop proposal flow</td>
+<td>agent_end → store → scan → apply</td>
+</tr>
+<tr>
+<td>Trajectory JSONL schema</td>
+<td>Claw-R1 alignment on interaction_log</td>
+</tr>
+<tr>
+<td>Lazy catalog + load_skill</td>
+<td>already partial in TaiChu</td>
+</tr>
+</tbody></table></div>
+<h2>10. Implement in TaiChu</h2>
+<p class="zh-lead"><strong>中文</strong> P1 workshop-style proposals；P2 skillFilter 子 agent。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Priority</th>
+<th>What</th>
+<th>Seam</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>P1</td>
+<td>Multi-root skill merge priority</td>
+<td>skill loader</td>
+</tr>
+<tr>
+<td>P1</td>
+<td><code>agent_end</code> proposal hook</td>
+<td>session lifecycle</td>
+</tr>
+<tr>
+<td>P1</td>
+<td>Trajectory export fields</td>
+<td>interaction_log</td>
+</tr>
+<tr>
+<td>P2</td>
+<td>per-agent skillFilter</td>
+<td>subagent profiles</td>
+</tr>
+<tr>
+<td>P2</td>
+<td>skill-scanner before apply</td>
+<td>proposal gate</td>
+</tr>
+</tbody></table></div>
+<h2>11. Do NOT Borrow</h2>
+<p class="zh-lead"><strong>中文</strong> 勿全盘 marketplace 信任模型。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Pattern</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>ClawHub marketplace trust model</td>
+<td>Verge security report</td>
+</tr>
+<tr>
+<td>Auto-apply without scanner</td>
+<td>quarantine is essential</td>
+</tr>
+<tr>
+<td>Heuristic-only signals alone</td>
+<td>combine with eval gate (OpenSquilla)</td>
+</tr>
+</tbody></table></div>
+<h2>12. Score (1–10)</h2>
+<p class="zh-lead"><strong>中文</strong> 总分 8.0：Lifecycle 9/13；Compact-skill 弱。</p>
+
+
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Category</th>
+<th align="center">Score</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Data Model</td>
+<td align="center">8</td>
+<td>Standard SKILL.md + 6 sources</td>
+</tr>
+<tr>
+<td>Runtime</td>
+<td align="center">8</td>
+<td>Snapshot + lazy ★; no ranker</td>
+</tr>
+<tr>
+<td>Lifecycle</td>
+<td align="center">8</td>
+<td>workshop 9/13</td>
+</tr>
+<tr>
+<td>Evolution</td>
+<td align="center">7</td>
+<td>workshop strong; no RRF/gates</td>
+</tr>
+<tr>
+<td>Governance</td>
+<td align="center">7</td>
+<td>scanner + allowlist</td>
+</tr>
+<tr>
+<td>Agent Integration</td>
+<td align="center">8</td>
+<td>per-agent scope ★</td>
+</tr>
+<tr>
+<td>RL Readiness</td>
+<td align="center">7</td>
+<td>trajectory ★</td>
+</tr>
+<tr>
+<td><strong>Overall</strong></td>
+<td align="center"><strong>8.0</strong></td>
+<td>Best scope model + RL export</td>
+</tr>
+</tbody></table></div>
+<h2>Evidence index</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Claim</th>
+<th>Path / URL</th>
+<th>Level</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>OC-01</td>
+<td>6-source precedence</td>
+<td><code>docs/tools/skills.md:19-30</code></td>
+<td>L0+L3</td>
+</tr>
+<tr>
+<td>OC-02</td>
+<td>Location vs visibility</td>
+<td><code>docs/tools/skills.md:50-52</code></td>
+<td>L0</td>
+</tr>
+<tr>
+<td>OC-03</td>
+<td>skill-workshop</td>
+<td><code>extensions/skill-workshop/index.ts</code></td>
+<td>L3</td>
+</tr>
+<tr>
+<td>OC-04</td>
+<td>Trajectory</td>
+<td><code>trajectory/runtime.ts</code></td>
+<td>L3</td>
+</tr>
+<tr>
+<td>OC-05</td>
+<td>Marketplace risk</td>
+<td><a href="https://www.theverge.com/news/874011/openclaw-ai-skill-clawhub-extensions-security-nightmare">https://www.theverge.com/news/874011/openclaw-ai-skill-clawhub-extensions-security-nightmare</a></td>
+<td>L0</td>
+</tr>
+<tr>
+<td>OC-06</td>
+<td>agent filter</td>
+<td><code>agent-filter.ts</code></td>
+<td>L2</td>
+</tr>
+</tbody></table></div>
+</article>
+    </div>
+  </div>
+  <script src="../../../../js/i18n.js"></script>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
+  </script>
+</body>
+</html>

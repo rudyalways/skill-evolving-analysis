@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SkillRL — Recursive Skill-Augmented RL · Paper Deep Dive</title>
+  <link rel="stylesheet" href="css/deck.css">
+</head>
+<body data-i18n-page="deck" data-content-lang="bi">
+  <div class="lang-switch-deck" data-lang-switch aria-label="Language"></div>
+  <a class="hub-link" href="index.html" data-i18n="deck.hub">← Deck Hub</a>
+
+  <div class="deck">
+
+    <!-- SLIDE 1 — Title -->
+    <section class="slide theme-skillrl" id="slide-1">
+      <div class="slide-inner">
+        <header class="slide-header">
+          <div>
+            <div class="kicker">Paper Deep Dive · arXiv:2602.08234</div>
+            <h1><span data-lang-only="en">SkillRL</span><span data-lang-only="zh" hidden>SkillRL</span></h1>
+            <p class="subtitle"><span data-lang-only="en">Evolving Agents via Recursive Skill-Augmented Reinforcement Learning</span><span data-lang-only="zh" hidden>通过递归 Skill 增强强化学习进化 Agent</span></p>
+          </div>
+          <span class="slide-num">1 / 5</span>
+        </header>
+
+        <div class="slide-body">
+          <div class="stat-row">
+            <div class="stat blue">
+              <div class="val">RL</div>
+              <div class="lbl">Layer — algorithm</div>
+            </div>
+            <div class="stat blue">
+              <div class="val">SkillBank</div>
+              <div class="lbl">Hierarchical library</div>
+            </div>
+            <div class="stat blue">
+              <div class="val">GRPO</div>
+              <div class="lbl">Policy optimization</div>
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <div class="panel accent-skillrl">
+              <h3>Authors &amp; Code</h3>
+              <p><strong>Xia et al.</strong> · aiming-lab</p>
+              <p style="margin-top:0.5rem">
+                <span class="tag blue">SkillBank</span>
+                <span class="tag blue">Recursive evolution</span>
+                <span class="tag blue">Failure lessons</span>
+                <span class="tag blue">Teacher distillation</span>
+              </p>
+              <div class="chip-row" style="margin-top:0.65rem">
+                <a href="https://github.com/aiming-lab/SkillRL" target="_blank" rel="noopener" class="evidence-chip" style="text-decoration:none">GitHub · aiming-lab/SkillRL</a>
+                <a href="https://arxiv.org/abs/2602.08234" target="_blank" rel="noopener" class="evidence-chip" style="text-decoration:none">arXiv · 2602.08234</a>
+              </div>
+            </div>
+            <div class="panel accent-skillrl">
+              <h3>One-Line Thesis</h3>
+              <p class="quote-block" style="margin:0">
+                Convert raw trajectories into reusable <strong>skills</strong> in a hierarchical <strong>SkillBank</strong> — then <strong>co-evolve</strong> the library and policy during <strong>GRPO</strong>.
+              </p>
+            </div>
+          </div>
+
+          <div class="eli5">
+            <strong>Stack positioning:</strong> SkillRL is the <em>learning algorithm</em> — how the policy improves from experience. Claw-R1 (infra layer) collects step-level data; SkillRL distills it into compact skills and runs recursive RL.
+          </div>
+
+          <div class="chip-row">
+            <span class="evidence-chip" data-evidence="Abstract — SkillRL" data-quote="In this paper, we propose SkillRL, a framework that bridges the gap between raw experience and policy improvement through automatic skill discovery and recursive evolution." data-link="https://arxiv.org/abs/2602.08234">📄 Abstract quote</span>
+            <span class="evidence-chip" data-evidence="Full abstract — arXiv:2602.08234" data-quote="Large Language Model (LLM) agents have shown stunning results in complex tasks, yet they often operate in isolation, failing to learn from past experiences. Existing memory-based methods primarily store raw trajectories, which are often redundant and noise-heavy. This prevents agents from extracting high-level, reusable behavioral patterns that are essential for generalization. In this paper, we propose SkillRL, a framework that bridges the gap between raw experience and policy improvement through automatic skill discovery and recursive evolution. Our approach introduces an experience-based distillation mechanism to build a hierarchical skill library SkillBank, an adaptive retrieval strategy for general and task-specific heuristics, and a recursive evolution mechanism that allows the skill library to co-evolve with the agent's policy during reinforcement learning. These innovations significantly reduce the token footprint while enhancing reasoning utility. Experimental results on ALFWorld, WebShop and seven search-augmented tasks demonstrate that SkillRL achieves state-of-the-art performance, outperforming strong baselines over 15.3% and maintaining robustness as task complexity increases. Code is available at https://github.com/aiming-lab/SkillRL." data-link="https://arxiv.org/abs/2602.08234">📄 Full abstract</span>
+            <span class="evidence-chip" data-evidence="Layer distinction" data-quote="SkillRL focuses on how the policy learns from experience (RL algorithm). Claw-R1 focuses on how agent interaction data is collected, managed, and fed into RL (infrastructure / data system)." data-source="topics/skill-rl/overview.md">📐 Stack layer</span>
+          </div>
+        </div>
+
+        <footer class="slide-footer">
+          <span>SkillRL · Xia et al. · aiming-lab</span>
+          <span>arXiv:2602.08234 · RL algorithm layer</span>
+        </footer>
+      </div>
+    </section>
+
+    <!-- SLIDE 2 — Problem ELI5 -->
+    <section class="slide theme-skillrl" id="slide-2">
+      <div class="slide-inner">
+        <header class="slide-header">
+          <div>
+            <div class="kicker">Background · Problem · ELI5</div>
+            <h1><span data-lang-only="en">Raw Trajectories Don't Generalize</span><span data-lang-only="zh" hidden>原始轨迹难以泛化</span></h1>
+            <p class="subtitle"><span data-lang-only="en">Most agents treat every task as independent. Memory systems store long, noisy rollout logs — hard to retrieve, hard to reuse.</span><span data-lang-only="zh" hidden>多数 Agent 把每任务当独立事件；记忆系统存冗长噪声 rollout — 难检索难复用</span></p>
+          </div>
+          <span class="slide-num">2 / 5</span>
+        </header>
+
+        <div class="slide-body">
+          <div class="eli5">
+            <strong>Analogy — diary vs recipe cards:</strong> A raw trajectory is like a rambling diary entry — every observation, every wrong turn, every retry. A <strong>skill</strong> is a recipe card: <em>"When searching webpages, identify official sources first, then compare, then verify."</em> Same wisdom, <strong>10–20× fewer tokens</strong>.
+          </div>
+
+          <div class="compare">
+            <div class="panel before">
+              <h3>Before — Raw Trajectory Memory</h3>
+              <ul>
+                <li>Task A → full Obs→Act→Obs→Act log</li>
+                <li>Task B → another long noisy trace</li>
+                <li>Redundant steps, failed retries embedded</li>
+                <li>Hard to retrieve relevant past experience</li>
+                <li>Doesn't transfer across similar tasks</li>
+              </ul>
+              <pre class="mono" style="margin-top:0.5rem;font-size:0.68rem;background:var(--bg0);padding:0.5rem;border-radius:6px;color:var(--muted)">Obs → Act → Obs → Act → …
+(thousands of tokens per task)</pre>
+            </div>
+            <div class="compare-mid">→</div>
+            <div class="panel after">
+              <h3>After — Compact SkillBank</h3>
+              <ul>
+                <li>Teacher distills trajectories → skills</li>
+                <li>General heuristics + task-specific tactics</li>
+                <li>Failure lessons preserved (not discarded)</li>
+                <li>Adaptive retrieval — only relevant skills</li>
+                <li>Reusable across tasks and domains</li>
+              </ul>
+              <pre class="mono" style="margin-top:0.5rem;font-size:0.68rem;background:var(--bg0);padding:0.5rem;border-radius:6px;color:var(--green)">Skill: Search official docs first
+Failure: Don't trust cached pages
+(~10–20× compression)</pre>
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <div class="panel accent-warn">
+              <h3>Core Question</h3>
+              <p><em>Can we convert trajectories into reusable skills?</em> Existing memory methods store raw experience — redundant, noise-heavy, preventing extraction of high-level behavioral patterns essential for generalization.</p>
+            </div>
+            <div class="panel accent-skillrl">
+              <h3>Token Compression</h3>
+              <div class="stat-row">
+                <div class="stat blue">
+                  <div class="val">10–20×</div>
+                  <div class="lbl">Smaller context</div>
+                </div>
+                <div class="stat blue">
+                  <div class="val">↑</div>
+                  <div class="lbl">Reasoning utility</div>
+                </div>
+              </div>
+              <p style="margin-top:0.5rem;font-size:0.78rem">Skills carry actionable heuristics, not replayed step sequences.</p>
+            </div>
+          </div>
+
+          <div class="chip-row">
+            <span class="evidence-chip" data-evidence="Problem — abstract" data-quote="Existing memory-based methods primarily store raw trajectories, which are often redundant and noise-heavy. This prevents agents from extracting high-level, reusable behavioral patterns that are essential for generalization." data-link="https://arxiv.org/abs/2602.08234">📄 Abstract — raw trajectory problem</span>
+            <span class="evidence-chip" data-evidence="Skill example" data-quote="When searching webpages, first identify official sources, then compare, then verify." data-source="topics/skill-rl/overview.md · SkillBank abstraction">📋 Skill vs trajectory</span>
+          </div>
+        </div>
+
+        <footer class="slide-footer">
+          <span>Before vs After · diary → recipe cards</span>
+          <span>10–20× token compression claim</span>
+        </footer>
+      </div>
+    </section>
+
+    <!-- SLIDE 3 — Methodology -->
+    <section class="slide theme-skillrl" id="slide-3">
+      <div class="slide-inner">
+        <header class="slide-header">
+          <div>
+            <div class="kicker">Methodology</div>
+            <h1><span data-lang-only="en">Six-Step SkillRL Pipeline</span><span data-lang-only="zh" hidden>SkillRL 六步流水线</span></h1>
+            <p class="subtitle"><span data-lang-only="en">From environment rollouts to recursive SkillBank updates — experience distillation wrapped around GRPO.</span><span data-lang-only="zh" hidden>从环境 rollout 到递归 SkillBank 更新 — 经验蒸馏包裹 GRPO</span></p>
+          </div>
+          <span class="slide-num">3 / 5</span>
+        </header>
+
+        <div class="slide-body">
+          <div class="flow">
+            <div class="flow-step theme-skillrl">
+              <div class="num">1</div>
+              <strong>Environment Rollouts</strong>
+              <span>Success + failure trajectories from agent policy</span>
+            </div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-step theme-skillrl">
+              <div class="num">2</div>
+              <strong>Teacher Distillation</strong>
+              <span>LLM extracts patterns &amp; failure lessons from traces</span>
+            </div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-step theme-skillrl">
+              <div class="num">3</div>
+              <strong>SkillBank</strong>
+              <span>Hierarchical: general S<sub>g</sub> + task-specific S<sub>k</sub></span>
+            </div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-step theme-skillrl">
+              <div class="num">4</div>
+              <strong>Adaptive Retrieval</strong>
+              <span>Top-K relevant skills for current task context</span>
+            </div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-step theme-skillrl">
+              <div class="num">5</div>
+              <strong>GRPO Update</strong>
+              <span>Policy learns with skill-augmented context</span>
+            </div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-step theme-skillrl">
+              <div class="num">6</div>
+              <strong>Recursive Validation</strong>
+              <span>Epoch update: refine SkillBank from new rollouts</span>
+            </div>
+          </div>
+
+          <div class="grid-2" style="margin-top:0.5rem">
+            <div class="panel accent-skillrl">
+              <h3>Success → Positive Skill</h3>
+              <pre class="mono" style="background:var(--bg0);padding:0.6rem;border-radius:8px;margin:0;font-size:0.72rem;color:var(--green)">Applicable: Searching APIs
+Strategy:   Search official docs first
+Failure:    Do not trust cached pages</pre>
+            </div>
+            <div class="panel accent-warn">
+              <h3>Failure → Failure Lesson</h3>
+              <pre class="mono" style="background:var(--bg0);padding:0.6rem;border-radius:8px;margin:0;font-size:0.72rem;color:var(--red)">Failure lesson:
+Do not search StackOverflow
+before official documentation.</pre>
+              <p style="margin-top:0.5rem;font-size:0.78rem">Failures are <strong>not discarded</strong> — distilled into actionable anti-patterns.</p>
+            </div>
+          </div>
+
+          <div class="grid-3">
+            <div class="panel">
+              <h3>General Skills S<sub>g</sub></h3>
+              <p>Reason before acting; verify answers; search official docs first.</p>
+            </div>
+            <div class="panel">
+              <h3>Task-Specific S<sub>k</sub></h3>
+              <p>ALFWorld: open cabinet before drawer. WebShop: check variants before buying.</p>
+            </div>
+            <div class="panel">
+              <h3>Adaptive Retrieval</h3>
+              <p>Task "Buy shoes" → retrieve verify-inventory + compare-sizes — not every past trajectory.</p>
+            </div>
+          </div>
+
+          <div class="chip-row">
+            <span class="evidence-chip" data-evidence="Distillation mechanism — abstract" data-quote="Our approach introduces an experience-based distillation mechanism to build a hierarchical skill library SkillBank, an adaptive retrieval strategy for general and task-specific heuristics, and a recursive evolution mechanism that allows the skill library to co-evolve with the agent's policy during reinforcement learning." data-link="https://arxiv.org/abs/2602.08234">📄 Abstract — three mechanisms</span>
+            <span class="evidence-chip" data-evidence="Failure lessons" data-quote="Failure lesson: Do not search StackOverflow before official documentation. Failures are distilled into skills — not discarded." data-source="topics/skill-rl/overview.md">⚠ Failure mining</span>
+          </div>
+        </div>
+
+        <footer class="slide-footer">
+          <span>Rollouts → Distill → SkillBank → Retrieve → GRPO → Validate</span>
+          <span>Success patterns + failure lessons equally valuable</span>
+        </footer>
+      </div>
+    </section>
+
+    <!-- SLIDE 4 — Recursive Co-Evolution -->
+    <section class="slide theme-skillrl" id="slide-4">
+      <div class="slide-inner">
+        <header class="slide-header">
+          <div>
+            <div class="kicker">Core Contribution</div>
+            <h1><span data-lang-only="en">Recursive Co-Evolution Loop</span><span data-lang-only="zh" hidden>递归协同进化环</span></h1>
+            <p class="subtitle"><span data-lang-only="en">Policy and SkillBank evolve together — not a one-shot RL run. GRPO is standard; the SkillBank wrapper is novel.</span><span data-lang-only="zh" hidden>策略与 SkillBank 共同进化 — 非一次性 RL。GRPO 标准；SkillBank 包装是创新点</span></p>
+          </div>
+          <span class="slide-num">4 / 5</span>
+        </header>
+
+        <div class="slide-body">
+          <div class="panel accent-skillrl" style="text-align:center">
+            <h3>Policy ↔ SkillBank Recursive Loop</h3>
+            <pre class="mono" style="background:var(--bg0);padding:0.85rem;border-radius:10px;margin:0.5rem 0 0;font-size:0.72rem;line-height:1.6;color:var(--skillrl)">     ┌──────────────────────────────────────────┐
+     │                                          │
+     ▼                                          │
+  Policy ──→ Rollouts (success + failure)       │
+     │              │                           │
+     │              ▼                           │
+     │      Teacher distillation                │
+     │              │                           │
+     │              ▼                           │
+     │         SkillBank ──→ Adaptive retrieve ─┘
+     │              │
+     │              ▼
+     └─── GRPO policy update
+              │
+              ▼
+     Validation epoch → refine weak categories
+              │
+              └──→ (loop continues)</pre>
+          </div>
+
+          <div class="grid-2">
+            <div class="panel accent-skillrl">
+              <h3>Cold-Start SFT</h3>
+              <p>Before RL begins, supervised fine-tuning teaches the agent <strong>how to use skills</strong> from SkillBank. Without this, the policy cannot leverage retrieved heuristics during early GRPO rollouts.</p>
+            </div>
+            <div class="panel accent-skillrl">
+              <h3>What's Novel vs Standard</h3>
+              <ul>
+                <li><strong>GRPO:</strong> not novel — standard policy optimization</li>
+                <li><strong>SkillBank + recursive evolution:</strong> novel wrapper around GRPO</li>
+                <li><strong>Failure lessons:</strong> failures feed SkillBank, not dropped</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="compare">
+            <div class="panel before">
+              <h3>Before — Episodic Independent Tasks</h3>
+              <ul>
+                <li>Task 1 → trajectory → forget</li>
+                <li>Task 2 → trajectory → forget</li>
+                <li>Task 3 → trajectory → forget</li>
+                <li>No cross-task knowledge transfer</li>
+                <li>Memory grows unbounded with raw logs</li>
+              </ul>
+            </div>
+            <div class="compare-mid">→</div>
+            <div class="panel after">
+              <h3>After — Reusable Skill Library</h3>
+              <ul>
+                <li>Trajectories → distilled skills</li>
+                <li>SkillBank grows smarter with policy</li>
+                <li>Better policy → better trajectories → better skills</li>
+                <li>Hierarchical retrieval generalizes</li>
+                <li>Recursive validation prunes weak areas</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="chip-row">
+            <span class="evidence-chip" data-evidence="Recursive evolution — abstract" data-quote="A recursive evolution mechanism that allows the skill library to co-evolve with the agent's policy during reinforcement learning." data-link="https://arxiv.org/abs/2602.08234">📄 Abstract — co-evolution</span>
+            <span class="evidence-chip" data-evidence="Novelty boundary" data-quote="The RL algorithm itself is not novel — they use GRPO. The novelty is SkillBank + recursive skill evolution wrapped around GRPO." data-source="topics/skill-rl/overview.md">🎯 GRPO vs SkillBank novelty</span>
+          </div>
+        </div>
+
+        <footer class="slide-footer">
+          <span>Policy ↔ SkillBank co-evolve recursively</span>
+          <span>Cold-start SFT → GRPO → validation epoch</span>
+        </footer>
+      </div>
+    </section>
+
+    <!-- SLIDE 5 — Benchmarks & Takeaways -->
+    <section class="slide theme-skillrl" id="slide-5">
+      <div class="slide-inner">
+        <header class="slide-header">
+          <div>
+            <div class="kicker">Results · Takeaways</div>
+            <h1><span data-lang-only="en">Benchmarks &amp; Open Questions</span><span data-lang-only="zh" hidden>基准与开放问题</span></h1>
+            <p class="subtitle"><span data-lang-only="en">State-of-the-art on embodied + web + search-augmented tasks. Robustness holds as complexity increases.</span><span data-lang-only="zh" hidden>具身 + Web + 搜索增强任务 SOTA；复杂度上升时鲁棒性保持</span></p>
+          </div>
+          <span class="slide-num">5 / 5</span>
+        </header>
+
+        <div class="slide-body">
+          <div class="stat-row">
+            <div class="stat blue">
+              <div class="val">+15.3%</div>
+              <div class="lbl">Over strong baselines</div>
+            </div>
+            <div class="stat blue">
+              <div class="val">3</div>
+              <div class="lbl">Benchmark suites</div>
+            </div>
+            <div class="stat blue">
+              <div class="val">7</div>
+              <div class="lbl">Search-augmented tasks</div>
+            </div>
+            <div class="stat blue">
+              <div class="val">SOTA</div>
+              <div class="lbl">ALFWorld · WebShop · Search</div>
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <div class="panel accent-skillrl">
+              <h3>Benchmark Coverage</h3>
+              <ul>
+                <li><strong>ALFWorld</strong> — embodied household tasks</li>
+                <li><strong>WebShop</strong> — e-commerce navigation &amp; purchase</li>
+                <li><strong>7 search-augmented tasks</strong> — retrieval + reasoning under tool use</li>
+              </ul>
+              <p style="margin-top:0.5rem;font-size:0.78rem;color:var(--muted)">Maintains robustness as task complexity increases — skills generalize better than raw trajectory replay.</p>
+            </div>
+            <div class="panel accent-skillrl">
+              <h3>Key Takeaways</h3>
+              <ul>
+                <li><strong>Compress experience:</strong> 10–20× token reduction vs raw trajectories</li>
+                <li><strong>Learn from failure:</strong> failure lessons in SkillBank, not discarded</li>
+                <li><strong>Co-evolve:</strong> policy and SkillBank improve together recursively</li>
+                <li><strong>Hierarchical retrieval:</strong> general + task-specific heuristics on demand</li>
+                <li><strong>Algorithm-agnostic data:</strong> pairs with Claw-R1 step streams as input fuel</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="quote-block">
+            "…a framework that bridges the gap between raw experience and policy improvement through automatic skill discovery and recursive evolution."
+            <cite>— Abstract, arXiv:2602.08234</cite>
+          </div>
+
+          <details class="expand">
+            <summary>Open questions &amp; limitations</summary>
+            <div class="expand-body">
+              <ul style="padding-left:1.1rem;margin:0">
+                <li><strong>SkillBank growth:</strong> pruning strategy as library scales — when to retire low-success skills?</li>
+                <li><strong>Retrieval sensitivity:</strong> threshold δ and Top-K hyperparameters affect which skills reach the policy</li>
+                <li><strong>Teacher quality:</strong> distillation quality depends on teacher LLM; bad skills propagate</li>
+                <li><strong>Claw-R1 integration:</strong> can step-level Data Pool traces feed SkillRL trajectory builder directly?</li>
+                <li><strong>Validation cost:</strong> recursive epoch frequency vs benchmark evaluation overhead</li>
+                <li><strong>Retrieval optimization:</strong> skill selection is itself an optimization problem alongside GRPO</li>
+              </ul>
+            </div>
+          </details>
+
+          <div class="chip-row">
+            <span class="evidence-chip" data-evidence="Abstract — bridges the gap" data-quote="In this paper, we propose SkillRL, a framework that bridges the gap between raw experience and policy improvement through automatic skill discovery and recursive evolution." data-link="https://arxiv.org/abs/2602.08234">📄 "bridges the gap between raw experience and policy improvement"</span>
+            <span class="evidence-chip" data-evidence="Full abstract — arXiv:2602.08234" data-quote="Large Language Model (LLM) agents have shown stunning results in complex tasks, yet they often operate in isolation, failing to learn from past experiences. Existing memory-based methods primarily store raw trajectories, which are often redundant and noise-heavy. This prevents agents from extracting high-level, reusable behavioral patterns that are essential for generalization. In this paper, we propose SkillRL, a framework that bridges the gap between raw experience and policy improvement through automatic skill discovery and recursive evolution. Our approach introduces an experience-based distillation mechanism to build a hierarchical skill library SkillBank, an adaptive retrieval strategy for general and task-specific heuristics, and a recursive evolution mechanism that allows the skill library to co-evolve with the agent's policy during reinforcement learning. These innovations significantly reduce the token footprint while enhancing reasoning utility. Experimental results on ALFWorld, WebShop and seven search-augmented tasks demonstrate that SkillRL achieves state-of-the-art performance, outperforming strong baselines over 15.3% and maintaining robustness as task complexity increases. Code is available at https://github.com/aiming-lab/SkillRL." data-link="https://arxiv.org/abs/2602.08234">📄 Full abstract</span>
+            <a href="https://arxiv.org/abs/2602.08234" target="_blank" rel="noopener" class="evidence-chip" style="text-decoration:none">🔗 arXiv:2602.08234</a>
+            <a href="https://github.com/aiming-lab/SkillRL" target="_blank" rel="noopener" class="evidence-chip" style="text-decoration:none">🔗 GitHub · aiming-lab/SkillRL</a>
+            <a href="paper-claw-r1.html" class="evidence-chip" style="text-decoration:none">→ Claw-R1 deck</a>
+            <a href="survey-part2.html" class="evidence-chip" style="text-decoration:none">→ Combined pipeline deck</a>
+          </div>
+        </div>
+
+        <footer class="slide-footer">
+          <span>ALFWorld · WebShop · 7 search tasks · +15.3%</span>
+          <span><a href="index.html">Deck Hub</a> · <a href="https://arxiv.org/abs/2602.08234" target="_blank" rel="noopener">arXiv</a> · <a href="https://github.com/aiming-lab/SkillRL" target="_blank" rel="noopener">GitHub</a></span>
+        </footer>
+      </div>
+    </section>
+
+  </div><!-- .deck -->
+
+  <nav class="deck-nav" aria-label="Slide navigation">
+    <button type="button" id="nav-prev" aria-label="Previous slide">← Prev</button>
+    <div class="progress-bar" aria-hidden="true"><div class="progress-fill" id="progress-fill"></div></div>
+    <span class="progress-label" id="progress-label">1/5</span>
+    <button type="button" id="nav-next" aria-label="Next slide">Next →</button>
+  </nav>
+
+  <div class="modal-overlay" id="evidence-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal">
+      <button type="button" class="close-btn" onclick="closeModal()" aria-label="Close">&times;</button>
+      <h2 id="modal-title">Evidence</h2>
+      <div id="modal-body"></div>
+    </div>
+  </div>
+
+  <script src="js/deck.js"></script>
+  <script src="../js/i18n.js"></script>
+</body>
+</html>

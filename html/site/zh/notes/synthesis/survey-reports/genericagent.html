@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GenericAgent 架构调研（4.8） — Skill-Evolving</title>
+  <link rel="alternate" hreflang="en" href="/html/site/notes/synthesis/survey-reports/genericagent.html">
+  <link rel="alternate" hreflang="zh-Hans" href="/html/site/zh/notes/synthesis/survey-reports/genericagent.html">
+  <link rel="alternate" hreflang="x-default" href="/html/site/notes/synthesis/survey-reports/genericagent.html">
+  <link rel="stylesheet" href="../../../../../css/viewer.css">
+</head>
+<body class="page-compact page-survey-report" data-doc-locale="zh" data-content-lang="zh">
+  <div class="viewer-layout">
+    <nav>
+      <div data-lang-switch class="lang-switch-host"></div>
+      <h1 data-i18n="nav.docs">Docs</h1>
+      <div class="title" data-i18n="nav.rendered">Rendered HTML</div>
+      <section class="highlight-section"><h2 data-i18n="nav.compare">nav.compare</h2><ul><li><a href="../agent-skill-architecture-survey-matrix.html" data-i18n="nav.matrix165">nav.matrix165</a></li><li><a href="../skill-lifecycle-full-matrix.html" data-i18n="nav.lifecycle">nav.lifecycle</a></li><li><a href="../web-expanded-lifecycle-matrix-merged.html" data-i18n="nav.web_l3">nav.web_l3</a></li><li><a href="../eight-repo-comprehensive-survey.html" data-i18n="nav.survey20">nav.survey20</a></li><li><a href="../skill-lifecycle-and-dynamic-loading-survey.html" data-i18n="nav.per_turn">nav.per_turn</a></li><li><a href="../eight-repo-deep-source-analysis.html" data-i18n="nav.deep_source">nav.deep_source</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.per_repo">nav.per_repo</h2><ul><li><a href="./opensquilla.html">OpenSquilla (9.0)</a></li><li><a href="./hermes-agent.html">Hermes (8.1)</a></li><li><a href="./openclaw.html">OpenClaw (8.0)</a></li><li><a href="./claude-code-rev.html">Claude Rev (7.7)</a></li><li><a href="./codex.html">Codex (7.2)</a></li><li><a href="./taichu.html">TaiChu (5.0)</a></li><li><a href="./zeroclaw.html">ZeroClaw (5.0)</a></li><li><a class="active" href="./genericagent.html">GenericAgent (4.8)</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.papers">nav.papers</h2><ul><li><a href="../../../../topics/skill-rl/overview.html">SkillRL</a></li><li><a href="../../../../topics/claw-r1/overview.html">Claw-R1</a></li><li><a href="../comparison.html" data-i18n="nav.comparison">nav.comparison</a></li><li><a href="../combined-pipeline.html" data-i18n="nav.pipeline">nav.pipeline</a></li><li><a href="../l3-comprehensive-skill-analysis.html" data-i18n="nav.l3">nav.l3</a></li><li><a href="../../../../notes/synthesis/taichu-p0-skill-compaction-spec.html" data-i18n="nav.taichu_p0">nav.taichu_p0</a></li></ul></section><section><h2 data-i18n="nav.more">More</h2><ul>
+    <li><a href="/html/docs.html" data-i18n="nav.sitemap">Sitemap</a></li>
+    <li><a href="/html/i18n-coverage.html" data-i18n="nav.i18n_coverage">i18n coverage</a></li>
+    <li><a href="/html/index.html" data-i18n="nav.dashboard">Dashboard</a></li>
+    <li><a href="/html/deck/index.html" data-i18n="nav.decks">Slide decks</a></li>
+  </ul></section>
+    </nav>
+    <div class="viewer-main">
+      <div class="viewer-toolbar">
+        <div>
+          <h1>GenericAgent 架构调研（4.8）</h1>
+          <div class="path">notes/synthesis/survey-reports/genericagent.md</div>
+        </div>
+        <a class="btn" href="/html/docs.html" data-i18n="toolbar.sitemap">Sitemap</a>
+        <a class="btn primary" href="../agent-skill-architecture-survey-matrix.html" data-i18n="toolbar.matrix">165-dim matrix</a>
+      </div>
+      
+      <article class="md-body"><h1>GenericAgent 架构调研（4.8）</h1>
+<blockquote>
+<p><strong>Mine→Evolve SOP 哲学强，但非 SKILL.md 标准生命周期</strong></p>
+<p>memory/*_sop.md L0–L4；crystallize 成功写 L2/L3；无 formal skill CRUD。</p>
+</blockquote>
+<h2>1. 架构</h2>
+<p>非 SKILL.md：L-tier memory 树 + anchor prompt 每 10 turn。</p>
+<h2>2. Skill 运行时</h2>
+<p>file_read 加载 SOP；related_sop 弱推荐。</p>
+<h2>3. Skill 生命周期</h2>
+<p>start_long_term_update 验证后写；memory_cleanup_sop。</p>
+<h2>4. Skill 进化</h2>
+<p>/morphling 结晶；plan mode plan.md checkpoint。</p>
+<h2>5. 多 Agent Skill</h2>
+<p>subprocess 隔离；team BBS。</p>
+<h2>6. Skill 治理</h2>
+<p>L0 protocol；无 marketplace。</p>
+<h2>7. Harness 集成</h2>
+<p>9 atomic tools；reflect cron。</p>
+<h2>8. RL 就绪度</h2>
+<p>model log；无 RL pipeline。</p>
+<h2>9. TaiChu 可借鉴</h2>
+<p>借 task→path→reusable skill Miner 思想。</p>
+<h2>10. TaiChu 落地</h2>
+<p>P2 SOP 结晶流程；非 P0。</p>
+<h2>11. 不应借鉴</h2>
+<p>勿 ungated crystallize 直接生产。</p>
+<h2>12. 评分</h2>
+<p>总分 4.8：理念强、标准 skill 生命周期弱。</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Category</th>
+<th align="center">Score</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Data Model</td>
+<td align="center">5</td>
+<td>SOP not SKILL.md</td>
+</tr>
+<tr>
+<td>Runtime</td>
+<td align="center">5</td>
+<td>on-demand read; no catalog rank</td>
+</tr>
+<tr>
+<td>Lifecycle</td>
+<td align="center">7</td>
+<td>crystallize strong</td>
+</tr>
+<tr>
+<td>Evolution</td>
+<td align="center">6</td>
+<td>philosophy ★; engineering weak</td>
+</tr>
+<tr>
+<td>Governance</td>
+<td align="center">2</td>
+<td>protocol doc only</td>
+</tr>
+<tr>
+<td>Agent Integration</td>
+<td align="center">3</td>
+<td>weak multi-agent skills</td>
+</tr>
+<tr>
+<td>RL Readiness</td>
+<td align="center">2</td>
+<td>minimal</td>
+</tr>
+<tr>
+<td><strong>Overall</strong></td>
+<td align="center"><strong>4.8</strong></td>
+<td><strong>Best SkillRL-style miner inspiration</strong></td>
+</tr>
+</tbody></table></div>
+<p><em>完整英文版含 L3 路径与引用 → <code>survey-reports/genericagent.md</code></em></p>
+</article>
+    </div>
+  </div>
+  <script src="../../../../../js/i18n.js"></script>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
+  </script>
+</body>
+</html>

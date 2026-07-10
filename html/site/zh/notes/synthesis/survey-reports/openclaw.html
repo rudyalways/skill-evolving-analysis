@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OpenClaw 架构调研（8.0） — Skill-Evolving</title>
+  <link rel="alternate" hreflang="en" href="/html/site/notes/synthesis/survey-reports/openclaw.html">
+  <link rel="alternate" hreflang="zh-Hans" href="/html/site/zh/notes/synthesis/survey-reports/openclaw.html">
+  <link rel="alternate" hreflang="x-default" href="/html/site/notes/synthesis/survey-reports/openclaw.html">
+  <link rel="stylesheet" href="../../../../../css/viewer.css">
+</head>
+<body class="page-compact page-survey-report" data-doc-locale="zh" data-content-lang="zh">
+  <div class="viewer-layout">
+    <nav>
+      <div data-lang-switch class="lang-switch-host"></div>
+      <h1 data-i18n="nav.docs">Docs</h1>
+      <div class="title" data-i18n="nav.rendered">Rendered HTML</div>
+      <section class="highlight-section"><h2 data-i18n="nav.compare">nav.compare</h2><ul><li><a href="../agent-skill-architecture-survey-matrix.html" data-i18n="nav.matrix165">nav.matrix165</a></li><li><a href="../skill-lifecycle-full-matrix.html" data-i18n="nav.lifecycle">nav.lifecycle</a></li><li><a href="../web-expanded-lifecycle-matrix-merged.html" data-i18n="nav.web_l3">nav.web_l3</a></li><li><a href="../eight-repo-comprehensive-survey.html" data-i18n="nav.survey20">nav.survey20</a></li><li><a href="../skill-lifecycle-and-dynamic-loading-survey.html" data-i18n="nav.per_turn">nav.per_turn</a></li><li><a href="../eight-repo-deep-source-analysis.html" data-i18n="nav.deep_source">nav.deep_source</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.per_repo">nav.per_repo</h2><ul><li><a href="./opensquilla.html">OpenSquilla (9.0)</a></li><li><a href="./hermes-agent.html">Hermes (8.1)</a></li><li><a class="active" href="./openclaw.html">OpenClaw (8.0)</a></li><li><a href="./claude-code-rev.html">Claude Rev (7.7)</a></li><li><a href="./codex.html">Codex (7.2)</a></li><li><a href="./taichu.html">TaiChu (5.0)</a></li><li><a href="./zeroclaw.html">ZeroClaw (5.0)</a></li><li><a href="./genericagent.html">GenericAgent (4.8)</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.papers">nav.papers</h2><ul><li><a href="../../../../topics/skill-rl/overview.html">SkillRL</a></li><li><a href="../../../../topics/claw-r1/overview.html">Claw-R1</a></li><li><a href="../comparison.html" data-i18n="nav.comparison">nav.comparison</a></li><li><a href="../combined-pipeline.html" data-i18n="nav.pipeline">nav.pipeline</a></li><li><a href="../l3-comprehensive-skill-analysis.html" data-i18n="nav.l3">nav.l3</a></li><li><a href="../../../../notes/synthesis/taichu-p0-skill-compaction-spec.html" data-i18n="nav.taichu_p0">nav.taichu_p0</a></li></ul></section><section><h2 data-i18n="nav.more">More</h2><ul>
+    <li><a href="/html/docs.html" data-i18n="nav.sitemap">Sitemap</a></li>
+    <li><a href="/html/i18n-coverage.html" data-i18n="nav.i18n_coverage">i18n coverage</a></li>
+    <li><a href="/html/index.html" data-i18n="nav.dashboard">Dashboard</a></li>
+    <li><a href="/html/deck/index.html" data-i18n="nav.decks">Slide decks</a></li>
+  </ul></section>
+    </nav>
+    <div class="viewer-main">
+      <div class="viewer-toolbar">
+        <div>
+          <h1>OpenClaw 架构调研（8.0）</h1>
+          <div class="path">notes/synthesis/survey-reports/openclaw.md</div>
+        </div>
+        <a class="btn" href="/html/docs.html" data-i18n="toolbar.sitemap">Sitemap</a>
+        <a class="btn primary" href="../agent-skill-architecture-survey-matrix.html" data-i18n="toolbar.matrix">165-dim matrix</a>
+      </div>
+      
+      <article class="md-body"><h1>OpenClaw 架构调研（8.0）</h1>
+<blockquote>
+<p><strong>6 源 merge + skill-workshop 进化 + per-agent skillFilter</strong></p>
+<p>多源 SKILL.md merge；metadata XML catalog；read tool 懒加载 body；workshop proposals。</p>
+</blockquote>
+<h2>1. 架构</h2>
+<p>6 源优先级 merge；chokidar watcher；session snapshot。</p>
+<h2>2. Skill 运行时</h2>
+<p>150 skill / 18K 上限；compact XML；per-agent skillFilter 白名单。</p>
+<h2>3. Skill 生命周期</h2>
+<p>workshop agent_end → reviewer → proposals → scanner → append/replace。</p>
+<h2>4. Skill 进化</h2>
+<p>LLM reviewer + regex；auto/manual 策略；trajectory 元数据。</p>
+<h2>5. 多 Agent Skill</h2>
+<p>subagent 缩减 system prompt；skillFilter 继承。</p>
+<h2>6. Skill 治理</h2>
+<p>skill-scanner quarantine；workshop pending。</p>
+<h2>7. Harness 集成</h2>
+<p>Gateway + agent loop；skill-workshop 与 compact 并行。</p>
+<h2>8. RL 就绪度</h2>
+<p>openclaw-trajectory JSONL；OpenClaw-RL 离线 RL 层。</p>
+<h2>9. TaiChu 可借鉴</h2>
+<p>借 6 源 precedence、workshop 闭环、trajectory schema。</p>
+<h2>10. TaiChu 落地</h2>
+<p>P1 workshop-style proposals；P2 skillFilter 子 agent。</p>
+<h2>11. 不应借鉴</h2>
+<p>勿全盘 marketplace 信任模型。</p>
+<h2>12. 评分</h2>
+<p>总分 8.0：Lifecycle 9/13；Compact-skill 弱。</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Category</th>
+<th align="center">Score</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Data Model</td>
+<td align="center">8</td>
+<td>Standard SKILL.md + 6 sources</td>
+</tr>
+<tr>
+<td>Runtime</td>
+<td align="center">8</td>
+<td>Snapshot + lazy ★; no ranker</td>
+</tr>
+<tr>
+<td>Lifecycle</td>
+<td align="center">8</td>
+<td>workshop 9/13</td>
+</tr>
+<tr>
+<td>Evolution</td>
+<td align="center">7</td>
+<td>workshop strong; no RRF/gates</td>
+</tr>
+<tr>
+<td>Governance</td>
+<td align="center">7</td>
+<td>scanner + allowlist</td>
+</tr>
+<tr>
+<td>Agent Integration</td>
+<td align="center">8</td>
+<td>per-agent scope ★</td>
+</tr>
+<tr>
+<td>RL Readiness</td>
+<td align="center">7</td>
+<td>trajectory ★</td>
+</tr>
+<tr>
+<td><strong>Overall</strong></td>
+<td align="center"><strong>8.0</strong></td>
+<td>Best scope model + RL export</td>
+</tr>
+</tbody></table></div>
+<p><em>完整英文版含 L3 路径与引用 → <code>survey-reports/openclaw.md</code></em></p>
+</article>
+    </div>
+  </div>
+  <script src="../../../../../js/i18n.js"></script>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
+  </script>
+</body>
+</html>

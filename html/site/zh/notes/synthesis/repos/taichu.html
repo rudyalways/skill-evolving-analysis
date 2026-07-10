@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TaiChu — 20 维度源码分析 — Skill-Evolving</title>
+  <link rel="alternate" hreflang="en" href="/html/site/notes/synthesis/repos/taichu.html">
+  <link rel="alternate" hreflang="zh-Hans" href="/html/site/zh/notes/synthesis/repos/taichu.html">
+  <link rel="alternate" hreflang="x-default" href="/html/site/notes/synthesis/repos/taichu.html">
+  <link rel="stylesheet" href="../../../../../css/viewer.css">
+</head>
+<body class="" data-doc-locale="zh" data-content-lang="zh">
+  <div class="viewer-layout">
+    <nav>
+      <div data-lang-switch class="lang-switch-host"></div>
+      <h1 data-i18n="nav.docs">Docs</h1>
+      <div class="title" data-i18n="nav.rendered">Rendered HTML</div>
+      <section class="highlight-section"><h2 data-i18n="nav.compare">nav.compare</h2><ul><li><a href="../agent-skill-architecture-survey-matrix.html" data-i18n="nav.matrix165">nav.matrix165</a></li><li><a href="../skill-lifecycle-full-matrix.html" data-i18n="nav.lifecycle">nav.lifecycle</a></li><li><a href="../web-expanded-lifecycle-matrix-merged.html" data-i18n="nav.web_l3">nav.web_l3</a></li><li><a href="../eight-repo-comprehensive-survey.html" data-i18n="nav.survey20">nav.survey20</a></li><li><a href="../skill-lifecycle-and-dynamic-loading-survey.html" data-i18n="nav.per_turn">nav.per_turn</a></li><li><a href="../eight-repo-deep-source-analysis.html" data-i18n="nav.deep_source">nav.deep_source</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.per_repo">nav.per_repo</h2><ul><li><a href="../survey-reports/opensquilla.html">OpenSquilla (9.0)</a></li><li><a href="../survey-reports/hermes-agent.html">Hermes (8.1)</a></li><li><a href="../survey-reports/openclaw.html">OpenClaw (8.0)</a></li><li><a href="../survey-reports/claude-code-rev.html">Claude Rev (7.7)</a></li><li><a href="../survey-reports/codex.html">Codex (7.2)</a></li><li><a href="../survey-reports/taichu.html">TaiChu (5.0)</a></li><li><a href="../survey-reports/zeroclaw.html">ZeroClaw (5.0)</a></li><li><a href="../survey-reports/genericagent.html">GenericAgent (4.8)</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.papers">nav.papers</h2><ul><li><a href="../../../../topics/skill-rl/overview.html">SkillRL</a></li><li><a href="../../../../topics/claw-r1/overview.html">Claw-R1</a></li><li><a href="../comparison.html" data-i18n="nav.comparison">nav.comparison</a></li><li><a href="../combined-pipeline.html" data-i18n="nav.pipeline">nav.pipeline</a></li><li><a href="../l3-comprehensive-skill-analysis.html" data-i18n="nav.l3">nav.l3</a></li><li><a href="../../../../notes/synthesis/taichu-p0-skill-compaction-spec.html" data-i18n="nav.taichu_p0">nav.taichu_p0</a></li></ul></section><section><h2 data-i18n="nav.more">More</h2><ul>
+    <li><a href="/html/docs.html" data-i18n="nav.sitemap">Sitemap</a></li>
+    <li><a href="/html/i18n-coverage.html" data-i18n="nav.i18n_coverage">i18n coverage</a></li>
+    <li><a href="/html/index.html" data-i18n="nav.dashboard">Dashboard</a></li>
+    <li><a href="/html/deck/index.html" data-i18n="nav.decks">Slide decks</a></li>
+  </ul></section>
+    </nav>
+    <div class="viewer-main">
+      <div class="viewer-toolbar">
+        <div>
+          <h1>TaiChu — 20 维度源码分析</h1>
+          <div class="path">notes/synthesis/repos/taichu.md</div>
+        </div>
+        <a class="btn" href="/html/docs.html" data-i18n="toolbar.sitemap">Sitemap</a>
+        <a class="btn primary" href="../agent-skill-architecture-survey-matrix.html" data-i18n="toolbar.matrix">165-dim matrix</a>
+      </div>
+      
+      <article class="md-body"><h1>TaiChu — 20 维度源码分析</h1>
+<blockquote>
+<p>Path: <code>/Users/maybewu/Documents/Projects/drafts/zk/TaiChu</code> (private)<br>Upstream: <a href="https://taichu.fun/gitea/SystemAgentDev/TaiChu.git">taichu.fun/gitea/SystemAgentDev/TaiChu</a></p>
+</blockquote>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Dimension</th>
+<th>Summary</th>
+<th>Key paths</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td><strong>Architecture</strong></td>
+<td>Rust layered SDK L1–L5; 端云协同 overlay</td>
+<td><code>docs/overview.md</code>, <code>core/taichu-core-sdk/</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>Agent loop</strong></td>
+<td>Pi-mono dual loop; steer/follow-up; StreamFn injected</td>
+<td><code>core/agent-loop/src/agent_loop.rs</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>Harness</strong></td>
+<td>Embeddable library; Runtime/SessionManager facade</td>
+<td><code>core/taichu-core-sdk/src/runtime.rs</code></td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>Session</strong></td>
+<td>Multi-instance (session, channel, device); JSONL/DB history</td>
+<td><code>docs/architecture/session-management.md</code></td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong>Memory</strong></td>
+<td>MEMORY.md in prompt; MemoryStore planned</td>
+<td><code>core/agent-framework/src/prompt_builder.rs</code></td>
+</tr>
+<tr>
+<td>6</td>
+<td><strong>Skills</strong></td>
+<td>Catalog XML + <strong>load_skill</strong>; runs_on device routing</td>
+<td><code>core/builtintools/src/skill/load_skill.rs</code></td>
+</tr>
+<tr>
+<td>7</td>
+<td><strong>Workflow</strong></td>
+<td>No built-in plan mode (benchmark gap doc)</td>
+<td><code>docs/architecture/agent-benchmark-improvement-plan.md</code></td>
+</tr>
+<tr>
+<td>8</td>
+<td><strong>Reflection</strong></td>
+<td>Design-only; no reflect scheduler</td>
+<td><code>docs/architecture/user-interaction-improvement.md</code></td>
+</tr>
+<tr>
+<td>9</td>
+<td><strong>Self-improvement</strong></td>
+<td><strong>None runtime</strong></td>
+<td>comparison doc L952</td>
+</tr>
+<tr>
+<td>10</td>
+<td><strong>Skill evolution</strong></td>
+<td><strong>None</strong> — P2 roadmap only</td>
+<td><code>docs/architecture/skill-system-cross-repo-comparison.md</code></td>
+</tr>
+<tr>
+<td>11</td>
+<td><strong>Prompt</strong></td>
+<td>LocalFsPromptBuilder ordered assembly</td>
+<td><code>core/agent-framework/src/prompt_builder.rs</code></td>
+</tr>
+<tr>
+<td>12</td>
+<td><strong>Evaluation</strong></td>
+<td>Benchmark improvement plan; integration tests</td>
+<td><code>core/*/tests/</code></td>
+</tr>
+<tr>
+<td>13</td>
+<td><strong>Hooks</strong></td>
+<td>TransformContext; Before/AfterToolCall; hook gateway design doc</td>
+<td><code>docs/architecture/extension-hooks-and-timing.md</code></td>
+</tr>
+<tr>
+<td>14</td>
+<td><strong>Context</strong></td>
+<td>LLM summarization compaction; <strong>load_skill body may be lost</strong></td>
+<td><code>core/agent-session/src/compaction.rs</code></td>
+</tr>
+<tr>
+<td>15</td>
+<td><strong>Tools</strong></td>
+<td>Trait ToolDefinition + ToolDomains filtering</td>
+<td><code>core/builtintools/</code>, <code>tool_domains.rs</code></td>
+</tr>
+<tr>
+<td>16</td>
+<td><strong>Multi-agent</strong></td>
+<td>run_subagent local/remote; no skill inherit</td>
+<td><code>core/subagent/</code>, comparison doc L776-781</td>
+</tr>
+<tr>
+<td>17</td>
+<td><strong>Training/RL</strong></td>
+<td>None; llm-router only</td>
+<td><code>services/rust/llm-router/</code></td>
+</tr>
+<tr>
+<td>18</td>
+<td><strong>Interesting</strong></td>
+<td><strong>runs_on + remote delegation</strong>; A-system per-turn skill list</td>
+<td><code>load_skill.rs:110-132</code>, taichu-service api</td>
+</tr>
+<tr>
+<td>19</td>
+<td><strong>Weaknesses</strong></td>
+<td>No invoked_skills; no evolution; no subagent skill preload</td>
+<td>comparison doc L47-51</td>
+</tr>
+<tr>
+<td>20</td>
+<td><strong>For TaiChu</strong></td>
+<td>See comprehensive survey P0–P3; existing comparison doc</td>
+<td><code>skill-system-cross-repo-comparison.md</code></td>
+</tr>
+</tbody></table></div>
+<h2>Skill evolution sub-matrix</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Sub</th>
+<th>Status</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Trigger</td>
+<td>❌ None</td>
+<td>comparison doc L952</td>
+</tr>
+<tr>
+<td>Detection</td>
+<td>Interaction JSONL only</td>
+<td>comparison doc L831</td>
+</tr>
+<tr>
+<td>Proposal</td>
+<td>❌ Design P2</td>
+<td>comparison doc L982-983</td>
+</tr>
+<tr>
+<td>User gate</td>
+<td>❌</td>
+<td>comparison doc L839-841</td>
+</tr>
+<tr>
+<td>Write-back</td>
+<td>❌ Agent cannot write canonical skills</td>
+<td>comparison doc L1057</td>
+</tr>
+<tr>
+<td>Compaction</td>
+<td>❌ <strong>Risk:</strong> load_skill body summarized away</td>
+<td><code>context-and-skills.md:64-68</code></td>
+</tr>
+<tr>
+<td>Discovery</td>
+<td>Session scan; Toollery filter; A-system wire</td>
+<td><code>prompt_builder.rs</code>, <code>session.rs</code></td>
+</tr>
+<tr>
+<td>Usage ranking</td>
+<td>❌</td>
+<td>comparison doc L973</td>
+</tr>
+<tr>
+<td>SubAgent skills</td>
+<td>❌ Child rescans roots only</td>
+<td><code>manager.rs:1736-1796</code></td>
+</tr>
+<tr>
+<td>Cloud/device routing</td>
+<td>✅ runs_on + remote_delegation</td>
+<td><code>load_skill.rs:110-132</code></td>
+</tr>
+</tbody></table></div>
+<h2>已有深度文档</h2>
+<p><code>/Users/maybewu/Documents/Projects/drafts/zk/TaiChu/docs/architecture/skill-system-cross-repo-comparison.md</code> — 8-repo 对比 v2 (2026-07-06)，本调研与其结论一致并扩展至 20 维度。</p>
+</article>
+    </div>
+  </div>
+  <script src="../../../../../js/i18n.js"></script>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
+  </script>
+</body>
+</html>

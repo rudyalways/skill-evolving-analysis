@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Workflow — Skill-Evolving Analysis</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body data-i18n-page="host" data-content-lang="en">
+  <div class="layout">
+    <nav>
+      <div data-lang-switch class="lang-switch-host"></div>
+      <h1 data-i18n="nav.research">Research</h1>
+      <div class="title" data-i18n="site.title">Skill-Evolving Analysis</div>
+      <section>
+        <h2 data-i18n="nav.overview">Overview</h2>
+        <ul>
+          <li><a href="index.html" data-page="index.html" data-i18n="nav.dashboard">Dashboard</a></li>
+          <li><a href="structure.html" data-page="structure.html" data-i18n="nav.directory">Directory map</a></li>
+          <li><a href="workflow.html" data-page="workflow.html" class="active" data-i18n="nav.workflow">Workflow</a></li>
+        </ul>
+      </section>
+    </nav>
+
+    <main>
+      <header class="page-header">
+        <h1><span data-lang-only="en">Research workflow</span><span data-lang-only="zh" hidden>研究工作流</span></h1>
+        <p><span data-lang-only="en">How to handle incoming data without losing track</span><span data-lang-only="zh" hidden>如何处理新数据而不迷失方向</span></p>
+      </header>
+
+      <section class="block">
+        <h2>1. Receive → inbox</h2>
+        <p>Drop anything new into <code>data/inbox/</code> — PDFs, JSON exports, repo clones, screenshots, API responses. Don't organize yet; just capture.</p>
+      </section>
+
+      <section class="block">
+        <h2>2. Triage → raw</h2>
+        <p>Run the ingest script to copy into the correct <code>data/raw/</code> bucket with a date prefix:</p>
+        <pre class="tree">./scripts/ingest.sh data/inbox/skillrl.pdf papers
+./scripts/ingest.sh data/inbox/run-log.jsonl experiments
+./scripts/ingest.sh data/inbox/openclaw-rl/ repos</pre>
+        <p>Raw files are <strong>immutable</strong> — never edit originals.</p>
+      </section>
+
+      <section class="block">
+        <h2>3. Document → note</h2>
+        <p>Copy a template from <code>templates/</code> and fill in metadata:</p>
+        <table>
+          <thead><tr><th>Template</th><th>Use when</th></tr></thead>
+          <tbody>
+            <tr><td><code>paper-note.md</code></td><td>Reading a new paper</td></tr>
+            <tr><td><code>data-entry.md</code></td><td>Filing raw data with provenance</td></tr>
+            <tr><td><code>experiment-log.md</code></td><td>Running or logging experiments</td></tr>
+            <tr><td><code>daily-log.md</code></td><td>End-of-day research journal</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="block">
+        <h2>4. Process → derived artifacts</h2>
+        <p>Extract structured data into <code>data/processed/</code>:</p>
+        <ul style="margin-left:1.25rem;color:var(--muted)">
+          <li><code>extractions/</code> — parsed sections, JSON schemas, code snippets</li>
+          <li><code>tables/</code> — benchmark numbers, comparison matrices</li>
+          <li><code>embeddings/</code> — vector indexes for semantic search</li>
+        </ul>
+      </section>
+
+      <section class="block">
+        <h2>5. Synthesize → topics & notes</h2>
+        <p>Update topic overviews under <code>topics/</code> and write cross-cutting analysis in <code>notes/synthesis/</code>.</p>
+      </section>
+
+      <section class="block">
+        <h2>6. Catalog → INDEX.md</h2>
+        <p>Every artifact gets a row in <code>INDEX.md</code>. This is the single source of truth for "what do we have?"</p>
+      </section>
+
+      <section class="block">
+        <h2>Status lifecycle</h2>
+        <pre class="tree"><span class="badge inbox">inbox</span>  →  raw  →  processed  →  (linked in notes/topics)
+                              ↘
+                           archived  <span class="dir">(when superseded)</span></pre>
+      </section>
+
+      <section class="block">
+        <h2>Daily rhythm</h2>
+        <ol style="margin-left:1.25rem;color:var(--muted);line-height:2">
+          <li>Clear <code>data/inbox/</code> — triage everything</li>
+          <li>Update <code>INDEX.md</code></li>
+          <li>Write <code>notes/daily/YYYY-MM-DD.md</code></li>
+          <li>Refresh topic overviews if new insights emerged</li>
+        </ol>
+      </section>
+    </main>
+  </div>
+  <script src="js/render.js"></script>
+  <script src="js/i18n.js"></script>
+  <script src="js/i18n.js"></script>
+</body>
+</html>

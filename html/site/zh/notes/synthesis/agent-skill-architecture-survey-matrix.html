@@ -1,0 +1,2534 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agent Skill 架构调研矩阵 — Skill-Evolving</title>
+  <link rel="alternate" hreflang="en" href="/html/site/notes/synthesis/agent-skill-architecture-survey-matrix.html">
+  <link rel="alternate" hreflang="zh-Hans" href="/html/site/zh/notes/synthesis/agent-skill-architecture-survey-matrix.html">
+  <link rel="alternate" hreflang="x-default" href="/html/site/notes/synthesis/agent-skill-architecture-survey-matrix.html">
+  <link rel="stylesheet" href="../../../../css/viewer.css">
+</head>
+<body class="" data-doc-locale="zh" data-content-lang="zh">
+  <div class="viewer-layout">
+    <nav>
+      <div data-lang-switch class="lang-switch-host"></div>
+      <h1 data-i18n="nav.docs">Docs</h1>
+      <div class="title" data-i18n="nav.rendered">Rendered HTML</div>
+      <section class="highlight-section"><h2 data-i18n="nav.compare">nav.compare</h2><ul><li><a class="active" href="./agent-skill-architecture-survey-matrix.html" data-i18n="nav.matrix165">nav.matrix165</a></li><li><a href="./skill-lifecycle-full-matrix.html" data-i18n="nav.lifecycle">nav.lifecycle</a></li><li><a href="./web-expanded-lifecycle-matrix-merged.html" data-i18n="nav.web_l3">nav.web_l3</a></li><li><a href="./eight-repo-comprehensive-survey.html" data-i18n="nav.survey20">nav.survey20</a></li><li><a href="./skill-lifecycle-and-dynamic-loading-survey.html" data-i18n="nav.per_turn">nav.per_turn</a></li><li><a href="./eight-repo-deep-source-analysis.html" data-i18n="nav.deep_source">nav.deep_source</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.per_repo">nav.per_repo</h2><ul><li><a href="./survey-reports/opensquilla.html">OpenSquilla (9.0)</a></li><li><a href="./survey-reports/hermes-agent.html">Hermes (8.1)</a></li><li><a href="./survey-reports/openclaw.html">OpenClaw (8.0)</a></li><li><a href="./survey-reports/claude-code-rev.html">Claude Rev (7.7)</a></li><li><a href="./survey-reports/codex.html">Codex (7.2)</a></li><li><a href="./survey-reports/taichu.html">TaiChu (5.0)</a></li><li><a href="./survey-reports/zeroclaw.html">ZeroClaw (5.0)</a></li><li><a href="./survey-reports/genericagent.html">GenericAgent (4.8)</a></li></ul></section><section class="highlight-section"><h2 data-i18n="nav.papers">nav.papers</h2><ul><li><a href="../../../topics/skill-rl/overview.html">SkillRL</a></li><li><a href="../../../topics/claw-r1/overview.html">Claw-R1</a></li><li><a href="./comparison.html" data-i18n="nav.comparison">nav.comparison</a></li><li><a href="./combined-pipeline.html" data-i18n="nav.pipeline">nav.pipeline</a></li><li><a href="./l3-comprehensive-skill-analysis.html" data-i18n="nav.l3">nav.l3</a></li><li><a href="../../../notes/synthesis/taichu-p0-skill-compaction-spec.html" data-i18n="nav.taichu_p0">nav.taichu_p0</a></li></ul></section><section><h2 data-i18n="nav.more">More</h2><ul>
+    <li><a href="/html/docs.html" data-i18n="nav.sitemap">Sitemap</a></li>
+    <li><a href="/html/i18n-coverage.html" data-i18n="nav.i18n_coverage">i18n coverage</a></li>
+    <li><a href="/html/index.html" data-i18n="nav.dashboard">Dashboard</a></li>
+    <li><a href="/html/deck/index.html" data-i18n="nav.decks">Slide decks</a></li>
+  </ul></section>
+    </nav>
+    <div class="viewer-main">
+      <div class="viewer-toolbar">
+        <div>
+          <h1>Agent Skill 架构调研矩阵</h1>
+          <div class="path">notes/synthesis/agent-skill-architecture-survey-matrix.zh.md</div>
+        </div>
+        <a class="btn" href="/html/docs.html" data-i18n="toolbar.sitemap">Sitemap</a>
+        <a class="btn primary" href="./agent-skill-architecture-survey-matrix.html" data-i18n="toolbar.matrix">165-dim matrix</a>
+      </div>
+      
+      <article class="md-body"><h1>Agent Skill 架构调研矩阵</h1>
+<blockquote>
+<p><strong>不是功能清单</strong> — Agent Harness + Skill 系统设计的<strong>横向架构调研工具</strong> for Agent Harness + Skill system design.<br><strong>证据</strong>： L2–L3 local source (8 runtime repos) + L0 public docs/issues.<br><strong>项目</strong>： Codex · Claude Code Rev (oboard) · OpenClaw · Hermes · GenericAgent · OpenSquilla · ZeroClaw · TaiChu</p>
+</blockquote>
+<h2>七大类</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>大类</th>
+<th>章节</th>
+<th align="center">维度数</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>I</td>
+<td><strong>Skill 数据模型</strong></td>
+<td>§1</td>
+<td align="center">14</td>
+</tr>
+<tr>
+<td>II</td>
+<td><strong>运行时</strong></td>
+<td>§2–§7 发现、暴露、推荐、运行时、卸载、使用</td>
+<td align="center">68</td>
+</tr>
+<tr>
+<td>III</td>
+<td><strong>生命周期</strong></td>
+<td>§8</td>
+<td align="center">13</td>
+</tr>
+<tr>
+<td>IV</td>
+<td><strong>进化与质量</strong></td>
+<td>§9–§10</td>
+<td align="center">29</td>
+</tr>
+<tr>
+<td>V</td>
+<td><strong>治理</strong></td>
+<td>§11</td>
+<td align="center">12</td>
+</tr>
+<tr>
+<td>VI</td>
+<td><strong>Agent 集成</strong></td>
+<td>§12–§14 关系、多 Agent、记忆</td>
+<td align="center">28</td>
+</tr>
+<tr>
+<td>VII</td>
+<td><strong>RL 就绪度</strong></td>
+<td>§15</td>
+<td align="center">11</td>
+</tr>
+<tr>
+<td></td>
+<td><strong>合计</strong></td>
+<td><strong>15 节</strong></td>
+<td align="center"><strong>165</strong></td>
+</tr>
+</tbody></table></div>
+<h3>单元格图例</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th align="center">符号</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">★</td>
+<td>强 / 一等公民 / 生产路径</td>
+</tr>
+<tr>
+<td align="center">◐</td>
+<td>部分 / 实验 / 弱</td>
+</tr>
+<tr>
+<td align="center">·</td>
+<td>无 / 不在范围</td>
+</tr>
+<tr>
+<td align="center">❌</td>
+<td>已知缺口或文档化风险</td>
+</tr>
+<tr>
+<td align="center">—</td>
+<td>该框架类型不适用</td>
+</tr>
+</tbody></table></div>
+<p>架构差异显著处用短文本补充符号。</p>
+<h3>各仓库交付格式</h3>
+<p>每个框架应产出 <strong>12 节调研报告</strong> (template: <a href="../../../notes/templates/survey-matrix-repo-report.html"><code>templates/survey-matrix-repo-report.md</code></a>):</p>
+<pre><code class="language-text">1. Architecture  2. Skill Runtime  3. Skill Lifecycle  4. Skill Evolution
+5. Multi-Agent Skill  6. Skill Governance  7. Harness Integration  8. RL Readiness
+9. Borrow for TaiChu  10. Implement in TaiChu  11. Do NOT borrow  12. Score (1–10)
+</code></pre>
+<p>完整示例： <strong>all 8 repos</strong> in <a href="survey-reports/">survey-reports/</a> — see <a href="../../../notes/synthesis/survey-reports/README.html">README</a></p>
+<hr>
+<h1>I. Skill 数据模型</h1>
+<h2>§1 — Skill 表示与打包</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>维度</th>
+<th align="center">Codex</th>
+<th align="center">Claude Rev</th>
+<th align="center">OpenClaw</th>
+<th align="center">Hermes</th>
+<th align="center">GenericAgent</th>
+<th align="center">OpenSquilla</th>
+<th align="center">ZeroClaw</th>
+<th align="center">TaiChu</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Skill 单元</strong> (Skill Unit)</td>
+<td align="center">SKILL.md dir</td>
+<td align="center">SKILL.md dir</td>
+<td align="center">SKILL.md file</td>
+<td align="center">SKILL.md dir</td>
+<td align="center"><code>*_sop.md</code></td>
+<td align="center">SkillSpec + MetaSkill</td>
+<td align="center">SKILL.md/.toml</td>
+<td align="center">SKILL.md</td>
+</tr>
+<tr>
+<td><strong>存储格式</strong> (Storage Format)</td>
+<td align="center">MD + YAML FM</td>
+<td align="center">MD + YAML FM</td>
+<td align="center">MD + YAML FM</td>
+<td align="center">MD + YAML FM</td>
+<td align="center">MD SOP prose</td>
+<td align="center">MD + meta schema</td>
+<td align="center">MD/TOML</td>
+<td align="center">MD + YAML</td>
+</tr>
+<tr>
+<td><strong>文件布局</strong> (File Layout)</td>
+<td align="center"><code>skills/&lt;n&gt;/</code> + scripts/refs/assets/agents</td>
+<td align="center">project/user/bundled/plugin roots</td>
+<td align="center">多根目录合并</td>
+<td align="center"><code>~/.hermes/skills/&lt;n&gt;/</code></td>
+<td align="center"><code>memory/</code> L0–L4 tree</td>
+<td align="center">六层优先级目录</td>
+<td align="center"><code>workspace/skills/</code></td>
+<td align="center"><code>skills/system/&lt;n&gt;/</code></td>
+</tr>
+<tr>
+<td><strong>元数据</strong> (Metadata)</td>
+<td align="center">name, description req</td>
+<td align="center">frontmatter</td>
+<td align="center">frontmatter + location</td>
+<td align="center">frontmatter</td>
+<td align="center">L-tier tags</td>
+<td align="center">SkillSpec typed</td>
+<td align="center">version in manifest</td>
+<td align="center">runs_on, depends_on_tools</td>
+</tr>
+<tr>
+<td><strong>描述</strong> (Description)</td>
+<td align="center">★ routing signal</td>
+<td align="center">trigger text</td>
+<td align="center">catalog desc</td>
+<td align="center">catalog desc</td>
+<td align="center">SOP title</td>
+<td align="center">trigger + description</td>
+<td align="center">summary line</td>
+<td align="center">XML description</td>
+</tr>
+<tr>
+<td><strong>参数</strong> (Parameters)</td>
+<td align="center"><code>agents/openai.yaml</code></td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">meta step params</td>
+<td align="center"><code>{placeholder}</code>→tool schema</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>脚本</strong> (Scripts)</td>
+<td align="center">★ <code>scripts/</code></td>
+<td align="center">·</td>
+<td align="center">via references</td>
+<td align="center">★ <code>scripts/</code></td>
+<td align="center">·</td>
+<td align="center">★ <code>skill_exec</code> entrypoint</td>
+<td align="center">shell bridge</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>资产</strong> (Assets)</td>
+<td align="center">★ <code>assets/</code></td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">★ <code>assets/</code></td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>引用</strong> (References)</td>
+<td align="center">★ <code>references/</code></td>
+<td align="center">·</td>
+<td align="center">lazy read path</td>
+<td align="center">★ <code>references/</code></td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>示例</strong> (Examples)</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">templates/</td>
+<td align="center">·</td>
+<td align="center">★ <code>eval_prompts</code> fixtures</td>
+<td align="center">·</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>内嵌工作流</strong> (Embedded Workflow)</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">plan.md checkpoint</td>
+<td align="center">★ MetaSkill <code>composition_raw</code></td>
+<td align="center">channel SOP</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>嵌套 Skill</strong> (Nested Skill)</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">◐ L-tree parent/child</td>
+<td align="center">meta step→skill ref</td>
+<td align="center">·</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>MetaSkill 工作流</strong> (MetaSkill)</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">★ DAG workflow type</td>
+<td align="center">·</td>
+<td align="center">◐ roadmap P3</td>
+</tr>
+<tr>
+<td><strong>版本</strong> (Version)</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">◐ snapshot version#</td>
+<td align="center">◐ manifest origin hash</td>
+<td align="center">·</td>
+<td align="center">★ lockfile SHA256</td>
+<td align="center">◐ manifest field</td>
+<td align="center">·</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h1>II. 运行时</h1>
+<h2>§2 — Skill 发现</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>维度</th>
+<th align="center">Codex</th>
+<th align="center">Claude Rev</th>
+<th align="center">OpenClaw</th>
+<th align="center">Hermes</th>
+<th align="center">GenericAgent</th>
+<th align="center">OpenSquilla</th>
+<th align="center">ZeroClaw</th>
+<th align="center">TaiChu</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>发现来源</strong> (Discover Source)</td>
+<td align="center">文件系统作用域</td>
+<td align="center">多根目录扫描</td>
+<td align="center">六源合并</td>
+<td align="center"><code>~/.hermes</code> scan</td>
+<td align="center">memory/ listing</td>
+<td align="center">六层加载器</td>
+<td align="center">workspace scan</td>
+<td align="center">canonical + cloud catalog</td>
+</tr>
+<tr>
+<td><strong>搜索路径</strong> (Search Path)</td>
+<td align="center">User/Repo/System/Admin</td>
+<td align="center">project→user→bundled</td>
+<td align="center">workspace highest</td>
+<td align="center">单一主目录</td>
+<td align="center">L1 index</td>
+<td align="center">WORKSPACE highest</td>
+<td align="center"><code>~/.zeroclaw/workspace</code></td>
+<td align="center">仅 system 根</td>
+</tr>
+<tr>
+<td><strong>工作区 Skill</strong> (Workspace Skill)</td>
+<td align="center">★ repo <code>skills/</code></td>
+<td align="center">★ project dir</td>
+<td align="center">★ <code>&lt;ws&gt;/skills</code></td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">★ WORKSPACE layer</td>
+<td align="center">★ workspace</td>
+<td align="center">· session isolated</td>
+</tr>
+<tr>
+<td><strong>用户 Skill</strong> (User Skill)</td>
+<td align="center">★ User scope</td>
+<td align="center">★ user dir</td>
+<td align="center"><code>~/.openclaw/skills</code></td>
+<td align="center">★ <code>~/.hermes</code></td>
+<td align="center">memory/ user</td>
+<td align="center">PERSONAL layer</td>
+<td align="center">workspace</td>
+<td align="center">cloud sync</td>
+</tr>
+<tr>
+<td><strong>全局 Skill</strong> (Global Skill)</td>
+<td align="center">★ System scope</td>
+<td align="center">bundled</td>
+<td align="center">managed + bundled</td>
+<td align="center">bundled sync</td>
+<td align="center">·</td>
+<td align="center">MANAGED</td>
+<td align="center">open-skills sync</td>
+<td align="center">17 canonical</td>
+</tr>
+<tr>
+<td><strong>注册表 Skill</strong> (Registry Skill)</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">ClawHub (external)</td>
+<td align="center">Hermes Hub</td>
+<td align="center">·</td>
+<td align="center">hub install</td>
+<td align="center">★ zeroclaw-skills</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>远程 Skill</strong> (Remote Skill)</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">remote node refresh</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">★ cloud catalog + device</td>
+</tr>
+<tr>
+<td><strong>生成 Skill</strong> (Generated Skill)</td>
+<td align="center">◐ Record&amp;Replay</td>
+<td align="center">◐ skillify</td>
+<td align="center">workshop proposals</td>
+<td align="center">★ agent-created</td>
+<td align="center">★ crystallized SOP</td>
+<td align="center">proposals/</td>
+<td align="center">·</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>内置 Skill</strong> (Bundled Skill)</td>
+<td align="center">★ system</td>
+<td align="center">★ bundled</td>
+<td align="center">★ lowest priority</td>
+<td align="center">★ skills_sync</td>
+<td align="center">种子 SOP</td>
+<td align="center">BUNDLED layer</td>
+<td align="center">bundled</td>
+<td align="center">★ system/</td>
+</tr>
+<tr>
+<td><strong>优先级</strong> (Priority)</td>
+<td align="center">作用域顺序</td>
+<td align="center">源顺序</td>
+<td align="center">★ 6-level explicit</td>
+<td align="center">单一目录树</td>
+<td align="center">L-tier</td>
+<td align="center">★ 6-level explicit</td>
+<td align="center">workspace over remote</td>
+<td align="center">canonical only</td>
+</tr>
+<tr>
+<td><strong>覆盖</strong> (Override)</td>
+<td align="center">高作用域优先</td>
+<td align="center">·</td>
+<td align="center">★同名高优先级覆盖</td>
+<td align="center">agent patch</td>
+<td align="center">file_patch</td>
+<td align="center">accept→MANAGED</td>
+<td align="center">·</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>影子/遮蔽</strong> (Shadow)</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">◐ issue: symlink</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>冲突解决</strong> (Conflict Resolution)</td>
+<td align="center">作用域优先级</td>
+<td align="center">·</td>
+<td align="center">按名+优先级合并</td>
+<td align="center">后写胜出</td>
+<td align="center">manual</td>
+<td align="center">lock SHA pin</td>
+<td align="center">·</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>懒发现</strong> (Lazy Discovery)</td>
+<td align="center">watcher refresh</td>
+<td align="center">incremental listing</td>
+<td align="center">★ snapshot at session start</td>
+<td align="center">index at session</td>
+<td align="center">on file_read</td>
+<td align="center">snapshot v11 cache</td>
+<td align="center">scan at load</td>
+<td align="center">scan at session</td>
+</tr>
+<tr>
+<td><strong>文件监听</strong> (File Watch)</td>
+<td align="center">★</td>
+<td align="center">·</td>
+<td align="center">★ chokidar</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">◐ sync interval</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>热重载</strong> (Hot Reload)</td>
+<td align="center">◐ watcher</td>
+<td align="center">◐ delta listing</td>
+<td align="center">★ next-turn refresh</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">pipeline rebuild</td>
+<td align="center">·</td>
+<td align="center">◐ per-turn prefix</td>
+</tr>
+<tr>
+<td><strong>刷新策略</strong> (Refresh Policy)</td>
+<td align="center">变更时</td>
+<td align="center">每轮增量</td>
+<td align="center">snapshot version bump</td>
+<td align="center">session frozen</td>
+<td align="center">reflect cron</td>
+<td align="center"><strong>★ every turn</strong> filter_skills</td>
+<td align="center">session</td>
+<td align="center"><strong>★ every turn</strong> user prefix</td>
+</tr>
+</tbody></table></div>
+<h2>§3 — Skill 暴露</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>维度</th>
+<th align="center">Codex</th>
+<th align="center">Claude Rev</th>
+<th align="center">OpenClaw</th>
+<th align="center">Hermes</th>
+<th align="center">GenericAgent</th>
+<th align="center">OpenSquilla</th>
+<th align="center">ZeroClaw</th>
+<th align="center">TaiChu</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>LLM 可见</strong> (Visible to LLM)</td>
+<td align="center">metadata block</td>
+<td align="center">listing attachment</td>
+<td align="center">metadata XML</td>
+<td align="center">metadata index</td>
+<td align="center">memory dir list</td>
+<td align="center">injector output</td>
+<td align="center">full or compact</td>
+<td align="center">XML + user prefix</td>
+</tr>
+<tr>
+<td><strong>用户可见</strong> (Visible to User)</td>
+<td align="center">TUI skill toggle</td>
+<td align="center">UI skill picker</td>
+<td align="center">config UI</td>
+<td align="center">CLI/Gateway</td>
+<td align="center">file tree</td>
+<td align="center">CLI proposals</td>
+<td align="center">audit cmd</td>
+<td align="center">Flutter catalog</td>
+</tr>
+<tr>
+<td><strong>隐藏 Skill</strong> (Hidden Skill)</td>
+<td align="center">disableModelInvocation equiv</td>
+<td align="center">·</td>
+<td align="center">★ frontmatter hide</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">disabled gate</td>
+<td align="center">·</td>
+<td align="center">filter</td>
+</tr>
+<tr>
+<td><strong>渐进披露</strong> (Progressive Disclosure)</td>
+<td align="center">★ desc→full</td>
+<td align="center">★ listing→tool</td>
+<td align="center">★ catalog→read</td>
+<td align="center">★ list→view</td>
+<td align="center">index→read</td>
+<td align="center">★ compact→view</td>
+<td align="center">★ compact mode</td>
+<td align="center">★ catalog→load_skill</td>
+</tr>
+<tr>
+<td><strong>仅摘要</strong> (Summary Only)</td>
+<td align="center">★ initial catalog</td>
+<td align="center">listing metadata</td>
+<td align="center">compact XML</td>
+<td align="center">skills_list meta</td>
+<td align="center">L1 index</td>
+<td align="center">compact injector</td>
+<td align="center">compact summary</td>
+<td align="center"><code># Available Skills</code></td>
+</tr>
+<tr>
+<td><strong>完整 Prompt 加载</strong> (Full Prompt Loaded)</td>
+<td align="center">on @mention</td>
+<td align="center">Skill tool</td>
+<td align="center">read tool lazy</td>
+<td align="center">skill_view / --skills preload</td>
+<td align="center">file_read</td>
+<td align="center">skill_view / meta_invoke</td>
+<td align="center">always-flag full</td>
+<td align="center">load_skill body</td>
+</tr>
+<tr>
+<td><strong>仅描述</strong> (Description Only)</td>
+<td align="center">★ default expose</td>
+<td align="center">★ attachment</td>
+<td align="center">★ default</td>
+<td align="center">★ default</td>
+<td align="center">title only</td>
+<td align="center">compact mode</td>
+<td align="center">compact</td>
+<td align="center">★ default</td>
+</tr>
+<tr>
+<td><strong>显式调用</strong> (Explicit Invocation)</td>
+<td align="center">★ <code>/</code> <code>@skill</code></td>
+<td align="center">★ Skill tool slash</td>
+<td align="center">read tool</td>
+<td align="center">★ <code>/&lt;skill&gt;</code></td>
+<td align="center">file_read path</td>
+<td align="center">skill_view / <code>/meta</code></td>
+<td align="center">read file</td>
+<td align="center">★ load_skill</td>
+</tr>
+<tr>
+<td><strong>隐式调用</strong> (Implicit Invocation)</td>
+<td align="center">★ shell pattern match</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">◐ auto from desc</td>
+<td align="center">related_sop hint</td>
+<td align="center">◐ auto_trigger meta</td>
+<td align="center">·</td>
+<td align="center">◐ Toollery decide</td>
+</tr>
+</tbody></table></div>
+<h2>§4 — Skill 推荐</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>维度</th>
+<th align="center">Codex</th>
+<th align="center">Claude Rev</th>
+<th align="center">OpenClaw</th>
+<th align="center">Hermes</th>
+<th align="center">GenericAgent</th>
+<th align="center">OpenSquilla</th>
+<th align="center">ZeroClaw</th>
+<th align="center">TaiChu</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>触发</strong> (Trigger)</td>
+<td align="center">mention / shell</td>
+<td align="center">usage decay UI</td>
+<td align="center">·</td>
+<td align="center">slash / nudge</td>
+<td align="center">related_sop</td>
+<td align="center"><strong>★ per-turn pipeline</strong></td>
+<td align="center">·</td>
+<td align="center">Toollery hook</td>
+</tr>
+<tr>
+<td><strong>描述匹配</strong> (Description Match)</td>
+<td align="center">◐ implicit</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">◐ lexical leg</td>
+<td align="center">·</td>
+<td align="center">◐</td>
+</tr>
+<tr>
+<td><strong>向量匹配</strong> (Embedding Match)</td>
+<td align="center">·</td>
+<td align="center">EXPERIMENTAL search</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">★ semantic leg RRF</td>
+<td align="center">·</td>
+<td align="center">◐ plugin slot</td>
+</tr>
+<tr>
+<td><strong>LLM 决策</strong> (LLM Decide)</td>
+<td align="center">model picks mention</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">review agent</td>
+<td align="center">agent picks SOP</td>
+<td align="center">Dream classify</td>
+<td align="center">·</td>
+<td align="center">NLU context</td>
+</tr>
+<tr>
+<td><strong>规则驱动</strong> (Rule Based)</td>
+<td align="center">shell regex</td>
+<td align="center">bundled+MCP filter</td>
+<td align="center">skillFilter whitelist</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">pinned always</td>
+<td align="center">·</td>
+<td align="center">runs_on filter</td>
+</tr>
+<tr>
+<td><strong>任务模式</strong> (Task Pattern)</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">workshop regex</td>
+<td align="center">review prompt</td>
+<td align="center">goal mode</td>
+<td align="center">auto_propose chains</td>
+<td align="center">·</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>工具模式</strong> (Tool Pattern)</td>
+<td align="center">★ implicit shell</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">tool in SOP</td>
+<td align="center">requires_tools gate</td>
+<td align="center">·</td>
+<td align="center">depends_on_tools soft</td>
+</tr>
+<tr>
+<td><strong>历史模式</strong> (History Pattern)</td>
+<td align="center">·</td>
+<td align="center">★ 7d decay score</td>
+<td align="center">·</td>
+<td align="center">session_search FTS</td>
+<td align="center">access stats</td>
+<td align="center">Dream co-occurrence</td>
+<td align="center">·</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>用户偏好</strong> (User Preference)</td>
+<td align="center">TUI enabled set</td>
+<td align="center">survey apply</td>
+<td align="center">agent config</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">device profile</td>
+</tr>
+<tr>
+<td><strong>频率</strong> (Frequency)</td>
+<td align="center">·</td>
+<td align="center">★ decay ranking</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">◐ access stats</td>
+<td align="center">trigger accuracy</td>
+<td align="center">·</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>排序</strong> (Ranking)</td>
+<td align="center">· budget truncate</td>
+<td align="center">◐ decay sort</td>
+<td align="center">alpha + budget</td>
+<td align="center">·</td>
+<td align="center">◐ stats</td>
+<td align="center"><strong>★ RRF fusion</strong></td>
+<td align="center">·</td>
+<td align="center">◐ embedding</td>
+</tr>
+<tr>
+<td><strong>多 Skill 排序</strong> (Multi Skill Ranking)</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">★ top-k=5</td>
+<td align="center">·</td>
+<td align="center">◐ multi filter</td>
+</tr>
+<tr>
+<td><strong>预算感知</strong> (Budget Aware)</td>
+<td align="center">★ 2% / 8K cap</td>
+<td align="center">attachment budget</td>
+<td align="center">150 / 18K cap</td>
+<td align="center">size limit</td>
+<td align="center">anchor prompt</td>
+<td align="center">injector truncate</td>
+<td align="center">compact mode</td>
+<td align="center">·</td>
+</tr>
+</tbody></table></div>
+<h2>§5 — Skill 运行时</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>维度</th>
+<th align="center">Codex</th>
+<th align="center">Claude Rev</th>
+<th align="center">OpenClaw</th>
+<th align="center">Hermes</th>
+<th align="center">GenericAgent</th>
+<th align="center">OpenSquilla</th>
+<th align="center">ZeroClaw</th>
+<th align="center">TaiChu</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>每轮加载</strong> (Per Turn Loading)</td>
+<td align="center">★ mentioned only</td>
+<td align="center">★ delta listing</td>
+<td align="center">◐ snapshot reuse</td>
+<td align="center">· frozen index</td>
+<td align="center">·</td>
+<td align="center"><strong>★ filter+inject</strong></td>
+<td align="center">· session</td>
+<td align="center"><strong>★ user prefix</strong></td>
+</tr>
+<tr>
+<td><strong>每 Session</strong> (Per Session)</td>
+<td align="center">SkillsManager cache</td>
+<td align="center">sentSkillNames map</td>
+<td align="center">★ snapshot</td>
+<td align="center">frozen prefix</td>
+<td align="center">anchor rebuild</td>
+<td align="center">snapshot cache</td>
+<td align="center">load at start</td>
+<td align="center">session scan</td>
+</tr>
+<tr>
+<td><strong>每 Agent</strong> (Per Agent)</td>
+<td align="center">turn_skills config</td>
+<td align="center">per agentId map</td>
+<td align="center">★ skillFilter</td>
+<td align="center">same index</td>
+<td align="center">·</td>
+<td align="center">agent FSM</td>
+<td align="center">·</td>
+<td align="center">session instance</td>
+</tr>
+<tr>
+<td><strong>每 SubAgent</strong> (Per SubAgent)</td>
+<td align="center">★ child turn_skills</td>
+<td align="center">★ frontmatter preload</td>
+<td align="center">◐ filter inherit</td>
+<td align="center">◐ delegate</td>
+<td align="center">·</td>
+<td align="center">meta agent step</td>
+<td align="center">◐ spawn</td>
+<td align="center">❌ rescans only</td>
+</tr>
+<tr>
+<td><strong>动态加载</strong> (Dynamic Loading)</td>
+<td align="center">injection.rs</td>
+<td align="center">Skill tool</td>
+<td align="center">read tool</td>
+<td align="center">skill_view</td>
+<td align="center">file_read</td>
+<td align="center">skill_view</td>
+<td align="center">read at location</td>
+<td align="center">load_skill</td>
+</tr>
+<tr>
+<td><strong>动态卸载</strong> (Dynamic Unloading)</td>
+<td align="center">not in turn</td>
+<td align="center">·</td>
+<td align="center">lazy default</td>
+<td align="center">·</td>
+<td align="center">anchor</td>
+<td align="center">compact injector</td>
+<td align="center">compact</td>
+<td align="center">ToolResult only</td>
+</tr>
+<tr>
+<td><strong>并行 Skill</strong> (Parallel Skills)</td>
+<td align="center">multi mention</td>
+<td align="center">multi invoked</td>
+<td align="center">multi read</td>
+<td align="center">multi view</td>
+<td align="center">·</td>
+<td align="center">meta parallel steps</td>
+<td align="center">·</td>
+<td align="center">multi load</td>
+</tr>
+<tr>
+<td><strong>Skill 链</strong> (Skill Chain)</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">★ MetaSkill steps</td>
+<td align="center">SOP chain</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>Skill 图</strong> (Skill Graph)</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">★ MetaOrchestrator DAG</td>
+<td align="center">·</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>Skill 缓存</strong> (Skill Cache)</td>
+<td align="center">SkillsManager</td>
+<td align="center">sentSkillNames</td>
+<td align="center">snapshot prompt</td>
+<td align="center">frozen memory</td>
+<td align="center">working dict</td>
+<td align="center">schema v11</td>
+<td align="center">registry</td>
+<td align="center">prefix cache</td>
+</tr>
+<tr>
+<td><strong>Skill 上下文预算</strong> (Skill Context Budget)</td>
+<td align="center">★ metadata cap</td>
+<td align="center">per-skill cap</td>
+<td align="center">char/skill cap</td>
+<td align="center">·</td>
+<td align="center">anchor</td>
+<td align="center">governor</td>
+<td align="center">compact/full</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>Skill 压缩</strong> (Skill Compression)</td>
+<td align="center">truncate desc</td>
+<td align="center">compact attachment</td>
+<td align="center">~/ path compress</td>
+<td align="center">·</td>
+<td align="center">history tags</td>
+<td align="center">compact injector</td>
+<td align="center">compact mode</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>Skill 摘要</strong> (Skill Summarization)</td>
+<td align="center">compact hooks</td>
+<td align="center">·</td>
+<td align="center">compaction-safeguard</td>
+<td align="center">ContextCompressor</td>
+<td align="center">compress tags</td>
+<td align="center">session compact</td>
+<td align="center">auto_compact</td>
+<td align="center">★ LLM compact</td>
+</tr>
+<tr>
+<td><strong>Skill 剪枝</strong> (Skill Pruning)</td>
+<td align="center">omit from catalog</td>
+<td align="center">·</td>
+<td align="center">binary search drop</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">gate disabled</td>
+<td align="center">·</td>
+<td align="center">skill_name_filter</td>
+</tr>
+</tbody></table></div>
+<h2>§6 — Skill 卸载</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>维度</th>
+<th align="center">Codex</th>
+<th align="center">Claude Rev</th>
+<th align="center">OpenClaw</th>
+<th align="center">Hermes</th>
+<th align="center">GenericAgent</th>
+<th align="center">OpenSquilla</th>
+<th align="center">ZeroClaw</th>
+<th align="center">TaiChu</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>卸载到 SubAgent</strong> (Offload to SubAgent)</td>
+<td align="center">★ Task spawn</td>
+<td align="center">★ Task tool isolate</td>
+<td align="center">subagent session</td>
+<td align="center">★ delegate_task</td>
+<td align="center">subprocess</td>
+<td align="center">meta agent step</td>
+<td align="center">SubAgentRegistry</td>
+<td align="center">run_subagent</td>
+</tr>
+<tr>
+<td><strong>卸载到 Tool</strong> (Offload to Tool)</td>
+<td align="center">read/MCP</td>
+<td align="center">Skill tool</td>
+<td align="center">read tool</td>
+<td align="center">skill_view</td>
+<td align="center">file_read</td>
+<td align="center">skill_exec</td>
+<td align="center">SkillToolHandler</td>
+<td align="center">load_skill</td>
+</tr>
+<tr>
+<td><strong>卸载到工作流</strong> (Offload to Workflow)</td>
+<td align="center">update_plan</td>
+<td align="center">·</td>
+<td align="center">cron isolated</td>
+<td align="center">·</td>
+<td align="center">plan.md</td>
+<td align="center">★ MetaSkill</td>
+<td align="center">channel SOP</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>卸载到记忆</strong> (Offload to Memory)</td>
+<td align="center">generate_memories</td>
+<td align="center">TodoWrite JSON</td>
+<td align="center">memory search</td>
+<td align="center">MEMORY.md frozen</td>
+<td align="center">★ L2/L3 SOP</td>
+<td align="center">Dream→MEMORY</td>
+<td align="center">fact extract</td>
+<td align="center">MEMORY.md</td>
+</tr>
+<tr>
+<td><strong>卸载到 MCP</strong> (Offload to MCP)</td>
+<td align="center">★ MCP tools</td>
+<td align="center">MCP in search</td>
+<td align="center">MCP plugins</td>
+<td align="center">MCP tools</td>
+<td align="center">·</td>
+<td align="center">MCP</td>
+<td align="center">★ MCP</td>
+<td align="center">MCP planned</td>
+</tr>
+<tr>
+<td><strong>卸载到人工</strong> (Offload to Human)</td>
+<td align="center">Guardian approval</td>
+<td align="center">★ Survey UI</td>
+<td align="center">workshop pending</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">gate refuse</td>
+<td align="center">audit user</td>
+<td align="center">·</td>
+</tr>
+</tbody></table></div>
+<h2>§7 — Skill 使用</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>维度</th>
+<th align="center">Codex</th>
+<th align="center">Claude Rev</th>
+<th align="center">OpenClaw</th>
+<th align="center">Hermes</th>
+<th align="center">GenericAgent</th>
+<th align="center">OpenSquilla</th>
+<th align="center">ZeroClaw</th>
+<th align="center">TaiChu</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>直接 Prompt</strong> (Direct Prompt)</td>
+<td align="center">★ injected <code>&lt;skill&gt;</code></td>
+<td align="center">Skill tool body</td>
+<td align="center">read→prompt</td>
+<td align="center">skill_view body</td>
+<td align="center">SOP text</td>
+<td align="center">skill_view</td>
+<td align="center">read content</td>
+<td align="center">load_skill result</td>
+</tr>
+<tr>
+<td><strong>Tool 包装</strong> (Tool Wrapper)</td>
+<td align="center">·</td>
+<td align="center">Skill as tool</td>
+<td align="center">·</td>
+<td align="center">skills as tools</td>
+<td align="center">·</td>
+<td align="center">skill_exec</td>
+<td align="center">SkillToolHandler</td>
+<td align="center">load_skill tool</td>
+</tr>
+<tr>
+<td><strong>代码</strong> (Code)</td>
+<td align="center">scripts/</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">scripts/</td>
+<td align="center">·</td>
+<td align="center">entrypoints</td>
+<td align="center">shell bridge</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>工作流</strong> (Workflow)</td>
+<td align="center">agent_jobs</td>
+<td align="center">·</td>
+<td align="center">cron agent</td>
+<td align="center">·</td>
+<td align="center">morphling</td>
+<td align="center">★ meta_invoke</td>
+<td align="center">·</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>规划器</strong> (Planner)</td>
+<td align="center">★ update_plan</td>
+<td align="center">TodoWrite</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">plan mode</td>
+<td align="center">meta steps</td>
+<td align="center">·</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>标准作业程序</strong> (SOP)</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">★ primary form</td>
+<td align="center">·</td>
+<td align="center">◐</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>Agent 执行体</strong> (Agent)</td>
+<td align="center">★ multi_agents</td>
+<td align="center">★ subagent</td>
+<td align="center">subagent</td>
+<td align="center">delegate</td>
+<td align="center">team BBS</td>
+<td align="center">meta agent</td>
+<td align="center">subagent spawn</td>
+<td align="center">subagent relay</td>
+</tr>
+<tr>
+<td><strong>MCP 协议</strong> (MCP)</td>
+<td align="center">★</td>
+<td align="center">bundled+MCP</td>
+<td align="center">plugins</td>
+<td align="center">★</td>
+<td align="center">·</td>
+<td align="center">★</td>
+<td align="center">★</td>
+<td align="center">◐</td>
+</tr>
+<tr>
+<td><strong>命令</strong> (Command)</td>
+<td align="center">★ implicit shell</td>
+<td align="center">slash</td>
+<td align="center">slash</td>
+<td align="center">slash</td>
+<td align="center">·</td>
+<td align="center">CLI</td>
+<td align="center">zeroclaw CLI</td>
+<td align="center">device SkillLoad</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h1>III. 生命周期</h1>
+<h2>§8 — Skill 生命周期阶段</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>维度</th>
+<th align="center">Codex</th>
+<th align="center">Claude Rev</th>
+<th align="center">OpenClaw</th>
+<th align="center">Hermes</th>
+<th align="center">GenericAgent</th>
+<th align="center">OpenSquilla</th>
+<th align="center">ZeroClaw</th>
+<th align="center">TaiChu</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>创建者</strong> (Created By)</td>
+<td align="center">human / skill-creator</td>
+<td align="center">skillify / human</td>
+<td align="center">workshop / human</td>
+<td align="center">★ agent skill_manage</td>
+<td align="center">★ agent crystallize</td>
+<td align="center">auto_propose / meta-creator</td>
+<td align="center">human</td>
+<td align="center">human canonical</td>
+</tr>
+<tr>
+<td><strong>导入</strong> (Imported)</td>
+<td align="center">FS copy</td>
+<td align="center">project add</td>
+<td align="center">ClawHub / extraDirs</td>
+<td align="center">Hub install</td>
+<td align="center">·</td>
+<td align="center">hub install</td>
+<td align="center">open-skills sync</td>
+<td align="center">cloud deploy</td>
+</tr>
+<tr>
+<td><strong>生成</strong> (Generated)</td>
+<td align="center">Record&amp;Replay</td>
+<td align="center">skillify session</td>
+<td align="center">workshop heuristic</td>
+<td align="center">background review</td>
+<td align="center">long_term_update</td>
+<td align="center">Dream / auto_propose</td>
+<td align="center">·</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>人工编写</strong> (Human Written)</td>
+<td align="center">★ primary</td>
+<td align="center">★ project skills</td>
+<td align="center">workspace files</td>
+<td align="center">bundled</td>
+<td align="center">种子 SOP</td>
+<td align="center">managed</td>
+<td align="center">user workspace</td>
+<td align="center">★ 17 canonical</td>
+</tr>
+<tr>
+<td><strong>AI 编写</strong> (AI Written)</td>
+<td align="center">·</td>
+<td align="center">◐ patches</td>
+<td align="center">◐ workshop apply</td>
+<td align="center">★ skill_manage</td>
+<td align="center">★ SOP write</td>
+<td align="center">proposals</td>
+<td align="center">·</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>已评审</strong> (Reviewed)</td>
+<td align="center">Guardian (tools)</td>
+<td align="center">★ Survey UI</td>
+<td align="center">LLM reviewer</td>
+<td align="center">bg review agent</td>
+<td align="center">L0 protocol</td>
+<td align="center">4-gate + E2E</td>
+<td align="center">audit scan</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>已批准</strong> (Approved)</td>
+<td align="center">TUI test / user</td>
+<td align="center">user survey</td>
+<td align="center">auto/manual policy</td>
+<td align="center">· agent self</td>
+<td align="center">agent self</td>
+<td align="center">gates.json pass</td>
+<td align="center">user audit</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>已发布</strong> (Published)</td>
+<td align="center">FS write</td>
+<td align="center">apply patch</td>
+<td align="center">apply proposal</td>
+<td align="center">immediate write</td>
+<td align="center">file_patch</td>
+<td align="center">accept→MANAGED</td>
+<td align="center">load skill</td>
+<td align="center">canonical deploy</td>
+</tr>
+<tr>
+<td><strong>已弃用</strong> (Deprecated)</td>
+<td align="center">disable toggle</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">cleanup SOP</td>
+<td align="center">reject</td>
+<td align="center">·</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>已禁用</strong> (Disabled)</td>
+<td align="center">write_skill_enabled</td>
+<td align="center">·</td>
+<td align="center">disableModelInvocation</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">disabled gate</td>
+<td align="center">·</td>
+<td align="center">skill_name_filter</td>
+</tr>
+<tr>
+<td><strong>已删除</strong> (Deleted)</td>
+<td align="center">FS delete</td>
+<td align="center">user delete</td>
+<td align="center">file delete</td>
+<td align="center">skill_manage delete</td>
+<td align="center">manual</td>
+<td align="center">reject + rm</td>
+<td align="center">rm dir</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>已归档</strong> (Archived)</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">quarantine store</td>
+<td align="center">·</td>
+<td align="center">L4 sessions</td>
+<td align="center">proposals history</td>
+<td align="center">hygiene cron</td>
+<td align="center">JSONL log</td>
+</tr>
+<tr>
+<td><strong>回滚</strong> (Rollback)</td>
+<td align="center">git / manual</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">❌ needed</td>
+</tr>
+<tr>
+<td><strong>生命周期得分</strong> (Lifecycle Score)</td>
+<td align="center">6/13</td>
+<td align="center">8/13</td>
+<td align="center">9/13</td>
+<td align="center">10/13</td>
+<td align="center">7/13</td>
+<td align="center"><strong>12/13</strong></td>
+<td align="center">5/13</td>
+<td align="center">4/13</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h1>IV. 进化与质量</h1>
+<h2>§9 — Skill 进化</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>维度</th>
+<th align="center">Codex</th>
+<th align="center">Claude Rev</th>
+<th align="center">OpenClaw</th>
+<th align="center">Hermes</th>
+<th align="center">GenericAgent</th>
+<th align="center">OpenSquilla</th>
+<th align="center">ZeroClaw</th>
+<th align="center">TaiChu</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>反思</strong> (Reflection)</td>
+<td align="center">ReviewTask code</td>
+<td align="center">★ 5-turn hook</td>
+<td align="center">◐ dreaming</td>
+<td align="center">★ bg review</td>
+<td align="center">reflect cron</td>
+<td align="center">★ Dream</td>
+<td align="center">loop detect</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>自反思</strong> (Self Reflection)</td>
+<td align="center">·</td>
+<td align="center">skillImprovement</td>
+<td align="center">workshop self</td>
+<td align="center">★ review prompt</td>
+<td align="center">goal mode</td>
+<td align="center">Dream LLM</td>
+<td align="center">·</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>教师模型</strong> (Teacher)</td>
+<td align="center">·</td>
+<td align="center">aux small model</td>
+<td align="center">LLM reviewer</td>
+<td align="center">review agent</td>
+<td align="center">·</td>
+<td align="center">E2E judge</td>
+<td align="center">·</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>强化学习</strong> (RL)</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">◐ trajectory</td>
+<td align="center">★ Atropos</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>GRPO 算法</strong> (GRPO)</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">OpenClaw-RL ext</td>
+<td align="center">◐ RL tool</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>偏好</strong> (Preference)</td>
+<td align="center">·</td>
+<td align="center">survey accept</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>成对比较</strong> (Pairwise)</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">meta vs baseline</td>
+<td align="center">·</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>候选</strong> (Candidate)</td>
+<td align="center">·</td>
+<td align="center">JSON patches</td>
+<td align="center">★ proposals store</td>
+<td align="center">direct create</td>
+<td align="center">SOP draft</td>
+<td align="center">★ proposals/</td>
+<td align="center">·</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>合并</strong> (Merge)</td>
+<td align="center">·</td>
+<td align="center">user apply</td>
+<td align="center">append/replace</td>
+<td align="center">patch</td>
+<td align="center">file_patch</td>
+<td align="center">accept_proposal</td>
+<td align="center">·</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>拆分</strong> (Split)</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>重写</strong> (Rewrite)</td>
+<td align="center">manual</td>
+<td align="center">section patches</td>
+<td align="center">replace mode</td>
+<td align="center">edit</td>
+<td align="center">morphling</td>
+<td align="center">meta rewrite</td>
+<td align="center">·</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>摘要化</strong> (Summarize)</td>
+<td align="center">memories distill</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">Dream summary</td>
+<td align="center">fact extract</td>
+<td align="center">compact summarize</td>
+</tr>
+<tr>
+<td><strong>重构</strong> (Refactor)</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">meta-skill-creator</td>
+<td align="center">·</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>自动 Patch</strong> (Auto Patch)</td>
+<td align="center">·</td>
+<td align="center">◐ after survey</td>
+<td align="center">◐ auto policy</td>
+<td align="center">★ skill_manage</td>
+<td align="center">★ file_patch</td>
+<td align="center">after gates</td>
+<td align="center">·</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>自动删除</strong> (Auto Delete)</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">★ skill_manage</td>
+<td align="center">·</td>
+<td align="center">reject</td>
+<td align="center">·</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>自动版本</strong> (Auto Version)</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">snapshot#</td>
+<td align="center">hash</td>
+<td align="center">·</td>
+<td align="center">lock SHA</td>
+<td align="center">field</td>
+<td align="center">·</td>
+</tr>
+</tbody></table></div>
+<h2>§10 — Skill 质量</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>维度</th>
+<th align="center">Codex</th>
+<th align="center">Claude Rev</th>
+<th align="center">OpenClaw</th>
+<th align="center">Hermes</th>
+<th align="center">GenericAgent</th>
+<th align="center">OpenSquilla</th>
+<th align="center">ZeroClaw</th>
+<th align="center">TaiChu</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>基准测试</strong> (Benchmark)</td>
+<td align="center">integration tests</td>
+<td align="center">·</td>
+<td align="center">qa-lab</td>
+<td align="center">·</td>
+<td align="center">model logs</td>
+<td align="center">trigger accuracy</td>
+<td align="center">·</td>
+<td align="center">bench plan</td>
+</tr>
+<tr>
+<td><strong>回归测试</strong> (Regression)</td>
+<td align="center">suite/skill_*</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">★ eval_prompts</td>
+<td align="center">·</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>回放</strong> (Replay)</td>
+<td align="center">Record&amp;Replay</td>
+<td align="center">session JSONL</td>
+<td align="center">trajectory</td>
+<td align="center">JSONL+DB</td>
+<td align="center">·</td>
+<td align="center">decision log</td>
+<td align="center">·</td>
+<td align="center">interaction_log</td>
+</tr>
+<tr>
+<td><strong>单元测试</strong> (Unit Test)</td>
+<td align="center">★ Rust tests</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">pytest</td>
+<td align="center">audit tests</td>
+<td align="center">Rust tests</td>
+</tr>
+<tr>
+<td><strong>集成测试</strong> (Integration Test)</td>
+<td align="center">★ extensive</td>
+<td align="center">·</td>
+<td align="center">e2e ext</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">runtime_e2e</td>
+<td align="center">·</td>
+<td align="center">◐</td>
+</tr>
+<tr>
+<td><strong>沙箱</strong> (Sandbox)</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>仿真</strong> (Simulation)</td>
+<td align="center">TestCodex</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">Atropos env</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>在线评估</strong> (Online Eval)</td>
+<td align="center">analytics</td>
+<td align="center">usage decay</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">access stats</td>
+<td align="center">trigger acc</td>
+<td align="center">economic</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>A/B 测试</strong> (A/B)</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">★ meta vs baseline</td>
+<td align="center">·</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>成功率</strong> (Success Rate)</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">verify axiom</td>
+<td align="center">gate metrics</td>
+<td align="center">·</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>奖励</strong> (Reward)</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">trajectory reward</td>
+<td align="center">RL reward</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>Token 成本</strong> (Token Cost)</td>
+<td align="center">budget cap</td>
+<td align="center">attachment cap</td>
+<td align="center">char cap</td>
+<td align="center">·</td>
+<td align="center">★ anchor</td>
+<td align="center">governor</td>
+<td align="center">compact</td>
+<td align="center">user prefix</td>
+</tr>
+<tr>
+<td><strong>延迟</strong> (Latency)</td>
+<td align="center">·</td>
+<td align="center">SideQuery small</td>
+<td align="center">·</td>
+<td align="center">bg async</td>
+<td align="center">·</td>
+<td align="center">pipeline</td>
+<td align="center">·</td>
+<td align="center">·</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h1>V. 治理</h1>
+<h2>§11 — Skill 治理</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>维度</th>
+<th align="center">Codex</th>
+<th align="center">Claude Rev</th>
+<th align="center">OpenClaw</th>
+<th align="center">Hermes</th>
+<th align="center">GenericAgent</th>
+<th align="center">OpenSquilla</th>
+<th align="center">ZeroClaw</th>
+<th align="center">TaiChu</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>权限</strong> (Permission)</td>
+<td align="center">TUI approval</td>
+<td align="center">project scope</td>
+<td align="center">agent config</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">policy chain</td>
+<td align="center">·</td>
+<td align="center">ToolDomains</td>
+</tr>
+<tr>
+<td><strong>能力</strong> (Capability)</td>
+<td align="center">tool allow</td>
+<td align="center">·</td>
+<td align="center">tool + read</td>
+<td align="center">toolsets</td>
+<td align="center">9 atomic tools</td>
+<td align="center">requires_tools</td>
+<td align="center">tool schema</td>
+<td align="center">runs_on</td>
+</tr>
+<tr>
+<td><strong>风险</strong> (Risk)</td>
+<td align="center">★ Guardian JSON</td>
+<td align="center">·</td>
+<td align="center">scanner quarantine</td>
+<td align="center">skills_guard</td>
+<td align="center">·</td>
+<td align="center">gates.json</td>
+<td align="center">audit patterns</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>签名</strong> (Signature)</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">lock SHA</td>
+<td align="center">·</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>信任等级</strong> (Trust Level)</td>
+<td align="center">Admin scope</td>
+<td align="center">project vs bundled</td>
+<td align="center">managed tiers</td>
+<td align="center">bundled vs user</td>
+<td align="center">·</td>
+<td align="center">MANAGED vs BUNDLED</td>
+<td align="center">registry disclaimer</td>
+<td align="center">canonical</td>
+</tr>
+<tr>
+<td><strong>审计</strong> (Audit)</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">skill-scanner</td>
+<td align="center">_security_scan</td>
+<td align="center">·</td>
+<td align="center">hub quarantine</td>
+<td align="center">★ skills/audit.rs</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>溯源</strong> (Provenance)</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">proposal metadata</td>
+<td align="center">origin hash</td>
+<td align="center">·</td>
+<td align="center">proposal source</td>
+<td align="center">sync source</td>
+<td align="center">cloud origin</td>
+</tr>
+<tr>
+<td><strong>注册表</strong> (Registry)</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">ClawHub</td>
+<td align="center">Hermes Hub</td>
+<td align="center">·</td>
+<td align="center">hub</td>
+<td align="center">★ zeroclaw-skills</td>
+<td align="center">skill_catalog.json</td>
+</tr>
+<tr>
+<td><strong>市场</strong> (Marketplace)</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">★ ClawHub risk</td>
+<td align="center">Hub</td>
+<td align="center">·</td>
+<td align="center">hub</td>
+<td align="center">community</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>评审</strong> (Review)</td>
+<td align="center">Guardian</td>
+<td align="center">Survey UI</td>
+<td align="center">LLM reviewer</td>
+<td align="center">bg review</td>
+<td align="center">L0 SOP</td>
+<td align="center">4-gate</td>
+<td align="center">CI structure</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>所有者</strong> (Owner)</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">contributor</td>
+<td align="center">team curated</td>
+</tr>
+<tr>
+<td><strong>许可证</strong> (License)</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">repo LICENSE</td>
+<td align="center">·</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h1>VI. Agent 集成</h1>
+<h2>§12 — Skill 关系</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>维度</th>
+<th align="center">Codex</th>
+<th align="center">Claude Rev</th>
+<th align="center">OpenClaw</th>
+<th align="center">Hermes</th>
+<th align="center">GenericAgent</th>
+<th align="center">OpenSquilla</th>
+<th align="center">ZeroClaw</th>
+<th align="center">TaiChu</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>父 Skill</strong> (Parent Skill)</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">L-tree</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>子 Skill</strong> (Child Skill)</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">nested SOP</td>
+<td align="center">step refs</td>
+<td align="center">·</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>Meta Skill 类型</strong> (Meta Skill)</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">★ MetaSkill type</td>
+<td align="center">·</td>
+<td align="center">P3</td>
+</tr>
+<tr>
+<td><strong>组合 Skill</strong> (Composite Skill)</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">composition_raw</td>
+<td align="center">·</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>互补 Skill</strong> (Complementary Skill)</td>
+<td align="center">·</td>
+<td align="center">◐ subagent preload</td>
+<td align="center">per-agent filter</td>
+<td align="center">delegate</td>
+<td align="center">·</td>
+<td align="center">meta multi-skill</td>
+<td align="center">·</td>
+<td align="center">❌</td>
+</tr>
+<tr>
+<td><strong>替代 Skill</strong> (Alternative Skill)</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>依赖</strong> (Dependency)</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">requires_tools</td>
+<td align="center">·</td>
+<td align="center">depends_on_tools soft</td>
+</tr>
+<tr>
+<td><strong>Skill 图</strong> (Skill Graph)</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">★ MetaOrchestrator</td>
+<td align="center">·</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>Skill 有向无环图</strong> (Skill DAG)</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">★ meta steps</td>
+<td align="center">·</td>
+<td align="center">·</td>
+</tr>
+</tbody></table></div>
+<h2>§13 — 多 Agent Skill</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>维度</th>
+<th align="center">Codex</th>
+<th align="center">Claude Rev</th>
+<th align="center">OpenClaw</th>
+<th align="center">Hermes</th>
+<th align="center">GenericAgent</th>
+<th align="center">OpenSquilla</th>
+<th align="center">ZeroClaw</th>
+<th align="center">TaiChu</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>共享 Skill</strong> (Shared Skill)</td>
+<td align="center">repo scope</td>
+<td align="center">project</td>
+<td align="center">shared managed</td>
+<td align="center">~/.hermes</td>
+<td align="center">memory shared</td>
+<td align="center">MANAGED</td>
+<td align="center">workspace</td>
+<td align="center">canonical</td>
+</tr>
+<tr>
+<td><strong>私有 Skill</strong> (Private Skill)</td>
+<td align="center">user scope</td>
+<td align="center">user</td>
+<td align="center">per-agent ws</td>
+<td align="center">user created</td>
+<td align="center">user SOP</td>
+<td align="center">PERSONAL</td>
+<td align="center">·</td>
+<td align="center">device profile</td>
+</tr>
+<tr>
+<td><strong>每 Agent Skill</strong> (Per Agent Skill)</td>
+<td align="center">turn_skills</td>
+<td align="center">agentId map</td>
+<td align="center">★ skillFilter</td>
+<td align="center">same index</td>
+<td align="center">·</td>
+<td align="center">FSM agent</td>
+<td align="center">·</td>
+<td align="center">session</td>
+</tr>
+<tr>
+<td><strong>每角色 Skill</strong> (Per Role Skill)</td>
+<td align="center">·</td>
+<td align="center">subagent profile</td>
+<td align="center">agent list[]</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">meta roles</td>
+<td align="center">team topology</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>互补 Skill</strong> (Complementary Skill)</td>
+<td align="center">child subset</td>
+<td align="center">★ preload list</td>
+<td align="center">filter diff</td>
+<td align="center">◐</td>
+<td align="center">·</td>
+<td align="center">DAG steps</td>
+<td align="center">·</td>
+<td align="center">❌</td>
+</tr>
+<tr>
+<td><strong>Skill 协商</strong> (Skill Negotiation)</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">BBS</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>Skill 传递</strong> (Skill Transfer)</td>
+<td align="center">·</td>
+<td align="center">tool result</td>
+<td align="center">summary</td>
+<td align="center">delegate summary</td>
+<td align="center">·</td>
+<td align="center">subagent report</td>
+<td align="center">·</td>
+<td align="center">relay</td>
+</tr>
+<tr>
+<td><strong>Skill 借用</strong> (Skill Borrow)</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>Skill 广播</strong> (Skill Broadcast)</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">cloud catalog</td>
+</tr>
+<tr>
+<td><strong>Skill 隔离</strong> (Skill Isolation)</td>
+<td align="center">★ child no parent skills</td>
+<td align="center">★ sub context</td>
+<td align="center">subagent prompt</td>
+<td align="center">★ delegate</td>
+<td align="center">subprocess</td>
+<td align="center">one-shot agent</td>
+<td align="center">registry</td>
+<td align="center">partial</td>
+</tr>
+</tbody></table></div>
+<h2>§14 — 记忆集成</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>维度</th>
+<th align="center">Codex</th>
+<th align="center">Claude Rev</th>
+<th align="center">OpenClaw</th>
+<th align="center">Hermes</th>
+<th align="center">GenericAgent</th>
+<th align="center">OpenSquilla</th>
+<th align="center">ZeroClaw</th>
+<th align="center">TaiChu</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>情节记忆</strong> (Episodic)</td>
+<td align="center">thread history</td>
+<td align="center">session JSONL</td>
+<td align="center">trajectory</td>
+<td align="center">session DB</td>
+<td align="center">L4 sessions</td>
+<td align="center">pipeline log</td>
+<td align="center">history</td>
+<td align="center">JSONL</td>
+</tr>
+<tr>
+<td><strong>语义记忆</strong> (Semantic)</td>
+<td align="center">memories config</td>
+<td align="center">·</td>
+<td align="center">memory search</td>
+<td align="center">MEMORY.md</td>
+<td align="center">L2 facts</td>
+<td align="center">hybrid chunks</td>
+<td align="center">facts</td>
+<td align="center">MEMORY.md</td>
+</tr>
+<tr>
+<td><strong>向量</strong> (Vector)</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">◐ embedding</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">★ hybrid</td>
+<td align="center">·</td>
+<td align="center">◐ planned</td>
+</tr>
+<tr>
+<td><strong>图</strong> (Graph)</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">meta DAG</td>
+<td align="center">·</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>检索增强生成</strong> (RAG)</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">★ hybrid FTS+vec</td>
+<td align="center">FTS5 search</td>
+<td align="center">file_read</td>
+<td align="center">★ retrieval</td>
+<td align="center">·</td>
+<td align="center">Toollery</td>
+</tr>
+<tr>
+<td><strong>KV 缓存</strong> (KV)</td>
+<td align="center">prefix cache</td>
+<td align="center">·</td>
+<td align="center">snapshot cache</td>
+<td align="center">★ frozen prefix</td>
+<td align="center">anchor</td>
+<td align="center">每轮注入</td>
+<td align="center">·</td>
+<td align="center">user prefix cache</td>
+</tr>
+<tr>
+<td><strong>摘要</strong> (Summary)</td>
+<td align="center">compact</td>
+<td align="center">compact</td>
+<td align="center">compaction</td>
+<td align="center">compressor</td>
+<td align="center">compress</td>
+<td align="center">compact</td>
+<td align="center">auto_compact</td>
+<td align="center">★ compact</td>
+</tr>
+<tr>
+<td><strong>反思</strong> (Reflection)</td>
+<td align="center">distill</td>
+<td align="center">skillImprove</td>
+<td align="center">dream</td>
+<td align="center">bg review</td>
+<td align="center">reflect</td>
+<td align="center">Dream</td>
+<td align="center">consolidation</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>长期记忆</strong> (Long-term)</td>
+<td align="center">AGENTS.md</td>
+<td align="center">·</td>
+<td align="center">MEMORY.md</td>
+<td align="center">MEMORY.md</td>
+<td align="center">L3 SOP tree</td>
+<td align="center">Dream promote</td>
+<td align="center">memory hygiene</td>
+<td align="center">MEMORY.md</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h1>VII. RL 就绪度</h1>
+<h2>§15 — RL 就绪度（SkillRL / Claw-R1）</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>维度</th>
+<th align="center">Codex</th>
+<th align="center">Claude Rev</th>
+<th align="center">OpenClaw</th>
+<th align="center">Hermes</th>
+<th align="center">GenericAgent</th>
+<th align="center">OpenSquilla</th>
+<th align="center">ZeroClaw</th>
+<th align="center">TaiChu</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Step 轨迹</strong> (Step Trace)</td>
+<td align="center">◐ dispatch trace</td>
+<td align="center">session steps</td>
+<td align="center">★ trajectory metadata</td>
+<td align="center">JSONL steps</td>
+<td align="center">model log</td>
+<td align="center">★ PipelineStepRecord</td>
+<td align="center">OTel</td>
+<td align="center">◐ interaction_log</td>
+</tr>
+<tr>
+<td><strong>轨迹</strong> (Trajectory)</td>
+<td align="center">rollout</td>
+<td align="center">JSONL export</td>
+<td align="center">★ openclaw-trajectory</td>
+<td align="center">Atropos traj</td>
+<td align="center">·</td>
+<td align="center">TraceContext</td>
+<td align="center">·</td>
+<td align="center">JSONL</td>
+</tr>
+<tr>
+<td><strong>Tool 轨迹</strong> (Tool Trace)</td>
+<td align="center">★ tool_dispatch_trace</td>
+<td align="center">tool results</td>
+<td align="center">trajectory tools</td>
+<td align="center">tool log</td>
+<td align="center">tool log</td>
+<td align="center">decision log</td>
+<td align="center">tool log</td>
+<td align="center">interaction_log</td>
+</tr>
+<tr>
+<td><strong>奖励</strong> (Reward)</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">◐ trajectory reward</td>
+<td align="center">★ env reward</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>验证器</strong> (Verifier)</td>
+<td align="center">tests</td>
+<td align="center">·</td>
+<td align="center">qa-lab</td>
+<td align="center">env verify</td>
+<td align="center">VERIFY SOP</td>
+<td align="center">runtime_e2e</td>
+<td align="center">audit</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>回放</strong> (Replay)</td>
+<td align="center">Record&amp;Replay</td>
+<td align="center">session replay</td>
+<td align="center">trajectory read</td>
+<td align="center">DB replay</td>
+<td align="center">·</td>
+<td align="center">decision replay</td>
+<td align="center">·</td>
+<td align="center">log replay</td>
+</tr>
+<tr>
+<td><strong>数据集</strong> (Dataset)</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">trajectory export</td>
+<td align="center">RL datasets</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>离线 RL</strong> (Offline RL)</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">★ OpenClaw-RL repo</td>
+<td align="center">★ Atropos</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>在线 RL</strong> (Online RL)</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">rl_training_tool</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+<td align="center">·</td>
+</tr>
+<tr>
+<td><strong>SkillRL 兼容</strong> (SkillRL Compatible)</td>
+<td align="center">◐ traces only</td>
+<td align="center">◐ traces</td>
+<td align="center">◐ traj no SkillBank</td>
+<td align="center">◐ closest</td>
+<td align="center">◐ SOP mine</td>
+<td align="center">◐ proposals</td>
+<td align="center">·</td>
+<td align="center">◐ log only</td>
+</tr>
+<tr>
+<td><strong>Claw-R1 兼容</strong> (Claw-R1 Compatible)</td>
+<td align="center">◐</td>
+<td align="center">◐</td>
+<td align="center">★ best OSS</td>
+<td align="center">★</td>
+<td align="center">·</td>
+<td align="center">★ pipeline log</td>
+<td align="center">·</td>
+<td align="center">◐ hooks</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h1>综合评分（1–10）</h1>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>框架</th>
+<th align="center">数据模型</th>
+<th align="center">运行时</th>
+<th align="center">生命周期</th>
+<th align="center">进化</th>
+<th align="center">治理</th>
+<th align="center">Agent 集成</th>
+<th align="center">RL 就绪</th>
+<th align="center"><strong>总分</strong></th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>OpenSquilla</strong></td>
+<td align="center">9</td>
+<td align="center">9</td>
+<td align="center">12</td>
+<td align="center">9</td>
+<td align="center">8</td>
+<td align="center">9</td>
+<td align="center">6</td>
+<td align="center"><strong>9.0</strong></td>
+</tr>
+<tr>
+<td><strong>Hermes</strong></td>
+<td align="center">8</td>
+<td align="center">8</td>
+<td align="center">10</td>
+<td align="center">9</td>
+<td align="center">5</td>
+<td align="center">7</td>
+<td align="center">8</td>
+<td align="center"><strong>8.1</strong></td>
+</tr>
+<tr>
+<td><strong>OpenClaw</strong></td>
+<td align="center">8</td>
+<td align="center">8</td>
+<td align="center">9</td>
+<td align="center">7</td>
+<td align="center">7</td>
+<td align="center">8</td>
+<td align="center">7</td>
+<td align="center"><strong>8.0</strong></td>
+</tr>
+<tr>
+<td><strong>Claude Rev</strong></td>
+<td align="center">7</td>
+<td align="center">9</td>
+<td align="center">8</td>
+<td align="center">7</td>
+<td align="center">6</td>
+<td align="center">9</td>
+<td align="center">4</td>
+<td align="center"><strong>7.7</strong></td>
+</tr>
+<tr>
+<td><strong>Codex</strong></td>
+<td align="center">9</td>
+<td align="center">8</td>
+<td align="center">6</td>
+<td align="center">3</td>
+<td align="center">8</td>
+<td align="center">7</td>
+<td align="center">4</td>
+<td align="center"><strong>7.2</strong></td>
+</tr>
+<tr>
+<td><strong>TaiChu</strong></td>
+<td align="center">6</td>
+<td align="center">7</td>
+<td align="center">4</td>
+<td align="center">1</td>
+<td align="center">3</td>
+<td align="center">5</td>
+<td align="center">3</td>
+<td align="center"><strong>5.0</strong></td>
+</tr>
+<tr>
+<td><strong>ZeroClaw</strong></td>
+<td align="center">6</td>
+<td align="center">5</td>
+<td align="center">5</td>
+<td align="center">2</td>
+<td align="center">7</td>
+<td align="center">4</td>
+<td align="center">2</td>
+<td align="center"><strong>5.0</strong></td>
+</tr>
+<tr>
+<td><strong>GenericAgent</strong></td>
+<td align="center">5</td>
+<td align="center">5</td>
+<td align="center">7</td>
+<td align="center">6</td>
+<td align="center">2</td>
+<td align="center">3</td>
+<td align="center">2</td>
+<td align="center"><strong>4.8</strong></td>
+</tr>
+</tbody></table></div>
+<p><em>评分为矩阵覆盖度的定性汇总，非 benchmark 指标。</em></p>
+<hr>
+<h1>TaiChu 综合结论（来自矩阵）</h1>
+<h2>可借鉴（按大类）</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>类别</th>
+<th>主要来源</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>数据模型</td>
+<td>Codex layout + OpenClaw multi-root + ZeroClaw trust metadata</td>
+</tr>
+<tr>
+<td>运行时</td>
+<td>Codex progressive disclosure + OpenSquilla RRF + Claude incremental listing + <strong>runs_on keep</strong></td>
+</tr>
+<tr>
+<td>生命周期</td>
+<td>OpenSquilla gates + Hermes CRUD (candidate only) + Claude invoked_skills</td>
+</tr>
+<tr>
+<td>进化</td>
+<td>OpenSquilla proposals + GenericAgent miner + Hermes review (with read-before-write)</td>
+</tr>
+<tr>
+<td>治理</td>
+<td>ZeroClaw audit + OpenSquilla gates + Codex Guardian</td>
+</tr>
+<tr>
+<td>Agent 集成</td>
+<td>Claude subagent bundles + OpenSquilla MetaSkill + OpenClaw skillFilter</td>
+</tr>
+<tr>
+<td>RL 就绪度</td>
+<td>OpenClaw trajectory + Claw-R1 step schema on interaction_log</td>
+</tr>
+</tbody></table></div>
+<h2>不应借鉴</h2>
+<ul>
+<li>Hermes direct production patch without gate</li>
+<li>OpenClaw marketplace trust model wholesale</li>
+<li>GenericAgent ungated crystallize</li>
+<li>ZeroClaw assumption that CI = security boundary</li>
+</ul>
+<hr>
+<h2>相关文档</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>文档</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><a href="./skill-lifecycle-full-matrix.html">skill-lifecycle-full-matrix.md</a></td>
+<td>9 阶段精简矩阵</td>
+</tr>
+<tr>
+<td><a href="./skill-lifecycle-and-dynamic-loading-survey.html">skill-lifecycle-and-dynamic-loading-survey.md</a></td>
+<td>各仓库 L3 叙事证据</td>
+</tr>
+<tr>
+<td><a href="repos/">repos/*.md</a></td>
+<td>20 维仓库卡片</td>
+</tr>
+<tr>
+<td><a href="./web-expanded-lifecycle-matrix-merged.html">web-expanded-lifecycle-matrix-merged.md</a></td>
+<td><strong>Web 扩展 lifecycle</strong> 合并（公开 quotes + L3 修正）</td>
+</tr>
+<tr>
+<td><a href="survey-reports/">survey-reports/</a></td>
+<td><strong>8 complete</strong> 12-section reports + evidence index</td>
+</tr>
+<tr>
+<td><a href="../config/survey-matrix-dimensions.yaml">config/survey-matrix-dimensions.yaml</a></td>
+<td>Machine-readable dimension index</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2>变更记录</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>日期</th>
+<th>变更</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>2026-07-08</td>
+<td>首版 165 维 Agent Skill 架构调研矩阵</td>
+</tr>
+</tbody></table></div>
+</article>
+    </div>
+  </div>
+  <script src="../../../../js/i18n.js"></script>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
+  </script>
+</body>
+</html>

@@ -1,0 +1,20 @@
+sequenceDiagram
+  autonumber
+  participant U as User
+  participant R as REPL Agent
+  participant A as attachments
+  participant X as Aux model
+  participant S as Survey UI
+  participant C as compact
+  Note over U,R: Turns 1-5 · Online
+  U->>R: Refactor auth module (turn 5)
+  R->>A: Skill tool → addInvokedSkill(auth-refactor)
+  R->>U: code changes
+  Note over X: every 5 turns hook
+  R->>X: skillImprovement.trigger()
+  X->>S: JSON patches [{section,change}]
+  U->>S: accept 2/3 suggestions
+  S->>R: applySkillImprovement()
+  Note over C: later compact
+  C->>A: createSkillAttachmentIfNeeded()
+  A->>R: invoked_skills survive summarize

@@ -1,0 +1,25 @@
+sequenceDiagram
+  autonumber
+  participant U as User
+  participant H as TurnRunnerHarness
+  participant F as filter_skills
+  participant A as Agent FSM
+  participant L as DecisionLog
+  participant P as auto_propose
+  participant G as gates+E2E
+  Note over U,A: Turn N · Online
+  U->>H: Deploy staging with health check
+  H->>F: HybridRetriever.rrf_top_k(5)
+  F->>A: inject_compact deploy-staging
+  A->>U: bash(deploy.sh) + reply
+  H->>L: collect_invoked_skills (async)
+  Note over L,G: Post-turn · Async→Offline
+  L->>P: trajectory + decision signals
+  P->>G: proposals/{id}/ + gates.json
+  G->>G: evaluate_proposal_gates (4)
+  G->>G: runtime_e2e meta vs baseline
+  Note over G: Human accept_proposal
+  Note over U,A: Turn N+1 · Online
+  U->>H: Same deploy task
+  H->>F: MANAGED layer now includes new skill
+  F->>A: RRF inject updated catalog

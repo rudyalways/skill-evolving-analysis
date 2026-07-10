@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Docs Sitemap — Skill-Evolving Analysis</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .hero-compare {
+      background: linear-gradient(135deg, #eff6ff 0%, #f0f9ff 50%, #eef2ff 100%);
+      border: 1px solid var(--border-light);
+      border-left: 4px solid var(--accent);
+      border-radius: var(--radius);
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 2rem;
+      box-shadow: var(--shadow-sm);
+    }
+    .hero-compare h2 { border: none; margin-bottom: 0.75rem; font-size: 1.15rem; }
+    .hero-compare .links { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .hero-compare a {
+      display: inline-block;
+      padding: 0.5rem 1rem;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.88rem;
+      color: var(--text);
+      text-decoration: none;
+    }
+    .hero-compare a:hover { border-color: var(--accent); color: var(--accent); }
+    .hero-compare a.primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+      font-weight: 600;
+    }
+    .hero-compare a.primary:hover {
+      background: var(--accent-hover);
+      color: #fff;
+    }
+    .doc-list { list-style: none; }
+    .doc-list li { margin-bottom: 0.35rem; }
+    .doc-list a { font-size: 0.9rem; }
+    .doc-list .desc { font-size: 0.78rem; color: var(--muted); margin-left: 0.25rem; }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
+    @media (max-width: 768px) { .two-col { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <nav>
+      <div data-lang-switch class="lang-switch-host"></div>
+      <h1 data-i18n="nav.research">Research</h1>
+      <div class="title" data-i18n="docs.title">Docs Sitemap</div>
+      <section>
+        <h2 data-i18n="nav.navigate">Navigate</h2>
+        <ul>
+          <li><a href="index.html" data-i18n="nav.dashboard">Dashboard</a></li>
+          <li><a href="docs.html" class="active" data-i18n="nav.sitemap">Sitemap</a></li>
+          <li><a href="deck/index.html" data-i18n="nav.decks">Slide decks</a></li>
+        </ul>
+      </section>
+      <section>
+        <h2 data-i18n="nav.quick_open">Quick open</h2>
+        <ul>
+          <li><a href="site/notes/synthesis/agent-skill-architecture-survey-matrix.html">165-dim matrix</a></li>
+          <li><a href="site/notes/synthesis/skill-lifecycle-full-matrix.html">Lifecycle matrix</a></li>
+        </ul>
+      </section>
+    </nav>
+
+    <main>
+      <header class="page-header">
+        <h1 data-i18n="docs.title">Documentation Sitemap</h1>
+        <p data-i18n="docs.intro">All synthesis docs are pre-rendered as HTML — tables, links, code blocks, Mermaid diagrams. Run node scripts/build_site.mjs after editing markdown, then python3 scripts/serve.py.</p>
+      </header>
+
+      <div class="hero-compare">
+        <h2 data-i18n="docs.hero">★ 8-repo cross-compare tables</h2>
+        <p style="color:var(--muted);font-size:0.88rem;margin-bottom:1rem">
+          Codex · Claude Rev · OpenClaw · Hermes · GenericAgent · OpenSquilla · ZeroClaw · TaiChu
+        </p>
+        <div class="links">
+          <a class="primary" href="site/notes/synthesis/agent-skill-architecture-survey-matrix.html">165-dim Architecture Matrix</a>
+          <a href="site/notes/synthesis/skill-lifecycle-full-matrix.html">9-stage Lifecycle Matrix</a>
+          <a href="site/notes/synthesis/web-expanded-lifecycle-matrix-merged.html">Web + L3 Merged</a>
+          <a href="site/notes/synthesis/eight-repo-comprehensive-survey.html">20-dim Comprehensive Survey</a>
+          <a href="site/notes/synthesis/skill-lifecycle-and-dynamic-loading-survey.html">Per-turn / Dynamic / Subagent</a>
+          <a href="site/notes/synthesis/eight-repo-deep-source-analysis.html">8×7 Deep Source Matrix</a>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <section class="block">
+          <h2 data-i18n="docs.reports">Per-repo survey reports (12-section)</h2>
+          <ul class="doc-list">
+            <li><a href="site/notes/synthesis/survey-reports/opensquilla.html">OpenSquilla</a> <span class="desc">9.0</span></li>
+            <li><a href="site/notes/synthesis/survey-reports/hermes-agent.html">Hermes Agent</a> <span class="desc">8.1</span></li>
+            <li><a href="site/notes/synthesis/survey-reports/openclaw.html">OpenClaw</a> <span class="desc">8.0</span></li>
+            <li><a href="site/notes/synthesis/survey-reports/claude-code-rev.html">Claude Code Rev</a> <span class="desc">7.7</span></li>
+            <li><a href="site/notes/synthesis/survey-reports/codex.html">Codex</a> <span class="desc">7.2</span></li>
+            <li><a href="site/notes/synthesis/survey-reports/taichu.html">TaiChu</a> <span class="desc">5.0</span></li>
+            <li><a href="site/notes/synthesis/survey-reports/zeroclaw.html">ZeroClaw</a> <span class="desc">5.0</span></li>
+            <li><a href="site/notes/synthesis/survey-reports/genericagent.html">GenericAgent</a> <span class="desc">4.8</span></li>
+            <li><a href="site/notes/synthesis/survey-reports/README.html">Reports index</a></li>
+          </ul>
+        </section>
+
+        <section class="block">
+          <h2>Per-repo 20-dim cards</h2>
+          <ul class="doc-list">
+            <li><a href="site/notes/synthesis/repos/opensquilla.html">opensquilla.md</a></li>
+            <li><a href="site/notes/synthesis/repos/hermes-agent.html">hermes-agent.md</a></li>
+            <li><a href="site/notes/synthesis/repos/openclaw.html">openclaw.md</a></li>
+            <li><a href="site/notes/synthesis/repos/claude-code-rev.html">claude-code-rev.md</a></li>
+            <li><a href="site/notes/synthesis/repos/codex.html">codex.md</a></li>
+            <li><a href="site/notes/synthesis/repos/taichu.html">taichu.md</a></li>
+            <li><a href="site/notes/synthesis/repos/zeroclaw.html">zeroclaw.md</a></li>
+            <li><a href="site/notes/synthesis/repos/genericagent.html">genericagent.md</a></li>
+          </ul>
+        </section>
+      </div>
+
+      <section class="block">
+          <h2 data-i18n="docs.papers_arch">Papers &amp; architecture</h2>
+          <ul class="doc-list">
+            <li><a href="site/topics/skill-rl/overview.html">SkillRL overview</a></li>
+            <li><a href="site/topics/claw-r1/overview.html">Claw-R1 overview</a></li>
+            <li><a href="site/notes/synthesis/comparison.html">SkillRL vs Claw-R1 comparison</a></li>
+            <li><a href="site/zh/notes/synthesis/comparison.html">SkillRL vs Claw-R1 · 中文</a></li>
+          <li><a href="site/notes/synthesis/combined-pipeline.html">Combined pipeline</a></li>
+          <li><a href="site/notes/synthesis/l3-comprehensive-skill-analysis.html">L3 comprehensive analysis</a></li>
+          <li><a href="site/notes/synthesis/web-deep-taichu-borrowing-guide.html">TaiChu borrowing guide</a></li>
+          <li><a href="site/notes/synthesis/taichu-p0-skill-compaction-spec.html">TaiChu P0 spec</a></li>
+          <li><a href="site/notes/synthesis/paper-index.html">Paper &amp; system index</a></li>
+        </ul>
+      </section>
+
+      <section class="block">
+          <h2 data-i18n="docs.presentations">Presentations (native HTML)</h2>
+        <ul class="doc-list">
+          <li><a href="deck/index.html">Deck hub — 25 slides</a></li>
+          <li><a href="deck/survey-part1.html">Survey Part 1 (8 slides)</a></li>
+          <li><a href="deck/survey-part2.html">Survey Part 2 + TaiChu</a></li>
+          <li><a href="deck/paper-skillrl.html">Paper — SkillRL</a></li>
+          <li><a href="deck/paper-claw-r1.html">Paper — Claw-R1</a></li>
+        </ul>
+      </section>
+
+      <section class="block">
+          <h2 data-i18n="docs.catalog">Catalog &amp; store</h2>
+        <ul class="doc-list">
+          <li><a href="site/INDEX.html">INDEX.md</a></li>
+          <li><a href="site/README.html">README.md</a></li>
+          <li><a href="site/STORE.html">STORE.md</a></li>
+          <li><a href="viewer.html?path=store/manifest.yaml">store/manifest.yaml</a></li>
+        </ul>
+      </section>
+
+      <footer>
+        <span data-i18n="docs.footer">Static site: html/site/ — built from workspace markdown via scripts/build_site.mjs.</span>
+        <span data-i18n="dash.footer.refreshed">Last refreshed:</span> <span id="last-refreshed">—</span>
+      </footer>
+    </main>
+  </div>
+  <script src="js/i18n.js"></script>
+  <script src="js/sitemap.js"></script>
+  <script src="js/render.js"></script>
+</body>
+</html>
