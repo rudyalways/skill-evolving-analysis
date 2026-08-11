@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Skill 自进化 — Roadmap &amp; 相关工作 · skill自进化.pptx</title>
+  <link rel="stylesheet" href="css/deck.css">
+  <style>
+    .pptx-src { font-size: 0.72rem; color: var(--muted); margin-top: 0.25rem; }
+    .milestone-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.45rem; }
+    .milestone-card { background: var(--surface2, #f0f5ff); border: 1px solid var(--border); border-radius: 8px; padding: 0.55rem 0.65rem; }
+    .milestone-card strong { display: block; font-size: 0.85rem; margin-bottom: 0.2rem; }
+    .milestone-card span { font-size: 0.72rem; color: var(--muted); line-height: 1.35; }
+    .milestone-card.axis { border-color: var(--accent); background: var(--accent-soft, #dbeafe); }
+    .flow-line { font-size: 0.8rem; padding: 0.55rem 0.7rem; background: var(--surface2); border-left: 3px solid var(--accent); margin: 0.6rem 0; }
+    .dense-list { font-size: 0.78rem; line-height: 1.45; }
+    .dense-list li { margin: 0.25rem 0; }
+    table.dense th, table.dense td { font-size: 0.68rem; padding: 0.28rem 0.4rem; }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+    @media (max-width: 900px) {
+      .milestone-grid, .two-col { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body data-i18n-page="deck" data-content-lang="zh">
+  <div class="lang-switch-deck" data-lang-switch aria-label="Language"></div>
+  <a class="hub-link" href="index.html">← Deck Hub</a>
+
+  <div class="deck">
+
+    <!-- 1 Title -->
+    <section class="slide theme-taichu" id="slide-1">
+      <div class="slide-inner">
+        <header class="slide-header">
+          <div>
+            <div class="kicker">TaiChu · Skill OS · v1.5</div>
+            <h1>Skill 自进化</h1>
+            <p class="subtitle">完全解耦的 Skill OS 侧车 · Online / Async / Offline · 版本 · 上线验证 · 多用户 · 端云/端端</p>
+            <p class="pptx-src">来源：skill自进化.pptx（有效内容约第 1–11 页）· SSOT：TaiChu skill-self-evolution-roadmap.md</p>
+          </div>
+          <span class="slide-num">1 / 11</span>
+        </header>
+        <div class="slide-body">
+          <div class="stat-row">
+            <div class="stat purple"><div class="val">M1–M9</div><div class="lbl">独立里程碑</div></div>
+            <div class="stat blue"><div class="val">①②③</div><div class="lbl">Online / Async / Offline</div></div>
+            <div class="stat green"><div class="val">M5–M8</div><div class="lbl">版本·验证·多用户·共进化</div></div>
+            <div class="stat orange"><div class="val">6</div><div class="lbl">相关工作要点</div></div>
+          </div>
+          <div class="eli5">
+            TaiChu 已有多端路由与 per-turn catalog 优势；短板在 compaction 保护、SubAgent 技能传递、自进化门禁与 PC harness。
+            本路线图以 <code>skill-os</code> 侧车为内核，对用户与主 Agent 接口按阶段递进。
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2 Roadmap milestones -->
+    <section class="slide theme-survey" id="slide-2">
+      <div class="slide-inner">
+        <header class="slide-header">
+          <div>
+            <div class="kicker">整体 Roadmap</div>
+            <h1>Milestones M1–M9</h1>
+            <p class="subtitle">时机车道（M1–M4）与产品能力轴（M5–M8）分里程碑交付</p>
+          </div>
+          <span class="slide-num">2 / 11</span>
+        </header>
+        <div class="slide-body">
+          <div class="milestone-grid">
+            <div class="milestone-card"><strong>M1 · Online</strong><span>业界追平：<code>skill_evo</code> + invoked + compact；仅 turn 内；L1 staging</span></div>
+            <div class="milestone-card"><strong>M2 · Async</strong><span>DecisionLog sidecar · session_end miner · improvement · bg-review；不阻塞 prompt()</span></div>
+            <div class="milestone-card"><strong>M3 · 暴露</strong><span>filter_skills + staging 格式 + 共现只观察</span></div>
+            <div class="milestone-card"><strong>M4 · Offline</strong><span>cron/Dream · OfflineGate UI · install-wide 只读 · scout</span></div>
+            <div class="milestone-card axis"><strong>M5 · 版本管理</strong><span>semver · skill-versions · active SSOT · staging→L2</span></div>
+            <div class="milestone-card axis"><strong>M6 · 上线验证</strong><span>gates · smoke 沙箱 · SkillsBench 门禁 · A/B</span></div>
+            <div class="milestone-card axis"><strong>M7 · 多用户</strong><span>per-user/persona 分区 · Heavy 多租户 · SharedCatalog ACL</span></div>
+            <div class="milestone-card axis"><strong>M8 · 端云/端端</strong><span>skilldiff + OfflineGate · Cloud↔Device · Device↔Device</span></div>
+            <div class="milestone-card"><strong>M9 · 编排（可选）</strong><span>Meta-DAG 多 Agent</span></div>
+          </div>
+          <div class="flow-line">
+            <strong>演进与门禁主线：</strong> 版本管理 → 上线验证（异步/离线）→ 多 Agent 进化 → 端云/端端 → 多用户进化
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3 M1 scope -->
+    <section class="slide theme-taichu" id="slide-3">
+      <div class="slide-inner">
+        <header class="slide-header">
+          <div>
+            <div class="kicker">第一阶段 · M1 业界对齐</div>
+            <h1>M1 议题列表</h1>
+            <p class="subtitle">skill自进化-M1-业界对齐</p>
+          </div>
+          <span class="slide-num">3 / 11</span>
+        </header>
+        <div class="slide-body">
+          <ol class="dense-list" style="font-size:0.9rem;padding-left:1.2rem">
+            <li><strong>TaiChu 接口和平台适配</strong> — metadata（单会话/跨会话目录）、skill 格式/协议、输入适配（ram msgs / interaction JSONL）、调用点（plugin/钩子/异步）、skill 使用跟踪</li>
+            <li><strong>进化时机策略</strong> — 同步 / 异步 / 离线；每 N 轮；LLM judge 检测时机</li>
+            <li><strong>工具实现</strong> — create / patch / delete（<code>skill_evo</code>）</li>
+            <li><strong>Benchmark</strong> — SkillsBench</li>
+            <li><strong>上线验证（M1 种子 / M6 完整）</strong> — 格式、测试、benchmark</li>
+          </ol>
+          <div class="panel accent-taichu" style="margin-top:0.75rem">
+            <h3>M1 硬边界</h3>
+            <p style="font-size:0.82rem">仅 <strong>Online ①</strong>：CP-01 / CP-02 / CP-04。Async（CP-03/05/06/07）→ M2；Offline → M4；版本 → M5；验证门禁 → M6。</p>
+          </div>
+          <div class="panel" style="margin-top:0.55rem">
+            <h3>硬需求：创建 vs 反馈自优化</h3>
+            <ul class="dense-list">
+              <li><strong>场景1（M1 必交）：</strong>用户请求创建 Skill → <code>skill_evo</code> → <strong>仅 L1 staging</strong>（对齐 OpenClaw/Hermes/Claude 均可创建）</li>
+              <li><strong>场景2（非 M1）：</strong>反馈自动改 Skill → 默认 <strong>OpenClaw 待审提案</strong>边界；禁静默改活跃 Skill。Hermes 直写生效 = 非默认（≥M5+flag）</li>
+              <li>Claude 官方无原生反馈写回 <code>SKILL.md</code>；本地非官方 skill_improvement <strong>不作</strong>产品承诺</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4 MUSE -->
+    <section class="slide theme-survey" id="slide-4">
+      <div class="slide-inner">
+        <header class="slide-header">
+          <div>
+            <div class="kicker">相关工作 3.1</div>
+            <h1>MUSE-Autoskill</h1>
+            <p class="subtitle">结论：很多维度很好 · 统一生命周期 Creation / Memory / Management / Evaluation / Refinement</p>
+          </div>
+          <span class="slide-num">4 / 11</span>
+        </header>
+        <div class="slide-body">
+          <div class="two-col">
+            <div class="panel">
+              <h3>端到端</h3>
+              <ol class="dense-list">
+                <li>Master Agent（ReAct）查 Skill Bank 或 Skill Creator 合成包</li>
+                <li><code>SKILL.md</code> + scripts/ + tests/ + resources/</li>
+                <li>Executor 沙箱 → Evaluator 跑 tests</li>
+                <li>fail → Refiner patch；pass → Memory recall</li>
+              </ol>
+            </div>
+            <div class="panel accent-survey">
+              <h3>应用要点</h3>
+              <ul class="dense-list">
+                <li><strong>M1：</strong> 文件级渐进加载、目录组织、有 tests</li>
+                <li><strong>长期：</strong> resources、离线后台优化、与记忆结合</li>
+                <li><strong>难点：</strong> 跨 OS；强依赖 bash / python / node 环境</li>
+                <li><strong>蓝图：</strong> 更正/合并/遗忘；离线对齐 <strong>M6</strong></li>
+              </ul>
+            </div>
+          </div>
+          <p style="font-size:0.72rem;color:var(--muted);margin-top:0.5rem">生命周期覆盖对比表见下一页（相对 Voyager / AutoSkill / EvoSkill / Anthropic Skills 等，MUSE 全勾）。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5 MUSE matrix -->
+    <section class="slide theme-survey" id="slide-5">
+      <div class="slide-inner">
+        <header class="slide-header">
+          <div>
+            <div class="kicker">MUSE-Autoskill</div>
+            <h1>生命周期覆盖对比</h1>
+            <p class="subtitle">Creation · Memory · Management · Evaluation · Refinement · Cross-agent · Training-free</p>
+          </div>
+          <span class="slide-num">5 / 11</span>
+        </header>
+        <div class="slide-body">
+          <table class="dense">
+            <thead>
+              <tr><th>Method</th><th>Create</th><th>Mem</th><th>Mgmt</th><th>Eval</th><th>Refine</th><th>X-agent</th><th>TF</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Voyager</td><td>✓</td><td>✗</td><td>✓</td><td>△</td><td>✓</td><td>△</td><td>✓</td></tr>
+              <tr><td>AutoSkill</td><td>✓</td><td>△</td><td>△</td><td>✗</td><td>✓</td><td>✗</td><td>✓</td></tr>
+              <tr><td>EvoSkill</td><td>✓</td><td>✗</td><td>△</td><td>✓</td><td>✓</td><td>✗</td><td>✓</td></tr>
+              <tr><td>Anthropic Skills</td><td>✓</td><td>✗</td><td>✓</td><td>△</td><td>✗</td><td>△</td><td>✓</td></tr>
+              <tr><td>SkillOS</td><td>✓</td><td>✓</td><td>✓</td><td>△</td><td>✓</td><td>✗</td><td>✗</td></tr>
+              <tr style="background:var(--accent-soft)"><td><strong>MUSE-Autoskill</strong></td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6 SkillSmith -->
+    <section class="slide theme-survey" id="slide-6">
+      <div class="slide-inner">
+        <header class="slide-header">
+          <div>
+            <div class="kicker">相关工作 3.2</div>
+            <h1>SkillSmith</h1>
+            <p class="subtitle">一次编译边界、反复受控调用</p>
+          </div>
+          <span class="slide-num">6 / 11</span>
+        </header>
+        <div class="slide-body">
+          <div class="two-col">
+            <div class="panel">
+              <h3>Compile Time（一次）</h3>
+              <ul class="dense-list">
+                <li>输入 SKILL.md → Source-Shape 分类（Workflow / Dispatcher / Reference）</li>
+                <li>Lowerings：workflow graph、guards、refs</li>
+                <li>Thin artifact：metadata + hash、operator bindings、policy hints</li>
+              </ul>
+            </div>
+            <div class="panel">
+              <h3>Runtime</h3>
+              <ul class="dense-list">
+                <li>Load boundary → Select operator → Policy check</li>
+                <li>Workflow / Dispatcher / Reference 三类执行</li>
+                <li><strong>Takeaway：</strong> one-time boundary；repeated guarded invocation</li>
+              </ul>
+            </div>
+          </div>
+          <div class="flow-line">应用：基于官方开源先验证 · <strong>至少覆盖离线阶段（M4/M6）</strong></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7 SkillHone -->
+    <section class="slide theme-taichu" id="slide-7">
+      <div class="slide-inner">
+        <header class="slide-header">
+          <div>
+            <div class="kicker">相关工作 3.3 · → M5</div>
+            <h1>SkillHone</h1>
+            <p class="subtitle">版本管理 · 评测/回归 · 决策历史跟踪 — <strong>版本管理是第一性原则</strong></p>
+          </div>
+          <span class="slide-num">7 / 11</span>
+        </header>
+        <div class="slide-body">
+          <div class="two-col">
+            <div class="panel accent-taichu">
+              <h3>双 Agent Team</h3>
+              <ul class="dense-list">
+                <li><strong>Optimization：</strong> Diagnoser / Explorer / Proposer …</li>
+                <li><strong>Evaluation：</strong> Reporter / Analyst / Executor …</li>
+                <li>Skill Repo + Skill-Eval Repo + Failure Wiki 闭环</li>
+              </ul>
+            </div>
+            <div class="panel">
+              <h3>Repository Ops</h3>
+              <ul class="dense-list">
+                <li>Wiki / Issue / Branch / PR / Actions / Merge</li>
+                <li><strong>Persistent Decision History</strong> 跨 iteration</li>
+                <li>对齐 TaiChu <strong>M5</strong> semver + skill-versions + active</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8 SkillCat -->
+    <section class="slide theme-survey" id="slide-8">
+      <div class="slide-inner">
+        <header class="slide-header">
+          <div>
+            <div class="kicker">相关工作 3.4</div>
+            <h1>SkillCat</h1>
+            <p class="subtitle">对比学习 · 评估增强 · 拓扑图路由</p>
+          </div>
+          <span class="slide-num">8 / 11</span>
+        </header>
+        <div class="slide-body">
+          <table class="dense">
+            <thead><tr><th>既有挑战</th><th>SkillCAT 方案</th></tr></thead>
+            <tbody>
+              <tr><td>Single-Trace Bias</td><td><strong>C</strong>ontrastive Causal Extraction — 成功/失败轨迹找因果</td></tr>
+              <tr><td>Unvalidated Merging</td><td><strong>A</strong>ssessment-Augmented Evolution — 合并前验证 patch</td></tr>
+              <tr><td>Context Overload</td><td><strong>T</strong>opology-aware Task Execution — 只加载最小 skill</td></tr>
+            </tbody>
+          </table>
+          <div class="flow-line" style="margin-top:0.75rem">
+            Offline：CCE → AAE → 写回 · Online：TTE 拓扑路由 · 应用 → 跨会话离线 / 评测打分（M4 + M6）
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 9 SkillClaw + CoEvo -->
+    <section class="slide theme-survey" id="slide-9">
+      <div class="slide-inner">
+        <header class="slide-header">
+          <div>
+            <div class="kicker">相关工作 3.5–3.6 · → M7 / M8</div>
+            <h1>SkillClaw · CoEvoSkill</h1>
+            <p class="subtitle">多用户集体进化 · Generator↔Verifier 共进化</p>
+          </div>
+          <span class="slide-num">9 / 11</span>
+        </header>
+        <div class="slide-body">
+          <div class="two-col">
+            <div class="panel accent-survey">
+              <h3>SkillClaw 闭环</h3>
+              <ol class="dense-list">
+                <li>多用户多场景 trajectories</li>
+                <li>按 skill 分组聚合证据</li>
+                <li><code>Evolve-Skill.md</code> 驱动 Attribution → Evolution</li>
+                <li>回灌 SkillHub + 真实交互验证</li>
+              </ol>
+              <p style="font-size:0.75rem;margin-top:0.4rem">→ TaiChu <strong>M7 多用户进化</strong></p>
+            </div>
+            <div class="panel">
+              <h3>CoEvoSkill + 其他</h3>
+              <ul class="dense-list">
+                <li>Skill Generator ↔ Surrogate Verifier 共进化</li>
+                <li>Oracle 信息隔离；相关性合并/删除</li>
+                <li>FederatedSkill · MememtoSkill · SkillForge …</li>
+              </ul>
+              <p style="font-size:0.75rem;margin-top:0.4rem">→ TaiChu <strong>M8 端云/端端</strong>（skilldiff）</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 10 Product axes summary -->
+    <section class="slide theme-taichu" id="slide-10">
+      <div class="slide-inner">
+        <header class="slide-header">
+          <div>
+            <div class="kicker">产品能力轴（v1.5）</div>
+            <h1>必须单独可见的四条能力</h1>
+            <p class="subtitle">不要埋在「晋升」一句话里</p>
+          </div>
+          <span class="slide-num">10 / 11</span>
+        </header>
+        <div class="slide-body">
+          <table class="dense">
+            <thead><tr><th>能力</th><th>里程碑</th><th>必须交付</th><th>明确不做</th></tr></thead>
+            <tbody>
+              <tr><td><strong>版本管理</strong></td><td>M5</td><td>semver · skill-versions · active · rollback</td><td>无版本直写 canonical</td></tr>
+              <tr><td><strong>上线验证</strong></td><td>M6</td><td>gates · smoke 沙箱 · SkillsBench 门禁</td><td>仅黑名单当安全边界</td></tr>
+              <tr><td><strong>多用户进化</strong></td><td>M7</td><td>分区 · Heavy 隔离 · SharedCatalog ACL</td><td>默认跨用户挖轨迹</td></tr>
+              <tr><td><strong>端云 / 端端</strong></td><td>M8</td><td>skilldiff · OfflineGate · 云只读</td><td>trajectory sync · 静默云写</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- 11 Placeholder note -->
+    <section class="slide theme-survey" id="slide-11">
+      <div class="slide-inner">
+        <header class="slide-header">
+          <div>
+            <div class="kicker">PPT 说明</div>
+            <h1>占位页 · 后续补充</h1>
+            <p class="subtitle">第 12–24 页目前仅有标题碎片，无实质正文或配图</p>
+          </div>
+          <span class="slide-num">11 / 11</span>
+        </header>
+        <div class="slide-body">
+          <div class="eli5">
+            本 Deck 覆盖 pptx 有效内容（约 1–11 页）。完整设计 SSOT 见 TaiChu
+            <code>docs/architecture/skill-self-evolution-roadmap.md</code>（v1.5）。
+          </div>
+          <div class="chip-row" style="margin-top:1rem">
+            <a class="evidence-chip" href="index.html">← Deck Hub</a>
+            <a class="evidence-chip" href="../index.html">Dashboard</a>
+            <a class="evidence-chip" href="skill-evolution-repos.html">八仓对照 Deck</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <script src="../js/i18n.js"></script>
+  <script src="js/deck.js"></script>
+</body>
+</html>

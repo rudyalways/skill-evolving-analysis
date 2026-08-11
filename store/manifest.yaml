@@ -3,7 +3,7 @@
 # Last full sync: 2026-07-08
 
 workspace: skill-evolving-analysis
-last_updated: "2026-07-08"
+last_updated: "2026-08-11"
 
 sessions:
   - id: S2026-07-08-001
@@ -41,6 +41,18 @@ topics:
     evidence_level: L1
 
 synthesis:
+  - id: N2026-08-11-001
+    path: notes/synthesis/harness-evolving-oss-from-lilian-weng.md
+    category: survey
+    evidence_level: L0
+    title: Harness evolving OSS — from Lilian Weng post
+    source:
+      url: https://lilianweng.github.io/posts/2026-07-04-harness/
+      title: Harness Engineering for Self-Improvement
+      author: Lilian Weng
+      published: "2026-07-04"
+      accessed: "2026-08-11"
+      local_raw: data/raw/web/lilian-weng-2026-07-04-harness.md
   - id: N2026-07-08-001
     path: notes/synthesis/comparison.md
     category: synthesis
@@ -238,6 +250,17 @@ scripts:
     purpose: inbox → data/raw/
   - path: scripts/record.sh
     purpose: register artifact → manifest reminder
+
+raw:
+  - id: R2026-08-11-001
+    path: data/raw/web/lilian-weng-2026-07-04-harness.md
+    type: web
+    url: https://lilianweng.github.io/posts/2026-07-04-harness/
+    title: Harness Engineering for Self-Improvement
+    author: Lilian Weng
+    published: "2026-07-04"
+    accessed: "2026-08-11"
+    used_by: [N2026-08-11-001]
 
 external_refs:
   - path: drafts/zk/TaiChu/docs/architecture/skill-system-cross-repo-comparison.md

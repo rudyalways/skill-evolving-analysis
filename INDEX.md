@@ -2,7 +2,7 @@
 
 > Master catalog. Append a row for every new artifact. Sort newest-first within each section.
 
-Last updated: 2026-07-08
+Last updated: 2026-08-11
 
 **Persistent archive:** [STORE.md](STORE.md) · [store/manifest.yaml](store/manifest.yaml) · [recording protocol](store/protocols/recording.md)
 
@@ -19,6 +19,7 @@ Last updated: 2026-07-08
 | T005 | Proposed 2026–2027 online skill lifecycle | architecture | draft | [notes/synthesis/proposed-skill-lifecycle-architecture.md](notes/synthesis/proposed-skill-lifecycle-architecture.md) |
 | T006 | Skill evolution taxonomy (6 routes) | taxonomy | active | [notes/synthesis/skill-evolution-taxonomy.md](notes/synthesis/skill-evolution-taxonomy.md) |
 | T007 | **Agent Skill Architecture Survey Matrix** (165 dim) | survey | active | [notes/synthesis/agent-skill-architecture-survey-matrix.md](notes/synthesis/agent-skill-architecture-survey-matrix.md) |
+| T008 | **Skill 自进化 Roadmap**（pptx briefing · M1–M9） | roadmap | active | [notes/synthesis/skill-self-evolution-pptx-briefing.md](notes/synthesis/skill-self-evolution-pptx-briefing.md) · [deck](html/deck/skill-self-evolution-roadmap.html) |
 
 ---
 
@@ -43,7 +44,7 @@ Last updated: 2026-07-08
 
 | ID | Type | Path | Description |
 |----|------|------|-------------|
-| — | — | `data/raw/` | No files yet |
+| R2026-08-11-001 | web | [data/raw/web/lilian-weng-2026-07-04-harness.md](data/raw/web/lilian-weng-2026-07-04-harness.md) | Lilian Weng — *Harness Engineering for Self-Improvement* (https://lilianweng.github.io/posts/2026-07-04-harness/, accessed 2026-08-11) |
 
 ---
 
@@ -72,6 +73,7 @@ Last updated: 2026-07-08
 
 | Date | Title | Path |
 |------|-------|------|
+| 2026-08-11 | **Harness evolving OSS** — from Lilian Weng post (DGM / Meta-Harness / AHE / Self-Harness) | [notes/synthesis/harness-evolving-oss-from-lilian-weng.md](notes/synthesis/harness-evolving-oss-from-lilian-weng.md) |
 | 2026-07-08 | SkillRL vs Claw-R1 comparison | [notes/synthesis/comparison.md](notes/synthesis/comparison.md) |
 | 2026-07-08 | L3 深度合并分析 + TaiChu P0 spec | [notes/synthesis/l3-comprehensive-skill-analysis.md](notes/synthesis/l3-comprehensive-skill-analysis.md), [taichu-p0-skill-compaction-spec.md](notes/synthesis/taichu-p0-skill-compaction-spec.md) |
 | 2026-07-08 | Web 调研 vs 本机 L2 交叉核对 | [notes/synthesis/web-vs-local-reconciliation.md](notes/synthesis/web-vs-local-reconciliation.md) |
@@ -103,6 +105,7 @@ Last updated: 2026-07-08
 
 | Date | Change |
 |------|--------|
+| 2026-08-11 | Added harness-evolving OSS note distilled from Lilian Weng 2026-07-04 post |
 | 2026-07-08 | Initial workspace scaffold |
 | 2026-07-08 | Corrected T002 to Claw-R1 (was OpenClaw-RL); added full synthesis + combined pipeline |
 | 2026-07-08 | Added skill evolution taxonomy, proposed architecture, paper index |
