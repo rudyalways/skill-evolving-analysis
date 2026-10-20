@@ -16,4 +16,4 @@ Write one file per topic under `workspace/traces/derived_traces`, plus `unassign
 
 ## Applies when
 
-Raw traces are in the traces directory, or Judge sent the run back to CutTraces.
+Raw traces are in the traces directory. This is the label agent.

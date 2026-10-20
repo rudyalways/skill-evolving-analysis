@@ -20,4 +20,4 @@ Write `workspace/run/diagnosis.json`. The shape is `diagnosis.example.json` in t
 
 ## Applies when
 
-Traces have been cut into topics, or Judge sent the run back to LabelA.
+Traces have been cut into topics. This is the label agent.

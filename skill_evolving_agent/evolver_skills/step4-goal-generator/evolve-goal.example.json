@@ -16,7 +16,7 @@
         "op": "create",
         "skills": [
           {
-            "skill": "<skill>",
+            "skill": "<new skill>",
             "description": "<what the new skill does>",
             "sections": [
               "<overview>",
@@ -58,7 +58,7 @@
         "op": "update",
         "skills": [
           {
-            "skill": "<skill>",
+            "skill": "<existing skill>",
             "goal": "<update goal>",
             "facet": "<update facet>",
             "sections": [
@@ -90,7 +90,7 @@
         "op": "delete",
         "skills": [
           {
-            "skill": "<skill>",
+            "skill": "<removed skill>",
             "reason": "<why this skill is removed>"
           }
         ]
@@ -98,11 +98,11 @@
       {
         "op": "merge",
         "skills": [
-          "<skill>",
-          "<skill>"
+          "<skill a>",
+          "<skill b>"
         ],
         "into": {
-          "skill": "<skill>",
+          "skill": "<merged skill>",
           "description": "<what the merged skill covers>",
           "dirs": [
             {
@@ -114,10 +114,10 @@
       },
       {
         "op": "split",
-        "skill": "<skill>",
+        "skill": "<source skill>",
         "into": [
           {
-            "skill": "<skill>",
+            "skill": "<part skill>",
             "description": "<what this part keeps>",
             "dirs": [
               {
@@ -132,7 +132,7 @@
         "op": "<other>",
         "description": "<what this action does>",
         "skills": [
-          "<skill>"
+          "<other skill>"
         ],
         "dirs": [
           {

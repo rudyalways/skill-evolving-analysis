@@ -16,4 +16,4 @@ Read Label A from `workspace/run/diagnosis.json`. The shape is `evolver_skills/s
 
 ## Applies when
 
-The goal action is update, merge, or split, or Judge sent the run back to Select.
+The goal action is update, merge, or split. This is the last step of the label agent.

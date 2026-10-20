@@ -12,8 +12,8 @@ Do not create a skill for behavior the model and harness already do well. Do not
 
 ## Must
 
-Read `workspace/run/evolve-goal.json`. The shape is `evolver_skills/step4-goal-generator/evolve-goal.example.json`. When an `action.ops` item has `op` create, read each item in `skills`: the skill name, its description, its labels, and the `sections` and `dirs` on that item. Those lists are only what this skill needs. Write those headings and directories, not every name in the example. Add the skill under `target/to_be_improved_skills` and write those labels, each a capability path and a weight, into `target/to_be_improved_skills_metadata/metadata.json`. Hand an out-of-distribution gap to `step5.2.2-ood-data-updater`.
+Read `workspace/run/evolve-goal.json`. When an `action.ops` item has `op` create, read each item in `skills`: the skill name, its description, its labels, and the `sections` and `dirs` on that item. Those lists are only what this skill needs. Write those headings and directories. Add the skill under `target/to_be_improved_skills` and write those labels, each a capability path and a weight, into `target/to_be_improved_skills_metadata/metadata.json`. Hand an out-of-distribution gap to `step5.2.2-ood-data-updater`.
 
 ## Applies when
 
-The goal says create, or Judge sent the run back to Generate.
+The optimize loop has reached a create op, or Judge sent that op back to Generate.

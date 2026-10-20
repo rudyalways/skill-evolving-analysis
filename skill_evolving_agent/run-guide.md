@@ -1,15 +1,14 @@
 # Run guide
 
-One run is one container. The image holds the program. The run directory on the host holds the data. Delete the container when the session is finished. The host directory stays.
+Two images, built from `Dockerfile.label` and `Dockerfile.optimize`. The repo stays one directory. Each image contains only that agent's skills, so a session cannot read the other agent's instructions. Both mount the same `workspace/runs/<run_id>`. The goal file there is the handoff.
 
-## Image
+## Images
 
-The image contains:
+The label image contains cut traces, Label A, Label B, the goal, select, the section list, and `data/skill_capabilites`.
 
-- `evolver_skills`, including `reference-skill_format`
-- `data/skill_capabilites`
+The optimize image contains create, the out-of-distribution note, verify, judge, and the section checker. It reads the goal from the mounted run.
 
-It does not contain a live run. The blank layout is `workspace` on the host. The image copies that layout. A mount covers `workspace` for a real run.
+Neither image contains a live run. The blank layout is `workspace` on the host. A mount covers `workspace` for a real run.
 
 ## Real run
 
@@ -35,26 +34,35 @@ Put the raw jsonl files in `runs/$id/traces/target_agent_traces`. An optional re
 From the repo root:
 
 ```bash
-docker build -f skill_evolving_agent/Dockerfile -t skill-evolver .
-docker run -d --name "$id" \
-  -v "$PWD/skill_evolving_agent/workspace/runs/$id:/opt/skill-evolver/skill_evolving_agent/workspace" \
-  skill-evolver
+mount="$PWD/skill_evolving_agent/workspace/runs/$id:/opt/skill-evolver/skill_evolving_agent/workspace"
+docker build -f skill_evolving_agent/Dockerfile.label -t skill-evolver-label .
+docker build -f skill_evolving_agent/Dockerfile.optimize -t skill-evolver-optimize .
+docker run -d --name "$id-label" -v "$mount" skill-evolver-label
 ```
 
 The host path is `workspace/runs/<run_id>`. Inside the container that directory is `workspace`. The container refuses to start when that path is not a mount.
 
-## Session
+## Sessions
 
-The container stays up. The agent session is `docker exec -it <run_id> sh`.
+A session is `docker exec -it "$id-label" sh`, then later `docker exec -it "$id-optimize" sh`.
 
-A runner outside the agent starts each step. It hands the agent only that step's `skill.md`. The next step starts only after the previous step has a `done` line in `logs/execution.jsonl` and its output file is in place. After the goal, the op picks step 5.1 or step 5.2. On `back`, the runner re-enters `action.to`.
+A runner outside the agent starts each step. It hands the agent only that step's `skill.md`. The next step starts only after the previous step has a `done` line in `logs/execution.jsonl` and its output file is in place.
+
+The label container cuts traces, writes Label A, Label B, and the goal, and selects skills when the action is update, merge, or split. It writes `run/evolve-goal.json` and stops. Remove that container. The host directory stays.
+
+```bash
+docker rm -f "$id-label"
+docker run -d --name "$id-optimize" -v "$mount" skill-evolver-optimize
+```
+
+The optimize container takes one goal op at a time and passes `--op` to the verifier scripts. create, update, and delete name one skill. merge and split name two. On `back`, the runner re-enters that op's edit once, then moves to the next op.
 
 Each step appends `{"step": "<step1>", "event": "<started|done|failed>", "at": "<iso8601>"}` to `logs/execution.jsonl`.
 
 ## Stop
 
 ```bash
-docker rm -f "$id"
+docker rm -f "$id-optimize"
 ```
 
 The container is gone. `workspace/runs/<run_id>/` is still on the host. That directory is the copy used for stats, auditing, and a later run:

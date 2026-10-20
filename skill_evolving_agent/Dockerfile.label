@@ -1,0 +1,22 @@
+FROM python:3.12-slim
+
+WORKDIR /opt/skill-evolver
+
+COPY skill_evolving_agent/evolver_skills/reference-skill_format/skill_format.json skill_evolving_agent/evolver_skills/reference-skill_format/skill_format.json
+COPY skill_evolving_agent/evolver_skills/reference-skill_format/skill_names.py skill_evolving_agent/evolver_skills/reference-skill_format/skill_names.py
+COPY skill_evolving_agent/evolver_skills/step1-cut-traces skill_evolving_agent/evolver_skills/step1-cut-traces
+COPY skill_evolving_agent/evolver_skills/step2-dignosis skill_evolving_agent/evolver_skills/step2-dignosis
+COPY skill_evolving_agent/evolver_skills/step3-existing_skills_labeler skill_evolving_agent/evolver_skills/step3-existing_skills_labeler
+COPY skill_evolving_agent/evolver_skills/step4-goal-generator skill_evolving_agent/evolver_skills/step4-goal-generator
+COPY skill_evolving_agent/evolver_skills/step5.1-skill-select skill_evolving_agent/evolver_skills/step5.1-skill-select
+COPY skill_evolving_agent/label-agent.md skill_evolving_agent/AGENT.md
+COPY skill_evolving_agent/workspace skill_evolving_agent/workspace
+COPY skill_evolving_agent/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+COPY data/skill_capabilites data/skill_capabilites
+
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+WORKDIR /opt/skill-evolver/skill_evolving_agent
+
+ENTRYPOINT ["docker-entrypoint.sh"]
+CMD ["sleep", "infinity"]

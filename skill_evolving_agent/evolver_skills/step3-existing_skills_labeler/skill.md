@@ -16,4 +16,4 @@ List the existing skills. For each skill, write or extend its metadata record un
 
 ## Applies when
 
-Label A is done and existing skills still need labels, or Judge sent the run back to LabelB.
+Label A is done and existing skills still need labels. This is the label agent.
