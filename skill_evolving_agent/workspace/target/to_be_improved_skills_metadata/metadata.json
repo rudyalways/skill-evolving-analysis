@@ -1,0 +1,27 @@
+{
+    "skills_metadata": [
+        {
+            "skill_types": [
+                {
+                    "type": "<job/methodology>",
+                    "weight": "<float_0_to_1>"
+                },
+                {
+                    "type": "<job/verification>",
+                    "weight": "<float_0_to_1>"
+                },
+                {
+                    "type": "<form/pattern/constraint>",
+                    "weight": "<float_0_to_1>"
+                }
+            ],
+            "unmatched_skill_types": [
+                {
+                    "type": "<remember user long term preference>",
+                    "weight": "<float_0_to_1>"
+                }
+            ],
+            "description": "<Description of these skill types. Each type is a skill_capabilites leaf. At least 3 labels, each with a weight. An unmatched type is a name that is not a leaf.>"
+        }
+    ]
+}

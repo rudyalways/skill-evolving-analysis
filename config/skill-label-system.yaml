@@ -1,0 +1,102 @@
+# Label system for public_skills/**/SKILL.md
+# A facet is one question. Job and domain allow many labels.
+# Form and provenance allow one.
+
+version: 1
+corpus: public_skills
+match_on: name, description, markdown headings
+
+facets:
+  provenance:
+    cardinality: one
+    description: Git clone that contains the skill, relative to public_skills/.
+  form:
+    cardinality: one
+    description: How the skill instructs. Exactly one label.
+    default: technique
+    labels:
+      - id: reference
+        description: Lookup material for an API, CLI, schema, or file format.
+      - id: pattern
+        description: A way of thinking, a constraint, or a judgment rule, without a fixed procedure.
+      - id: technique
+        description: A procedure with steps the agent follows.
+  job:
+    cardinality: many
+    description: What kind of hint the skill gives. A skill may have several.
+    labels:
+      - id: methodology
+        description: Order of work. Plan, brainstorm, debug loop, TDD, or another procedure for how to proceed.
+      - id: reflection
+        description: Look back at a draft, diff, or decision before treating it as final.
+      - id: verification
+        description: Require evidence, a test, an audit, or a check before claiming success.
+      - id: output-format
+        description: Require a specific artifact shape, such as HTML, slides, PDF, or a deck.
+      - id: audience
+        description: Require a reader level or voice, such as ELI5, plain language, or terse speech.
+      - id: repo-understanding
+        description: Explain, map, or onboard someone through a codebase or document set.
+      - id: discovery
+        description: Find, choose, or install another skill or tool.
+      - id: skill-authoring
+        description: Create, edit, or evaluate a skill.
+  domain:
+    cardinality: many
+    description: Subject matter. A skill may have several. Assigned after job labels.
+    fallback: unspecified
+    labels:
+      - id: documents
+        description: Office files and decks as the subject, not only as an output hint.
+      - id: frontend
+        description: Web UI, React, CSS, design systems, accessibility of interfaces.
+      - id: design
+        description: Visual design, brand, Figma, canvas, taste.
+      - id: backend
+        description: Servers, HTTP APIs, GraphQL.
+      - id: data
+        description: Analysis, metrics, dashboards, tables, notebooks.
+      - id: databases
+        description: SQL, Postgres, Redis, schemas.
+      - id: security
+        description: Threats, auth hardening, pentest, vulnerability review.
+      - id: testing
+        description: Tests, QA, browsers used to check behavior.
+      - id: cloud-devops
+        description: AWS, Azure, GCP, Kubernetes, CI, deploy, Terraform.
+      - id: git
+        description: Git, GitHub, pull requests, worktrees, commits.
+      - id: marketing
+        description: SEO, growth, campaigns, social distribution.
+      - id: writing
+        description: Prose, copy, blogs, documentation voice.
+      - id: media
+        description: Video, image, audio, animation.
+      - id: ai
+        description: Models, prompts, agents, MCP, RAG, evaluation of models.
+      - id: research
+        description: Papers, literature, investigations, surveys.
+      - id: finance
+        description: Tax, accounting, invoices, investing, payments ledgers.
+      - id: commerce
+        description: Stores, Shopify, checkout, catalogs.
+      - id: productivity
+        description: Notion, Slack, email, calendar, Feishu/Lark, office workflow.
+      - id: mobile
+        description: iOS, Android, Swift, Kotlin, React Native, Expo.
+      - id: life-science
+        description: Biology, clinical, chemistry, genomics.
+      - id: legal
+        description: Contracts, compliance, privacy law, policy.
+      - id: education
+        description: Teaching, courses, tutoring, exercises.
+      - id: games
+        description: Game design, engines, gameplay.
+      - id: business
+        description: Sales, HR, CRM, operations, product management.
+      - id: systems
+        description: Operating systems, shells, networking, DPUs, and machine-level tools.
+      - id: software
+        description: General programming when no narrower domain matches.
+      - id: unspecified
+        description: No domain rule matched. Kept so every skill still has a domain label.

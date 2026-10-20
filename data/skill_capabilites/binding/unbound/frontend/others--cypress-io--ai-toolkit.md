@@ -1,0 +1,18 @@
+---
+view: "binding"
+depth1: "unbound"
+depth2: "frontend"
+depth3: "others--cypress-io--ai-toolkit"
+placements: 2
+kind: "clone"
+---
+
+# others--cypress-io--ai-toolkit
+
+unbound · No product named · 没有点名产品 / frontend / others--cypress-io--ai-toolkit
+
+2 placements, 0.2% of frontend (873), under unbound (15,250).
+
+This row is a copied skill pack, not a capability name.
+
+Counted from the skill-capabilities tree in `benchmark-all-in-one.html`, 5 Oct 2026.

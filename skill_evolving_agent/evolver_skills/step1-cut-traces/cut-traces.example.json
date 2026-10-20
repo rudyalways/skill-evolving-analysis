@@ -1,0 +1,18 @@
+{
+  "topics": [
+    {
+      "topic": "<topic>",
+      "source": "<target_agent_traces>",
+      "traces": [
+        "<trace.jsonl>"
+      ]
+    }
+  ],
+  "unassigned": [
+    {
+      "source": "<target_agent_traces>",
+      "trace": "<trace.jsonl>",
+      "reason": "<why this trace fits no topic>"
+    }
+  ]
+}

@@ -1,0 +1,780 @@
+CategoryID,Segment name,Display,Gmail,Discovery,Search,Shopping,Video
+80428,/Apparel & Accessories,YES,YES,YES,YES,NO,YES
+80429,/Apparel & Accessories/Activewear,YES,YES,YES,YES,NO,YES
+80557,/Apparel & Accessories/Activewear/Running Apparel,NO,NO,NO,YES,NO,YES
+80558,/Apparel & Accessories/Activewear/Yoga Apparel,NO,NO,NO,YES,NO,YES
+80949,/Apparel & Accessories/Backpacks,YES,YES,NO,NO,NO,NO
+80430,/Apparel & Accessories/Costumes,YES,YES,YES,YES,NO,YES
+80879,/Apparel & Accessories/Eyewear,YES,YES,NO,YES,NO,YES
+80880,/Apparel & Accessories/Eyewear/Eyeglasses & Contact Lenses,NO,YES,NO,NO,NO,YES
+80878,/Apparel & Accessories/Eyewear/Sunglasses,YES,YES,NO,YES,NO,YES
+80431,/Apparel & Accessories/Formal Wear,YES,YES,YES,YES,NO,YES
+80443,/Apparel & Accessories/Formal Wear/Bridal Wear,YES,YES,YES,YES,NO,YES
+80444,/Apparel & Accessories/Formal Wear/Suits & Business Attire,YES,YES,YES,YES,NO,YES
+80432,/Apparel & Accessories/Handbags,YES,YES,YES,YES,NO,YES
+80940,/Apparel & Accessories/Hats,YES,YES,NO,NO,NO,NO
+80433,/Apparel & Accessories/Jewelry & Watches,YES,YES,YES,YES,NO,YES
+80445,/Apparel & Accessories/Jewelry & Watches/Fine Jewelry,YES,YES,YES,YES,NO,YES
+80877,/Apparel & Accessories/Jewelry & Watches/Fine Jewelry/Necklaces,YES,YES,NO,YES,NO,YES
+80447,/Apparel & Accessories/Jewelry & Watches/Watches,YES,YES,YES,YES,NO,YES
+80446,/Apparel & Accessories/Jewelry & Watches/Wedding & Engagement Rings,YES,YES,YES,YES,NO,YES
+80434,/Apparel & Accessories/Lingerie,YES,YES,YES,YES,NO,YES
+80435,/Apparel & Accessories/Luggage,YES,YES,YES,YES,NO,YES
+80436,/Apparel & Accessories/Men's Apparel,YES,YES,YES,YES,NO,YES
+80438,/Apparel & Accessories/Outerwear,YES,YES,YES,YES,NO,YES
+80937,/Apparel & Accessories/Pants,YES,YES,NO,NO,NO,NO
+80938,/Apparel & Accessories/Shirts & Tops,YES,YES,NO,NO,NO,NO
+80439,/Apparel & Accessories/Shoes,YES,YES,YES,YES,NO,YES
+80448,/Apparel & Accessories/Shoes/Athletic Shoes,YES,YES,YES,YES,NO,YES
+80449,/Apparel & Accessories/Shoes/Boots,YES,YES,YES,YES,NO,YES
+80450,/Apparel & Accessories/Shoes/Dress Shoes,YES,YES,YES,YES,NO,YES
+80881,/Apparel & Accessories/Socks,YES,YES,NO,YES,NO,YES
+80440,/Apparel & Accessories/Swimwear,YES,YES,YES,YES,NO,YES
+80882,/Apparel & Accessories/Underwear,YES,YES,NO,YES,NO,YES
+80441,"/Apparel & Accessories/Wallets, Briefcases & Leather Goods",YES,YES,YES,YES,NO,YES
+80442,/Apparel & Accessories/Women's Apparel,YES,YES,YES,YES,NO,YES
+80874,/Arts & Crafts Supplies,YES,YES,NO,YES,NO,YES
+80001,/Autos & Vehicles,YES,YES,YES,YES,NO,YES
+80468,/Autos & Vehicles/Auto Parts & Accessories,YES,YES,YES,YES,NO,YES
+80470,/Autos & Vehicles/Auto Parts & Accessories/Auto Exterior Parts & Accessories,YES,YES,YES,YES,NO,YES
+80471,/Autos & Vehicles/Auto Parts & Accessories/Auto Interior Parts & Accessories,YES,YES,YES,YES,NO,YES
+80472,/Autos & Vehicles/Auto Parts & Accessories/Automotive Electronic Components,YES,YES,YES,YES,NO,YES
+80473,/Autos & Vehicles/Auto Parts & Accessories/Car Batteries,YES,YES,YES,YES,NO,YES
+80474,/Autos & Vehicles/Auto Parts & Accessories/Car Brakes,YES,YES,YES,YES,NO,YES
+80475,/Autos & Vehicles/Auto Parts & Accessories/Engine & Transmission,YES,YES,YES,YES,NO,YES
+80476,/Autos & Vehicles/Auto Parts & Accessories/High Performance & Aftermarket Auto Parts,YES,YES,YES,YES,NO,YES
+80477,/Autos & Vehicles/Auto Parts & Accessories/Wheels & Tires,YES,YES,YES,YES,NO,YES
+80469,/Autos & Vehicles/Auto Repair & Maintenance,YES,YES,YES,YES,NO,YES
+80479,/Autos & Vehicles/Auto Repair & Maintenance/Brake Service & Repair,YES,YES,YES,YES,NO,YES
+80480,/Autos & Vehicles/Auto Repair & Maintenance/Collision & Auto Body Repair,YES,YES,YES,YES,NO,YES
+80478,/Autos & Vehicles/Auto Repair & Maintenance/Glass Repair & Replacement,YES,YES,YES,YES,NO,YES
+80481,/Autos & Vehicles/Auto Repair & Maintenance/Oil Changes,YES,YES,YES,YES,NO,YES
+80482,/Autos & Vehicles/Auto Repair & Maintenance/Transmission Repair,YES,YES,YES,YES,NO,YES
+80206,/Autos & Vehicles/Motor Vehicles,YES,YES,YES,YES,NO,YES
+80097,/Autos & Vehicles/Motor Vehicles/Motor Vehicles (New),YES,YES,YES,YES,NO,YES
+80099,/Autos & Vehicles/Motor Vehicles/Motor Vehicles (Used),YES,YES,YES,YES,NO,YES
+80013,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand,YES,YES,YES,YES,NO,YES
+80014,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Acura,YES,YES,YES,YES,NO,YES
+80093,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Alfa Romeo,YES,YES,YES,YES,NO,YES
+80015,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Audi,YES,YES,YES,YES,NO,YES
+80016,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/BMW,YES,YES,YES,YES,NO,YES
+80054,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Buick,YES,YES,YES,YES,NO,YES
+80017,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Cadillac,YES,YES,YES,YES,NO,YES
+80018,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Chevrolet,YES,YES,YES,YES,NO,YES
+80019,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Chrysler,YES,YES,YES,YES,NO,YES
+80020,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Citroën,YES,YES,YES,YES,NO,YES
+80021,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Dodge,YES,YES,YES,YES,NO,YES
+80022,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Fiat,YES,YES,YES,YES,NO,YES
+80023,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Ford,YES,YES,YES,YES,NO,YES
+80024,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/GMC,YES,YES,YES,YES,NO,YES
+80025,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Honda,YES,YES,YES,YES,NO,YES
+80026,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Hyundai,YES,YES,YES,YES,NO,YES
+80080,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Infiniti,YES,YES,YES,YES,NO,YES
+80081,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Isuzu,YES,YES,YES,YES,NO,YES
+80057,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Jaguar,YES,YES,YES,YES,NO,YES
+80027,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Jeep,YES,YES,YES,YES,NO,YES
+80028,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Kia,YES,YES,YES,YES,NO,YES
+80059,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Land Rover,YES,YES,YES,YES,NO,YES
+80029,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Lexus,YES,YES,YES,YES,NO,YES
+80030,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Lincoln,YES,YES,YES,YES,NO,YES
+80060,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Maserati,YES,YES,YES,YES,NO,YES
+80031,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Mazda,YES,YES,YES,YES,NO,YES
+80032,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Mercedes-Benz,YES,YES,YES,YES,NO,YES
+80061,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Mini,YES,YES,YES,YES,NO,YES
+80034,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Mitsubishi,YES,YES,YES,YES,NO,YES
+80035,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Nissan,YES,YES,YES,YES,NO,YES
+80036,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Peugeot,YES,YES,YES,YES,NO,YES
+80038,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Porsche,YES,YES,YES,YES,NO,YES
+80693,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Ram Trucks,YES,YES,YES,YES,NO,YES
+80039,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Renault,YES,YES,YES,YES,NO,YES
+80094,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/SEAT,YES,YES,YES,YES,NO,YES
+80063,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Scion,YES,YES,YES,YES,NO,YES
+80041,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Subaru,YES,YES,YES,YES,NO,YES
+80064,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Suzuki,YES,YES,YES,YES,NO,YES
+80694,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Tesla Motors,YES,YES,YES,YES,NO,YES
+80042,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Toyota,YES,YES,YES,YES,NO,YES
+80047,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Vauxhall-Opel,YES,YES,YES,YES,NO,YES
+80043,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Volkswagen,YES,YES,YES,YES,NO,YES
+80044,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Volvo,YES,YES,YES,YES,NO,YES
+80171,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type,YES,YES,YES,YES,NO,YES
+80049,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Classic Vehicles,YES,YES,YES,YES,NO,YES
+80111,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Compact Cars,YES,YES,YES,YES,NO,YES
+80172,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Compact Cars/Compact Cars (New),YES,YES,YES,YES,NO,YES
+80112,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Compact Cars/Compact Cars (Used),YES,YES,YES,YES,NO,YES
+80102,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Convertibles,YES,YES,YES,YES,NO,YES
+80173,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Convertibles/Convertibles (New),YES,YES,YES,YES,NO,YES
+80113,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Convertibles/Convertibles (Used),YES,YES,YES,YES,NO,YES
+80103,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Coupes,YES,YES,YES,YES,NO,YES
+80174,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Coupes/Coupes (New),YES,YES,YES,YES,NO,YES
+80170,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Coupes/Coupes (Used),YES,YES,YES,YES,NO,YES
+80110,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Crossovers,YES,YES,YES,YES,NO,YES
+80175,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Crossovers/Crossovers (New),YES,YES,YES,YES,NO,YES
+80114,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Crossovers/Crossovers (Used),YES,YES,YES,YES,NO,YES
+80104,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Diesel Vehicles,YES,YES,YES,YES,NO,YES
+80176,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Diesel Vehicles/Diesel Vehicles (New),YES,YES,YES,YES,NO,YES
+80115,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Diesel Vehicles/Diesel Vehicles (Used),YES,YES,YES,YES,NO,YES
+80105,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Hatchbacks,YES,YES,YES,YES,NO,YES
+80177,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Hatchbacks/Hatchbacks (New),YES,YES,YES,YES,NO,YES
+80116,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Hatchbacks/Hatchbacks (Used),YES,YES,YES,YES,NO,YES
+80012,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Hybrid & Alternative Vehicles,YES,YES,YES,YES,NO,YES
+80178,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Hybrid & Alternative Vehicles/Hybrid & Alternative Vehicles (New),YES,YES,YES,YES,NO,YES
+80117,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Hybrid & Alternative Vehicles/Hybrid & Alternative Vehicles (Used),YES,YES,YES,YES,NO,YES
+80106,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Luxury Vehicles,YES,YES,YES,YES,NO,YES
+80179,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Luxury Vehicles/Luxury Vehicles (New),YES,YES,YES,YES,NO,YES
+80118,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Luxury Vehicles/Luxury Vehicles (Used),YES,YES,YES,YES,NO,YES
+80079,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Microcars & Subcompacts,YES,YES,YES,YES,NO,YES
+80180,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Microcars & Subcompacts/Microcars & Subcompacts (New),YES,YES,YES,YES,NO,YES
+80119,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Microcars & Subcompacts/Microcars & Subcompacts (Used),YES,YES,YES,YES,NO,YES
+80006,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Motorcycles,YES,YES,YES,YES,NO,YES
+80181,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Motorcycles/Motorcycles (New),YES,YES,YES,YES,NO,YES
+80120,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Motorcycles/Motorcycles (Used),YES,YES,YES,YES,NO,YES
+80004,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Off-Road Vehicles,YES,YES,YES,YES,NO,YES
+80182,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Off-Road Vehicles/Off-Road Vehicles (New),YES,YES,YES,YES,NO,YES
+80190,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Off-Road Vehicles/Off-Road Vehicles (Used),YES,YES,YES,YES,NO,YES
+80050,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Pickup Trucks,YES,YES,YES,YES,NO,YES
+80187,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Pickup Trucks/Pickup Trucks (New),YES,YES,YES,YES,NO,YES
+80127,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Pickup Trucks/Pickup Trucks (Used),YES,YES,YES,YES,NO,YES
+80051,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/SUVs,YES,YES,YES,YES,NO,YES
+80188,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/SUVs/SUVs (New),YES,YES,YES,YES,NO,YES
+80128,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/SUVs/SUVs (Used),YES,YES,YES,YES,NO,YES
+80068,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Scooters & Mopeds,YES,YES,YES,YES,NO,YES
+80183,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Scooters & Mopeds/Scooters & Mopeds (New),YES,YES,YES,YES,NO,YES
+80121,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Scooters & Mopeds/Scooters & Mopeds (Used),YES,YES,YES,YES,NO,YES
+80107,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Sedans,YES,YES,YES,YES,NO,YES
+80184,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Sedans/Sedans (New),YES,YES,YES,YES,NO,YES
+80122,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Sedans/Sedans (Used),YES,YES,YES,YES,NO,YES
+80108,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Sports Cars,YES,YES,YES,YES,NO,YES
+80185,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Sports Cars/Sports Cars (New),YES,YES,YES,YES,NO,YES
+80123,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Sports Cars/Sports Cars (Used),YES,YES,YES,YES,NO,YES
+80109,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Station Wagons,YES,YES,YES,YES,NO,YES
+80186,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Station Wagons/Station Wagons (New),YES,YES,YES,YES,NO,YES
+80124,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Station Wagons/Station Wagons (Used),YES,YES,YES,YES,NO,YES
+80052,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Vans & Minivans,YES,YES,YES,YES,NO,YES
+80189,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Vans & Minivans/Vans & Minivans (New),YES,YES,YES,YES,NO,YES
+80129,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Vans & Minivans/Vans & Minivans (Used),YES,YES,YES,YES,NO,YES
+80169,/Autos & Vehicles/Vehicles (Other),YES,YES,YES,YES,NO,YES
+80067,/Autos & Vehicles/Vehicles (Other)/Bicycles & Accessories,YES,YES,YES,YES,NO,YES
+80065,/Autos & Vehicles/Vehicles (Other)/Boats & Watercraft,YES,YES,YES,YES,NO,YES
+80069,/Autos & Vehicles/Vehicles (Other)/Campers & RVs,YES,YES,YES,YES,NO,YES
+80070,/Autos & Vehicles/Vehicles (Other)/Commercial Vehicles,YES,YES,YES,YES,NO,YES
+80308,/Baby & Children's Products,YES,YES,YES,YES,NO,YES
+80309,/Baby & Children's Products/Baby & Children's Apparel,YES,YES,YES,YES,NO,YES
+80316,/Baby & Children's Products/Baby & Children's Apparel/Baby & Toddler Apparel,YES,YES,YES,YES,NO,YES
+80317,/Baby & Children's Products/Baby & Children's Apparel/Children's Apparel,YES,YES,YES,YES,NO,YES
+80312,/Baby & Children's Products/Child Car Seats,YES,YES,YES,YES,NO,YES
+80314,/Baby & Children's Products/Childcare & Education,YES,YES,YES,YES,NO,YES
+80318,/Baby & Children's Products/Childcare & Education/Childcare,YES,YES,YES,YES,NO,YES
+80319,/Baby & Children's Products/Childcare & Education/Early Childhood Education,YES,YES,YES,YES,NO,YES
+80310,/Baby & Children's Products/Diapers & Baby Hygiene Products,YES,YES,YES,YES,NO,YES
+80315,/Baby & Children's Products/Infant & Toddler Feeding,YES,YES,YES,YES,NO,YES
+80320,/Baby & Children's Products/Infant & Toddler Feeding/Infant Feeding Supplies,YES,YES,YES,YES,NO,YES
+80321,/Baby & Children's Products/Infant & Toddler Feeding/Toddler Meals,YES,YES,YES,YES,NO,YES
+80313,/Baby & Children's Products/Strollers & Baby Carriages,YES,YES,YES,YES,NO,YES
+80311,/Baby & Children's Products/Toys & Games,YES,YES,YES,YES,NO,YES
+80546,/Beauty Products & Services,YES,YES,YES,YES,NO,YES
+80552,/Beauty Products & Services/Bath & Body Products,YES,YES,YES,YES,NO,YES
+80551,/Beauty Products & Services/Hair Care Products,YES,YES,YES,YES,NO,YES
+80554,/Beauty Products & Services/Makeup & Cosmetics,YES,YES,YES,YES,NO,YES
+80577,/Beauty Products & Services/Makeup & Cosmetics/Eye Makeup,YES,YES,NO,YES,NO,YES
+80578,/Beauty Products & Services/Makeup & Cosmetics/Face Makeup,YES,YES,NO,YES,NO,YES
+80579,/Beauty Products & Services/Makeup & Cosmetics/Lip Makeup,YES,YES,NO,YES,NO,YES
+80580,/Beauty Products & Services/Makeup & Cosmetics/Nail Care Products,YES,YES,NO,YES,NO,YES
+80437,/Beauty Products & Services/Perfumes & Fragrances,YES,YES,YES,YES,NO,YES
+80555,/Beauty Products & Services/Skin Care Products,YES,YES,YES,YES,NO,YES
+80581,/Beauty Products & Services/Skin Care Products/Anti-Aging Skin Care Products,YES,YES,NO,NO,NO,NO
+80583,/Beauty Products & Services/Skin Care Products/Face Lotions & Moisturizers,YES,YES,NO,YES,NO,YES
+80582,/Beauty Products & Services/Skin Care Products/Facial Cleansers & Makeup Removers,YES,YES,NO,YES,NO,YES
+80556,/Beauty Products & Services/Spas & Beauty Services,YES,YES,YES,YES,NO,YES
+80587,/Beauty Products & Services/Spas & Beauty Services/Manicures & Pedicures,NO,NO,NO,YES,NO,YES
+80553,/Beauty Products & Services/Tanning & Sun Care Products,YES,YES,YES,YES,NO,YES
+80883,/Business & Industrial Products,YES,YES,NO,YES,NO,YES
+80884,/Business & Industrial Products/Food Service Equipment,YES,YES,NO,NO,NO,YES
+80885,/Business & Industrial Products/Material Handling Equipment,NO,YES,NO,NO,NO,YES
+80886,/Business & Industrial Products/Signage,YES,YES,NO,NO,NO,YES
+80887,/Business & Industrial Products/Work Safety Protective Gear,NO,YES,NO,NO,NO,YES
+80463,/Business Services,YES,YES,YES,YES,NO,YES
+80517,/Business Services/Advertising & Marketing Services,YES,YES,YES,YES,NO,YES
+80528,/Business Services/Advertising & Marketing Services/Email Marketing Services,NO,NO,NO,YES,NO,YES
+80529,/Business Services/Advertising & Marketing Services/SEO & SEM Services,YES,YES,YES,YES,NO,YES
+80518,/Business Services/Business Financial Services,YES,YES,YES,YES,NO,YES
+80519,/Business Services/Business Printing & Document Services,YES,YES,YES,YES,NO,YES
+80520,/Business Services/Business Technology,YES,YES,YES,YES,NO,YES
+80530,/Business Services/Business Technology/Enterprise Software,YES,YES,YES,YES,NO,YES
+80535,/Business Services/Business Technology/Enterprise Software/CRM Solutions,YES,YES,YES,YES,NO,YES
+80534,/Business Services/Business Technology/Enterprise Software/Collaboration & Conferencing Tools,YES,YES,YES,YES,NO,YES
+80536,/Business Services/Business Technology/Enterprise Software/ERP Solutions,YES,YES,YES,YES,NO,YES
+80537,/Business Services/Business Technology/Enterprise Software/Helpdesk & Customer Support Solutions,YES,YES,YES,YES,NO,YES
+80531,/Business Services/Business Technology/Network Systems & Services,YES,YES,YES,YES,NO,YES
+80538,/Business Services/Business Technology/Network Systems & Services/Hosted Data & Cloud Storage,YES,YES,YES,YES,NO,YES
+80539,/Business Services/Business Technology/Network Systems & Services/Network & Enterprise Security,YES,YES,YES,YES,NO,YES
+80540,/Business Services/Business Technology/Network Systems & Services/Network Equipment & Virtualization,YES,YES,YES,YES,NO,YES
+80541,/Business Services/Business Technology/Network Systems & Services/Network Management,YES,YES,YES,YES,NO,YES
+80532,/Business Services/Business Technology/Web Services,YES,YES,YES,YES,NO,YES
+80542,/Business Services/Business Technology/Web Services/Domain Registration,YES,YES,YES,YES,NO,YES
+80543,/Business Services/Business Technology/Web Services/Web Design & Development,YES,YES,YES,YES,NO,YES
+80544,/Business Services/Business Technology/Web Services/Web Hosting,YES,YES,YES,YES,NO,YES
+80521,/Business Services/Corporate Event Planning,YES,YES,YES,YES,NO,YES
+80522,/Business Services/Office Supplies,YES,YES,YES,YES,NO,YES
+80533,/Business Services/Office Supplies/Office Furniture,YES,YES,YES,YES,NO,YES
+80523,/Business Services/Payment Processing & Merchant Services,YES,YES,YES,YES,NO,YES
+80524,/Business Services/Payroll Services,YES,YES,YES,YES,NO,YES
+80525,/Business Services/Physical Security & Access Control,NO,NO,NO,YES,NO,YES
+80526,/Business Services/Staffing & Recruitment Services,YES,YES,YES,YES,NO,YES
+80193,/Computers & Peripherals,YES,YES,YES,YES,NO,YES
+80195,/Computers & Peripherals/Computer Accessories & Components,YES,YES,YES,YES,NO,YES
+80200,/Computers & Peripherals/Computer Accessories & Components/Computer Monitors,YES,YES,YES,YES,NO,YES
+80201,/Computers & Peripherals/Computer Accessories & Components/Memory & Storage,YES,YES,YES,YES,NO,YES
+80194,/Computers & Peripherals/Computers,YES,YES,YES,YES,NO,YES
+80197,/Computers & Peripherals/Computers/Desktop Computers,YES,YES,YES,YES,NO,YES
+80198,/Computers & Peripherals/Computers/Laptops & Notebooks,YES,YES,YES,YES,NO,YES
+80199,/Computers & Peripherals/Computers/Tablets & Ultraportable Devices,YES,YES,YES,YES,NO,YES
+80196,"/Computers & Peripherals/Printers, Scanners & Faxes",YES,YES,YES,YES,NO,YES
+80207,/Consumer Electronics,YES,YES,YES,YES,NO,YES
+80210,/Consumer Electronics/Audio,YES,YES,YES,YES,NO,YES
+80218,/Consumer Electronics/Audio/Car Audio,NO,NO,NO,YES,NO,YES
+80888,/Consumer Electronics/Audio/Headphones & Headsets,YES,YES,NO,YES,NO,YES
+80220,/Consumer Electronics/Audio/Pro Musician & DJ Equipment,YES,YES,YES,YES,NO,YES
+80221,/Consumer Electronics/Audio/Speakers,YES,YES,YES,YES,NO,YES
+80222,/Consumer Electronics/Audio/Stereo Systems,YES,YES,YES,YES,NO,YES
+80890,/Consumer Electronics/Batteries,YES,YES,NO,NO,NO,YES
+80209,/Consumer Electronics/Camcorders,YES,YES,YES,YES,NO,YES
+80208,/Consumer Electronics/Cameras,YES,YES,YES,YES,NO,YES
+80223,/Consumer Electronics/Cameras/Camera Lenses,YES,YES,YES,YES,NO,YES
+80224,/Consumer Electronics/Cameras/Digital SLRs,YES,YES,YES,YES,NO,YES
+80244,/Consumer Electronics/Game Consoles,YES,YES,YES,YES,NO,YES
+80245,/Consumer Electronics/Game Consoles/Nintendo Consoles,YES,YES,YES,YES,NO,YES
+80246,/Consumer Electronics/Game Consoles/Sony PlayStation,YES,YES,YES,YES,NO,YES
+80247,/Consumer Electronics/Game Consoles/Xbox,YES,YES,YES,YES,NO,YES
+80213,/Consumer Electronics/Home Theater Systems,YES,YES,YES,YES,NO,YES
+80889,/Consumer Electronics/Mobile Phone Accessories,YES,YES,NO,YES,NO,YES
+80286,/Consumer Electronics/Mobile Phones,YES,YES,YES,YES,NO,YES
+80691,/Consumer Electronics/Mobile Phones/Android Phones,NO,NO,YES,YES,NO,YES
+80692,/Consumer Electronics/Mobile Phones/iOS Phones,NO,NO,YES,YES,NO,YES
+80934,/Consumer Electronics/Power Adapters & Chargers,NO,YES,NO,NO,NO,YES
+80211,/Consumer Electronics/Televisions,YES,YES,YES,YES,NO,YES
+80592,/Dating Services,YES,YES,YES,YES,NO,YES
+80226,/Education,YES,YES,YES,YES,NO,YES
+80227,/Education/Foreign Language Study,YES,YES,YES,YES,NO,YES
+80228,/Education/Post-Secondary Education,YES,YES,YES,YES,NO,YES
+80232,/Education/Post-Secondary Education/Arts & Design Education,YES,YES,YES,YES,NO,YES
+80233,/Education/Post-Secondary Education/Business Education,YES,YES,YES,YES,NO,YES
+80285,/Education/Post-Secondary Education/Cosmetology Education & Training,YES,YES,YES,YES,NO,YES
+80234,/Education/Post-Secondary Education/Health Care Education,NO,NO,NO,YES,NO,YES
+80236,/Education/Post-Secondary Education/Health Care Education/Nursing Education,NO,NO,NO,YES,NO,YES
+80235,/Education/Post-Secondary Education/Technology Education,YES,YES,YES,YES,NO,YES
+80229,/Education/Primary & Secondary Schools (K-12),YES,YES,YES,YES,NO,YES
+80230,/Education/Study Abroad Programs,YES,YES,YES,YES,NO,YES
+80231,/Education/Test Preparation & Tutoring,YES,YES,YES,YES,NO,YES
+80412,/Employment,YES,YES,YES,YES,NO,YES
+80413,/Employment/Accounting & Finance Jobs,YES,YES,YES,YES,NO,YES
+80425,/Employment/Career Consulting Services,YES,YES,YES,YES,NO,YES
+80414,/Employment/Clerical & Administrative Jobs,YES,YES,YES,YES,NO,YES
+80415,/Employment/Education Jobs,YES,YES,YES,YES,NO,YES
+80416,/Employment/Executive & Management Jobs,YES,YES,YES,YES,NO,YES
+80417,/Employment/Government & Public Sector Jobs,YES,YES,YES,YES,NO,YES
+80418,/Employment/Health & Medical Jobs,YES,YES,YES,YES,NO,YES
+80419,/Employment/IT & Technical Jobs,YES,YES,YES,YES,NO,YES
+80424,/Employment/Internships,YES,YES,YES,YES,NO,YES
+80420,/Employment/Legal Jobs,YES,YES,YES,YES,NO,YES
+80426,/Employment/Resumes & Portfolios,YES,YES,YES,YES,NO,YES
+80421,/Employment/Retail Jobs,YES,YES,YES,YES,NO,YES
+80422,/Employment/Sales & Marketing Jobs,YES,YES,YES,YES,NO,YES
+80423,/Employment/Temporary & Seasonal Jobs,YES,YES,YES,YES,NO,YES
+80593,/Event Tickets,YES,YES,YES,YES,NO,YES
+80597,/Event Tickets/Concert & Music Festival Tickets,YES,YES,YES,YES,NO,YES
+80595,/Event Tickets/Performing Arts Tickets,YES,YES,YES,YES,NO,YES
+80596,/Event Tickets/Performing Arts Tickets/Broadway & Theater Tickets,YES,YES,YES,YES,NO,YES
+80598,/Event Tickets/Sports Tickets,YES,YES,YES,YES,NO,YES
+80599,/Event Tickets/Sports Tickets/American Football Tickets,YES,YES,YES,YES,NO,YES
+80600,/Event Tickets/Sports Tickets/Baseball Tickets,YES,YES,YES,YES,NO,YES
+80601,/Event Tickets/Sports Tickets/Basketball Tickets,YES,YES,YES,YES,NO,YES
+80602,/Event Tickets/Sports Tickets/Hockey Tickets,YES,YES,YES,YES,NO,YES
+80603,/Event Tickets/Sports Tickets/Soccer Tickets,YES,YES,YES,YES,NO,YES
+80130,/Financial Services,YES,YES,YES,YES,NO,YES
+80132,/Financial Services/Banking Services,YES,YES,YES,YES,NO,YES
+80142,/Financial Services/Banking Services/Debit & Checking Services,YES,YES,YES,YES,NO,YES
+80409,/Financial Services/Banking Services/Savings Accounts,YES,YES,YES,YES,NO,YES
+80135,/Financial Services/Credit & Lending,YES,YES,YES,YES,NO,YES
+80140,/Financial Services/Credit & Lending/Auto Loans,YES,YES,YES,YES,NO,YES
+80138,/Financial Services/Credit & Lending/Business Loans,YES,YES,YES,YES,NO,YES
+80141,/Financial Services/Credit & Lending/Credit Cards,YES,YES,YES,YES,NO,YES
+80410,/Financial Services/Credit & Lending/Credit Reports & Monitoring Services,YES,YES,YES,YES,NO,YES
+80136,/Financial Services/Credit & Lending/Mortgage,YES,YES,YES,YES,NO,YES
+80411,/Financial Services/Credit & Lending/Mortgage/Home Equity Loans,YES,YES,YES,YES,NO,YES
+80153,/Financial Services/Credit & Lending/Mortgage/Home Purchase Loans,YES,YES,YES,YES,NO,YES
+80152,/Financial Services/Credit & Lending/Mortgage/Mortgage Refinancing,YES,YES,YES,YES,NO,YES
+80139,/Financial Services/Credit & Lending/Personal Loans,YES,YES,YES,YES,NO,YES
+80192,/Financial Services/Credit & Lending/Student Loans,YES,YES,YES,YES,NO,YES
+80133,/Financial Services/Financial Planning,YES,YES,YES,YES,NO,YES
+80150,/Financial Services/Financial Planning/Estate Planning,YES,YES,YES,YES,NO,YES
+80151,/Financial Services/Financial Planning/Retirement Planning,YES,YES,YES,YES,NO,YES
+80134,/Financial Services/Insurance,YES,YES,YES,YES,NO,YES
+80143,/Financial Services/Insurance/Auto Insurance,YES,YES,YES,YES,NO,YES
+80144,/Financial Services/Insurance/Health Insurance,YES,YES,YES,YES,NO,YES
+80191,/Financial Services/Insurance/Home Insurance,YES,YES,YES,YES,NO,YES
+80145,/Financial Services/Insurance/Life Insurance,YES,YES,YES,YES,NO,YES
+80146,/Financial Services/Insurance/Travel Insurance,YES,YES,YES,YES,NO,YES
+80149,/Financial Services/Investment Services,YES,YES,YES,YES,NO,YES
+80137,/Financial Services/Tax Preparation Services & Software,YES,YES,YES,YES,NO,YES
+80891,/Food,NO,YES,YES,YES,NO,YES
+80892,/Food/Baked Goods,NO,YES,NO,YES,NO,YES
+80894,/Food/Candy & Chocolate,NO,YES,NO,YES,NO,YES
+80895,/Food/Condiments & Sauces,NO,YES,NO,NO,NO,YES
+80893,/Food/Cooking & Baking Ingredients,NO,YES,NO,NO,NO,YES
+80969,/Food/Grocery Delivery,NO,NO,YES,YES,NO,YES
+80970,/Food/Restaurant Delivery & Takeout,NO,NO,YES,YES,NO,YES
+80464,/Gifts & Occasions,YES,YES,YES,YES,NO,YES
+80507,/Gifts & Occasions/Flowers,YES,YES,YES,YES,NO,YES
+80508,/Gifts & Occasions/Gift Baskets,YES,YES,YES,YES,NO,YES
+80503,/Gifts & Occasions/Holiday Items & Decorations,YES,YES,YES,YES,NO,YES
+80509,/Gifts & Occasions/Holiday Items & Decorations/Christmas Items & Decor,YES,YES,YES,YES,NO,YES
+80510,/Gifts & Occasions/Holiday Items & Decorations/Halloween Items & Decor,YES,YES,YES,YES,NO,YES
+80511,/Gifts & Occasions/Holiday Items & Decorations/Valentine's Day Items & Decor,YES,YES,YES,YES,NO,YES
+80504,/Gifts & Occasions/Party Supplies & Planning,YES,YES,YES,YES,NO,YES
+80512,/Gifts & Occasions/Party Supplies & Planning/Event Planning Services,YES,YES,YES,YES,NO,YES
+80513,/Gifts & Occasions/Party Supplies & Planning/Party Supplies,YES,YES,YES,YES,NO,YES
+80505,/Gifts & Occasions/Personalized Gifts,YES,YES,YES,YES,NO,YES
+80506,/Gifts & Occasions/Photo & Video Services,YES,YES,YES,YES,NO,YES
+80515,/Gifts & Occasions/Photo & Video Services/Event Photographers & Studios,YES,YES,YES,YES,NO,YES
+80516,/Gifts & Occasions/Photo & Video Services/Photo Printing Services,YES,YES,YES,YES,NO,YES
+80404,/Gifts & Occasions/Wedding Planning,YES,YES,YES,YES,NO,YES
+80237,/Home & Garden,YES,YES,YES,YES,NO,YES
+80915,/Home & Garden/Cookware & Bakeware,YES,YES,NO,YES,NO,YES
+80483,/Home & Garden/Home & Garden Services,YES,YES,YES,YES,NO,YES
+80484,/Home & Garden/Home & Garden Services/Architectural Services,YES,YES,YES,YES,NO,YES
+80485,/Home & Garden/Home & Garden Services/Carpet Installation,YES,YES,YES,YES,NO,YES
+80486,/Home & Garden/Home & Garden Services/Door & Window Installation,YES,YES,YES,YES,NO,YES
+80487,/Home & Garden/Home & Garden Services/Electrician Services,YES,YES,YES,YES,NO,YES
+80488,/Home & Garden/Home & Garden Services/Flooring Services,YES,YES,YES,YES,NO,YES
+80490,/Home & Garden/Home & Garden Services/General Contracting & Remodeling Services,YES,YES,YES,YES,NO,YES
+80491,/Home & Garden/Home & Garden Services/Home Cleaning Services,YES,YES,YES,YES,NO,YES
+80492,/Home & Garden/Home & Garden Services/Home Inspection Services,YES,YES,YES,YES,NO,YES
+80493,/Home & Garden/Home & Garden Services/Interior Design & Decorating Services,YES,YES,YES,YES,NO,YES
+80494,/Home & Garden/Home & Garden Services/Landscape Design,YES,YES,YES,YES,NO,YES
+80495,/Home & Garden/Home & Garden Services/Lawn & Garden Maintenance,NO,NO,NO,YES,NO,YES
+80496,/Home & Garden/Home & Garden Services/Locksmith Services,YES,YES,YES,YES,NO,YES
+80497,/Home & Garden/Home & Garden Services/Painting Services,YES,YES,YES,YES,NO,YES
+80498,/Home & Garden/Home & Garden Services/Pest Control Services,YES,YES,YES,YES,NO,YES
+80499,/Home & Garden/Home & Garden Services/Plumbing Services,YES,YES,YES,YES,NO,YES
+80500,/Home & Garden/Home & Garden Services/Roofing Services,YES,YES,YES,YES,NO,YES
+80238,/Home & Garden/Home Appliances,YES,YES,YES,YES,NO,YES
+80897,/Home & Garden/Home Appliances/Climate Control Appliances,YES,YES,NO,YES,NO,YES
+80898,/Home & Garden/Home Appliances/Climate Control Appliances/Air Conditioners,YES,YES,NO,NO,NO,YES
+80899,/Home & Garden/Home Appliances/Climate Control Appliances/Fans,YES,YES,NO,NO,NO,NO
+80260,/Home & Garden/Home Appliances/Cooking Ranges & Stoves,YES,YES,YES,YES,NO,YES
+80258,/Home & Garden/Home Appliances/Dishwashers,YES,YES,YES,YES,NO,YES
+80900,/Home & Garden/Home Appliances/Kitchen Appliance Accessories,NO,YES,NO,YES,NO,YES
+80901,/Home & Garden/Home Appliances/Kitchen Appliance Accessories/Coffee Maker & Espresso Machine Accessories,NO,YES,NO,NO,NO,YES
+80902,/Home & Garden/Home Appliances/Kitchen Appliance Accessories/Mixer & Blender Accessories,NO,YES,NO,NO,NO,YES
+80903,/Home & Garden/Home Appliances/Kitchen Appliance Accessories/Refrigerator Accessories,NO,YES,NO,NO,NO,YES
+80262,/Home & Garden/Home Appliances/Microwaves,YES,YES,YES,YES,NO,YES
+80259,/Home & Garden/Home Appliances/Refrigerators,YES,YES,YES,YES,NO,YES
+80265,/Home & Garden/Home Appliances/Small Appliances,YES,YES,YES,YES,NO,YES
+80274,/Home & Garden/Home Appliances/Small Appliances/Coffee & Espresso Makers,YES,YES,YES,YES,NO,YES
+80272,/Home & Garden/Home Appliances/Small Appliances/Juicers & Blenders,YES,YES,YES,YES,NO,YES
+80273,/Home & Garden/Home Appliances/Small Appliances/Mixers,YES,YES,YES,YES,NO,YES
+80261,/Home & Garden/Home Appliances/Vacuums,YES,YES,YES,YES,NO,YES
+80257,/Home & Garden/Home Appliances/Washers & Dryers,YES,YES,YES,YES,NO,YES
+80239,/Home & Garden/Home Decor,YES,YES,YES,YES,NO,YES
+80904,/Home & Garden/Home Decor/Bedding,YES,YES,NO,YES,NO,YES
+80255,/Home & Garden/Home Decor/Curtains & Window Treatments,YES,YES,YES,YES,NO,YES
+80905,/Home & Garden/Home Decor/Curtains & Window Treatments/Curtains & Drapes,NO,YES,NO,NO,NO,YES
+80906,/Home & Garden/Home Decor/Curtains & Window Treatments/Window Blinds & Shades,NO,YES,NO,NO,NO,YES
+80876,/Home & Garden/Home Decor/Fine Art,NO,YES,NO,YES,NO,YES
+80256,/Home & Garden/Home Decor/Fireplaces,YES,YES,YES,YES,NO,YES
+80275,/Home & Garden/Home Decor/Lights & Fixtures,YES,YES,YES,YES,NO,YES
+80907,/Home & Garden/Home Decor/Lights & Fixtures/Ceiling Light Fixtures,NO,YES,NO,YES,NO,YES
+80908,/Home & Garden/Home Decor/Lights & Fixtures/Wall Light Fixtures,NO,YES,NO,NO,NO,YES
+80909,/Home & Garden/Home Decor/Linens,NO,YES,NO,NO,NO,YES
+80254,/Home & Garden/Home Decor/Rugs & Carpets,YES,YES,YES,YES,NO,YES
+80240,/Home & Garden/Home Furnishings,YES,YES,YES,YES,NO,YES
+80250,/Home & Garden/Home Furnishings/Bedroom,YES,YES,YES,YES,NO,YES
+80910,/Home & Garden/Home Furnishings/Bedroom/Beds & Bed Frames,YES,YES,NO,YES,NO,YES
+80911,/Home & Garden/Home Furnishings/Bedroom/Mattresses,YES,YES,NO,YES,NO,YES
+80251,/Home & Garden/Home Furnishings/Home Office,YES,YES,YES,YES,NO,YES
+80912,/Home & Garden/Home Furnishings/Home Office/Desks,NO,NO,NO,NO,NO,NO
+80913,/Home & Garden/Home Furnishings/Home Office/Office Chairs,NO,YES,NO,NO,NO,YES
+80502,/Home & Garden/Home Furnishings/Home Storage & Shelving,YES,YES,YES,YES,NO,YES
+80249,/Home & Garden/Home Furnishings/Kitchen & Dining Room,YES,YES,YES,YES,NO,YES
+80917,/Home & Garden/Home Furnishings/Kitchen & Dining Room/Kitchen & Dining Room Chairs,NO,YES,NO,NO,NO,YES
+80916,/Home & Garden/Home Furnishings/Kitchen & Dining Room/Kitchen & Dining Room Tables,NO,YES,NO,YES,NO,YES
+80918,/Home & Garden/Home Furnishings/Kitchen & Dining Room/Stools,NO,YES,NO,NO,NO,YES
+80248,/Home & Garden/Home Furnishings/Living Room,YES,YES,YES,YES,NO,YES
+80942,/Home & Garden/Home Furnishings/Living Room/Accent Tables,YES,YES,NO,NO,NO,NO
+80941,/Home & Garden/Home Furnishings/Living Room/Sofas,YES,YES,NO,NO,NO,NO
+80252,/Home & Garden/Home Furnishings/Nursery,YES,YES,YES,YES,NO,YES
+80241,/Home & Garden/Home Improvement,YES,YES,YES,YES,NO,YES
+80268,/Home & Garden/Home Improvement/Flooring,YES,YES,YES,YES,NO,YES
+80266,/Home & Garden/Home Improvement/Kitchen & Bathroom Cabinets,YES,YES,YES,YES,NO,YES
+80267,/Home & Garden/Home Improvement/Kitchen & Bathroom Counters,YES,YES,YES,YES,NO,YES
+80270,/Home & Garden/Home Improvement/Paint,YES,YES,YES,YES,NO,YES
+80919,/Home & Garden/Home Improvement/Plumbing Fixture Hardware & Parts,NO,YES,NO,YES,NO,YES
+80269,/Home & Garden/Home Improvement/Plumbing Fixtures,YES,YES,YES,YES,NO,YES
+80920,/Home & Garden/Home Improvement/Power & Electrical Supplies,NO,YES,NO,YES,NO,YES
+80271,/Home & Garden/Home Improvement/Tools,YES,YES,YES,YES,NO,YES
+80921,/Home & Garden/Home Improvement/Tools/Measuring Tools & Sensors,NO,YES,NO,NO,NO,YES
+80242,/Home & Garden/Home Security,YES,YES,YES,YES,NO,YES
+80922,/Home & Garden/Household Supplies,YES,YES,NO,YES,NO,YES
+80923,/Home & Garden/Household Supplies/Household Cleaning Supplies,YES,YES,NO,YES,NO,YES
+80924,/Home & Garden/Household Supplies/Pest Control Supplies,YES,YES,NO,NO,NO,YES
+80945,/Home & Garden/Kitchen Tools & Utensils,YES,YES,NO,NO,NO,NO
+80501,/Home & Garden/Outdoor Items,YES,YES,YES,YES,NO,YES
+80925,/Home & Garden/Outdoor Items/BBQ & Grill Accessories,NO,YES,NO,NO,NO,YES
+80264,/Home & Garden/Outdoor Items/BBQs & Grills,YES,YES,YES,YES,NO,YES
+80253,/Home & Garden/Outdoor Items/Garden & Outdoor Furniture,YES,YES,YES,YES,NO,YES
+80926,/Home & Garden/Outdoor Items/Garden & Outdoor Furniture/Outdoor Furniture Sets,NO,YES,NO,YES,NO,YES
+80927,/Home & Garden/Outdoor Items/Garden Sheds & Outdoor Structures,YES,YES,NO,YES,NO,YES
+80896,/Home & Garden/Outdoor Items/Lawn Care & Gardening Supplies,YES,YES,NO,YES,NO,YES
+80263,/Home & Garden/Outdoor Items/Lawn Mowers,YES,YES,YES,YES,NO,YES
+80243,/Home & Garden/Outdoor Items/Pools & Spas,YES,YES,YES,YES,NO,YES
+80873,/Home & Garden/Pet Supplies,YES,YES,NO,YES,NO,YES
+80936,/Home & Garden/Pet Supplies/Cat Food & Supplies,YES,YES,NO,NO,NO,NO
+80935,/Home & Garden/Pet Supplies/Dog Food & Supplies,YES,YES,NO,NO,NO,NO
+80914,/Home & Garden/Tableware,YES,YES,NO,YES,NO,YES
+80928,/Media,NO,YES,NO,YES,NO,YES
+80932,/Media/Audio Streaming Subscription Services,NO,NO,NO,NO,NO,NO
+80929,/Media/Books,NO,YES,NO,YES,NO,YES
+80930,/Media/DVDs & Videos,NO,YES,NO,YES,NO,YES
+80931,/Media/Video Games,NO,YES,NO,YES,NO,YES
+80933,/Media/Video Streaming Subscription Services,NO,NO,NO,NO,NO,NO
+80875,/Musical Instruments & Accessories,YES,YES,NO,YES,NO,YES
+80131,/Real Estate,YES,YES,YES,YES,NO,YES
+80204,/Real Estate/Commercial Properties,YES,YES,YES,YES,NO,YES
+80161,/Real Estate/Commercial Properties/Commercial Properties (For Rent),YES,YES,YES,YES,NO,YES
+80158,/Real Estate/Commercial Properties/Commercial Properties (For Sale),YES,YES,YES,YES,NO,YES
+80403,/Real Estate/Moving & Relocation,YES,YES,YES,YES,NO,YES
+80205,/Real Estate/Residential Properties,YES,YES,YES,YES,NO,YES
+80155,/Real Estate/Residential Properties/Residential Properties (For Rent),YES,YES,YES,YES,NO,YES
+80160,/Real Estate/Residential Properties/Residential Properties (For Rent)/Apartments (For Rent),YES,YES,YES,YES,NO,YES
+80162,/Real Estate/Residential Properties/Residential Properties (For Rent)/Apartments (For Rent)/Furnished Apartments,NO,NO,NO,YES,NO,YES
+80163,/Real Estate/Residential Properties/Residential Properties (For Rent)/Apartments (For Rent)/Unfurnished Apartments,NO,NO,NO,YES,NO,YES
+80159,/Real Estate/Residential Properties/Residential Properties (For Rent)/Houses (For Rent),YES,YES,YES,YES,NO,YES
+80157,/Real Estate/Residential Properties/Residential Properties (For Sale),YES,YES,YES,YES,NO,YES
+80203,/Real Estate/Residential Properties/Residential Properties (For Sale)/Apartments (For Sale),YES,YES,YES,YES,NO,YES
+80167,/Real Estate/Residential Properties/Residential Properties (For Sale)/Apartments (For Sale)/New Apartments (For Sale),YES,YES,YES,YES,NO,YES
+80165,/Real Estate/Residential Properties/Residential Properties (For Sale)/Apartments (For Sale)/Preowned Apartments (For Sale),YES,YES,YES,YES,NO,YES
+80202,/Real Estate/Residential Properties/Residential Properties (For Sale)/Houses (For Sale),YES,YES,YES,YES,NO,YES
+80166,/Real Estate/Residential Properties/Residential Properties (For Sale)/Houses (For Sale)/New Houses (For Sale),YES,YES,YES,YES,NO,YES
+80164,/Real Estate/Residential Properties/Residential Properties (For Sale)/Houses (For Sale)/Preowned Houses (For Sale),YES,YES,YES,YES,NO,YES
+80955,/Seasonal Shopping,YES,YES,YES,YES,NO,YES
+80956,/Seasonal Shopping/Back-to-School Shopping,YES,YES,YES,YES,NO,YES
+80963,/Seasonal Shopping/Back-to-School Shopping/Back-to-School Apparel & Accessories,YES,YES,YES,YES,NO,YES
+80962,/Seasonal Shopping/Back-to-School Shopping/School Supplies,YES,YES,YES,YES,NO,YES
+80957,/Seasonal Shopping/Black Friday Shopping,YES,YES,YES,YES,NO,YES
+80965,/Seasonal Shopping/Black Friday Shopping/In-Store Black Friday Shopping,YES,YES,YES,YES,NO,YES
+80964,/Seasonal Shopping/Black Friday Shopping/Online Black Friday Shopping,YES,YES,YES,YES,NO,YES
+80958,/Seasonal Shopping/Christmas Shopping,YES,YES,YES,YES,NO,YES
+80968,/Seasonal Shopping/Christmas Shopping/After-Christmas Sale Shopping,YES,YES,YES,YES,NO,YES
+80967,/Seasonal Shopping/Christmas Shopping/In-Store Christmas Shopping,YES,YES,YES,YES,NO,YES
+80966,/Seasonal Shopping/Christmas Shopping/Online Christmas Shopping,YES,YES,YES,YES,NO,YES
+80959,/Seasonal Shopping/Mother's Day Shopping,YES,YES,YES,YES,NO,YES
+80960,/Seasonal Shopping/Mother's Day Shopping/Mother's Day Dining,YES,YES,YES,YES,NO,YES
+80961,/Seasonal Shopping/Mother's Day Shopping/Mother's Day Flowers & Greeting Cards,YES,YES,YES,YES,NO,YES
+80276,/Software,YES,YES,YES,YES,NO,YES
+80281,/Software/Accounting Software,YES,YES,YES,YES,NO,YES
+80277,/Software/Antivirus & Security Software,YES,YES,YES,YES,NO,YES
+80278,/Software/Audio & Music Software,YES,YES,YES,YES,NO,YES
+80279,/Software/Business & Productivity Software,YES,YES,YES,YES,NO,YES
+80280,/Software/Design Software,YES,YES,YES,YES,NO,YES
+80283,/Software/Design Software/Drawing & Animation Software,YES,YES,YES,YES,NO,YES
+80284,/Software/Design Software/Photo Software,YES,YES,YES,YES,NO,YES
+80282,/Software/Video Software,YES,YES,YES,YES,NO,YES
+80545,/Sports & Fitness,YES,YES,YES,YES,NO,YES
+80548,/Sports & Fitness/Fitness Products & Services,YES,YES,YES,YES,NO,YES
+80559,/Sports & Fitness/Fitness Products & Services/Exercise Equipment,YES,YES,YES,YES,NO,YES
+80590,/Sports & Fitness/Fitness Products & Services/Exercise Equipment/Fitness Technology Products,YES,YES,NO,NO,NO,NO
+80591,/Sports & Fitness/Fitness Products & Services/Exercise Equipment/Weights & Strength Training Equipment,YES,YES,NO,YES,NO,YES
+80560,/Sports & Fitness/Fitness Products & Services/Fitness Classes & Personal Training Services,YES,YES,YES,YES,NO,YES
+80561,/Sports & Fitness/Fitness Products & Services/Gyms & Athletic Clubs,YES,YES,YES,YES,NO,YES
+80549,/Sports & Fitness/Outdoor Recreational Equipment,YES,YES,YES,YES,NO,YES
+80562,/Sports & Fitness/Outdoor Recreational Equipment/Camping & Hiking Equipment,YES,YES,YES,YES,NO,YES
+80563,/Sports & Fitness/Outdoor Recreational Equipment/Fishing Equipment,YES,YES,YES,YES,NO,YES
+80550,/Sports & Fitness/Sporting Goods,YES,YES,YES,YES,NO,YES
+80566,/Sports & Fitness/Sporting Goods/Baseball Equipment,NO,NO,NO,YES,NO,YES
+80569,/Sports & Fitness/Sporting Goods/Golf Equipment,YES,YES,YES,YES,NO,YES
+80570,/Sports & Fitness/Sporting Goods/Hockey Equipment,NO,NO,NO,YES,NO,YES
+80571,/Sports & Fitness/Sporting Goods/Skateboarding Equipment,NO,NO,NO,YES,NO,YES
+80572,/Sports & Fitness/Sporting Goods/Soccer Equipment,NO,NO,NO,YES,NO,YES
+80575,/Sports & Fitness/Sporting Goods/Water Activities Equipment & Accessories,NO,NO,NO,YES,NO,YES
+80576,/Sports & Fitness/Sporting Goods/Winter Sports Equipment & Accessories,YES,YES,YES,YES,NO,YES
+80303,/Telecom,YES,YES,YES,YES,NO,YES
+80304,/Telecom/Cable & Satellite TV Providers,YES,YES,YES,YES,NO,YES
+80305,/Telecom/Internet Service Providers,YES,YES,YES,YES,NO,YES
+80306,/Telecom/Mobile Phone Service Providers,YES,YES,YES,YES,NO,YES
+80287,/Travel,YES,YES,YES,YES,NO,YES
+80288,/Travel/Air Travel,YES,YES,YES,YES,NO,YES
+80393,/Travel/Air Travel/Air Travel by Class,YES,YES,YES,YES,NO,YES
+80397,/Travel/Air Travel/Air Travel by Class/Business & First Class,YES,YES,YES,YES,NO,YES
+80398,/Travel/Air Travel/Air Travel by Class/Economy Class,YES,YES,YES,YES,NO,YES
+80604,/Travel/Bus & Rail Travel,YES,YES,YES,YES,NO,YES
+80289,/Travel/Car Rental,YES,YES,YES,YES,NO,YES
+80405,"/Travel/Car Rental/Economy, Compact & Mid-size Car Rental",YES,YES,YES,YES,NO,YES
+80406,/Travel/Car Rental/Full-size & Standard Car Rental,YES,YES,YES,YES,NO,YES
+80407,"/Travel/Car Rental/Luxury, Convertible & Specialty Car Rental",YES,YES,YES,YES,NO,YES
+80408,/Travel/Car Rental/Minivan & SUV Rental,YES,YES,YES,YES,NO,YES
+80290,/Travel/Cruises,YES,YES,YES,YES,NO,YES
+80291,/Travel/Hotels & Accommodations,YES,YES,YES,YES,NO,YES
+80396,/Travel/Hotels & Accommodations/Hotels by Star Rating,YES,YES,YES,YES,NO,YES
+80399,/Travel/Hotels & Accommodations/Hotels by Star Rating/1 & 2 Star Hotels,YES,YES,YES,YES,NO,YES
+80400,/Travel/Hotels & Accommodations/Hotels by Star Rating/3 Star Hotels,YES,YES,YES,YES,NO,YES
+80401,/Travel/Hotels & Accommodations/Hotels by Star Rating/4 Star Hotels,YES,YES,YES,YES,NO,YES
+80402,/Travel/Hotels & Accommodations/Hotels by Star Rating/5 Star Hotels,YES,YES,YES,YES,NO,YES
+80465,/Travel/Hotels & Accommodations/Vacation Rentals,YES,YES,YES,YES,NO,YES
+80865,/Travel/Sightseeing Tours & Tourist Attractions,YES,YES,NO,NO,NO,NO
+80605,/Travel/Trips by Destination,YES,YES,YES,YES,NO,YES
+80606,/Travel/Trips by Destination/Trips to Asia-Pacific,YES,YES,YES,YES,NO,YES
+80695,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to Australia,YES,YES,YES,YES,NO,YES
+80696,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to Australia/Trips to Brisbane,YES,YES,YES,YES,NO,YES
+80619,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to Australia/Trips to Melbourne,YES,YES,YES,YES,NO,YES
+80697,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to Australia/Trips to Perth,YES,YES,YES,YES,NO,YES
+80626,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to Australia/Trips to Sydney,YES,YES,YES,YES,NO,YES
+80698,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to China,YES,YES,YES,YES,NO,YES
+80613,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to China/Trips to Beijing,YES,YES,YES,YES,NO,YES
+80699,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to China/Trips to Chengdu,NO,YES,YES,YES,NO,YES
+80700,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to China/Trips to Guangzhou,YES,YES,YES,YES,NO,YES
+80624,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to China/Trips to Shanghai,YES,YES,YES,YES,NO,YES
+80615,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to Hong Kong,YES,YES,YES,YES,NO,YES
+80616,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to India,YES,YES,YES,YES,NO,YES
+80701,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to India/Trips to Ahmedabad,NO,YES,YES,YES,NO,YES
+80702,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to India/Trips to Bangalore,YES,YES,YES,YES,NO,YES
+80704,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to India/Trips to Chennai,YES,YES,YES,YES,NO,YES
+80706,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to India/Trips to Delhi,YES,YES,YES,YES,NO,YES
+80707,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to India/Trips to Goa,YES,YES,YES,YES,NO,YES
+80708,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to India/Trips to Hyderabad,YES,YES,YES,YES,NO,YES
+80709,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to India/Trips to Jaipur,YES,YES,YES,YES,NO,YES
+80705,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to India/Trips to Kochi (India),NO,YES,YES,YES,NO,YES
+80703,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to India/Trips to Kolkata,YES,YES,YES,YES,NO,YES
+80710,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to India/Trips to Mumbai,YES,YES,YES,YES,NO,YES
+80711,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to India/Trips to Pune,NO,YES,YES,YES,NO,YES
+80712,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to Indonesia,YES,YES,YES,YES,NO,YES
+80611,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to Indonesia/Trips to Bali,YES,YES,YES,YES,NO,YES
+80713,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to Indonesia/Trips to Bandung,NO,YES,YES,YES,NO,YES
+80714,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to Indonesia/Trips to Jakarta,YES,YES,YES,YES,NO,YES
+80715,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to Japan,YES,YES,YES,YES,NO,YES
+80614,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to Japan/Trips to Fukuoka,YES,YES,YES,YES,NO,YES
+80617,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to Japan/Trips to Kyoto-Osaka-Kobe,YES,YES,YES,YES,NO,YES
+80620,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to Japan/Trips to Nagoya,YES,YES,YES,YES,NO,YES
+80716,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to Japan/Trips to Okinawa,YES,YES,YES,YES,NO,YES
+80717,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to Japan/Trips to Sapporo,YES,YES,YES,YES,NO,YES
+80628,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to Japan/Trips to Tokyo,YES,YES,YES,YES,NO,YES
+80618,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to Malaysia,YES,YES,YES,YES,NO,YES
+80718,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to Malaysia/Trips to Kuala Lumpur,YES,YES,YES,YES,NO,YES
+80719,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to Malaysia/Trips to Penang,NO,YES,YES,YES,NO,YES
+80720,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to Nepal,YES,YES,YES,YES,NO,YES
+80621,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to New Zealand,YES,YES,YES,YES,NO,YES
+80623,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to Seoul,YES,YES,YES,YES,NO,YES
+80625,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to Singapore,YES,YES,YES,YES,NO,YES
+80721,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to Sri Lanka,YES,YES,YES,YES,NO,YES
+80627,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to Taipei,YES,YES,YES,YES,NO,YES
+80722,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to Thailand,YES,YES,YES,YES,NO,YES
+80612,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to Thailand/Trips to Bangkok,YES,YES,YES,YES,NO,YES
+80723,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to Thailand/Trips to Chiang Mai,YES,YES,YES,YES,NO,YES
+80724,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to Thailand/Trips to Phuket,YES,YES,YES,YES,NO,YES
+80629,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to Vietnam,YES,YES,YES,YES,NO,YES
+80725,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to Vietnam/Trips to Hanoi,YES,YES,YES,YES,NO,YES
+80726,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to Vietnam/Trips to Ho Chi Minh City,YES,YES,YES,YES,NO,YES
+80622,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to the Philippines,YES,YES,YES,YES,NO,YES
+80607,/Travel/Trips by Destination/Trips to Europe,YES,YES,YES,YES,NO,YES
+80630,/Travel/Trips by Destination/Trips to Europe/Trips to Amsterdam,YES,YES,YES,YES,NO,YES
+80727,/Travel/Trips by Destination/Trips to Europe/Trips to Brussels,YES,YES,YES,YES,NO,YES
+80634,/Travel/Trips by Destination/Trips to Europe/Trips to Croatia,YES,YES,YES,YES,NO,YES
+80728,/Travel/Trips by Destination/Trips to Europe/Trips to Denmark,YES,YES,YES,YES,NO,YES
+80729,/Travel/Trips by Destination/Trips to Europe/Trips to Denmark/Trips to Copenhagen,YES,YES,YES,YES,NO,YES
+80730,/Travel/Trips by Destination/Trips to Europe/Trips to France,YES,YES,YES,YES,NO,YES
+80731,/Travel/Trips by Destination/Trips to Europe/Trips to France/Trips to Bordeaux,YES,YES,YES,YES,NO,YES
+80732,/Travel/Trips by Destination/Trips to Europe/Trips to France/Trips to Lyon,YES,YES,YES,YES,NO,YES
+80733,/Travel/Trips by Destination/Trips to Europe/Trips to France/Trips to Marseille,YES,YES,YES,YES,NO,YES
+80734,/Travel/Trips by Destination/Trips to Europe/Trips to France/Trips to Nice,YES,YES,YES,YES,NO,YES
+80641,/Travel/Trips by Destination/Trips to Europe/Trips to France/Trips to Paris,YES,YES,YES,YES,NO,YES
+80735,/Travel/Trips by Destination/Trips to Europe/Trips to France/Trips to Toulouse,YES,YES,YES,YES,NO,YES
+80736,/Travel/Trips by Destination/Trips to Europe/Trips to Germany,YES,YES,YES,YES,NO,YES
+80632,/Travel/Trips by Destination/Trips to Europe/Trips to Germany/Trips to Berlin,YES,YES,YES,YES,NO,YES
+80737,/Travel/Trips by Destination/Trips to Europe/Trips to Germany/Trips to Cologne,YES,YES,YES,YES,NO,YES
+80738,/Travel/Trips by Destination/Trips to Europe/Trips to Germany/Trips to Dusseldorf,YES,YES,YES,YES,NO,YES
+80635,/Travel/Trips by Destination/Trips to Europe/Trips to Germany/Trips to Frankfurt,YES,YES,YES,YES,NO,YES
+80739,/Travel/Trips by Destination/Trips to Europe/Trips to Germany/Trips to Hamburg,YES,YES,YES,YES,NO,YES
+80740,/Travel/Trips by Destination/Trips to Europe/Trips to Germany/Trips to Munich,YES,YES,YES,YES,NO,YES
+80741,/Travel/Trips by Destination/Trips to Europe/Trips to Germany/Trips to Stuttgart,NO,YES,YES,YES,NO,YES
+80636,/Travel/Trips by Destination/Trips to Europe/Trips to Greece,YES,YES,YES,YES,NO,YES
+80742,/Travel/Trips by Destination/Trips to Europe/Trips to Helsinki,YES,YES,YES,YES,NO,YES
+80743,/Travel/Trips by Destination/Trips to Europe/Trips to Hungary,YES,YES,YES,YES,NO,YES
+80744,/Travel/Trips by Destination/Trips to Europe/Trips to Hungary/Trips to Budapest,YES,YES,YES,YES,NO,YES
+80745,/Travel/Trips by Destination/Trips to Europe/Trips to Iceland,YES,YES,YES,YES,NO,YES
+80637,/Travel/Trips by Destination/Trips to Europe/Trips to Ireland,YES,YES,YES,YES,NO,YES
+80746,/Travel/Trips by Destination/Trips to Europe/Trips to Ireland/Trips to Dublin,YES,YES,YES,YES,NO,YES
+80747,/Travel/Trips by Destination/Trips to Europe/Trips to Italy,YES,YES,YES,YES,NO,YES
+80748,/Travel/Trips by Destination/Trips to Europe/Trips to Italy/Trips to Bologna,NO,YES,YES,YES,NO,YES
+80749,/Travel/Trips by Destination/Trips to Europe/Trips to Italy/Trips to Florence,YES,YES,YES,YES,NO,YES
+80750,/Travel/Trips by Destination/Trips to Europe/Trips to Italy/Trips to Milan,YES,YES,YES,YES,NO,YES
+80751,/Travel/Trips by Destination/Trips to Europe/Trips to Italy/Trips to Naples,YES,YES,YES,YES,NO,YES
+80643,/Travel/Trips by Destination/Trips to Europe/Trips to Italy/Trips to Rome,YES,YES,YES,YES,NO,YES
+80752,/Travel/Trips by Destination/Trips to Europe/Trips to Italy/Trips to Sicily,YES,YES,YES,YES,NO,YES
+80753,/Travel/Trips by Destination/Trips to Europe/Trips to Italy/Trips to Venice,YES,YES,YES,YES,NO,YES
+80754,/Travel/Trips by Destination/Trips to Europe/Trips to Kiev,YES,YES,YES,YES,NO,YES
+80755,/Travel/Trips by Destination/Trips to Europe/Trips to Malta,YES,YES,YES,YES,NO,YES
+80640,/Travel/Trips by Destination/Trips to Europe/Trips to Moscow,YES,YES,YES,YES,NO,YES
+80756,/Travel/Trips by Destination/Trips to Europe/Trips to Oslo,YES,YES,YES,YES,NO,YES
+80757,/Travel/Trips by Destination/Trips to Europe/Trips to Poland,YES,YES,YES,YES,NO,YES
+80758,/Travel/Trips by Destination/Trips to Europe/Trips to Poland/Trips to Krakow,YES,YES,YES,YES,NO,YES
+80759,/Travel/Trips by Destination/Trips to Europe/Trips to Poland/Trips to Warsaw,YES,YES,YES,YES,NO,YES
+80760,/Travel/Trips by Destination/Trips to Europe/Trips to Portugal,YES,YES,YES,YES,NO,YES
+80761,/Travel/Trips by Destination/Trips to Europe/Trips to Portugal/Trips to Faro,NO,YES,YES,YES,NO,YES
+80762,/Travel/Trips by Destination/Trips to Europe/Trips to Portugal/Trips to Lisbon,YES,YES,YES,YES,NO,YES
+80763,/Travel/Trips by Destination/Trips to Europe/Trips to Portugal/Trips to Porto,YES,YES,YES,YES,NO,YES
+80642,/Travel/Trips by Destination/Trips to Europe/Trips to Prague,YES,YES,YES,YES,NO,YES
+80764,/Travel/Trips by Destination/Trips to Europe/Trips to Romania,YES,YES,YES,YES,NO,YES
+80765,/Travel/Trips by Destination/Trips to Europe/Trips to Sofia,NO,YES,YES,YES,NO,YES
+80766,/Travel/Trips by Destination/Trips to Europe/Trips to Spain,YES,YES,YES,YES,NO,YES
+80767,/Travel/Trips by Destination/Trips to Europe/Trips to Spain/Trips to Alicante,NO,YES,YES,YES,NO,YES
+80631,/Travel/Trips by Destination/Trips to Europe/Trips to Spain/Trips to Barcelona,YES,YES,YES,YES,NO,YES
+80768,/Travel/Trips by Destination/Trips to Europe/Trips to Spain/Trips to Bilbao,NO,YES,YES,YES,NO,YES
+80769,/Travel/Trips by Destination/Trips to Europe/Trips to Spain/Trips to Cordoba,NO,YES,YES,YES,NO,YES
+80770,/Travel/Trips by Destination/Trips to Europe/Trips to Spain/Trips to Granada,NO,YES,YES,YES,NO,YES
+80639,/Travel/Trips by Destination/Trips to Europe/Trips to Spain/Trips to Madrid,YES,YES,YES,YES,NO,YES
+80771,/Travel/Trips by Destination/Trips to Europe/Trips to Spain/Trips to Malaga,YES,YES,YES,YES,NO,YES
+80772,"/Travel/Trips by Destination/Trips to Europe/Trips to Spain/Trips to Mallorca, Ibiza & Balearic Islands",YES,YES,YES,YES,NO,YES
+80773,/Travel/Trips by Destination/Trips to Europe/Trips to Spain/Trips to Seville,YES,YES,YES,YES,NO,YES
+80774,/Travel/Trips by Destination/Trips to Europe/Trips to Spain/Trips to Valencia,YES,YES,YES,YES,NO,YES
+80633,/Travel/Trips by Destination/Trips to Europe/Trips to Spain/Trips to the Canary Islands,YES,YES,YES,YES,NO,YES
+80775,/Travel/Trips by Destination/Trips to Europe/Trips to St. Petersburg,YES,YES,YES,YES,NO,YES
+80777,/Travel/Trips by Destination/Trips to Europe/Trips to Sweden,YES,YES,YES,YES,NO,YES
+80776,/Travel/Trips by Destination/Trips to Europe/Trips to Sweden/Trips to Stockholm,YES,YES,YES,YES,NO,YES
+80778,/Travel/Trips by Destination/Trips to Europe/Trips to Switzerland,YES,YES,YES,YES,NO,YES
+80779,/Travel/Trips by Destination/Trips to Europe/Trips to Switzerland/Trips to Geneva,YES,YES,YES,YES,NO,YES
+80780,/Travel/Trips by Destination/Trips to Europe/Trips to Switzerland/Trips to Zurich,YES,YES,YES,YES,NO,YES
+80644,/Travel/Trips by Destination/Trips to Europe/Trips to Turkey,YES,YES,YES,YES,NO,YES
+80868,/Travel/Trips by Destination/Trips to Europe/Trips to Turkey/Trips to Ankara,YES,YES,YES,YES,NO,YES
+80786,/Travel/Trips by Destination/Trips to Europe/Trips to Turkey/Trips to Antalya,YES,YES,YES,YES,NO,YES
+80787,/Travel/Trips by Destination/Trips to Europe/Trips to Turkey/Trips to Istanbul,YES,YES,YES,YES,NO,YES
+80870,/Travel/Trips by Destination/Trips to Europe/Trips to Turkey/Trips to Izmir,YES,YES,YES,YES,NO,YES
+80788,/Travel/Trips by Destination/Trips to Europe/Trips to Vienna,YES,YES,YES,YES,NO,YES
+80781,/Travel/Trips by Destination/Trips to Europe/Trips to the UK,YES,YES,YES,YES,NO,YES
+80782,"/Travel/Trips by Destination/Trips to Europe/Trips to the UK/Trips to Birmingham, UK",YES,YES,YES,YES,NO,YES
+80783,/Travel/Trips by Destination/Trips to Europe/Trips to the UK/Trips to Edinburgh,YES,YES,YES,YES,NO,YES
+80784,/Travel/Trips by Destination/Trips to Europe/Trips to the UK/Trips to Glasgow,YES,YES,YES,YES,NO,YES
+80638,"/Travel/Trips by Destination/Trips to Europe/Trips to the UK/Trips to London, UK",YES,YES,YES,YES,NO,YES
+80785,"/Travel/Trips by Destination/Trips to Europe/Trips to the UK/Trips to Manchester, UK",YES,YES,YES,YES,NO,YES
+80608,/Travel/Trips by Destination/Trips to Latin America,YES,YES,YES,YES,NO,YES
+80789,/Travel/Trips by Destination/Trips to Latin America/Trips to Bogota,YES,YES,YES,YES,NO,YES
+80790,/Travel/Trips by Destination/Trips to Latin America/Trips to Brazil,YES,YES,YES,YES,NO,YES
+80649,/Travel/Trips by Destination/Trips to Latin America/Trips to Brazil/Trips to Rio de Janeiro,YES,YES,YES,YES,NO,YES
+80791,/Travel/Trips by Destination/Trips to Latin America/Trips to Brazil/Trips to Salvador,YES,YES,YES,YES,NO,YES
+80650,/Travel/Trips by Destination/Trips to Latin America/Trips to Brazil/Trips to São Paulo,YES,YES,YES,YES,NO,YES
+80645,/Travel/Trips by Destination/Trips to Latin America/Trips to Buenos Aires,YES,YES,YES,YES,NO,YES
+80647,/Travel/Trips by Destination/Trips to Latin America/Trips to Costa Rica,YES,YES,YES,YES,NO,YES
+80798,/Travel/Trips by Destination/Trips to Latin America/Trips to Guatemala,YES,YES,YES,YES,NO,YES
+80799,/Travel/Trips by Destination/Trips to Latin America/Trips to Lima,YES,YES,YES,YES,NO,YES
+80648,/Travel/Trips by Destination/Trips to Latin America/Trips to Mexico,YES,YES,YES,YES,NO,YES
+80800,/Travel/Trips by Destination/Trips to Latin America/Trips to Mexico/Trips to Acapulco,YES,YES,YES,YES,NO,YES
+80801,/Travel/Trips by Destination/Trips to Latin America/Trips to Mexico/Trips to Cancun & Playa del Carmen,YES,YES,YES,YES,NO,YES
+80802,/Travel/Trips by Destination/Trips to Latin America/Trips to Mexico/Trips to Guadalajara,YES,YES,YES,YES,NO,YES
+80803,/Travel/Trips by Destination/Trips to Latin America/Trips to Mexico/Trips to Los Cabos,YES,YES,YES,YES,NO,YES
+80804,/Travel/Trips by Destination/Trips to Latin America/Trips to Mexico/Trips to Mexico City,YES,YES,YES,YES,NO,YES
+80805,/Travel/Trips by Destination/Trips to Latin America/Trips to Mexico/Trips to Monterrey,YES,YES,YES,YES,NO,YES
+80806,/Travel/Trips by Destination/Trips to Latin America/Trips to Mexico/Trips to Puerto Vallarta,YES,YES,YES,YES,NO,YES
+80807,/Travel/Trips by Destination/Trips to Latin America/Trips to Panama,YES,YES,YES,YES,NO,YES
+80808,/Travel/Trips by Destination/Trips to Latin America/Trips to Santiago,YES,YES,YES,YES,NO,YES
+80646,/Travel/Trips by Destination/Trips to Latin America/Trips to the Caribbean,YES,YES,YES,YES,NO,YES
+80792,/Travel/Trips by Destination/Trips to Latin America/Trips to the Caribbean/Trips to Aruba,YES,YES,YES,YES,NO,YES
+80793,/Travel/Trips by Destination/Trips to Latin America/Trips to the Caribbean/Trips to Cuba,YES,YES,YES,YES,NO,YES
+80794,/Travel/Trips by Destination/Trips to Latin America/Trips to the Caribbean/Trips to Jamaica,YES,YES,YES,YES,NO,YES
+80795,/Travel/Trips by Destination/Trips to Latin America/Trips to the Caribbean/Trips to Nassau,NO,YES,YES,YES,NO,YES
+80796,/Travel/Trips by Destination/Trips to Latin America/Trips to the Caribbean/Trips to Puerto Rico,YES,YES,YES,YES,NO,YES
+80797,/Travel/Trips by Destination/Trips to Latin America/Trips to the Caribbean/Trips to the Dominican Republic,YES,YES,YES,YES,NO,YES
+80610,/Travel/Trips by Destination/Trips to North America,YES,YES,YES,YES,NO,YES
+80819,/Travel/Trips by Destination/Trips to North America/Trips to Canada,YES,YES,YES,YES,NO,YES
+80820,/Travel/Trips by Destination/Trips to North America/Trips to Canada/Trips to Calgary,YES,YES,YES,YES,NO,YES
+80671,/Travel/Trips by Destination/Trips to North America/Trips to Canada/Trips to Montreal,YES,YES,YES,YES,NO,YES
+80821,/Travel/Trips by Destination/Trips to North America/Trips to Canada/Trips to Ottawa,YES,YES,YES,YES,NO,YES
+80688,/Travel/Trips by Destination/Trips to North America/Trips to Canada/Trips to Toronto,YES,YES,YES,YES,NO,YES
+80689,/Travel/Trips by Destination/Trips to North America/Trips to Canada/Trips to Vancouver,YES,YES,YES,YES,NO,YES
+80822,/Travel/Trips by Destination/Trips to North America/Trips to the US,YES,YES,YES,YES,NO,YES
+80823,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Alaska,YES,YES,YES,YES,NO,YES
+80824,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Albuquerque,YES,YES,YES,YES,NO,YES
+80656,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Atlanta,YES,YES,YES,YES,NO,YES
+80825,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Atlantic City,NO,YES,YES,YES,NO,YES
+80657,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Austin,YES,YES,YES,YES,NO,YES
+80826,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Baltimore,YES,YES,YES,YES,NO,YES
+80867,"/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Birmingham, AL",YES,YES,YES,YES,NO,YES
+80658,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Boston,YES,YES,YES,YES,NO,YES
+80827,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Buffalo-Rochester Area,YES,YES,YES,YES,NO,YES
+80828,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to California,YES,YES,YES,YES,NO,YES
+80668,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to California/Trips to Los Angeles,YES,YES,YES,YES,NO,YES
+80676,"/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to California/Trips to Orange County, CA",YES,YES,YES,YES,NO,YES
+80683,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to California/Trips to San Diego,YES,YES,YES,YES,NO,YES
+80684,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to California/Trips to San Francisco Bay Area,YES,YES,YES,YES,NO,YES
+80829,"/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Charleston, SC",YES,YES,YES,YES,NO,YES
+80659,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Charlotte,YES,YES,YES,YES,NO,YES
+80660,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Chicago,YES,YES,YES,YES,NO,YES
+80830,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Cincinnati,YES,YES,YES,YES,NO,YES
+80831,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Cleveland,YES,YES,YES,YES,NO,YES
+80832,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Columbus,YES,YES,YES,YES,NO,YES
+80661,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Dallas-Fort Worth,YES,YES,YES,YES,NO,YES
+80662,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Denver,YES,YES,YES,YES,NO,YES
+80663,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Detroit,YES,YES,YES,YES,NO,YES
+80833,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Florida,YES,YES,YES,YES,NO,YES
+80664,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Florida/Trips to Fort Lauderdale,YES,YES,YES,YES,NO,YES
+80834,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Florida/Trips to Fort Myers,YES,YES,YES,YES,NO,YES
+80835,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Florida/Trips to Jacksonville,YES,YES,YES,YES,NO,YES
+80836,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Florida/Trips to Key West,YES,YES,YES,YES,NO,YES
+80669,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Florida/Trips to Miami,YES,YES,YES,YES,NO,YES
+80677,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Florida/Trips to Orlando,YES,YES,YES,YES,NO,YES
+80851,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Florida/Trips to Pensacola,NO,YES,YES,YES,NO,YES
+80687,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Florida/Trips to Tampa Bay Area,YES,YES,YES,YES,NO,YES
+80837,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Gatlinburg,NO,YES,YES,YES,NO,YES
+80862,"/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Greenville, SC",NO,YES,YES,YES,NO,YES
+80838,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Hartford,YES,YES,YES,YES,NO,YES
+80665,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Hawaii,YES,YES,YES,YES,NO,YES
+80839,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Hawaii/Trips to Maui,YES,YES,YES,YES,NO,YES
+80840,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Hawaii/Trips to Oahu,YES,YES,YES,YES,NO,YES
+80841,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Hawaii/Trips to the Big Island,YES,YES,YES,YES,NO,YES
+80666,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Houston,YES,YES,YES,YES,NO,YES
+80842,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Indianapolis,YES,YES,YES,YES,NO,YES
+80843,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Kansas City,YES,YES,YES,YES,NO,YES
+80667,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Las Vegas,YES,YES,YES,YES,NO,YES
+80872,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Little Rock,NO,YES,YES,YES,NO,YES
+80844,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Louisville,YES,YES,YES,YES,NO,YES
+80845,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Memphis,YES,YES,YES,YES,NO,YES
+80846,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Milwaukee,YES,YES,YES,YES,NO,YES
+80670,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Minneapolis-Saint Paul,YES,YES,YES,YES,NO,YES
+80672,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Myrtle Beach & Grand Strand,YES,YES,YES,YES,NO,YES
+80673,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Nashville,YES,YES,YES,YES,NO,YES
+80674,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to New Orleans,YES,YES,YES,YES,NO,YES
+80675,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to New York City,YES,YES,YES,YES,NO,YES
+80847,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Norfolk-Virginia Beach Region,YES,YES,YES,YES,NO,YES
+80848,"/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Ocean City, MD",NO,YES,YES,YES,NO,YES
+80849,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Oklahoma City,YES,YES,YES,YES,NO,YES
+80850,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Omaha,NO,YES,YES,YES,NO,YES
+80678,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Philadelphia,YES,YES,YES,YES,NO,YES
+80679,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Phoenix,YES,YES,YES,YES,NO,YES
+80852,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Pittsburgh,YES,YES,YES,YES,NO,YES
+80680,"/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Portland, OR",YES,YES,YES,YES,NO,YES
+80853,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Raleigh-Durham Area,YES,YES,YES,YES,NO,YES
+80854,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Reno,YES,YES,YES,YES,NO,YES
+80855,"/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Richmond, VA",YES,YES,YES,YES,NO,YES
+80681,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Salt Lake City,YES,YES,YES,YES,NO,YES
+80682,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to San Antonio,YES,YES,YES,YES,NO,YES
+80856,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Savannah,NO,YES,YES,YES,NO,YES
+80685,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Seattle,YES,YES,YES,YES,NO,YES
+80686,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to St. Louis,YES,YES,YES,YES,NO,YES
+80857,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Tucson,YES,YES,YES,YES,NO,YES
+80690,"/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Washington, D.C.",YES,YES,YES,YES,NO,YES
+80609,/Travel/Trips by Destination/Trips to the Middle East & Africa,YES,YES,YES,YES,NO,YES
+80809,/Travel/Trips by Destination/Trips to the Middle East & Africa/Trips to Doha,NO,YES,YES,YES,NO,YES
+80651,/Travel/Trips by Destination/Trips to the Middle East & Africa/Trips to Egypt,YES,YES,YES,YES,NO,YES
+80652,/Travel/Trips by Destination/Trips to the Middle East & Africa/Trips to Israel,YES,YES,YES,YES,NO,YES
+80810,/Travel/Trips by Destination/Trips to the Middle East & Africa/Trips to Jeddah,NO,YES,YES,YES,NO,YES
+80811,/Travel/Trips by Destination/Trips to the Middle East & Africa/Trips to Jordan,YES,YES,YES,YES,NO,YES
+80812,/Travel/Trips by Destination/Trips to the Middle East & Africa/Trips to Kenya,YES,YES,YES,YES,NO,YES
+80871,/Travel/Trips by Destination/Trips to the Middle East & Africa/Trips to Kuwait,YES,YES,YES,YES,NO,YES
+80813,/Travel/Trips by Destination/Trips to the Middle East & Africa/Trips to Lebanon,YES,YES,YES,YES,NO,YES
+80653,/Travel/Trips by Destination/Trips to the Middle East & Africa/Trips to Morocco,YES,YES,YES,YES,NO,YES
+80869,/Travel/Trips by Destination/Trips to the Middle East & Africa/Trips to Riyadh,NO,YES,YES,YES,NO,YES
+80654,/Travel/Trips by Destination/Trips to the Middle East & Africa/Trips to South Africa,YES,YES,YES,YES,NO,YES
+80814,/Travel/Trips by Destination/Trips to the Middle East & Africa/Trips to South Africa/Trips to Cape Town,YES,YES,YES,YES,NO,YES
+80815,/Travel/Trips by Destination/Trips to the Middle East & Africa/Trips to South Africa/Trips to Johannesburg,YES,YES,YES,YES,NO,YES
+80816,/Travel/Trips by Destination/Trips to the Middle East & Africa/Trips to Tehran,NO,YES,YES,YES,NO,YES
+80655,/Travel/Trips by Destination/Trips to the Middle East & Africa/Trips to the United Arab Emirates,YES,YES,YES,YES,NO,YES
+80817,/Travel/Trips by Destination/Trips to the Middle East & Africa/Trips to the United Arab Emirates/Trips to Abu Dhabi,NO,YES,YES,YES,NO,YES
+80818,/Travel/Trips by Destination/Trips to the Middle East & Africa/Trips to the United Arab Emirates/Trips to Dubai,NO,YES,YES,YES,NO,YES
+80866,/Travel/Vacation Packages,YES,YES,NO,NO,NO,NO

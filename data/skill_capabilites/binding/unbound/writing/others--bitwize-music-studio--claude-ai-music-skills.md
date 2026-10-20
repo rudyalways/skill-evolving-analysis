@@ -1,0 +1,18 @@
+---
+view: "binding"
+depth1: "unbound"
+depth2: "writing"
+depth3: "others--bitwize-music-studio--claude-ai-music-skills"
+placements: 5
+kind: "clone"
+---
+
+# others--bitwize-music-studio--claude-ai-music-skills
+
+unbound · No product named · 没有点名产品 / writing / others--bitwize-music-studio--claude-ai-music-skills
+
+5 placements, 1.4% of writing (353), under unbound (15,250).
+
+This row is a copied skill pack, not a capability name.
+
+Counted from the skill-capabilities tree in `benchmark-all-in-one.html`, 5 Oct 2026.

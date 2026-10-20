@@ -1,0 +1,18 @@
+---
+view: "domain"
+depth1: "ai"
+depth2: "model"
+depth3: "others--cyperx84--claude-skills-mental-models"
+placements: 1
+kind: "clone"
+---
+
+# others--cyperx84--claude-skills-mental-models
+
+ai · Models, agents, prompts · 模型、智能体、提示 / model · Model · 模型 / others--cyperx84--claude-skills-mental-models
+
+1 placements, 0.1% of model (801), under ai (7,890).
+
+This row is a copied skill pack, not a capability name.
+
+Counted from the skill-capabilities tree in `benchmark-all-in-one.html`, 5 Oct 2026. This row is one of the level-3 names the page counts and does not store in the embedded list.

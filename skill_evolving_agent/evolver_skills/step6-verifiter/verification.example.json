@@ -1,0 +1,69 @@
+{
+  "diagnosis": null,
+  "verification_steps": {
+    "used_by": "verifier stage",
+    "steps": [
+      {
+        "id": "step1",
+        "check": "changelog reverse check"
+      },
+      {
+        "id": "step2",
+        "check": "goal align",
+        "ref": "evolve-goal"
+      },
+      {
+        "id": "step3",
+        "check": "difficulty level check"
+      },
+      {
+        "id": "step4",
+        "check": "not too complicated, not overfitting"
+      },
+      {
+        "id": "step5",
+        "check": "checklist",
+        "from": "goal capabilities"
+      }
+    ],
+    "step_n": {
+      "id": "stepN",
+      "enabled": false,
+      "method": "agent_run",
+      "verify_list": {
+        "target": ["response", "trace", "workspace", "logs"],
+        "verifier": ["regex", "script"]
+      }
+    }
+  },
+  "nod": null,
+  "result": null,
+  "feedback": {
+    "overall_status": "<pass|fail>",
+    "overall_feedback": "<text>",
+    "action": {
+      "op": "<pass|back>",
+      "to": "<earlier state, empty when pass>"
+    },
+    "per_skill": [
+      {
+        "skill": "<skill>",
+        "status": "<pass|fail>",
+        "feedback": "<text>",
+        "action": {
+          "op": "<pass|back>",
+          "to": "<earlier state, empty when pass>"
+        }
+      }
+    ],
+    "ood": [
+      {
+        "skill": "<skill>",
+        "kind": "<section|dir|check>",
+        "name": "<name outside the list>",
+        "description": "<what was seen that is not one of the checks or closed names>"
+      }
+    ]
+  },
+  "changelog": null
+}

@@ -1,0 +1,18 @@
+---
+view: "binding"
+depth1: "unbound"
+depth2: "mobile"
+depth3: "others--efremidze--swift-patterns-skill"
+placements: 1
+kind: "clone"
+---
+
+# others--efremidze--swift-patterns-skill
+
+unbound · No product named · 没有点名产品 / mobile / others--efremidze--swift-patterns-skill
+
+1 placements, 0.8% of mobile (123), under unbound (15,250).
+
+This row is a copied skill pack, not a capability name.
+
+Counted from the skill-capabilities tree in `benchmark-all-in-one.html`, 5 Oct 2026.

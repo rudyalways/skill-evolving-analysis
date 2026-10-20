@@ -1,0 +1,9 @@
+.git
+public_skills
+raw_materials
+notes
+data/processed
+**/__pycache__
+**/*.pyc
+**/.DS_Store
+skill_evolving_agent/workspace/runs

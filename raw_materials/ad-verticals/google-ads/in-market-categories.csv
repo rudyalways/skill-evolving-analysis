@@ -1,0 +1,955 @@
+Category ID,Parent category ID,Category path
+80428,0,/Apparel & Accessories
+80429,80428,/Apparel & Accessories/Activewear
+80557,80429,/Apparel & Accessories/Activewear/Running Apparel
+80558,80429,/Apparel & Accessories/Activewear/Yoga Apparel
+80949,80428,/Apparel & Accessories/Backpacks
+80430,80428,/Apparel & Accessories/Costumes
+80879,80428,/Apparel & Accessories/Eyewear
+80880,80879,/Apparel & Accessories/Eyewear/Eyeglasses & Contact Lenses
+80878,80879,/Apparel & Accessories/Eyewear/Sunglasses
+80431,80428,/Apparel & Accessories/Formal Wear
+80443,80431,/Apparel & Accessories/Formal Wear/Bridal Wear
+80444,80431,/Apparel & Accessories/Formal Wear/Suits & Business Attire
+80432,80428,/Apparel & Accessories/Handbags
+80940,80428,/Apparel & Accessories/Hats
+80433,80428,/Apparel & Accessories/Jewelry & Watches
+80445,80433,/Apparel & Accessories/Jewelry & Watches/Fine Jewelry
+80877,80445,/Apparel & Accessories/Jewelry & Watches/Fine Jewelry/Necklaces
+80447,80433,/Apparel & Accessories/Jewelry & Watches/Watches
+80446,80433,/Apparel & Accessories/Jewelry & Watches/Wedding & Engagement Rings
+80434,80428,/Apparel & Accessories/Lingerie
+80435,80428,/Apparel & Accessories/Luggage
+80436,80428,/Apparel & Accessories/Men's Apparel
+80438,80428,/Apparel & Accessories/Outerwear
+80937,80428,/Apparel & Accessories/Pants
+80938,80428,/Apparel & Accessories/Shirts & Tops
+80439,80428,/Apparel & Accessories/Shoes
+80448,80439,/Apparel & Accessories/Shoes/Athletic Shoes
+80449,80439,/Apparel & Accessories/Shoes/Boots
+80450,80439,/Apparel & Accessories/Shoes/Dress Shoes
+80939,80428,/Apparel & Accessories/Shorts
+80881,80428,/Apparel & Accessories/Socks
+80440,80428,/Apparel & Accessories/Swimwear
+80882,80428,/Apparel & Accessories/Underwear
+80441,80428,"/Apparel & Accessories/Wallets, Briefcases & Leather Goods"
+80442,80428,/Apparel & Accessories/Women's Apparel
+80874,0,/Arts & Crafts Supplies
+80001,0,/Autos & Vehicles
+80468,80001,/Autos & Vehicles/Auto Parts & Accessories
+80470,80468,/Autos & Vehicles/Auto Parts & Accessories/Auto Exterior Parts & Accessories
+80471,80468,/Autos & Vehicles/Auto Parts & Accessories/Auto Interior Parts & Accessories
+80472,80468,/Autos & Vehicles/Auto Parts & Accessories/Automotive Electronic Components
+80473,80468,/Autos & Vehicles/Auto Parts & Accessories/Car Batteries
+80474,80468,/Autos & Vehicles/Auto Parts & Accessories/Car Brakes
+80475,80468,/Autos & Vehicles/Auto Parts & Accessories/Engine & Transmission
+80476,80468,/Autos & Vehicles/Auto Parts & Accessories/High Performance & Aftermarket Auto Parts
+80477,80468,/Autos & Vehicles/Auto Parts & Accessories/Wheels & Tires
+80469,80001,/Autos & Vehicles/Auto Repair & Maintenance
+80479,80469,/Autos & Vehicles/Auto Repair & Maintenance/Brake Service & Repair
+80480,80469,/Autos & Vehicles/Auto Repair & Maintenance/Collision & Auto Body Repair
+80478,80469,/Autos & Vehicles/Auto Repair & Maintenance/Glass Repair & Replacement
+80481,80469,/Autos & Vehicles/Auto Repair & Maintenance/Oil Changes
+80482,80469,/Autos & Vehicles/Auto Repair & Maintenance/Transmission Repair
+80206,80001,/Autos & Vehicles/Motor Vehicles
+80097,80206,/Autos & Vehicles/Motor Vehicles/Motor Vehicles (New)
+80099,80206,/Autos & Vehicles/Motor Vehicles/Motor Vehicles (Used)
+80013,80206,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand
+80014,80013,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Acura
+80093,80013,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Alfa Romeo
+80015,80013,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Audi
+80016,80013,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/BMW
+80054,80013,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Buick
+80017,80013,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Cadillac
+80018,80013,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Chevrolet
+80019,80013,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Chrysler
+80020,80013,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Citroën
+80021,80013,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Dodge
+80022,80013,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Fiat
+80023,80013,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Ford
+80045,80013,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/GM-Daewoo
+80024,80013,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/GMC
+80025,80013,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Honda
+80056,80013,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Hummer
+80026,80013,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Hyundai
+80080,80013,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Infiniti
+80081,80013,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Isuzu
+80057,80013,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Jaguar
+80027,80013,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Jeep
+80028,80013,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Kia
+80059,80013,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Land Rover
+80029,80013,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Lexus
+80030,80013,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Lincoln
+80060,80013,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Maserati
+80031,80013,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Mazda
+80032,80013,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Mercedes-Benz
+80033,80013,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Mercury
+80061,80013,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Mini
+80034,80013,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Mitsubishi
+80035,80013,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Nissan
+80036,80013,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Peugeot
+80037,80013,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Pontiac
+80038,80013,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Porsche
+80693,80013,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Ram Trucks
+80039,80013,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Renault
+80094,80013,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/SEAT
+80046,80013,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Saab
+80040,80013,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Saturn
+80063,80013,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Scion
+80041,80013,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Subaru
+80064,80013,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Suzuki
+80694,80013,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Tesla Motors
+80042,80013,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Toyota
+80047,80013,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Vauxhall-Opel
+80043,80013,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Volkswagen
+80044,80013,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Brand/Volvo
+80296,80206,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Price
+80297,80296,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Price/$0 - $15k (Motor Vehicles)
+80298,80296,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Price/$15k - $25k (Motor Vehicles)
+80299,80296,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Price/$25k - $35k (Motor Vehicles)
+80300,80296,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Price/$35k - $50k (Motor Vehicles)
+80301,80296,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Price/$50k - $75k (Motor Vehicles)
+80302,80296,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Price/$75k and above (Motor Vehicles)
+80171,80206,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type
+80049,80171,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Classic Vehicles
+80111,80171,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Compact Cars
+80172,80111,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Compact Cars/Compact Cars (New)
+80112,80111,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Compact Cars/Compact Cars (Used)
+80102,80171,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Convertibles
+80173,80102,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Convertibles/Convertibles (New)
+80113,80102,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Convertibles/Convertibles (Used)
+80103,80171,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Coupes
+80174,80103,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Coupes/Coupes (New)
+80170,80103,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Coupes/Coupes (Used)
+80110,80171,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Crossovers
+80175,80110,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Crossovers/Crossovers (New)
+80114,80110,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Crossovers/Crossovers (Used)
+80104,80171,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Diesel Vehicles
+80176,80104,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Diesel Vehicles/Diesel Vehicles (New)
+80115,80104,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Diesel Vehicles/Diesel Vehicles (Used)
+80105,80171,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Hatchbacks
+80177,80105,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Hatchbacks/Hatchbacks (New)
+80116,80105,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Hatchbacks/Hatchbacks (Used)
+80012,80171,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Hybrid & Alternative Vehicles
+80178,80012,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Hybrid & Alternative Vehicles/Hybrid & Alternative Vehicles (New)
+80117,80012,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Hybrid & Alternative Vehicles/Hybrid & Alternative Vehicles (Used)
+80106,80171,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Luxury Vehicles
+80179,80106,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Luxury Vehicles/Luxury Vehicles (New)
+80118,80106,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Luxury Vehicles/Luxury Vehicles (Used)
+80079,80171,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Microcars & Subcompacts
+80180,80079,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Microcars & Subcompacts/Microcars & Subcompacts (New)
+80119,80079,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Microcars & Subcompacts/Microcars & Subcompacts (Used)
+80006,80171,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Motorcycles
+80181,80006,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Motorcycles/Motorcycles (New)
+80120,80006,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Motorcycles/Motorcycles (Used)
+80004,80171,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Off-Road Vehicles
+80182,80004,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Off-Road Vehicles/Off-Road Vehicles (New)
+80190,80004,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Off-Road Vehicles/Off-Road Vehicles (Used)
+80050,80171,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Pickup Trucks
+80187,80050,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Pickup Trucks/Pickup Trucks (New)
+80127,80050,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Pickup Trucks/Pickup Trucks (Used)
+80051,80171,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/SUVs
+80188,80051,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/SUVs/SUVs (New)
+80128,80051,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/SUVs/SUVs (Used)
+80068,80171,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Scooters & Mopeds
+80183,80068,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Scooters & Mopeds/Scooters & Mopeds (New)
+80121,80068,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Scooters & Mopeds/Scooters & Mopeds (Used)
+80107,80171,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Sedans
+80184,80107,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Sedans/Sedans (New)
+80122,80107,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Sedans/Sedans (Used)
+80108,80171,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Sports Cars
+80185,80108,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Sports Cars/Sports Cars (New)
+80123,80108,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Sports Cars/Sports Cars (Used)
+80109,80171,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Station Wagons
+80186,80109,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Station Wagons/Station Wagons (New)
+80124,80109,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Station Wagons/Station Wagons (Used)
+80052,80171,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Vans & Minivans
+80189,80052,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Vans & Minivans/Vans & Minivans (New)
+80129,80052,/Autos & Vehicles/Motor Vehicles/Motor Vehicles by Type/Vans & Minivans/Vans & Minivans (Used)
+80169,80001,/Autos & Vehicles/Vehicles (Other)
+80067,80169,/Autos & Vehicles/Vehicles (Other)/Bicycles & Accessories
+80065,80169,/Autos & Vehicles/Vehicles (Other)/Boats & Watercraft
+80069,80169,/Autos & Vehicles/Vehicles (Other)/Campers & RVs
+80070,80169,/Autos & Vehicles/Vehicles (Other)/Commercial Vehicles
+80308,0,/Baby & Children's Products
+80309,80308,/Baby & Children's Products/Baby & Children's Apparel
+80316,80309,/Baby & Children's Products/Baby & Children's Apparel/Baby & Toddler Apparel
+80317,80309,/Baby & Children's Products/Baby & Children's Apparel/Children's Apparel
+80312,80308,/Baby & Children's Products/Child Car Seats
+80314,80308,/Baby & Children's Products/Childcare & Education
+80318,80314,/Baby & Children's Products/Childcare & Education/Childcare
+80319,80314,/Baby & Children's Products/Childcare & Education/Early Childhood Education
+80310,80308,/Baby & Children's Products/Diapers & Baby Hygiene Products
+80315,80308,/Baby & Children's Products/Infant & Toddler Feeding
+80320,80315,/Baby & Children's Products/Infant & Toddler Feeding/Infant Feeding Supplies
+80321,80315,/Baby & Children's Products/Infant & Toddler Feeding/Toddler Meals
+80313,80308,/Baby & Children's Products/Strollers & Baby Carriages
+80311,80308,/Baby & Children's Products/Toys
+80546,0,/Beauty & Personal Care
+80552,80546,/Beauty & Personal Care/Bath & Body Products
+80989,80552,/Beauty & Personal Care/Bath & Body Products/Body Lotions & Moisturizers
+80991,80552,/Beauty & Personal Care/Bath & Body Products/Deodorants
+80988,80552,/Beauty & Personal Care/Bath & Body Products/Soaps & Body Washes
+80551,80546,/Beauty & Personal Care/Hair Care Products
+80979,80551,/Beauty & Personal Care/Hair Care Products/Hair Color Products
+80993,80551,/Beauty & Personal Care/Hair Care Products/Shampoos & Conditioners
+80554,80546,/Beauty & Personal Care/Makeup & Cosmetics
+80577,80554,/Beauty & Personal Care/Makeup & Cosmetics/Eye Makeup
+80578,80554,/Beauty & Personal Care/Makeup & Cosmetics/Face Makeup
+80579,80554,/Beauty & Personal Care/Makeup & Cosmetics/Lip Makeup
+80580,80554,/Beauty & Personal Care/Makeup & Cosmetics/Nail Care Products
+80437,80546,/Beauty & Personal Care/Perfumes & Fragrances
+80987,80546,/Beauty & Personal Care/Razors & Shavers
+80555,80546,/Beauty & Personal Care/Skin Care Products
+80581,80555,/Beauty & Personal Care/Skin Care Products/Anti-Aging Skin Care Products
+80583,80555,/Beauty & Personal Care/Skin Care Products/Face Lotions & Moisturizers
+80582,80555,/Beauty & Personal Care/Skin Care Products/Facial Cleansers & Makeup Removers
+80584,80555,/Beauty & Personal Care/Skin Care Products/Skin Care Tools & Devices
+80556,80546,/Beauty & Personal Care/Spas & Beauty Services
+80586,80556,/Beauty & Personal Care/Spas & Beauty Services/Facial & Skin Treatments
+80588,80556,/Beauty & Personal Care/Spas & Beauty Services/Hair Removal Services
+80587,80556,/Beauty & Personal Care/Spas & Beauty Services/Manicures & Pedicures
+80585,80556,/Beauty & Personal Care/Spas & Beauty Services/Massage Therapy
+80553,80546,/Beauty & Personal Care/Tanning & Sun Care Products
+80883,0,/Business & Industrial Products
+80884,80883,/Business & Industrial Products/Food Service Equipment
+80885,80883,/Business & Industrial Products/Material Handling Equipment
+80886,80883,/Business & Industrial Products/Signage
+80887,80883,/Business & Industrial Products/Work Safety Protective Gear
+80463,0,/Business Services
+80517,80463,/Business Services/Advertising & Marketing Services
+80527,80517,/Business Services/Advertising & Marketing Services/Direct Mail Marketing Services
+80528,80517,/Business Services/Advertising & Marketing Services/Email Marketing Services
+80529,80517,/Business Services/Advertising & Marketing Services/SEO & SEM Services
+80518,80463,/Business Services/Business Financial Services
+80519,80463,/Business Services/Business Printing & Document Services
+80520,80463,/Business Services/Business Technology
+80530,80520,/Business Services/Business Technology/Enterprise Software
+80535,80530,/Business Services/Business Technology/Enterprise Software/CRM Solutions
+80534,80530,/Business Services/Business Technology/Enterprise Software/Collaboration & Conferencing Tools
+80536,80530,/Business Services/Business Technology/Enterprise Software/ERP Solutions
+80537,80530,/Business Services/Business Technology/Enterprise Software/Helpdesk & Customer Support Solutions
+80531,80520,/Business Services/Business Technology/Network Systems & Services
+80538,80531,/Business Services/Business Technology/Network Systems & Services/Hosted Data & Cloud Storage
+80539,80531,/Business Services/Business Technology/Network Systems & Services/Network & Enterprise Security
+80540,80531,/Business Services/Business Technology/Network Systems & Services/Network Equipment & Virtualization
+80541,80531,/Business Services/Business Technology/Network Systems & Services/Network Management
+80532,80520,/Business Services/Business Technology/Web Services
+80542,80532,/Business Services/Business Technology/Web Services/Domain Registration
+80543,80532,/Business Services/Business Technology/Web Services/Web Design & Development
+80544,80532,/Business Services/Business Technology/Web Services/Web Hosting
+80521,80463,/Business Services/Corporate Event Planning
+80522,80463,/Business Services/Office Supplies
+80533,80522,/Business Services/Office Supplies/Office Furniture
+80523,80463,/Business Services/Payment Processing & Merchant Services
+80524,80463,/Business Services/Payroll Services
+80525,80463,/Business Services/Physical Security & Access Control
+80526,80463,/Business Services/Staffing & Recruitment Services
+80193,0,/Computers & Peripherals
+80195,80193,/Computers & Peripherals/Computer Accessories & Components
+80200,80195,/Computers & Peripherals/Computer Accessories & Components/Computer Monitors
+80201,80195,/Computers & Peripherals/Computer Accessories & Components/Memory & Storage
+81005,80195,/Computers & Peripherals/Computer Accessories & Components/Webcams
+80194,80193,/Computers & Peripherals/Computers
+80197,80194,/Computers & Peripherals/Computers/Desktop Computers
+80198,80194,/Computers & Peripherals/Computers/Laptops & Notebooks
+80199,80194,/Computers & Peripherals/Computers/Tablets & Ultraportable Devices
+80196,80193,"/Computers & Peripherals/Printers, Scanners & Faxes"
+80207,0,/Consumer Electronics
+80210,80207,/Consumer Electronics/Audio
+80218,80210,/Consumer Electronics/Audio/Car Audio
+80888,80210,/Consumer Electronics/Audio/Headphones & Headsets
+80219,80210,/Consumer Electronics/Audio/MP3 Players
+80220,80210,/Consumer Electronics/Audio/Pro Musician & DJ Equipment
+80221,80210,/Consumer Electronics/Audio/Speakers
+80222,80210,/Consumer Electronics/Audio/Stereo Systems
+80890,80207,/Consumer Electronics/Batteries
+80209,80207,/Consumer Electronics/Camcorders
+80208,80207,/Consumer Electronics/Cameras
+80223,80208,/Consumer Electronics/Cameras/Camera Lenses
+80224,80208,/Consumer Electronics/Cameras/Digital SLRs
+80225,80208,/Consumer Electronics/Cameras/Point & Shoots
+80212,80207,/Consumer Electronics/DVD & Blu-Ray Players
+80214,80207,/Consumer Electronics/GPS & Navigation
+80244,80207,/Consumer Electronics/Game Consoles
+80245,80244,/Consumer Electronics/Game Consoles/Nintendo Consoles
+80246,80244,/Consumer Electronics/Game Consoles/Sony PlayStation
+80247,80244,/Consumer Electronics/Game Consoles/Xbox
+80995,80207,/Consumer Electronics/Gaming Peripherals & Accessories
+80213,80207,/Consumer Electronics/Home Theater Systems
+80889,80207,/Consumer Electronics/Mobile Phone Accessories
+80286,80207,/Consumer Electronics/Mobile Phones
+80691,80286,/Consumer Electronics/Mobile Phones/Android Phones
+80692,80286,/Consumer Electronics/Mobile Phones/iOS Phones
+80934,80207,/Consumer Electronics/Power Adapters & Chargers
+80211,80207,/Consumer Electronics/Televisions
+80216,80211,/Consumer Electronics/Televisions/HDTVs
+80215,80211,/Consumer Electronics/Televisions/LCD TVs
+80217,80211,/Consumer Electronics/Televisions/Plasma TVs
+80592,0,/Dating Services
+80226,0,/Education
+80998,80226,/Education/Educational Resources (Preschool & Kindergarten)
+80999,80226,/Education/Educational Resources (Primary School)
+81000,80226,/Education/Educational Resources (Secondary School)
+80227,80226,/Education/Foreign Language Study
+80994,80226,/Education/Open Online Courses
+80228,80226,/Education/Post-Secondary Education
+80232,80228,/Education/Post-Secondary Education/Arts & Design Education
+80233,80228,/Education/Post-Secondary Education/Business Education
+80285,80228,/Education/Post-Secondary Education/Cosmetology Education & Training
+80234,80228,/Education/Post-Secondary Education/Health Care Education
+80236,80234,/Education/Post-Secondary Education/Health Care Education/Nursing Education
+80997,80228,/Education/Post-Secondary Education/Legal Education
+81001,80228,/Education/Post-Secondary Education/Science Education
+80235,80228,/Education/Post-Secondary Education/Technology Education
+80229,80226,/Education/Primary & Secondary Schools (K-12)
+80230,80226,/Education/Study Abroad Programs
+80231,80226,/Education/Test Preparation & Tutoring
+80412,0,/Employment
+80413,80412,/Employment/Accounting & Finance Jobs
+80982,80412,/Employment/Agriculture Jobs
+80425,80412,/Employment/Career Consulting Services
+80414,80412,/Employment/Clerical & Administrative Jobs
+80980,80412,/Employment/Construction Jobs
+80415,80412,/Employment/Education Jobs
+80416,80412,/Employment/Executive & Management Jobs
+80417,80412,/Employment/Government & Public Sector Jobs
+80418,80412,/Employment/Health & Medical Jobs
+80419,80412,/Employment/IT & Technical Jobs
+80424,80412,/Employment/Internships
+80420,80412,/Employment/Legal Jobs
+81002,80412,/Employment/Leisure & Hospitality Jobs
+80981,80412,/Employment/Manufacturing Jobs
+80426,80412,/Employment/Resumes & Portfolios
+80421,80412,/Employment/Retail Jobs
+80422,80412,/Employment/Sales & Marketing Jobs
+80423,80412,/Employment/Temporary & Seasonal Jobs
+80983,80412,/Employment/Transportation & Utilities Jobs
+80593,0,/Event Tickets
+80597,80593,/Event Tickets/Concert & Music Festival Tickets
+80595,80593,/Event Tickets/Performing Arts Tickets
+80596,80595,/Event Tickets/Performing Arts Tickets/Broadway & Theater Tickets
+80598,80593,/Event Tickets/Sports Tickets
+80599,80598,/Event Tickets/Sports Tickets/American Football Tickets
+80600,80598,/Event Tickets/Sports Tickets/Baseball Tickets
+80601,80598,/Event Tickets/Sports Tickets/Basketball Tickets
+80602,80598,/Event Tickets/Sports Tickets/Hockey Tickets
+80603,80598,/Event Tickets/Sports Tickets/Soccer Tickets
+80130,0,/Financial Services
+80132,80130,/Financial Services/Banking Services
+80142,80132,/Financial Services/Banking Services/Debit & Checking Services
+80409,80132,/Financial Services/Banking Services/Savings Accounts
+80135,80130,/Financial Services/Credit & Lending
+80140,80135,/Financial Services/Credit & Lending/Auto Loans
+80138,80135,/Financial Services/Credit & Lending/Business Loans
+80141,80135,/Financial Services/Credit & Lending/Credit Cards
+80410,80135,/Financial Services/Credit & Lending/Credit Reports & Monitoring Services
+80136,80135,/Financial Services/Credit & Lending/Mortgage
+80411,80136,/Financial Services/Credit & Lending/Mortgage/Home Equity Loans
+80153,80136,/Financial Services/Credit & Lending/Mortgage/Home Purchase Loans
+80152,80136,/Financial Services/Credit & Lending/Mortgage/Mortgage Refinancing
+80139,80135,/Financial Services/Credit & Lending/Personal Loans
+80192,80135,/Financial Services/Credit & Lending/Student Loans
+80133,80130,/Financial Services/Financial Planning
+80150,80133,/Financial Services/Financial Planning/Estate Planning
+80151,80133,/Financial Services/Financial Planning/Retirement Planning
+80134,80130,/Financial Services/Insurance
+80143,80134,/Financial Services/Insurance/Auto Insurance
+80144,80134,/Financial Services/Insurance/Health Insurance
+80191,80134,/Financial Services/Insurance/Home Insurance
+80145,80134,/Financial Services/Insurance/Life Insurance
+80146,80134,/Financial Services/Insurance/Travel Insurance
+80149,80130,/Financial Services/Investment Services
+80137,80130,/Financial Services/Tax Preparation Services & Software
+80891,0,/Food
+80892,80891,/Food/Baked Goods
+80894,80891,/Food/Candy & Chocolate
+80895,80891,/Food/Condiments & Sauces
+80893,80891,/Food/Cooking & Baking Ingredients
+80975,80891,/Food/Dairy & Eggs
+80973,80891,/Food/Fast Food Meals
+80969,80891,/Food/Grocery Delivery
+80972,80891,/Food/Meal Kits
+80974,80891,/Food/Pizza
+80976,80891,/Food/Produce & Farm Boxes
+80970,80891,/Food/Restaurant Delivery & Takeout
+80464,0,/Gifts & Occasions
+80507,80464,/Gifts & Occasions/Flowers
+80508,80464,/Gifts & Occasions/Gift Baskets
+80503,80464,/Gifts & Occasions/Holiday Items & Decorations
+80509,80503,/Gifts & Occasions/Holiday Items & Decorations/Christmas Items & Decor
+80510,80503,/Gifts & Occasions/Holiday Items & Decorations/Halloween Items & Decor
+80511,80503,/Gifts & Occasions/Holiday Items & Decorations/Valentine's Day Items & Decor
+80504,80464,/Gifts & Occasions/Party Supplies & Planning
+80512,80504,/Gifts & Occasions/Party Supplies & Planning/Event Planning Services
+80513,80504,/Gifts & Occasions/Party Supplies & Planning/Party Supplies
+80505,80464,/Gifts & Occasions/Personalized Gifts
+80506,80464,/Gifts & Occasions/Photo & Video Services
+80515,80506,/Gifts & Occasions/Photo & Video Services/Event Photographers & Studios
+80516,80506,/Gifts & Occasions/Photo & Video Services/Photo Printing Services
+80404,80464,/Gifts & Occasions/Wedding Planning
+80237,0,/Home & Garden
+80915,80237,/Home & Garden/Cookware & Bakeware
+80944,80237,/Home & Garden/Food & Beverage Containers
+80483,80237,/Home & Garden/Home & Garden Services
+80484,80483,/Home & Garden/Home & Garden Services/Architectural Services
+80485,80483,/Home & Garden/Home & Garden Services/Carpet Installation
+80486,80483,/Home & Garden/Home & Garden Services/Door & Window Installation
+80487,80483,/Home & Garden/Home & Garden Services/Electrician Services
+80488,80483,/Home & Garden/Home & Garden Services/Flooring Services
+80489,80483,/Home & Garden/Home & Garden Services/Foundation Repair
+80490,80483,/Home & Garden/Home & Garden Services/General Contracting & Remodeling Services
+80491,80483,/Home & Garden/Home & Garden Services/Home Cleaning Services
+80492,80483,/Home & Garden/Home & Garden Services/Home Inspection Services
+80493,80483,/Home & Garden/Home & Garden Services/Interior Design & Decorating Services
+80494,80483,/Home & Garden/Home & Garden Services/Landscape Design
+80495,80483,/Home & Garden/Home & Garden Services/Lawn & Garden Maintenance
+80496,80483,/Home & Garden/Home & Garden Services/Locksmith Services
+80497,80483,/Home & Garden/Home & Garden Services/Painting Services
+80498,80483,/Home & Garden/Home & Garden Services/Pest Control Services
+80499,80483,/Home & Garden/Home & Garden Services/Plumbing Services
+80500,80483,/Home & Garden/Home & Garden Services/Roofing Services
+80238,80237,/Home & Garden/Home Appliances
+80897,80238,/Home & Garden/Home Appliances/Climate Control & Air Quality
+80898,80897,/Home & Garden/Home Appliances/Climate Control & Air Quality/Air Conditioners
+80984,80897,/Home & Garden/Home Appliances/Climate Control & Air Quality/Air Purifiers
+80899,80897,/Home & Garden/Home Appliances/Climate Control & Air Quality/Fans
+80260,80238,/Home & Garden/Home Appliances/Cooking Ranges & Stoves
+80258,80238,/Home & Garden/Home Appliances/Dishwashers
+81003,80238,/Home & Garden/Home Appliances/Freezers
+80900,80238,/Home & Garden/Home Appliances/Kitchen Appliance Accessories
+80901,80900,/Home & Garden/Home Appliances/Kitchen Appliance Accessories/Coffee Maker & Espresso Machine Accessories
+80902,80900,/Home & Garden/Home Appliances/Kitchen Appliance Accessories/Mixer & Blender Accessories
+80903,80900,/Home & Garden/Home Appliances/Kitchen Appliance Accessories/Refrigerator Accessories
+80262,80238,/Home & Garden/Home Appliances/Microwaves
+80259,80238,/Home & Garden/Home Appliances/Refrigerators
+80265,80238,/Home & Garden/Home Appliances/Small Appliances
+81004,80265,/Home & Garden/Home Appliances/Small Appliances/Bread Makers
+80274,80265,/Home & Garden/Home Appliances/Small Appliances/Coffee & Espresso Makers
+80272,80265,/Home & Garden/Home Appliances/Small Appliances/Juicers & Blenders
+80273,80265,/Home & Garden/Home Appliances/Small Appliances/Mixers
+80261,80238,/Home & Garden/Home Appliances/Vacuums
+80257,80238,/Home & Garden/Home Appliances/Washers & Dryers
+80239,80237,/Home & Garden/Home Decor
+80904,80239,/Home & Garden/Home Decor/Bedding
+80947,80904,/Home & Garden/Home Decor/Bedding/Bed Sheets
+80948,80904,/Home & Garden/Home Decor/Bedding/Mattress Pads & Protectors
+80946,80904,/Home & Garden/Home Decor/Bedding/Quilts & Comforters
+80255,80239,/Home & Garden/Home Decor/Curtains & Window Treatments
+80905,80255,/Home & Garden/Home Decor/Curtains & Window Treatments/Curtains & Drapes
+80906,80255,/Home & Garden/Home Decor/Curtains & Window Treatments/Window Blinds & Shades
+80876,80239,/Home & Garden/Home Decor/Fine Art
+80256,80239,/Home & Garden/Home Decor/Fireplaces
+80986,80239,/Home & Garden/Home Decor/House Plants
+80275,80239,/Home & Garden/Home Decor/Lights & Fixtures
+80907,80275,/Home & Garden/Home Decor/Lights & Fixtures/Ceiling Light Fixtures
+80908,80275,/Home & Garden/Home Decor/Lights & Fixtures/Wall Light Fixtures
+80909,80239,/Home & Garden/Home Decor/Linens
+80254,80239,/Home & Garden/Home Decor/Rugs & Carpets
+80240,80237,/Home & Garden/Home Furnishings
+80250,80240,/Home & Garden/Home Furnishings/Bedroom
+80910,80250,/Home & Garden/Home Furnishings/Bedroom/Beds & Bed Frames
+80911,80250,/Home & Garden/Home Furnishings/Bedroom/Mattresses
+80251,80240,/Home & Garden/Home Furnishings/Home Office
+80912,80251,/Home & Garden/Home Furnishings/Home Office/Desks
+80913,80251,/Home & Garden/Home Furnishings/Home Office/Office Chairs
+80502,80240,/Home & Garden/Home Furnishings/Home Storage & Shelving
+80249,80240,/Home & Garden/Home Furnishings/Kitchen & Dining Room
+80917,80249,/Home & Garden/Home Furnishings/Kitchen & Dining Room/Kitchen & Dining Room Chairs
+80916,80249,/Home & Garden/Home Furnishings/Kitchen & Dining Room/Kitchen & Dining Room Tables
+80918,80249,/Home & Garden/Home Furnishings/Kitchen & Dining Room/Stools
+80248,80240,/Home & Garden/Home Furnishings/Living Room
+80942,80248,/Home & Garden/Home Furnishings/Living Room/Accent Tables
+80941,80248,/Home & Garden/Home Furnishings/Living Room/Sofas
+80252,80240,/Home & Garden/Home Furnishings/Nursery
+80241,80237,/Home & Garden/Home Improvement
+80268,80241,/Home & Garden/Home Improvement/Flooring
+80266,80241,/Home & Garden/Home Improvement/Kitchen & Bathroom Cabinets
+80267,80241,/Home & Garden/Home Improvement/Kitchen & Bathroom Counters
+80270,80241,/Home & Garden/Home Improvement/Paint
+80919,80241,/Home & Garden/Home Improvement/Plumbing Fixture Hardware & Parts
+80269,80241,/Home & Garden/Home Improvement/Plumbing Fixtures
+80920,80241,/Home & Garden/Home Improvement/Power & Electrical Supplies
+80271,80241,/Home & Garden/Home Improvement/Tools
+80921,80271,/Home & Garden/Home Improvement/Tools/Measuring Tools & Sensors
+80242,80237,/Home & Garden/Home Security
+80922,80237,/Home & Garden/Household Supplies
+80990,80922,/Home & Garden/Household Supplies/Hand Sanitizers
+80923,80922,/Home & Garden/Household Supplies/Household Cleaning Supplies
+80924,80922,/Home & Garden/Household Supplies/Pest Control Supplies
+80945,80237,/Home & Garden/Kitchen Tools & Utensils
+80501,80237,/Home & Garden/Outdoor Items
+80925,80501,/Home & Garden/Outdoor Items/BBQ & Grill Accessories
+80264,80501,/Home & Garden/Outdoor Items/BBQs & Grills
+80253,80501,/Home & Garden/Outdoor Items/Garden & Outdoor Furniture
+80926,80253,/Home & Garden/Outdoor Items/Garden & Outdoor Furniture/Outdoor Furniture Sets
+80927,80501,/Home & Garden/Outdoor Items/Garden Sheds & Outdoor Structures
+80896,80501,/Home & Garden/Outdoor Items/Lawn Care & Gardening Supplies
+80263,80501,/Home & Garden/Outdoor Items/Lawn Mowers
+80978,80501,/Home & Garden/Outdoor Items/Outdoor Toys & Play Equipment
+80243,80501,/Home & Garden/Outdoor Items/Pools & Spas
+80873,80237,/Home & Garden/Pet Supplies
+80936,80873,/Home & Garden/Pet Supplies/Cat Food & Supplies
+80935,80873,/Home & Garden/Pet Supplies/Dog Food & Supplies
+80914,80237,/Home & Garden/Tableware
+80985,80237,/Home & Garden/Water Purifiers
+80928,0,/Media & Entertainment
+80932,80928,/Media & Entertainment/Audio Streaming Subscription Services
+81006,80928,/Media & Entertainment/Board Games
+80929,80928,/Media & Entertainment/Books
+80930,80928,/Media & Entertainment/DVDs & Videos
+81007,80928,/Media & Entertainment/Movies on Demand
+81008,80928,/Media & Entertainment/Pay-per-View Sporting Events
+80933,80928,/Media & Entertainment/TV & Video Streaming Subscription Services
+80992,80928,/Media & Entertainment/Video Game Streaming Services
+80931,80928,/Media & Entertainment/Video Games
+80875,0,/Musical Instruments & Accessories
+80950,0,/Political Causes (US Elections)
+80951,80950,/Political Causes (US Elections)/Political Contributions (Left-Leaning US Candidates & Causes)
+80952,80950,/Political Causes (US Elections)/Political Contributions (Right-Leaning US Candidates & Causes)
+80953,80950,/Political Causes (US Elections)/Political Volunteering (Left-Leaning US Candidates & Causes)
+80954,80950,/Political Causes (US Elections)/Political Volunteering (Right-Leaning US Candidates & Causes)
+80131,0,/Real Estate
+80204,80131,/Real Estate/Commercial Properties
+80161,80204,/Real Estate/Commercial Properties/Commercial Properties (For Rent)
+80158,80204,/Real Estate/Commercial Properties/Commercial Properties (For Sale)
+80403,80131,/Real Estate/Moving & Relocation
+80205,80131,/Real Estate/Residential Properties
+80155,80205,/Real Estate/Residential Properties/Residential Properties (For Rent)
+80160,80155,/Real Estate/Residential Properties/Residential Properties (For Rent)/Apartments (For Rent)
+80162,80160,/Real Estate/Residential Properties/Residential Properties (For Rent)/Apartments (For Rent)/Furnished Apartments
+80163,80160,/Real Estate/Residential Properties/Residential Properties (For Rent)/Apartments (For Rent)/Unfurnished Apartments
+80159,80155,/Real Estate/Residential Properties/Residential Properties (For Rent)/Houses (For Rent)
+80157,80205,/Real Estate/Residential Properties/Residential Properties (For Sale)
+80203,80157,/Real Estate/Residential Properties/Residential Properties (For Sale)/Apartments (For Sale)
+80167,80203,/Real Estate/Residential Properties/Residential Properties (For Sale)/Apartments (For Sale)/New Apartments (For Sale)
+80165,80203,/Real Estate/Residential Properties/Residential Properties (For Sale)/Apartments (For Sale)/Preowned Apartments (For Sale)
+80168,80157,/Real Estate/Residential Properties/Residential Properties (For Sale)/Foreclosed Properties (For Sale)
+80202,80157,/Real Estate/Residential Properties/Residential Properties (For Sale)/Houses (For Sale)
+80166,80202,/Real Estate/Residential Properties/Residential Properties (For Sale)/Houses (For Sale)/New Houses (For Sale)
+80164,80202,/Real Estate/Residential Properties/Residential Properties (For Sale)/Houses (For Sale)/Preowned Houses (For Sale)
+80955,0,/Seasonal Shopping
+80956,80955,/Seasonal Shopping/Back-to-School Shopping
+80963,80956,/Seasonal Shopping/Back-to-School Shopping/Back-to-School Apparel & Accessories
+80962,80956,/Seasonal Shopping/Back-to-School Shopping/School Supplies
+80957,80955,/Seasonal Shopping/Black Friday Shopping
+80965,80957,/Seasonal Shopping/Black Friday Shopping/In-Store Black Friday Shopping
+80964,80957,/Seasonal Shopping/Black Friday Shopping/Online Black Friday Shopping
+80958,80955,/Seasonal Shopping/Christmas Shopping
+80968,80958,/Seasonal Shopping/Christmas Shopping/After-Christmas Sale Shopping
+80967,80958,/Seasonal Shopping/Christmas Shopping/In-Store Christmas Shopping
+80966,80958,/Seasonal Shopping/Christmas Shopping/Online Christmas Shopping
+80971,80955,/Seasonal Shopping/Father's Day Shopping
+80959,80955,/Seasonal Shopping/Mother's Day Shopping
+80960,80959,/Seasonal Shopping/Mother's Day Shopping/Mother's Day Dining
+80961,80959,/Seasonal Shopping/Mother's Day Shopping/Mother's Day Flowers & Greeting Cards
+80276,0,/Software
+80281,80276,/Software/Accounting Software
+80277,80276,/Software/Antivirus & Security Software
+80278,80276,/Software/Audio & Music Software
+80279,80276,/Software/Business & Productivity Software
+80280,80276,/Software/Design Software
+80283,80280,/Software/Design Software/Drawing & Animation Software
+80284,80280,/Software/Design Software/Photo Software
+80996,80276,/Software/Video Chat Software
+80282,80276,/Software/Video Editing & Production Software
+80545,0,/Sports & Fitness
+80548,80545,/Sports & Fitness/Fitness Products & Services
+80559,80548,/Sports & Fitness/Fitness Products & Services/Exercise Equipment
+80589,80559,/Sports & Fitness/Fitness Products & Services/Exercise Equipment/Cardio Training Equipment
+80590,80559,/Sports & Fitness/Fitness Products & Services/Exercise Equipment/Fitness Technology Products
+80591,80559,/Sports & Fitness/Fitness Products & Services/Exercise Equipment/Weights & Strength Training Equipment
+80560,80548,/Sports & Fitness/Fitness Products & Services/Fitness Classes & Personal Training Services
+80977,80560,/Sports & Fitness/Fitness Products & Services/Fitness Classes & Personal Training Services/Online Fitness Classes
+80561,80548,/Sports & Fitness/Fitness Products & Services/Gyms & Athletic Clubs
+80943,80548,/Sports & Fitness/Fitness Products & Services/Nutrition Drinks & Shakes
+80549,80545,/Sports & Fitness/Outdoor Recreational Equipment
+80562,80549,/Sports & Fitness/Outdoor Recreational Equipment/Camping & Hiking Equipment
+80563,80549,/Sports & Fitness/Outdoor Recreational Equipment/Fishing Equipment
+80564,80549,/Sports & Fitness/Outdoor Recreational Equipment/Hunting & Shooting Supplies
+80550,80545,/Sports & Fitness/Sporting Goods
+80565,80550,/Sports & Fitness/Sporting Goods/American Football Equipment
+80566,80550,/Sports & Fitness/Sporting Goods/Baseball Equipment
+80567,80550,/Sports & Fitness/Sporting Goods/Basketball Equipment
+80568,80550,/Sports & Fitness/Sporting Goods/Combat Sports Equipment
+80569,80550,/Sports & Fitness/Sporting Goods/Golf Equipment
+80570,80550,/Sports & Fitness/Sporting Goods/Hockey Equipment
+80571,80550,/Sports & Fitness/Sporting Goods/Skateboarding Equipment
+80572,80550,/Sports & Fitness/Sporting Goods/Soccer Equipment
+80573,80550,/Sports & Fitness/Sporting Goods/Tennis Equipment
+80574,80550,/Sports & Fitness/Sporting Goods/Volleyball Equipment
+80575,80550,/Sports & Fitness/Sporting Goods/Water Activities Equipment & Accessories
+80576,80550,/Sports & Fitness/Sporting Goods/Winter Sports Equipment & Accessories
+80303,0,/Telecom
+80304,80303,/Telecom/Cable & Satellite TV Providers
+80305,80303,/Telecom/Internet Service Providers
+80306,80303,/Telecom/Mobile Phone Service Providers
+80287,0,/Travel
+80288,80287,/Travel/Air Travel
+80393,80288,/Travel/Air Travel/Air Travel by Class
+80397,80393,/Travel/Air Travel/Air Travel by Class/Business & First Class
+80398,80393,/Travel/Air Travel/Air Travel by Class/Economy Class
+80394,80288,/Travel/Air Travel/Air Travel by Destination
+80604,80287,/Travel/Bus & Rail Travel
+80289,80287,/Travel/Car Rental
+80405,80289,"/Travel/Car Rental/Economy, Compact & Mid-size Car Rental"
+80406,80289,/Travel/Car Rental/Full-size & Standard Car Rental
+80407,80289,"/Travel/Car Rental/Luxury, Convertible & Specialty Car Rental"
+80408,80289,/Travel/Car Rental/Minivan & SUV Rental
+80290,80287,/Travel/Cruises
+80291,80287,/Travel/Hotels & Accommodations
+80395,80291,/Travel/Hotels & Accommodations/Hotels by Location
+80396,80291,/Travel/Hotels & Accommodations/Hotels by Star Rating
+80399,80396,/Travel/Hotels & Accommodations/Hotels by Star Rating/1 & 2 Star Hotels
+80400,80396,/Travel/Hotels & Accommodations/Hotels by Star Rating/3 Star Hotels
+80401,80396,/Travel/Hotels & Accommodations/Hotels by Star Rating/4 Star Hotels
+80402,80396,/Travel/Hotels & Accommodations/Hotels by Star Rating/5 Star Hotels
+80465,80291,/Travel/Hotels & Accommodations/Vacation Rentals
+80865,80287,/Travel/Sightseeing Tours & Tourist Attractions
+80605,80287,/Travel/Trips by Destination
+80606,80605,/Travel/Trips by Destination/Trips to Asia-Pacific
+80695,80606,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to Australia
+80696,80695,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to Australia/Trips to Brisbane
+80619,80695,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to Australia/Trips to Melbourne
+80697,80695,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to Australia/Trips to Perth
+80626,80695,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to Australia/Trips to Sydney
+80698,80606,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to China
+80613,80698,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to China/Trips to Beijing
+80325,80613,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to China/Trips to Beijing/Beijing (Air Travel Destination)
+80360,80613,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to China/Trips to Beijing/Beijing (Hotel Location)
+80699,80698,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to China/Trips to Chengdu
+80700,80698,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to China/Trips to Guangzhou
+80624,80698,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to China/Trips to Shanghai
+80353,80624,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to China/Trips to Shanghai/Shanghai (Air Travel Destination)
+80388,80624,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to China/Trips to Shanghai/Shanghai (Hotel Location)
+80615,80606,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to Hong Kong
+80616,80606,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to India
+80701,80616,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to India/Trips to Ahmedabad
+80702,80616,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to India/Trips to Bangalore
+80704,80616,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to India/Trips to Chennai
+80706,80616,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to India/Trips to Delhi
+80707,80616,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to India/Trips to Goa
+80708,80616,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to India/Trips to Hyderabad
+80709,80616,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to India/Trips to Jaipur
+80705,80616,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to India/Trips to Kochi (India)
+80703,80616,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to India/Trips to Kolkata
+80710,80616,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to India/Trips to Mumbai
+80711,80616,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to India/Trips to Pune
+80712,80606,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to Indonesia
+80611,80712,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to Indonesia/Trips to Bali
+80713,80712,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to Indonesia/Trips to Bandung
+80714,80712,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to Indonesia/Trips to Jakarta
+80715,80606,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to Japan
+80614,80715,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to Japan/Trips to Fukuoka
+80617,80715,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to Japan/Trips to Kyoto-Osaka-Kobe
+80620,80715,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to Japan/Trips to Nagoya
+80716,80715,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to Japan/Trips to Okinawa
+80717,80715,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to Japan/Trips to Sapporo
+80628,80715,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to Japan/Trips to Tokyo
+80354,80628,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to Japan/Trips to Tokyo/Tokyo (Air Travel Destination)
+80389,80628,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to Japan/Trips to Tokyo/Tokyo (Hotel Location)
+80618,80606,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to Malaysia
+80718,80618,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to Malaysia/Trips to Kuala Lumpur
+80719,80618,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to Malaysia/Trips to Penang
+80720,80606,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to Nepal
+80621,80606,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to New Zealand
+80623,80606,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to Seoul
+80625,80606,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to Singapore
+80721,80606,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to Sri Lanka
+80627,80606,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to Taipei
+80722,80606,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to Thailand
+80612,80722,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to Thailand/Trips to Bangkok
+80723,80722,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to Thailand/Trips to Chiang Mai
+80724,80722,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to Thailand/Trips to Phuket
+80629,80606,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to Vietnam
+80725,80629,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to Vietnam/Trips to Hanoi
+80726,80629,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to Vietnam/Trips to Ho Chi Minh City
+80622,80606,/Travel/Trips by Destination/Trips to Asia-Pacific/Trips to the Philippines
+80607,80605,/Travel/Trips by Destination/Trips to Europe
+80630,80607,/Travel/Trips by Destination/Trips to Europe/Trips to Amsterdam
+80727,80607,/Travel/Trips by Destination/Trips to Europe/Trips to Brussels
+80634,80607,/Travel/Trips by Destination/Trips to Europe/Trips to Croatia
+80728,80607,/Travel/Trips by Destination/Trips to Europe/Trips to Denmark
+80729,80728,/Travel/Trips by Destination/Trips to Europe/Trips to Denmark/Trips to Copenhagen
+80730,80607,/Travel/Trips by Destination/Trips to Europe/Trips to France
+80731,80730,/Travel/Trips by Destination/Trips to Europe/Trips to France/Trips to Bordeaux
+80732,80730,/Travel/Trips by Destination/Trips to Europe/Trips to France/Trips to Lyon
+80733,80730,/Travel/Trips by Destination/Trips to Europe/Trips to France/Trips to Marseille
+80734,80730,/Travel/Trips by Destination/Trips to Europe/Trips to France/Trips to Nice
+80641,80730,/Travel/Trips by Destination/Trips to Europe/Trips to France/Trips to Paris
+80344,80641,/Travel/Trips by Destination/Trips to Europe/Trips to France/Trips to Paris/Paris (Air Travel Destination)
+80379,80641,/Travel/Trips by Destination/Trips to Europe/Trips to France/Trips to Paris/Paris (Hotel Location)
+80735,80730,/Travel/Trips by Destination/Trips to Europe/Trips to France/Trips to Toulouse
+80736,80607,/Travel/Trips by Destination/Trips to Europe/Trips to Germany
+80632,80736,/Travel/Trips by Destination/Trips to Europe/Trips to Germany/Trips to Berlin
+80737,80736,/Travel/Trips by Destination/Trips to Europe/Trips to Germany/Trips to Cologne
+80738,80736,/Travel/Trips by Destination/Trips to Europe/Trips to Germany/Trips to Dusseldorf
+80635,80736,/Travel/Trips by Destination/Trips to Europe/Trips to Germany/Trips to Frankfurt
+80739,80736,/Travel/Trips by Destination/Trips to Europe/Trips to Germany/Trips to Hamburg
+80740,80736,/Travel/Trips by Destination/Trips to Europe/Trips to Germany/Trips to Munich
+80741,80736,/Travel/Trips by Destination/Trips to Europe/Trips to Germany/Trips to Stuttgart
+80636,80607,/Travel/Trips by Destination/Trips to Europe/Trips to Greece
+80742,80607,/Travel/Trips by Destination/Trips to Europe/Trips to Helsinki
+80743,80607,/Travel/Trips by Destination/Trips to Europe/Trips to Hungary
+80744,80743,/Travel/Trips by Destination/Trips to Europe/Trips to Hungary/Trips to Budapest
+80745,80607,/Travel/Trips by Destination/Trips to Europe/Trips to Iceland
+80637,80607,/Travel/Trips by Destination/Trips to Europe/Trips to Ireland
+80746,80637,/Travel/Trips by Destination/Trips to Europe/Trips to Ireland/Trips to Dublin
+80747,80607,/Travel/Trips by Destination/Trips to Europe/Trips to Italy
+80748,80747,/Travel/Trips by Destination/Trips to Europe/Trips to Italy/Trips to Bologna
+80749,80747,/Travel/Trips by Destination/Trips to Europe/Trips to Italy/Trips to Florence
+80750,80747,/Travel/Trips by Destination/Trips to Europe/Trips to Italy/Trips to Milan
+80751,80747,/Travel/Trips by Destination/Trips to Europe/Trips to Italy/Trips to Naples
+80643,80747,/Travel/Trips by Destination/Trips to Europe/Trips to Italy/Trips to Rome
+80348,80643,/Travel/Trips by Destination/Trips to Europe/Trips to Italy/Trips to Rome/Rome (Air Travel Destination)
+80383,80643,/Travel/Trips by Destination/Trips to Europe/Trips to Italy/Trips to Rome/Rome (Hotel Location)
+80752,80747,/Travel/Trips by Destination/Trips to Europe/Trips to Italy/Trips to Sicily
+80753,80747,/Travel/Trips by Destination/Trips to Europe/Trips to Italy/Trips to Venice
+80754,80607,/Travel/Trips by Destination/Trips to Europe/Trips to Kiev
+80755,80607,/Travel/Trips by Destination/Trips to Europe/Trips to Malta
+80640,80607,/Travel/Trips by Destination/Trips to Europe/Trips to Moscow
+80756,80607,/Travel/Trips by Destination/Trips to Europe/Trips to Oslo
+80757,80607,/Travel/Trips by Destination/Trips to Europe/Trips to Poland
+80758,80757,/Travel/Trips by Destination/Trips to Europe/Trips to Poland/Trips to Krakow
+80759,80757,/Travel/Trips by Destination/Trips to Europe/Trips to Poland/Trips to Warsaw
+80760,80607,/Travel/Trips by Destination/Trips to Europe/Trips to Portugal
+80761,80760,/Travel/Trips by Destination/Trips to Europe/Trips to Portugal/Trips to Faro
+80762,80760,/Travel/Trips by Destination/Trips to Europe/Trips to Portugal/Trips to Lisbon
+80763,80760,/Travel/Trips by Destination/Trips to Europe/Trips to Portugal/Trips to Porto
+80642,80607,/Travel/Trips by Destination/Trips to Europe/Trips to Prague
+80764,80607,/Travel/Trips by Destination/Trips to Europe/Trips to Romania
+80765,80607,/Travel/Trips by Destination/Trips to Europe/Trips to Sofia
+80766,80607,/Travel/Trips by Destination/Trips to Europe/Trips to Spain
+80767,80766,/Travel/Trips by Destination/Trips to Europe/Trips to Spain/Trips to Alicante
+80631,80766,/Travel/Trips by Destination/Trips to Europe/Trips to Spain/Trips to Barcelona
+80768,80766,/Travel/Trips by Destination/Trips to Europe/Trips to Spain/Trips to Bilbao
+80769,80766,/Travel/Trips by Destination/Trips to Europe/Trips to Spain/Trips to Cordoba
+80770,80766,/Travel/Trips by Destination/Trips to Europe/Trips to Spain/Trips to Granada
+80639,80766,/Travel/Trips by Destination/Trips to Europe/Trips to Spain/Trips to Madrid
+80771,80766,/Travel/Trips by Destination/Trips to Europe/Trips to Spain/Trips to Malaga
+80772,80766,"/Travel/Trips by Destination/Trips to Europe/Trips to Spain/Trips to Mallorca, Ibiza & Balearic Islands"
+80773,80766,/Travel/Trips by Destination/Trips to Europe/Trips to Spain/Trips to Seville
+80774,80766,/Travel/Trips by Destination/Trips to Europe/Trips to Spain/Trips to Valencia
+80633,80766,/Travel/Trips by Destination/Trips to Europe/Trips to Spain/Trips to the Canary Islands
+80775,80607,/Travel/Trips by Destination/Trips to Europe/Trips to St. Petersburg
+80777,80607,/Travel/Trips by Destination/Trips to Europe/Trips to Sweden
+80776,80777,/Travel/Trips by Destination/Trips to Europe/Trips to Sweden/Trips to Stockholm
+80778,80607,/Travel/Trips by Destination/Trips to Europe/Trips to Switzerland
+80779,80778,/Travel/Trips by Destination/Trips to Europe/Trips to Switzerland/Trips to Geneva
+80780,80778,/Travel/Trips by Destination/Trips to Europe/Trips to Switzerland/Trips to Zurich
+80644,80607,/Travel/Trips by Destination/Trips to Europe/Trips to Turkey
+80868,80644,/Travel/Trips by Destination/Trips to Europe/Trips to Turkey/Trips to Ankara
+80786,80644,/Travel/Trips by Destination/Trips to Europe/Trips to Turkey/Trips to Antalya
+80787,80644,/Travel/Trips by Destination/Trips to Europe/Trips to Turkey/Trips to Istanbul
+80870,80644,/Travel/Trips by Destination/Trips to Europe/Trips to Turkey/Trips to Izmir
+80788,80607,/Travel/Trips by Destination/Trips to Europe/Trips to Vienna
+80781,80607,/Travel/Trips by Destination/Trips to Europe/Trips to the UK
+80782,80781,"/Travel/Trips by Destination/Trips to Europe/Trips to the UK/Trips to Birmingham, UK"
+80783,80781,/Travel/Trips by Destination/Trips to Europe/Trips to the UK/Trips to Edinburgh
+80784,80781,/Travel/Trips by Destination/Trips to Europe/Trips to the UK/Trips to Glasgow
+80638,80781,"/Travel/Trips by Destination/Trips to Europe/Trips to the UK/Trips to London, UK"
+80336,80638,"/Travel/Trips by Destination/Trips to Europe/Trips to the UK/Trips to London, UK/London, UK (Air Travel Destination)"
+80371,80638,"/Travel/Trips by Destination/Trips to Europe/Trips to the UK/Trips to London, UK/London, UK (Hotel Location)"
+80785,80781,"/Travel/Trips by Destination/Trips to Europe/Trips to the UK/Trips to Manchester, UK"
+80608,80605,/Travel/Trips by Destination/Trips to Latin America
+80789,80608,/Travel/Trips by Destination/Trips to Latin America/Trips to Bogota
+80790,80608,/Travel/Trips by Destination/Trips to Latin America/Trips to Brazil
+80649,80790,/Travel/Trips by Destination/Trips to Latin America/Trips to Brazil/Trips to Rio de Janeiro
+80791,80790,/Travel/Trips by Destination/Trips to Latin America/Trips to Brazil/Trips to Salvador
+80650,80790,/Travel/Trips by Destination/Trips to Latin America/Trips to Brazil/Trips to São Paulo
+80645,80608,/Travel/Trips by Destination/Trips to Latin America/Trips to Buenos Aires
+80647,80608,/Travel/Trips by Destination/Trips to Latin America/Trips to Costa Rica
+80798,80608,/Travel/Trips by Destination/Trips to Latin America/Trips to Guatemala
+80799,80608,/Travel/Trips by Destination/Trips to Latin America/Trips to Lima
+80648,80608,/Travel/Trips by Destination/Trips to Latin America/Trips to Mexico
+80456,80648,/Travel/Trips by Destination/Trips to Latin America/Trips to Mexico/Mexico (Air Travel Destination)
+80462,80648,/Travel/Trips by Destination/Trips to Latin America/Trips to Mexico/Mexico (Hotel Location)
+80800,80648,/Travel/Trips by Destination/Trips to Latin America/Trips to Mexico/Trips to Acapulco
+80801,80648,/Travel/Trips by Destination/Trips to Latin America/Trips to Mexico/Trips to Cancun & Playa del Carmen
+80802,80648,/Travel/Trips by Destination/Trips to Latin America/Trips to Mexico/Trips to Guadalajara
+80803,80648,/Travel/Trips by Destination/Trips to Latin America/Trips to Mexico/Trips to Los Cabos
+80804,80648,/Travel/Trips by Destination/Trips to Latin America/Trips to Mexico/Trips to Mexico City
+80805,80648,/Travel/Trips by Destination/Trips to Latin America/Trips to Mexico/Trips to Monterrey
+80806,80648,/Travel/Trips by Destination/Trips to Latin America/Trips to Mexico/Trips to Puerto Vallarta
+80807,80608,/Travel/Trips by Destination/Trips to Latin America/Trips to Panama
+80808,80608,/Travel/Trips by Destination/Trips to Latin America/Trips to Santiago
+80646,80608,/Travel/Trips by Destination/Trips to Latin America/Trips to the Caribbean
+80327,80646,/Travel/Trips by Destination/Trips to Latin America/Trips to the Caribbean/Caribbean (Air Travel Destination)
+80362,80646,/Travel/Trips by Destination/Trips to Latin America/Trips to the Caribbean/Caribbean (Hotel Location)
+80792,80646,/Travel/Trips by Destination/Trips to Latin America/Trips to the Caribbean/Trips to Aruba
+80793,80646,/Travel/Trips by Destination/Trips to Latin America/Trips to the Caribbean/Trips to Cuba
+80794,80646,/Travel/Trips by Destination/Trips to Latin America/Trips to the Caribbean/Trips to Jamaica
+80795,80646,/Travel/Trips by Destination/Trips to Latin America/Trips to the Caribbean/Trips to Nassau
+80796,80646,/Travel/Trips by Destination/Trips to Latin America/Trips to the Caribbean/Trips to Puerto Rico
+80797,80646,/Travel/Trips by Destination/Trips to Latin America/Trips to the Caribbean/Trips to the Dominican Republic
+80610,80605,/Travel/Trips by Destination/Trips to North America
+80819,80610,/Travel/Trips by Destination/Trips to North America/Trips to Canada
+80820,80819,/Travel/Trips by Destination/Trips to North America/Trips to Canada/Trips to Calgary
+80671,80819,/Travel/Trips by Destination/Trips to North America/Trips to Canada/Trips to Montreal
+80821,80819,/Travel/Trips by Destination/Trips to North America/Trips to Canada/Trips to Ottawa
+80688,80819,/Travel/Trips by Destination/Trips to North America/Trips to Canada/Trips to Toronto
+80355,80688,/Travel/Trips by Destination/Trips to North America/Trips to Canada/Trips to Toronto/Toronto (Air Travel Destination)
+80390,80688,/Travel/Trips by Destination/Trips to North America/Trips to Canada/Trips to Toronto/Toronto (Hotel Location)
+80689,80819,/Travel/Trips by Destination/Trips to North America/Trips to Canada/Trips to Vancouver
+80356,80689,/Travel/Trips by Destination/Trips to North America/Trips to Canada/Trips to Vancouver/Vancouver (Air Travel Destination)
+80391,80689,/Travel/Trips by Destination/Trips to North America/Trips to Canada/Trips to Vancouver/Vancouver (Hotel Location)
+80822,80610,/Travel/Trips by Destination/Trips to North America/Trips to the US
+80823,80822,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Alaska
+80824,80822,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Albuquerque
+80656,80822,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Atlanta
+80323,80656,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Atlanta/Atlanta (Air Travel Destination)
+80358,80656,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Atlanta/Atlanta (Hotel Location)
+80825,80822,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Atlantic City
+80657,80822,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Austin
+80324,80657,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Austin/Austin (Air Travel Destination)
+80359,80657,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Austin/Austin (Hotel Location)
+80826,80822,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Baltimore
+80867,80822,"/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Birmingham, AL"
+80658,80822,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Boston
+80326,80658,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Boston/Boston (Air Travel Destination)
+80361,80658,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Boston/Boston (Hotel Location)
+80827,80822,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Buffalo-Rochester Area
+80828,80822,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to California
+80668,80828,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to California/Trips to Los Angeles
+80337,80668,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to California/Trips to Los Angeles/Los Angeles (Air Travel Destination)
+80372,80668,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to California/Trips to Los Angeles/Los Angeles (Hotel Location)
+80676,80828,"/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to California/Trips to Orange County, CA"
+80455,80676,"/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to California/Trips to Orange County, CA/Orange County, CA (Air Travel Destination)"
+80461,80676,"/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to California/Trips to Orange County, CA/Orange County, CA (Hotel Location)"
+80683,80828,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to California/Trips to San Diego
+80350,80683,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to California/Trips to San Diego/San Diego (Air Travel Destination)
+80385,80683,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to California/Trips to San Diego/San Diego (Hotel Location)
+80684,80828,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to California/Trips to San Francisco Bay Area
+80351,80684,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to California/Trips to San Francisco Bay Area/San Francisco Bay Area (Air Travel Destination)
+80386,80684,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to California/Trips to San Francisco Bay Area/San Francisco Bay Area (Hotel Location)
+80829,80822,"/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Charleston, SC"
+80659,80822,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Charlotte
+80452,80659,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Charlotte/Charlotte (Air Travel Destination)
+80458,80659,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Charlotte/Charlotte (Hotel Location)
+80660,80822,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Chicago
+80328,80660,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Chicago/Chicago (Air Travel Destination)
+80363,80660,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Chicago/Chicago (Hotel Location)
+80830,80822,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Cincinnati
+80831,80822,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Cleveland
+80832,80822,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Columbus
+80661,80822,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Dallas-Fort Worth
+80329,80661,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Dallas-Fort Worth/Dallas-Fort Worth (Air Travel Destination)
+80364,80661,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Dallas-Fort Worth/Dallas-Fort Worth (Hotel Location)
+80662,80822,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Denver
+80330,80662,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Denver/Denver (Air Travel Destination)
+80365,80662,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Denver/Denver (Hotel Location)
+80663,80822,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Detroit
+80331,80663,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Detroit/Detroit (Air Travel Destination)
+80366,80663,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Detroit/Detroit (Hotel Location)
+80833,80822,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Florida
+80664,80833,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Florida/Trips to Fort Lauderdale
+80332,80664,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Florida/Trips to Fort Lauderdale/Fort Lauderdale (Air Travel Destination)
+80367,80664,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Florida/Trips to Fort Lauderdale/Fort Lauderdale (Hotel Location)
+80834,80833,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Florida/Trips to Fort Myers
+80835,80833,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Florida/Trips to Jacksonville
+80836,80833,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Florida/Trips to Key West
+80669,80833,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Florida/Trips to Miami
+80338,80669,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Florida/Trips to Miami/Miami (Air Travel Destination)
+80373,80669,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Florida/Trips to Miami/Miami (Hotel Location)
+80677,80833,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Florida/Trips to Orlando
+80343,80677,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Florida/Trips to Orlando/Orlando (Air Travel Destination)
+80378,80677,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Florida/Trips to Orlando/Orlando (Hotel Location)
+80851,80833,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Florida/Trips to Pensacola
+80687,80833,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Florida/Trips to Tampa Bay Area
+80451,80687,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Florida/Trips to Tampa Bay Area/Tampa Bay Area (Air Travel Destination)
+80457,80687,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Florida/Trips to Tampa Bay Area/Tampa Bay Area (Hotel Location)
+80837,80822,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Gatlinburg
+80862,80822,"/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Greenville, SC"
+80838,80822,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Hartford
+80665,80822,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Hawaii
+80333,80665,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Hawaii/Hawaii (Air Travel Destination)
+80368,80665,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Hawaii/Hawaii (Hotel Location)
+80839,80665,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Hawaii/Trips to Maui
+80840,80665,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Hawaii/Trips to Oahu
+80841,80665,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Hawaii/Trips to the Big Island
+80666,80822,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Houston
+80334,80666,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Houston/Houston (Air Travel Destination)
+80369,80666,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Houston/Houston (Hotel Location)
+80842,80822,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Indianapolis
+80843,80822,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Kansas City
+80667,80822,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Las Vegas
+80335,80667,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Las Vegas/Las Vegas (Air Travel Destination)
+80370,80667,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Las Vegas/Las Vegas (Hotel Location)
+80872,80822,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Little Rock
+80844,80822,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Louisville
+80845,80822,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Memphis
+80846,80822,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Milwaukee
+80670,80822,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Minneapolis-Saint Paul
+80339,80670,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Minneapolis-Saint Paul/Minneapolis-Saint Paul (Air Travel Destination)
+80374,80670,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Minneapolis-Saint Paul/Minneapolis-Saint Paul (Hotel Location)
+80672,80822,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Myrtle Beach & Grand Strand
+80467,80672,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Myrtle Beach & Grand Strand/Myrtle Beach & Grand Strand (Air Travel Destination)
+80466,80672,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Myrtle Beach & Grand Strand/Myrtle Beach & Grand Strand (Hotel Location)
+80673,80822,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Nashville
+80340,80673,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Nashville/Nashville (Air Travel Destination)
+80375,80673,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Nashville/Nashville (Hotel Location)
+80674,80822,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to New Orleans
+80341,80674,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to New Orleans/New Orleans (Air Travel Destination)
+80376,80674,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to New Orleans/New Orleans (Hotel Location)
+80675,80822,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to New York City
+80342,80675,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to New York City/New York City (Air Travel Destination)
+80377,80675,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to New York City/New York City (Hotel Location)
+80847,80822,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Norfolk-Virginia Beach Region
+80848,80822,"/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Ocean City, MD"
+80849,80822,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Oklahoma City
+80850,80822,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Omaha
+80678,80822,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Philadelphia
+80345,80678,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Philadelphia/Philadelphia (Air Travel Destination)
+80380,80678,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Philadelphia/Philadelphia (Hotel Location)
+80679,80822,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Phoenix
+80346,80679,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Phoenix/Phoenix (Air Travel Destination)
+80381,80679,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Phoenix/Phoenix (Hotel Location)
+80852,80822,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Pittsburgh
+80680,80822,"/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Portland, OR"
+80347,80680,"/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Portland, OR/Portland, OR (Air Travel Destination)"
+80382,80680,"/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Portland, OR/Portland, OR (Hotel Location)"
+80853,80822,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Raleigh-Durham Area
+80854,80822,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Reno
+80855,80822,"/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Richmond, VA"
+80681,80822,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Salt Lake City
+80349,80681,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Salt Lake City/Salt Lake City (Air Travel Destination)
+80384,80681,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Salt Lake City/Salt Lake City (Hotel Location)
+80682,80822,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to San Antonio
+80453,80682,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to San Antonio/San Antonio (Air Travel Destination)
+80459,80682,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to San Antonio/San Antonio (Hotel Location)
+80856,80822,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Savannah
+80685,80822,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Seattle
+80352,80685,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Seattle/Seattle (Air Travel Destination)
+80387,80685,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Seattle/Seattle (Hotel Location)
+80686,80822,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to St. Louis
+80454,80686,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to St. Louis/St. Louis (Air Travel Destination)
+80460,80686,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to St. Louis/St. Louis (Hotel Location)
+80857,80822,/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Tucson
+80690,80822,"/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Washington, D.C."
+80357,80690,"/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Washington, D.C./Washington, D.C. (Air Travel Destination)"
+80392,80690,"/Travel/Trips by Destination/Trips to North America/Trips to the US/Trips to Washington, D.C./Washington, D.C. (Hotel Location)"
+80609,80605,/Travel/Trips by Destination/Trips to the Middle East & Africa
+80809,80609,/Travel/Trips by Destination/Trips to the Middle East & Africa/Trips to Doha
+80651,80609,/Travel/Trips by Destination/Trips to the Middle East & Africa/Trips to Egypt
+80652,80609,/Travel/Trips by Destination/Trips to the Middle East & Africa/Trips to Israel
+80810,80609,/Travel/Trips by Destination/Trips to the Middle East & Africa/Trips to Jeddah
+80811,80609,/Travel/Trips by Destination/Trips to the Middle East & Africa/Trips to Jordan
+80812,80609,/Travel/Trips by Destination/Trips to the Middle East & Africa/Trips to Kenya
+80871,80609,/Travel/Trips by Destination/Trips to the Middle East & Africa/Trips to Kuwait
+80813,80609,/Travel/Trips by Destination/Trips to the Middle East & Africa/Trips to Lebanon
+80653,80609,/Travel/Trips by Destination/Trips to the Middle East & Africa/Trips to Morocco
+80869,80609,/Travel/Trips by Destination/Trips to the Middle East & Africa/Trips to Riyadh
+80654,80609,/Travel/Trips by Destination/Trips to the Middle East & Africa/Trips to South Africa
+80814,80654,/Travel/Trips by Destination/Trips to the Middle East & Africa/Trips to South Africa/Trips to Cape Town
+80815,80654,/Travel/Trips by Destination/Trips to the Middle East & Africa/Trips to South Africa/Trips to Johannesburg
+80816,80609,/Travel/Trips by Destination/Trips to the Middle East & Africa/Trips to Tehran
+80655,80609,/Travel/Trips by Destination/Trips to the Middle East & Africa/Trips to the United Arab Emirates
+80817,80655,/Travel/Trips by Destination/Trips to the Middle East & Africa/Trips to the United Arab Emirates/Trips to Abu Dhabi
+80818,80655,/Travel/Trips by Destination/Trips to the Middle East & Africa/Trips to the United Arab Emirates/Trips to Dubai
+80858,80287,/Travel/Trips by Timing
+80859,80858,/Travel/Trips by Timing/Trip in Next 48 Hours
+80860,80858,/Travel/Trips by Timing/Trip is 2 to 7 Days Away
+80861,80858,/Travel/Trips by Timing/Trip is More Than a Week Away
+80866,80287,/Travel/Vacation Packages
+80863,80866,/Travel/Vacation Packages/All-Inclusive Vacations
+80864,80866,/Travel/Vacation Packages/Guided Tours & Escorted Vacations

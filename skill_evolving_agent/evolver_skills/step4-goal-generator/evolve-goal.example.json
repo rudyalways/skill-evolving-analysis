@@ -1,0 +1,147 @@
+{
+  "goal": {
+    "improve_harness": {
+      "scope": "<out_of_scope>"
+    },
+    "improve_skills": [
+      "<skill>"
+    ],
+    "avoid": "<put easy experience that the model and harness already do well into a skill>"
+  },
+  "reasoning": "<defects is from skill>",
+  "plan": "<fill gaps list>",
+  "action": {
+    "ops": [
+      {
+        "op": "create",
+        "skills": [
+          {
+            "skill": "<skill>",
+            "description": "<what the new skill does>",
+            "sections": [
+              "<overview>",
+              "<when_to_use>",
+              "<do_not_use>",
+              "<workflow>",
+              "<output>",
+              "<limitations>",
+              {
+                "section": "<other>",
+                "heading": "<heading outside the list>",
+                "goal": "<what this section says>"
+              }
+            ],
+            "dirs": [
+              {
+                "dir": "<references>",
+                "goal": "<what this directory holds>"
+              }
+            ],
+            "labels": [
+              {
+                "type": "<job/methodology>",
+                "weight": "<float_0_to_1>"
+              },
+              {
+                "type": "<job/verification>",
+                "weight": "<float_0_to_1>"
+              },
+              {
+                "type": "<form/pattern/constraint>",
+                "weight": "<float_0_to_1>"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "op": "update",
+        "skills": [
+          {
+            "skill": "<skill>",
+            "goal": "<update goal>",
+            "facet": "<update facet>",
+            "sections": [
+              {
+                "section": "<when_to_use>",
+                "goal": "<what changes in this section>"
+              },
+              {
+                "section": "<other>",
+                "heading": "<heading outside the list>",
+                "goal": "<what changes in this section>"
+              }
+            ],
+            "dirs": [
+              {
+                "dir": "<references>",
+                "goal": "<what changes in this directory>"
+              },
+              {
+                "dir": "<other>",
+                "name": "<directory outside the list>",
+                "goal": "<what changes in this directory>"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "op": "delete",
+        "skills": [
+          {
+            "skill": "<skill>",
+            "reason": "<why this skill is removed>"
+          }
+        ]
+      },
+      {
+        "op": "merge",
+        "skills": [
+          "<skill>",
+          "<skill>"
+        ],
+        "into": {
+          "skill": "<skill>",
+          "description": "<what the merged skill covers>",
+          "dirs": [
+            {
+              "dir": "<references>",
+              "goal": "<what the merged directory keeps>"
+            }
+          ]
+        }
+      },
+      {
+        "op": "split",
+        "skill": "<skill>",
+        "into": [
+          {
+            "skill": "<skill>",
+            "description": "<what this part keeps>",
+            "dirs": [
+              {
+                "dir": "<scripts>",
+                "goal": "<what this part's directory keeps>"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "op": "<other>",
+        "description": "<what this action does>",
+        "skills": [
+          "<skill>"
+        ],
+        "dirs": [
+          {
+            "dir": "<references>",
+            "goal": "<what this action does in the directory>"
+          }
+        ]
+      }
+    ]
+  },
+  "feedback_to": "<text>"
+}

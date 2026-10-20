@@ -1,0 +1,19 @@
+---
+view: "domain"
+depth1: "data"
+depth2: "metrics"
+depth3: "others--mouadja02--skills"
+placements: 24
+kind: "clone"
+---
+
+# others--mouadja02--skills
+
+data / metrics · Metrics · 指标 / others--mouadja02--skills
+
+24 placements, 7.9% of metrics (303), under data (4,250).
+
+This row is a copied skill pack, not a capability name.
+
+
+Counted from the skill-capabilities tree in `benchmark-all-in-one.html`, 5 Oct 2026.

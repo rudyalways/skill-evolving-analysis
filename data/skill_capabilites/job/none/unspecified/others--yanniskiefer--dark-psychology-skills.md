@@ -1,0 +1,18 @@
+---
+view: "job"
+depth1: "none"
+depth2: "unspecified"
+depth3: "others--yanniskiefer--dark-psychology-skills"
+placements: 11
+kind: "clone"
+---
+
+# others--yanniskiefer--dark-psychology-skills
+
+none · No job word matched · 没有命中工作词 / unspecified · Not named · 没有点名 / others--yanniskiefer--dark-psychology-skills
+
+11 placements, 1.6% of unspecified (667), under none (6,508).
+
+This row is a copied skill pack, not a capability name.
+
+Counted from the skill-capabilities tree in `benchmark-all-in-one.html`, 5 Oct 2026.

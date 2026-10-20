@@ -1,0 +1,41 @@
+Category ID,Parent category ID,Category path
+95029,0,/Becoming an Empty Nester
+95030,95029,/Becoming an Empty Nester/Last Child Moving Out Soon
+95031,95029,/Becoming an Empty Nester/Last Child Recently Moved Out
+95021,0,/Business Creation
+95023,95021,/Business Creation/Recently Started a Business
+95022,95021,/Business Creation/Starting a Business Soon
+95001,0,/College Graduation
+95004,95001,/College Graduation/Graduating Soon
+95005,95001,/College Graduation/Recently Graduated
+95015,0,/Home Renovation
+95016,95015,/Home Renovation/Recently Renovated Home
+95017,95015,/Home Renovation/Renovating Home Soon
+95024,0,/Job Change
+95026,95024,/Job Change/Recently Started New Job
+95025,95024,/Job Change/Starting New Job Soon
+95002,0,/Marriage
+95006,95002,/Marriage/Getting Married Soon
+95014,95002,/Marriage/Recently Engaged
+95007,95002,/Marriage/Recently Married
+95003,0,/Moving
+95008,95003,/Moving/Moving Soon
+95009,95003,/Moving/Recently Moved
+95018,0,/New Pet
+95027,95018,/New Pet/Adding Cat to Household Soon
+95028,95018,/New Pet/Adding Dog to Household Soon
+95020,95018,/New Pet/Recently Added Cat to Household
+95019,95018,/New Pet/Recently Added Dog to Household
+95032,0,/Purchasing a Home
+95033,95032,/Purchasing a Home/Purchasing a Home Soon
+95035,95033,/Purchasing a Home/Purchasing a Home Soon/Purchasing First Home Soon
+95034,95032,/Purchasing a Home/Recently Purchased a Home
+95036,95034,/Purchasing a Home/Recently Purchased a Home/Recently Purchased First Home
+95011,0,/Retirement
+95013,95011,/Retirement/Recently Retired
+95012,95011,/Retirement/Retiring Soon
+95037,0,/Taking a Trip
+95040,95037,/Taking a Trip/Currently Traveling
+95039,95037,/Taking a Trip/Preparing for Upcoming Trip
+95041,95037,/Taking a Trip/Recently Returned from Trip
+95038,95037,/Taking a Trip/Researching Destinations

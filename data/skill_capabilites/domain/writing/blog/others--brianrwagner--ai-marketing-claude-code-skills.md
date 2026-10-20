@@ -1,0 +1,19 @@
+---
+view: "domain"
+depth1: "writing"
+depth2: "blog"
+depth3: "others--brianrwagner--ai-marketing-claude-code-skills"
+placements: 1
+kind: "clone"
+---
+
+# others--brianrwagner--ai-marketing-claude-code-skills
+
+writing / blog / others--brianrwagner--ai-marketing-claude-code-skills
+
+1 placements, 0.6% of blog (171), under writing (2,267).
+
+This row is a copied skill pack, not a capability name.
+
+
+Counted from the skill-capabilities tree in `benchmark-all-in-one.html`, 5 Oct 2026.

@@ -1,0 +1,19 @@
+---
+view: "domain"
+depth1: "ai"
+depth2: "prompt"
+depth3: "others--garethmanning--education-agent-skills"
+placements: 5
+kind: "clone"
+---
+
+# others--garethmanning--education-agent-skills
+
+ai · Models, agents, prompts · 模型、智能体、提示 / prompt / others--garethmanning--education-agent-skills
+
+5 placements, 2.4% of prompt (212), under ai (7,890).
+
+This row is a copied skill pack, not a capability name.
+
+
+Counted from the skill-capabilities tree in `benchmark-all-in-one.html`, 5 Oct 2026.

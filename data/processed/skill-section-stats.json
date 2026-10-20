@@ -1,0 +1,549 @@
+{
+  "files": 19716,
+  "uniqueH2": 31976,
+  "noH2": 395,
+  "medianH2": 8.0,
+  "meanH2": 8.25,
+  "closed": {
+    "10": 273,
+    "20": 560,
+    "50": 3470,
+    "100": 4140
+  },
+  "noTop20": 4546,
+  "top": [
+    {
+      "name": "Limitations",
+      "n": 8273,
+      "pct": 42.0
+    },
+    {
+      "name": "When to Use",
+      "n": 6359,
+      "pct": 32.3
+    },
+    {
+      "name": "Prerequisites",
+      "n": 3154,
+      "pct": 16.0
+    },
+    {
+      "name": "Overview",
+      "n": 3096,
+      "pct": 15.7
+    },
+    {
+      "name": "When to Use This Skill",
+      "n": 2707,
+      "pct": 13.7
+    },
+    {
+      "name": "Best Practices",
+      "n": 2643,
+      "pct": 13.4
+    },
+    {
+      "name": "Workflow",
+      "n": 2209,
+      "pct": 11.2
+    },
+    {
+      "name": "Related Skills",
+      "n": 2029,
+      "pct": 10.3
+    },
+    {
+      "name": "Examples",
+      "n": 2012,
+      "pct": 10.2
+    },
+    {
+      "name": "Instructions",
+      "n": 1789,
+      "pct": 9.1
+    },
+    {
+      "name": "Quick Reference",
+      "n": 1711,
+      "pct": 8.7
+    },
+    {
+      "name": "Setup",
+      "n": 1462,
+      "pct": 7.4
+    },
+    {
+      "name": "Do not use this skill when",
+      "n": 1233,
+      "pct": 6.3
+    },
+    {
+      "name": "Common Pitfalls",
+      "n": 1218,
+      "pct": 6.2
+    },
+    {
+      "name": "How It Works",
+      "n": 1217,
+      "pct": 6.2
+    },
+    {
+      "name": "Example",
+      "n": 1180,
+      "pct": 6.0
+    },
+    {
+      "name": "Output Format",
+      "n": 1160,
+      "pct": 5.9
+    },
+    {
+      "name": "Known Pitfalls",
+      "n": 1149,
+      "pct": 5.8
+    },
+    {
+      "name": "References",
+      "n": 1104,
+      "pct": 5.6
+    },
+    {
+      "name": "Use this skill when",
+      "n": 1059,
+      "pct": 5.4
+    }
+  ],
+  "families": [
+    {
+      "en": "when to use",
+      "zh": "何时使用",
+      "n": 10387,
+      "pct": 52.7
+    },
+    {
+      "en": "limitations",
+      "zh": "限制",
+      "n": 8707,
+      "pct": 44.2
+    },
+    {
+      "en": "workflow",
+      "zh": "流程",
+      "n": 5306,
+      "pct": 26.9
+    },
+    {
+      "en": "prerequisite or setup",
+      "zh": "前提或安装",
+      "n": 4053,
+      "pct": 20.6
+    },
+    {
+      "en": "overview or purpose",
+      "zh": "概述或目的",
+      "n": 4023,
+      "pct": 20.4
+    },
+    {
+      "en": "example",
+      "zh": "示例",
+      "n": 3966,
+      "pct": 20.1
+    },
+    {
+      "en": "output",
+      "zh": "输出",
+      "n": 2736,
+      "pct": 13.9
+    },
+    {
+      "en": "instructions",
+      "zh": "指令",
+      "n": 1789,
+      "pct": 9.1
+    }
+  ],
+  "signatures": [
+    {
+      "names": [
+        "Prerequisites",
+        "Setup",
+        "Tool Discovery",
+        "Core Workflow Pattern",
+        "Known Pitfalls",
+        "Quick Reference"
+      ],
+      "n": 732,
+      "pct": 3.7
+    },
+    {
+      "names": [
+        "Overview",
+        "When to Use This Skill",
+        "How It Works",
+        "Field Reference",
+        "Select Options",
+        "Relations",
+        "Examples",
+        "Best Practices"
+      ],
+      "n": 342,
+      "pct": 1.7
+    },
+    {
+      "names": [
+        "When to Use",
+        "Prerequisites",
+        "Workflow",
+        "Key Concepts",
+        "Tools & Systems",
+        "Common Scenarios",
+        "Output Format"
+      ],
+      "n": 296,
+      "pct": 1.5
+    },
+    {
+      "names": [
+        "Detailed Guide",
+        "When to Use",
+        "Limitations"
+      ],
+      "n": 236,
+      "pct": 1.2
+    },
+    {
+      "names": [
+        "Instructions"
+      ],
+      "n": 180,
+      "pct": 0.9
+    },
+    {
+      "names": [
+        "Use this skill when",
+        "Do not use this skill when",
+        "Instructions",
+        "Resources",
+        "Limitations"
+      ],
+      "n": 170,
+      "pct": 0.9
+    },
+    {
+      "names": [
+        "Prerequisites",
+        "Setup",
+        "Core Workflows",
+        "Common Patterns",
+        "Known Pitfalls",
+        "Quick Reference",
+        "When to Use",
+        "Limitations"
+      ],
+      "n": 146,
+      "pct": 0.7
+    },
+    {
+      "names": [
+        "When to Use",
+        "Core Principles",
+        "Visual DNA",
+        "Web Implementation",
+        "App Implementation",
+        "Do's and Don'ts",
+        "Limitations"
+      ],
+      "n": 144,
+      "pct": 0.7
+    }
+  ],
+  "template": [
+    {
+      "name": "Applies when",
+      "n": 0
+    },
+    {
+      "name": "Experience",
+      "n": 0
+    },
+    {
+      "name": "Don't",
+      "n": 1
+    },
+    {
+      "name": "Must",
+      "n": 0
+    },
+    {
+      "name": "What NOT to Do",
+      "n": 59
+    },
+    {
+      "name": "Do not use this skill when",
+      "n": 1233
+    },
+    {
+      "name": "Experience Notes",
+      "n": 69
+    }
+  ],
+  "dirs": {
+    "files": 19716,
+    "onlySkillMd": 10864,
+    "withChildDir": 8008,
+    "withSiblingFile": 3578,
+    "nestedSkill": 65,
+    "uniqueDirNames": 489,
+    "uniqueFileNames": 1299,
+    "closed": {
+      "5": 6227,
+      "10": 7265,
+      "20": 7517
+    },
+    "dirs": [
+      {
+        "name": "references",
+        "n": 5667,
+        "pct": 28.7
+      },
+      {
+        "name": "scripts",
+        "n": 2577,
+        "pct": 13.1
+      },
+      {
+        "name": "agents",
+        "n": 1066,
+        "pct": 5.4
+      },
+      {
+        "name": "assets",
+        "n": 819,
+        "pct": 4.2
+      },
+      {
+        "name": "evals",
+        "n": 748,
+        "pct": 3.8
+      },
+      {
+        "name": "resources",
+        "n": 505,
+        "pct": 2.6
+      },
+      {
+        "name": "examples",
+        "n": 363,
+        "pct": 1.8
+      },
+      {
+        "name": "templates",
+        "n": 188,
+        "pct": 1.0
+      },
+      {
+        "name": "reference",
+        "n": 160,
+        "pct": 0.8
+      },
+      {
+        "name": "tests",
+        "n": 158,
+        "pct": 0.8
+      },
+      {
+        "name": "config",
+        "n": 107,
+        "pct": 0.5
+      },
+      {
+        "name": "rules",
+        "n": 55,
+        "pct": 0.3
+      },
+      {
+        "name": ".git",
+        "n": 54,
+        "pct": 0.3
+      },
+      {
+        "name": "troubleshooting",
+        "n": 41,
+        "pct": 0.2
+      },
+      {
+        "name": "schemas",
+        "n": 38,
+        "pct": 0.2
+      }
+    ],
+    "filesBeside": [
+      {
+        "name": "license",
+        "n": 997,
+        "pct": 5.1
+      },
+      {
+        "name": "readme.md",
+        "n": 722,
+        "pct": 3.7
+      },
+      {
+        "name": "benchmark.md",
+        "n": 412,
+        "pct": 2.1
+      },
+      {
+        "name": "skill-card.md",
+        "n": 412,
+        "pct": 2.1
+      },
+      {
+        "name": "skill.oms.sig",
+        "n": 411,
+        "pct": 2.1
+      },
+      {
+        "name": "license.txt",
+        "n": 374,
+        "pct": 1.9
+      },
+      {
+        "name": "skill.meta.json",
+        "n": 286,
+        "pct": 1.5
+      },
+      {
+        "name": "changelog.md",
+        "n": 104,
+        "pct": 0.5
+      },
+      {
+        "name": ".gitignore",
+        "n": 92,
+        "pct": 0.5
+      },
+      {
+        "name": "_meta.json",
+        "n": 86,
+        "pct": 0.4
+      },
+      {
+        "name": "card.md",
+        "n": 76,
+        "pct": 0.4
+      },
+      {
+        "name": "template.md",
+        "n": 64,
+        "pct": 0.3
+      }
+    ],
+    "ext": [
+      {
+        "name": ".md",
+        "n": 3957,
+        "pct": 20.1
+      },
+      {
+        "name": "(none)",
+        "n": 1157,
+        "pct": 5.9
+      },
+      {
+        "name": ".json",
+        "n": 626,
+        "pct": 3.2
+      },
+      {
+        "name": ".txt",
+        "n": 441,
+        "pct": 2.2
+      },
+      {
+        "name": ".sig",
+        "n": 411,
+        "pct": 2.1
+      },
+      {
+        "name": ".py",
+        "n": 195,
+        "pct": 1.0
+      },
+      {
+        "name": ".toml",
+        "n": 102,
+        "pct": 0.5
+      },
+      {
+        "name": ".yaml",
+        "n": 96,
+        "pct": 0.5
+      }
+    ],
+    "signatures": [
+      {
+        "names": [
+          "references"
+        ],
+        "n": 2887,
+        "pct": 14.6
+      },
+      {
+        "names": [
+          "references",
+          "scripts"
+        ],
+        "n": 1007,
+        "pct": 5.1
+      },
+      {
+        "names": [
+          "resources"
+        ],
+        "n": 443,
+        "pct": 2.2
+      },
+      {
+        "names": [
+          "assets",
+          "references",
+          "scripts"
+        ],
+        "n": 428,
+        "pct": 2.2
+      },
+      {
+        "names": [
+          "scripts"
+        ],
+        "n": 416,
+        "pct": 2.1
+      },
+      {
+        "names": [
+          "agents"
+        ],
+        "n": 330,
+        "pct": 1.7
+      },
+      {
+        "names": [
+          "evals",
+          "references"
+        ],
+        "n": 224,
+        "pct": 1.1
+      },
+      {
+        "names": [
+          "agents",
+          "references"
+        ],
+        "n": 207,
+        "pct": 1.0
+      }
+    ]
+  }
+}

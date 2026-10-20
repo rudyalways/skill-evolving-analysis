@@ -1,0 +1,259 @@
+Category ID,Parent category ID,Category path
+93017,0,/Banking & Finance
+92601,93017,/Banking & Finance/Avid Investors
+93019,93017,/Banking & Finance/Banks In-Person
+93018,93017,/Banking & Finance/Banks Online
+93048,93017,/Banking & Finance/Credit Card Preferences
+93051,93048,/Banking & Finance/Credit Card Preferences/Has Few Credit Cards
+93050,93048,/Banking & Finance/Credit Card Preferences/Has Many Credit Cards
+93035,93048,/Banking & Finance/Credit Card Preferences/Values Cash Back Offers
+93052,93048,/Banking & Finance/Credit Card Preferences/Values Low APRs
+93049,93048,/Banking & Finance/Credit Card Preferences/Values Points & Miles
+93020,93017,/Banking & Finance/Seeks Investment Advice
+93040,0,/Beauty & Wellness
+92505,93040,/Beauty & Wellness/Beauty Mavens
+93009,93040,/Beauty & Wellness/Frequently Visits Salons
+92967,0,/Consumer Moments
+92968,92967,/Consumer Moments/Connecting
+92969,92967,/Consumer Moments/Creating
+92970,92967,/Consumer Moments/Laughing
+92971,92967,/Consumer Moments/Learning
+92973,92967,/Consumer Moments/Planning
+92972,92967,/Consumer Moments/Positivity
+92974,92967,/Consumer Moments/Problem-Solving
+93001,0,/Consumer Patterns
+93002,0,/Food & Dining
+93007,93002,/Food & Dining/Coffee Shop Regulars
+90800,93002,/Food & Dining/Cooking Enthusiasts
+90801,90800,/Food & Dining/Cooking Enthusiasts/30 Minute Chefs
+90802,90800,/Food & Dining/Cooking Enthusiasts/Aspiring Chefs
+92900,93002,/Food & Dining/Fast Food Cravers
+92300,93002,/Food & Dining/Foodies
+93003,93002,/Food & Dining/Frequently Dines Out
+93033,93003,/Food & Dining/Frequently Dines Out/Diners by Meal
+93004,93033,/Food & Dining/Frequently Dines Out/Diners by Meal/Frequently Eats Breakfast Out
+93005,93033,/Food & Dining/Frequently Dines Out/Diners by Meal/Frequently Eats Dinner Out
+93006,93033,/Food & Dining/Frequently Dines Out/Diners by Meal/Frequently Eats Lunch Out
+93022,93003,/Food & Dining/Frequently Dines Out/Diners by Restaurant Type
+93032,93022,/Food & Dining/Frequently Dines Out/Diners by Restaurant Type/Frequents Casual Dining Restaurants
+93025,93022,/Food & Dining/Frequently Dines Out/Diners by Restaurant Type/Frequents Fast Casual Restaurants
+93024,93022,/Food & Dining/Frequently Dines Out/Diners by Restaurant Type/Frequents Fast Food Restaurants
+93023,93022,/Food & Dining/Frequently Dines Out/Diners by Restaurant Type/Frequents Fine Dining Restaurants
+93021,93002,/Food & Dining/Frequently Orders In
+92957,93002,/Food & Dining/Prefers Organic Food
+92955,93002,/Food & Dining/Vegetarians & Vegans
+92956,92955,/Food & Dining/Vegetarians & Vegans/Vegans
+92946,0,/Home & Garden
+90700,92946,/Home & Garden/Do-It-Yourselfers
+92932,92946,/Home & Garden/Gardening Enthusiasts
+92508,92946,/Home & Garden/Home Decor Enthusiasts
+94010,0,/Life Events
+94029,94010,/Life Events/Becoming an Empty Nester
+94030,94029,/Life Events/Becoming an Empty Nester/Last Child Moving Out Soon
+94031,94029,/Life Events/Becoming an Empty Nester/Last Child Recently Moved Out
+94021,94010,/Life Events/Business Creation
+94023,94021,/Life Events/Business Creation/Recently Started a Business
+94022,94021,/Life Events/Business Creation/Starting a Business Soon
+94001,94010,/Life Events/College Graduation
+94004,94001,/Life Events/College Graduation/Graduating Soon
+94005,94001,/Life Events/College Graduation/Recently Graduated
+94015,94010,/Life Events/Home Renovation
+94016,94015,/Life Events/Home Renovation/Recently Renovated Home
+94017,94015,/Life Events/Home Renovation/Renovating Home Soon
+94024,94010,/Life Events/Job Change
+94026,94024,/Life Events/Job Change/Recently Started New Job
+94025,94024,/Life Events/Job Change/Starting New Job Soon
+94002,94010,/Life Events/Marriage
+94006,94002,/Life Events/Marriage/Getting Married Soon
+94014,94002,/Life Events/Marriage/Recently Engaged
+94007,94002,/Life Events/Marriage/Recently Married
+94003,94010,/Life Events/Moving
+94008,94003,/Life Events/Moving/Moving Soon
+94009,94003,/Life Events/Moving/Recently Moved
+94018,94010,/Life Events/New Pet
+94027,94018,/Life Events/New Pet/Adding Cat to Household Soon
+94028,94018,/Life Events/New Pet/Adding Dog to Household Soon
+94020,94018,/Life Events/New Pet/Recently Added Cat to Household
+94019,94018,/Life Events/New Pet/Recently Added Dog to Household
+94032,94010,/Life Events/Purchasing a Home
+94033,94032,/Life Events/Purchasing a Home/Purchasing a Home Soon
+94035,94033,/Life Events/Purchasing a Home/Purchasing a Home Soon/Purchasing First Home Soon
+94034,94032,/Life Events/Purchasing a Home/Recently Purchased a Home
+94036,94034,/Life Events/Purchasing a Home/Recently Purchased a Home/Recently Purchased First Home
+94011,94010,/Life Events/Retirement
+94013,94011,/Life Events/Retirement/Recently Retired
+94012,94011,/Life Events/Retirement/Retiring Soon
+92947,0,/Lifestyles & Hobbies
+91700,92947,/Lifestyles & Hobbies/Art & Theater Aficionados
+92913,92947,/Lifestyles & Hobbies/Business Professionals
+92960,92947,/Lifestyles & Hobbies/Charitable Donors & Volunteers
+91000,92947,/Lifestyles & Hobbies/Family-Focused
+92959,91000,/Lifestyles & Hobbies/Family-Focused/Homeschooling Parents
+92504,92947,/Lifestyles & Hobbies/Fashionistas
+93008,92947,/Lifestyles & Hobbies/Frequently Attends Live Events
+90600,92947,/Lifestyles & Hobbies/Green Living Enthusiasts
+92958,92947,/Lifestyles & Hobbies/Mindfulness & Meditation Enthusiasts
+92400,92947,/Lifestyles & Hobbies/Nightlife Enthusiasts
+90100,92947,/Lifestyles & Hobbies/Outdoor Enthusiasts
+92944,90100,/Lifestyles & Hobbies/Outdoor Enthusiasts/Avid Fishers
+91100,92947,/Lifestyles & Hobbies/Pet Lovers
+91101,91100,/Lifestyles & Hobbies/Pet Lovers/Cat Lovers
+91102,91100,/Lifestyles & Hobbies/Pet Lovers/Dog Lovers
+90900,92947,/Lifestyles & Hobbies/Shutterbugs
+90300,92947,/Lifestyles & Hobbies/Thrill Seekers
+93034,0,/Media & Entertainment
+92923,93034,/Media & Entertainment/Book Lovers
+92914,93034,/Media & Entertainment/Comics & Animation Fans
+91600,93034,/Media & Entertainment/Gamers
+92904,91600,/Media & Entertainment/Gamers/Action Game Fans
+92905,91600,/Media & Entertainment/Gamers/Adventure & Strategy Game Fans
+91602,91600,/Media & Entertainment/Gamers/Casual & Social Gamers
+92962,91600,/Media & Entertainment/Gamers/Console Gamers
+92906,91600,/Media & Entertainment/Gamers/Driving & Racing Game Fans
+92963,91600,/Media & Entertainment/Gamers/Esports Fans
+92965,91600,/Media & Entertainment/Gamers/Fans of New & Upcoming Video Games
+91601,91600,/Media & Entertainment/Gamers/Hardcore Gamers
+92961,91600,/Media & Entertainment/Gamers/PC Gamers
+92907,91600,/Media & Entertainment/Gamers/Roleplaying Game Fans
+92908,91600,/Media & Entertainment/Gamers/Shooter Game Fans
+92909,91600,/Media & Entertainment/Gamers/Sports Game Fans
+92930,93034,/Media & Entertainment/Light TV Viewers
+91800,93034,/Media & Entertainment/Movie Lovers
+91801,91800,/Media & Entertainment/Movie Lovers/Action & Adventure Movie Fans
+91803,91800,/Media & Entertainment/Movie Lovers/Comedy Movie Fans
+92934,91800,/Media & Entertainment/Movie Lovers/Documentary Film Fans
+91802,91800,/Media & Entertainment/Movie Lovers/Family Movie Fans
+92966,91800,/Media & Entertainment/Movie Lovers/Fans of New & Upcoming Movies
+92916,91800,/Media & Entertainment/Movie Lovers/Fans of South Asian Film
+93026,91800,/Media & Entertainment/Movie Lovers/Frequent Moviegoers
+91804,91800,/Media & Entertainment/Movie Lovers/Horror Movie Fans
+92933,91800,/Media & Entertainment/Movie Lovers/Independent Film Fans
+91805,91800,/Media & Entertainment/Movie Lovers/Romance & Drama Movie Fans
+91806,91800,/Media & Entertainment/Movie Lovers/Sci-Fi & Fantasy Movie Fans
+91900,93034,/Media & Entertainment/Music Lovers
+91906,91900,/Media & Entertainment/Music Lovers/Blues Fans
+91903,91900,/Media & Entertainment/Music Lovers/Classical Music Enthusiasts
+91904,91900,/Media & Entertainment/Music Lovers/Country Music Fans
+91907,91900,/Media & Entertainment/Music Lovers/Electronic Dance Music Fans
+91911,91900,/Media & Entertainment/Music Lovers/Fans of Latin Music
+91908,91900,/Media & Entertainment/Music Lovers/Folk & Traditional Music Enthusiasts
+91912,91900,/Media & Entertainment/Music Lovers/Indie & Alternative Rock Fans
+91905,91900,/Media & Entertainment/Music Lovers/Jazz Enthusiasts
+91910,91900,/Media & Entertainment/Music Lovers/Metalheads
+91901,91900,/Media & Entertainment/Music Lovers/Pop Music Fans
+91909,91900,/Media & Entertainment/Music Lovers/Rap & Hip Hop Fans
+91902,91900,/Media & Entertainment/Music Lovers/Rock Music Fans
+92915,91900,/Media & Entertainment/Music Lovers/World Music Fans
+92800,93034,/Media & Entertainment/TV Lovers
+92801,92800,/Media & Entertainment/TV Lovers/Documentary & Nonfiction TV Fans
+92803,92800,/Media & Entertainment/TV Lovers/Family Television Fans
+92942,92800,/Media & Entertainment/TV Lovers/Food & Cooking TV Show Fans
+92804,92800,"/Media & Entertainment/TV Lovers/Game, Reality & Talk Show Fans"
+92937,92800,/Media & Entertainment/TV Lovers/Home & Real Estate TV Fans
+92805,92800,/Media & Entertainment/TV Lovers/Sci-Fi & Fantasy TV Fans
+92806,92800,/Media & Entertainment/TV Lovers/TV Comedy Fans
+92802,92800,/Media & Entertainment/TV Lovers/TV Drama Fans
+92941,92800,/Media & Entertainment/TV Lovers/TV Western Fans
+92936,92800,/Media & Entertainment/TV Lovers/Travel TV Fans
+92975,93034,/Media & Entertainment/Viewership Behavior
+92976,92975,/Media & Entertainment/Viewership Behavior/Cord Cutters
+92977,92975,/Media & Entertainment/Viewership Behavior/Cord Nevers
+92978,92975,/Media & Entertainment/Viewership Behavior/Heavy Streaming Content Viewers
+92979,92975,/Media & Entertainment/Viewership Behavior/Light Streaming Content Viewers
+92935,92975,/Media & Entertainment/Viewership Behavior/Live Sports Viewers
+92980,92935,/Media & Entertainment/Viewership Behavior/Live Sports Viewers/Live Sports Viewers on Cable or Broadcast TV
+92981,92935,/Media & Entertainment/Viewership Behavior/Live Sports Viewers/Live Sports Viewers on Streaming Services
+92949,0,/News & Politics
+92000,92949,/News & Politics/Avid News Readers
+92002,92000,/News & Politics/Avid News Readers/Avid Business News Readers
+92005,92000,/News & Politics/Avid News Readers/Avid Local News Readers
+92702,92000,/News & Politics/Avid News Readers/Avid Political News Readers
+92001,92000,/News & Politics/Avid News Readers/Avid World News Readers
+92006,92000,/News & Politics/Avid News Readers/Entertainment News Enthusiasts
+92008,92000,/News & Politics/Avid News Readers/Men's Media Fans
+92007,92000,/News & Politics/Avid News Readers/Women's Media Fans
+92920,92949,/News & Politics/Potential US Voters
+92921,92920,/News & Politics/Potential US Voters/Left-Leaning (Potential US Voters)
+92922,92920,/News & Politics/Potential US Voters/Right-Leaning (Potential US Voters)
+92953,92920,/News & Politics/Potential US Voters/Undecided (Potential US Voters)
+92901,0,/Shoppers
+93036,92901,/Shoppers/Apparel Buying Habits
+93039,93036,/Shoppers/Apparel Buying Habits/Regularly Purchases Children's Apparel
+93038,93036,/Shoppers/Apparel Buying Habits/Regularly Purchases Men's Apparel
+93037,93036,/Shoppers/Apparel Buying Habits/Regularly Purchases Women's Apparel
+92503,92901,/Shoppers/Bargain Hunters
+92501,92901,/Shoppers/Luxury Shoppers
+92952,92901,/Shoppers/Shoppers by Store Type
+93014,92952,/Shoppers/Shoppers by Store Type/Convenience Store Shoppers
+93015,92952,/Shoppers/Shoppers by Store Type/Department Store Shoppers
+93016,92952,/Shoppers/Shoppers by Store Type/Grocery Shoppers
+93011,92952,/Shoppers/Shoppers by Store Type/Superstore Shoppers
+93012,93011,/Shoppers/Shoppers by Store Type/Superstore Shoppers/Superstore Shoppers (Offline)
+93013,93011,/Shoppers/Shoppers by Store Type/Superstore Shoppers/Superstore Shoppers (Online)
+92500,92901,/Shoppers/Shopping Enthusiasts
+93010,92901,/Shoppers/Shopping Patterns
+92502,92901,/Shoppers/Value Shoppers
+92950,0,/Sports & Fitness
+90400,92950,/Sports & Fitness/Health & Fitness Buffs
+92964,90400,/Sports & Fitness/Health & Fitness Buffs/Weightlifters
+92943,90400,/Sports & Fitness/Health & Fitness Buffs/Yoga Lovers
+90200,92950,/Sports & Fitness/Sports Fans
+90204,90200,/Sports & Fitness/Sports Fans/Baseball Fans
+92938,90204,/Sports & Fitness/Sports Fans/Baseball Fans/Recreational Baseball & Softball Players
+90202,90200,/Sports & Fitness/Sports Fans/Basketball Fans
+92940,90202,/Sports & Fitness/Sports Fans/Basketball Fans/Recreational Basketball Players
+90209,90200,/Sports & Fitness/Sports Fans/Boating & Sailing Enthusiasts
+92917,90200,/Sports & Fitness/Sports Fans/Cricket Enthusiasts
+90217,90200,/Sports & Fitness/Sports Fans/Cycling Enthusiasts
+90201,90200,/Sports & Fitness/Sports Fans/Fans of American Football
+92919,90200,/Sports & Fitness/Sports Fans/Fans of Australian Football
+92902,90200,/Sports & Fitness/Sports Fans/Fight & Wrestling Fans
+90206,90200,/Sports & Fitness/Sports Fans/Golf Enthusiasts
+90205,90200,/Sports & Fitness/Sports Fans/Hockey Fans
+92903,90200,/Sports & Fitness/Sports Fans/Motor Sports Enthusiasts
+92954,90200,/Sports & Fitness/Sports Fans/Olympics Fans
+90208,90200,/Sports & Fitness/Sports Fans/Racquetball Enthusiasts
+92918,90200,/Sports & Fitness/Sports Fans/Rugby Enthusiasts
+90216,90200,/Sports & Fitness/Sports Fans/Running Enthusiasts
+90218,90200,/Sports & Fitness/Sports Fans/Skiing Enthusiasts
+90203,90200,/Sports & Fitness/Sports Fans/Soccer Fans
+92939,90203,/Sports & Fitness/Sports Fans/Soccer Fans/Recreational Soccer Players
+90212,90200,/Sports & Fitness/Sports Fans/Swimming Enthusiasts
+90207,90200,/Sports & Fitness/Sports Fans/Tennis Enthusiasts
+90211,90200,/Sports & Fitness/Sports Fans/Water Sports Enthusiasts
+90210,90200,/Sports & Fitness/Sports Fans/Winter Sports Enthusiasts
+92948,0,/Technology
+93053,92948,/Technology/Inactive Social Media Users
+92910,92948,/Technology/Mobile Enthusiasts
+92911,92948,/Technology/Social Media Enthusiasts
+92507,92948,/Technology/Technophiles
+92925,92507,/Technology/Technophiles/Audiophiles
+92931,92507,/Technology/Technophiles/Cloud Services Power Users
+92927,92507,/Technology/Technophiles/High-End Computer Aficionados
+92926,92507,/Technology/Technophiles/Home Automation Enthusiasts
+92945,0,/Travel
+92924,92945,/Travel/Business Travelers
+91500,92945,/Travel/Travel Buffs
+91504,91500,/Travel/Travel Buffs/Beachbound Travelers
+92928,91500,/Travel/Travel Buffs/Cruise Fans
+91502,91500,/Travel/Travel Buffs/Family Vacationers
+91501,91500,/Travel/Travel Buffs/Luxury Travelers
+91505,91500,/Travel/Travel Buffs/Snowbound Travelers
+92929,91500,/Travel/Travel Buffs/Timeshare Owners
+93028,0,/Vehicles & Transportation
+91401,93028,/Vehicles & Transportation/Auto Enthusiasts
+91300,91401,/Vehicles & Transportation/Auto Enthusiasts/Motorcycle Enthusiasts
+91400,91401,/Vehicles & Transportation/Auto Enthusiasts/Performance & Luxury Vehicle Enthusiasts
+92912,91401,/Vehicles & Transportation/Auto Enthusiasts/Truck & SUV Enthusiasts
+92951,93028,/Vehicles & Transportation/Transportation Modes
+93029,92951,/Vehicles & Transportation/Transportation Modes/Motorists
+93030,92951,/Vehicles & Transportation/Transportation Modes/Public Transit Users
+93031,92951,/Vehicles & Transportation/Transportation Modes/Taxi Service Users
+93041,93028,/Vehicles & Transportation/Vehicle Buying Preferences
+93043,93041,/Vehicles & Transportation/Vehicle Buying Preferences/Prioritizes Vehicle Appearance
+93045,93041,/Vehicles & Transportation/Vehicle Buying Preferences/Prioritizes Vehicle Fuel Efficiency
+93046,93041,/Vehicles & Transportation/Vehicle Buying Preferences/Prioritizes Vehicle Performance
+93047,93041,/Vehicles & Transportation/Vehicle Buying Preferences/Prioritizes Vehicle Price
+93042,93041,/Vehicles & Transportation/Vehicle Buying Preferences/Prioritizes Vehicle Reliability
+93044,93041,/Vehicles & Transportation/Vehicle Buying Preferences/Prioritizes Vehicle Safety
+93027,93028,/Vehicles & Transportation/Weekend Road Trippers

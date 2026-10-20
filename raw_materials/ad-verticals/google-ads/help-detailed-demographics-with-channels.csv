@@ -1,0 +1,35 @@
+Segment Name,Display,Gmail,Discovery,Search,Shopping,Video
+/Education,NO,YES,YES,YES,YES,YES
+/Education/Current College Students,NO,YES,YES,YES,YES,YES
+/Education/Highest Level of Educational Attainment,NO,YES,YES,YES,YES,YES
+/Education/Highest Level of Educational Attainment/Advanced Degree,NO,YES,YES,YES,YES,YES
+/Education/Highest Level of Educational Attainment/Bachelor's Degree,NO,YES,YES,YES,YES,YES
+/Education/Highest Level of Educational Attainment/High School Graduate,NO,YES,YES,YES,YES,YES
+/Employment,NO,YES,YES,YES,YES,YES
+/Employment/Company Size,NO,YES,YES,YES,YES,YES
+/Employment/Company Size/Large Employer (250-10k Employees),NO,YES,YES,YES,YES,YES
+/Employment/Company Size/Small Employer (1-249 Employees),NO,YES,YES,YES,YES,YES
+/Employment/Company Size/Very Large Employer (10k+ Employees),NO,YES,YES,YES,YES,YES
+/Employment/Industry,NO,YES,YES,YES,YES,YES
+/Employment/Industry/Construction Industry,NO,YES,YES,YES,YES,YES
+/Employment/Industry/Education Sector,NO,YES,YES,YES,YES,YES
+/Employment/Industry/Financial Industry,NO,YES,YES,YES,YES,YES
+/Employment/Industry/Healthcare Industry,NO,YES,YES,YES,YES,YES
+/Employment/Industry/Hospitality Industry,NO,YES,YES,YES,YES,YES
+/Employment/Industry/Manufacturing Industry,NO,YES,YES,YES,YES,YES
+/Employment/Industry/Real Estate Industry,NO,YES,YES,YES,YES,YES
+/Employment/Industry/TechNOlogy Industry,NO,YES,YES,YES,YES,YES
+/Homeownership Status,NO,YES,YES,YES,YES,YES
+/Homeownership Status/Homeowners,NO,YES,YES,YES,YES,YES
+/Homeownership Status/Renters,NO,YES,YES,YES,YES,YES
+/Marital Status,NO,YES,YES,YES,YES,YES
+/Marital Status/In a Relationship,NO,YES,YES,YES,YES,YES
+/Marital Status/Married,NO,YES,YES,YES,YES,YES
+/Marital Status/Single,NO,YES,YES,YES,YES,YES
+/Parental Status,NO,YES,YES,YES,YES,YES
+/Parental Status/Parents,NO,YES,YES,YES,YES,YES
+/Parental Status/Parents/Parents of Grade-Schoolers (6-12 years),NO,YES,YES,YES,YES,YES
+/Parental Status/Parents/Parents of Infants (0-1 years),NO,YES,YES,YES,YES,YES
+/Parental Status/Parents/Parents of Preschoolers (4-5 years),NO,YES,YES,YES,YES,YES
+/Parental Status/Parents/Parents of Teens (13-17 years),NO,YES,YES,YES,YES,YES
+/Parental Status/Parents/Parents of Toddlers (1-3 years),NO,YES,YES,YES,YES,YES

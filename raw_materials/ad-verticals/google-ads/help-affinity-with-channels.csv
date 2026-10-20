@@ -1,0 +1,155 @@
+Segment name,Display,Gmail,Discovery,Search,Shopping,Video
+/Banking & Finance,YES,YES,YES,YES,NO,YES
+/Banking & Finance/Avid Investors,YES,YES,YES,YES,NO,YES
+/Banking & Finance/Banks Online,NO,NO,NO,NO,NO,YES
+/Beauty & Wellness,YES,YES,YES,YES,NO,YES
+/Beauty & Wellness/Beauty Mavens,YES,YES,YES,YES,NO,YES
+/Beauty & Wellness/Frequently Visits Salons,YES,YES,YES,YES,NO,YES
+/Food & Dining,YES,YES,YES,YES,NO,YES
+/Food & Dining/Coffee Shop Regulars,YES,YES,YES,YES,NO,YES
+/Food & Dining/Cooking Enthusiasts,YES,YES,YES,YES,NO,YES
+/Food & Dining/Cooking Enthusiasts/30 Minute Chefs,YES,YES,YES,YES,NO,YES
+/Food & Dining/Cooking Enthusiasts/Aspiring Chefs,YES,YES,YES,YES,NO,YES
+/Food & Dining/Fast Food Cravers,YES,YES,YES,YES,NO,YES
+/Food & Dining/Foodies,YES,YES,YES,YES,NO,YES
+/Food & Dining/Frequently Dines Out,YES,YES,YES,YES,NO,YES
+/Food & Dining/Frequently Dines Out/Diners by Meal,YES,YES,YES,NO,NO,YES
+/Food & Dining/Frequently Dines Out/Diners by Meal/Frequently Eats Breakfast Out,YES,YES,YES,NO,NO,YES
+/Food & Dining/Frequently Dines Out/Diners by Meal/Frequently Eats Dinner Out,YES,YES,YES,NO,NO,YES
+/Food & Dining/Frequently Dines Out/Diners by Meal/Frequently Eats Lunch Out,YES,YES,YES,NO,NO,YES
+/Food & Dining/Prefers Organic Food,NO,NO,NO,NO,NO,YES
+/Food & Dining/Vegetarians & Vegans,NO,NO,NO,NO,NO,YES
+/Food & Dining/Vegetarians & Vegans/Vegans,NO,NO,NO,NO,NO,YES
+/Home & Garden,YES,YES,YES,YES,NO,YES
+/Home & Garden/Do-It-Yourselfers,YES,YES,YES,YES,NO,YES
+/Home & Garden/Home Decor Enthusiasts,YES,YES,YES,YES,NO,YES
+/Lifestyles & Hobbies,YES,YES,YES,YES,NO,YES
+/Lifestyles & Hobbies/Art & Theater Aficionados,YES,YES,YES,YES,NO,YES
+/Lifestyles & Hobbies/Business Professionals,YES,YES,YES,YES,NO,YES
+/Lifestyles & Hobbies/Charitable Donors & Volunteers,NO,NO,NO,NO,NO,YES
+/Lifestyles & Hobbies/Family-Focused,YES,YES,YES,YES,NO,YES
+/Lifestyles & Hobbies/Family-Focused/Homeschooling Parents,NO,NO,NO,NO,NO,YES
+/Lifestyles & Hobbies/Fashionistas,YES,YES,YES,YES,NO,YES
+/Lifestyles & Hobbies/Frequently Attends Live Events,YES,YES,YES,YES,NO,YES
+/Lifestyles & Hobbies/Green Living Enthusiasts,YES,YES,YES,YES,NO,YES
+/Lifestyles & Hobbies/Nightlife Enthusiasts,YES,YES,YES,YES,NO,YES
+/Lifestyles & Hobbies/Outdoor Enthusiasts,YES,YES,YES,YES,NO,YES
+/Lifestyles & Hobbies/Pet Lovers,YES,YES,YES,YES,NO,YES
+/Lifestyles & Hobbies/Pet Lovers/Cat Lovers,YES,YES,YES,YES,NO,YES
+/Lifestyles & Hobbies/Pet Lovers/Dog Lovers,YES,YES,YES,YES,NO,YES
+/Lifestyles & Hobbies/Shutterbugs,YES,YES,YES,YES,NO,YES
+/Lifestyles & Hobbies/Thrill Seekers,YES,YES,YES,YES,NO,YES
+/Media & Entertainment,YES,YES,YES,YES,NO,YES
+/Media & Entertainment/Book Lovers,YES,YES,YES,YES,NO,YES
+/Media & Entertainment/Comics & Animation Fans,YES,YES,YES,YES,NO,YES
+/Media & Entertainment/Gamers,YES,YES,YES,YES,NO,YES
+/Media & Entertainment/Gamers/Action Game Fans,YES,YES,YES,YES,NO,YES
+/Media & Entertainment/Gamers/Adventure & Strategy Game Fans,YES,YES,YES,YES,NO,YES
+/Media & Entertainment/Gamers/Casual & Social Gamers,YES,YES,YES,YES,NO,YES
+/Media & Entertainment/Gamers/Console Gamers,NO,NO,YES,NO,NO,YES
+/Media & Entertainment/Gamers/Driving & Racing Game Fans,YES,YES,YES,YES,NO,YES
+/Media & Entertainment/Gamers/Esports Fans,NO,NO,YES,NO,NO,YES
+/Media & Entertainment/Gamers/Fans of New & Upcoming Video Games,NO,NO,YES,NO,NO,YES
+/Media & Entertainment/Gamers/Hardcore Gamers,YES,YES,YES,YES,NO,YES
+/Media & Entertainment/Gamers/PC Gamers,NO,NO,YES,NO,NO,YES
+/Media & Entertainment/Gamers/Roleplaying Game Fans,YES,YES,YES,YES,NO,YES
+/Media & Entertainment/Gamers/Shooter Game Fans,YES,YES,YES,YES,NO,YES
+/Media & Entertainment/Gamers/Sports Game Fans,YES,YES,YES,YES,NO,YES
+/Media & Entertainment/Light TV Viewers,YES,NO,YES,YES,NO,YES
+/Media & Entertainment/Movie Lovers,YES,YES,YES,YES,NO,YES
+/Media & Entertainment/Movie Lovers/Action & Adventure Movie Fans,YES,YES,YES,YES,NO,YES
+/Media & Entertainment/Movie Lovers/Comedy Movie Fans,YES,YES,YES,YES,NO,YES
+/Media & Entertainment/Movie Lovers/Family Movie Fans,YES,YES,YES,YES,NO,YES
+/Media & Entertainment/Movie Lovers/Fans of New & Upcoming Movies,NO,NO,YES,NO,NO,YES
+/Media & Entertainment/Movie Lovers/Horror Movie Fans,YES,YES,YES,YES,NO,YES
+/Media & Entertainment/Movie Lovers/Romance & Drama Movie Fans,YES,YES,YES,YES,NO,YES
+/Media & Entertainment/Movie Lovers/Sci-Fi & Fantasy Movie Fans,YES,YES,YES,YES,NO,YES
+/Media & Entertainment/Movie Lovers/South Asian Film Fans,YES,YES,YES,YES,NO,YES
+/Media & Entertainment/Music Lovers,YES,YES,YES,YES,NO,YES
+/Media & Entertainment/Music Lovers/Blues Fans,YES,YES,YES,YES,NO,YES
+/Media & Entertainment/Music Lovers/Classical Music Enthusiasts,YES,YES,YES,YES,NO,YES
+/Media & Entertainment/Music Lovers/Country Music Fans,YES,YES,YES,YES,NO,YES
+/Media & Entertainment/Music Lovers/Electronic Dance Music Fans,YES,YES,YES,NO,NO,YES
+/Media & Entertainment/Music Lovers/Folk & Traditional Music Enthusiasts,YES,YES,YES,YES,NO,YES
+/Media & Entertainment/Music Lovers/Indie & Alternative Rock Fans,YES,YES,YES,YES,NO,YES
+/Media & Entertainment/Music Lovers/Jazz Enthusiasts,YES,YES,YES,YES,NO,YES
+/Media & Entertainment/Music Lovers/Metalheads,YES,YES,YES,YES,NO,YES
+/Media & Entertainment/Music Lovers/Pop Music Fans,YES,YES,YES,YES,NO,YES
+/Media & Entertainment/Music Lovers/Rap & Hip Hop Fans,YES,YES,YES,YES,NO,YES
+/Media & Entertainment/Music Lovers/Rock Music Fans,YES,YES,YES,YES,NO,YES
+/Media & Entertainment/Music Lovers/Spanish-Language Music Fans,YES,YES,YES,YES,NO,YES
+/Media & Entertainment/Music Lovers/World Music Fans,YES,YES,YES,YES,NO,YES
+/Media & Entertainment/TV Lovers,YES,YES,YES,YES,NO,YES
+/Media & Entertainment/TV Lovers/Documentary & NOnfiction TV Fans,YES,YES,YES,YES,NO,YES
+/Media & Entertainment/TV Lovers/Family Television Fans,YES,YES,YES,YES,NO,YES
+"/Media & Entertainment/TV Lovers/Game, Reality & Talk Show Fans",YES,YES,YES,YES,NO,YES
+/Media & Entertainment/TV Lovers/Sci-Fi & Fantasy TV Fans,YES,YES,YES,YES,NO,YES
+/Media & Entertainment/TV Lovers/TV Comedy Fans,YES,YES,YES,YES,NO,YES
+/Media & Entertainment/TV Lovers/TV Drama Fans,YES,YES,YES,YES,NO,YES
+/News & Politics,YES,YES,YES,YES,NO,YES
+/News & Politics/Avid News Readers,YES,YES,YES,YES,NO,YES
+/News & Politics/Avid News Readers/Avid Business News Readers,YES,YES,YES,YES,NO,YES
+/News & Politics/Avid News Readers/Avid Local News Readers,YES,YES,YES,YES,NO,YES
+/News & Politics/Avid News Readers/Avid Political News Readers,YES,YES,YES,YES,NO,YES
+/News & Politics/Avid News Readers/Avid World News Readers,YES,YES,YES,YES,NO,YES
+/News & Politics/Avid News Readers/Entertainment News Enthusiasts,YES,YES,YES,YES,NO,YES
+/News & Politics/Avid News Readers/Men's Media Fans,YES,YES,YES,YES,NO,YES
+/News & Politics/Avid News Readers/Women's Media Fans,YES,YES,YES,YES,NO,YES
+/Shoppers,YES,YES,YES,YES,NO,YES
+/Shoppers/Bargain Hunters,YES,YES,YES,YES,NO,YES
+/Shoppers/Luxury Shoppers,YES,YES,YES,YES,NO,YES
+/Shoppers/Shopaholics,YES,YES,YES,YES,NO,YES
+/Shoppers/Shoppers by Store Type,YES,YES,YES,NO,NO,YES
+/Shoppers/Shoppers by Store Type/Convenience Store Shoppers,YES,YES,YES,NO,NO,YES
+/Shoppers/Shoppers by Store Type/Department Store Shoppers,YES,YES,YES,NO,NO,YES
+/Shoppers/Shoppers by Store Type/Grocery Shoppers,NO,YES,YES,NO,NO,YES
+/Shoppers/Shoppers by Store Type/Superstore Shoppers,YES,YES,YES,NO,NO,YES
+/Shoppers/Value Shoppers,YES,YES,YES,YES,NO,YES
+/Sports & Fitness,YES,YES,YES,YES,NO,YES
+/Sports & Fitness/Health & Fitness Buffs,YES,YES,YES,YES,NO,YES
+/Sports & Fitness/Health & Fitness Buffs/Weightlifters,NO,NO,NO,NO,NO,YES
+/Sports & Fitness/Health & Fitness Buffs/Yoga Lovers,NO,NO,NO,NO,NO,YES
+/Sports & Fitness/Sports Fans,YES,YES,YES,YES,NO,YES
+/Sports & Fitness/Sports Fans/American Football Fans,YES,YES,YES,YES,NO,YES
+/Sports & Fitness/Sports Fans/Australian Football Fans,YES,YES,YES,YES,NO,YES
+/Sports & Fitness/Sports Fans/Baseball Fans,YES,YES,YES,YES,NO,YES
+/Sports & Fitness/Sports Fans/Basketball Fans,YES,YES,YES,YES,NO,YES
+/Sports & Fitness/Sports Fans/Boating & Sailing Enthusiasts,YES,YES,YES,YES,NO,YES
+/Sports & Fitness/Sports Fans/Cricket Enthusiasts,YES,YES,YES,YES,NO,YES
+/Sports & Fitness/Sports Fans/Cycling Enthusiasts,YES,YES,YES,YES,NO,YES
+/Sports & Fitness/Sports Fans/Fight & Wrestling Fans,YES,YES,YES,YES,NO,YES
+/Sports & Fitness/Sports Fans/Golf Enthusiasts,YES,YES,YES,YES,NO,YES
+/Sports & Fitness/Sports Fans/Hockey Fans,YES,YES,YES,YES,NO,YES
+/Sports & Fitness/Sports Fans/Motor Sports Enthusiasts,YES,YES,YES,YES,NO,YES
+/Sports & Fitness/Sports Fans/Racquetball Enthusiasts,YES,YES,YES,YES,NO,YES
+/Sports & Fitness/Sports Fans/Rugby Enthusiasts,YES,YES,YES,YES,NO,YES
+/Sports & Fitness/Sports Fans/Running Enthusiasts,YES,YES,YES,YES,NO,YES
+/Sports & Fitness/Sports Fans/Skiing Enthusiasts,YES,YES,YES,YES,NO,YES
+/Sports & Fitness/Sports Fans/Soccer Fans,YES,YES,YES,YES,NO,YES
+/Sports & Fitness/Sports Fans/Swimming Enthusiasts,YES,YES,YES,YES,NO,YES
+/Sports & Fitness/Sports Fans/Tennis Enthusiasts,YES,YES,YES,YES,NO,YES
+/Sports & Fitness/Sports Fans/Water Sports Enthusiasts,YES,YES,YES,YES,NO,YES
+/Sports & Fitness/Sports Fans/Winter Sports Enthusiasts,YES,YES,YES,YES,NO,YES
+/Technology,YES,YES,YES,YES,NO,YES
+/Technology/Mobile Enthusiasts,YES,YES,YES,YES,NO,YES
+/Technology/Social Media Enthusiasts,YES,YES,YES,YES,NO,YES
+/Technology/Technophiles,YES,YES,YES,YES,NO,YES
+/Technology/Technophiles/Audiophiles,NO,YES,NO,YES,NO,YES
+/Technology/Technophiles/Cloud Services Power Users,YES,YES,NO,YES,NO,YES
+/Technology/Technophiles/High-End Computer Aficionados,YES,YES,NO,YES,NO,YES
+/Technology/Technophiles/Home Automation Enthusiasts,YES,YES,NO,YES,NO,YES
+/Travel,YES,YES,YES,YES,NO,YES
+/Travel/Business Travelers,YES,YES,NO,YES,NO,NO
+/Travel/Travel Buffs,YES,YES,YES,YES,NO,YES
+/Travel/Travel Buffs/Beachbound Travelers,YES,YES,YES,YES,NO,YES
+/Travel/Travel Buffs/Family Vacationers,YES,YES,YES,YES,NO,YES
+/Travel/Travel Buffs/Luxury Travelers,YES,YES,YES,YES,NO,YES
+/Travel/Travel Buffs/SNOwbound Travelers,YES,YES,YES,YES,NO,YES
+/Vehicles & Transportation,YES,YES,YES,YES,NO,YES
+/Vehicles & Transportation/Auto Enthusiasts,YES,YES,YES,YES,NO,YES
+/Vehicles & Transportation/Auto Enthusiasts/Motorcycle Enthusiasts,YES,YES,YES,YES,NO,YES
+/Vehicles & Transportation/Auto Enthusiasts/Performance & Luxury Vehicle Enthusiasts,YES,YES,YES,YES,NO,YES
+/Vehicles & Transportation/Auto Enthusiasts/Truck & SUV Enthusiasts,YES,YES,YES,YES,NO,YES
+/Vehicles & Transportation/Transportation Modes,YES,YES,NO,YES,NO,YES
+/Vehicles & Transportation/Transportation Modes/Public Transit Users,YES,YES,NO,YES,NO,YES
+/Vehicles & Transportation/Transportation Modes/Taxi Service Users,YES,YES,NO,YES,NO,YES

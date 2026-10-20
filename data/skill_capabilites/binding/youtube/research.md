@@ -1,0 +1,17 @@
+---
+view: "binding"
+depth1: "youtube"
+depth2: "research"
+placements: 2
+kind: "named"
+---
+
+# research
+
+youtube / research
+
+2 placements, 1.2% of youtube (164).
+
+This branch stops at depth 2. The source tree stores no level-3 rows under it.
+
+Counted from the skill-capabilities tree in `benchmark-all-in-one.html`, 5 Oct 2026.

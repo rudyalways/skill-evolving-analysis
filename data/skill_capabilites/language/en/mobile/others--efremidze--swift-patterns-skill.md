@@ -1,0 +1,19 @@
+---
+view: "language"
+depth1: "en"
+depth2: "mobile"
+depth3: "others--efremidze--swift-patterns-skill"
+placements: 1
+kind: "clone"
+---
+
+# others--efremidze--swift-patterns-skill
+
+en · English · 英文 / mobile / others--efremidze--swift-patterns-skill
+
+1 placements, 0.8% of mobile (128), under en (19,190).
+
+This row is a copied skill pack, not a capability name.
+
+
+Counted from the skill-capabilities tree in `benchmark-all-in-one.html`, 5 Oct 2026.

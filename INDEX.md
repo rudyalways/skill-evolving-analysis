@@ -2,7 +2,7 @@
 
 > Master catalog. Append a row for every new artifact. Sort newest-first within each section.
 
-Last updated: 2026-08-11
+Last updated: 2026-10-05
 
 **Persistent archive:** [STORE.md](STORE.md) · [store/manifest.yaml](store/manifest.yaml) · [recording protocol](store/protocols/recording.md)
 
@@ -44,6 +44,7 @@ Last updated: 2026-08-11
 
 | ID | Type | Path | Description |
 |----|------|------|-------------|
+| R2026-10-05-001 | taxonomy | [raw_materials/ad-verticals/](raw_materials/ad-verticals/SOURCES.md) | Google Ads, Merchant, IAB, and TikTok vertical trees (fetched 2026-10-05). Meta has no public CSV. |
 | R2026-08-11-001 | web | [data/raw/web/lilian-weng-2026-07-04-harness.md](data/raw/web/lilian-weng-2026-07-04-harness.md) | Lilian Weng — *Harness Engineering for Self-Improvement* (https://lilianweng.github.io/posts/2026-07-04-harness/, accessed 2026-08-11) |
 
 ---
@@ -52,7 +53,7 @@ Last updated: 2026-08-11
 
 | ID | Source | Path | Description |
 |----|--------|------|-------------|
-| — | — | `data/processed/` | No files yet |
+| P2026-10-05-001 | public_skills labels | [data/processed/skill-label-leaves.jsonl](data/processed/skill-label-leaves.jsonl) | Eight facet trees, every leaf ≤100 skills. Summary: [skill-label-leaves.md](data/processed/skill-label-leaves.md) |
 
 ---
 
@@ -73,6 +74,9 @@ Last updated: 2026-08-11
 
 | Date | Title | Path |
 |------|-------|------|
+| 2026-10-05 | **Ad vertical trees** — what Google, IAB, Meta, and TikTok imply for the skill labels | [notes/synthesis/ad-vertical-trees.md](notes/synthesis/ad-vertical-trees.md) |
+| 2026-10-05 | **Skill label system** — eight facets, plus the ads-tree crosswalk | [notes/synthesis/skill-label-system.md](notes/synthesis/skill-label-system.md) |
+| 2026-09-29 | **Trace → skill methods** — algorithms, gates, scores, plus Google Cloud RRSI | [notes/synthesis/trace-to-skill-methods.md](notes/synthesis/trace-to-skill-methods.md) |
 | 2026-08-11 | **Harness evolving OSS** — from Lilian Weng post (DGM / Meta-Harness / AHE / Self-Harness) | [notes/synthesis/harness-evolving-oss-from-lilian-weng.md](notes/synthesis/harness-evolving-oss-from-lilian-weng.md) |
 | 2026-07-08 | SkillRL vs Claw-R1 comparison | [notes/synthesis/comparison.md](notes/synthesis/comparison.md) |
 | 2026-07-08 | L3 深度合并分析 + TaiChu P0 spec | [notes/synthesis/l3-comprehensive-skill-analysis.md](notes/synthesis/l3-comprehensive-skill-analysis.md), [taichu-p0-skill-compaction-spec.md](notes/synthesis/taichu-p0-skill-compaction-spec.md) |
@@ -105,6 +109,12 @@ Last updated: 2026-08-11
 
 | Date | Change |
 |------|--------|
+| 2026-10-05 | Adopted ads-tree node shape, depth cap, and external-id crosswalk into the skill label note |
+| 2026-10-05 | Ads verticals can crosswalk onto commercial domains; they do not replace the eight facets |
+| 2026-10-05 | Stored ad vertical taxonomies and wrote what their tree design implies for the skill labels |
+| 2026-10-05 | Wrote depth-5 trees for the other seven facets, and defined the rest bucket |
+| 2026-10-05 | Added skill label system note for the public_skills corpus |
+| 2026-09-29 | Added trace-to-skill methods note, then RRSI (regularized harness search, arXiv:2609.24972) |
 | 2026-08-11 | Added harness-evolving OSS note distilled from Lilian Weng 2026-07-04 post |
 | 2026-07-08 | Initial workspace scaffold |
 | 2026-07-08 | Corrected T002 to Claw-R1 (was OpenClaw-RL); added full synthesis + combined pipeline |
