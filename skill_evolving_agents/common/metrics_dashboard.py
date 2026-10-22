@@ -84,6 +84,115 @@ def active_statuses(database: Path, run_id: str) -> list[dict[str, Any]]:
     return sorted(active, key=lambda row: row["started_at"])
 
 
+def run_progress(
+    database: Path, run_id: str, spans: list[dict[str, Any]]
+) -> dict[str, Any]:
+    """Build a concise live checklist from runner-owned status records."""
+    workspace = database.parent / "runs" / run_id
+    status_root = workspace / "run/status"
+    documents: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    if status_root.is_dir():
+        for path in status_root.glob("*/*.json"):
+            try:
+                row = json.loads(path.read_text())
+            except (OSError, json.JSONDecodeError):
+                continue
+            if isinstance(row, dict) and isinstance(row.get("stage"), str):
+                documents[row["stage"]].append(row)
+    queue_phases = {
+        "label-traces-cluster": "diagnosis-queue",
+        "goal": "goal-queue",
+        "optimize": "operation-queue",
+    }
+    display = [
+        ("preprocessing", "Preprocessing"),
+        ("label-skills", "LabelSkills"),
+        ("label-traces-cluster", "Diagnosis"),
+        ("goal", "Goal"),
+        ("optimize", "Optimize"),
+        ("verifiter", "Verifiter"),
+        ("judge", "Judge"),
+    ]
+    goals = []
+    for path in (workspace / "run").glob("*/evolve-goal.json"):
+        try:
+            value = json.loads(path.read_text())
+        except (OSError, json.JSONDecodeError):
+            continue
+        if isinstance(value, dict):
+            goals.append(value)
+    goal_done = bool(documents.get("goal")) and all(
+        row.get("state") == "done" for row in documents["goal"]
+    )
+    operations_skipped = goal_done and bool(goals) and all(
+        not ((value.get("action") or {}).get("ops") or []) for value in goals
+    )
+    now = datetime.now(UTC)
+    stages: list[dict[str, Any]] = []
+    for stage, label in display:
+        rows = documents.get(stage, [])
+        states = [row.get("state") for row in rows]
+        if "failed" in states:
+            state = "failed"
+        elif "started" in states:
+            state = "running"
+        elif rows and all(value == "done" for value in states):
+            state = "done"
+        elif operations_skipped and stage in {"optimize", "verifiter", "judge"}:
+            state = "skipped"
+        else:
+            state = "pending"
+        completed_ms = sum(
+            float(row.get("duration_ms") or 0)
+            for row in rows
+            if row.get("state") == "done"
+        )
+        running_seconds = 0.0
+        for row in rows:
+            if row.get("state") != "started":
+                continue
+            raw = row.get("started_at") or row.get("at")
+            try:
+                started = datetime.fromisoformat(str(raw).replace("Z", "+00:00"))
+            except ValueError:
+                continue
+            running_seconds = max(running_seconds, (now - started).total_seconds())
+        queue_phase = queue_phases.get(stage)
+        queue_wait_ms = None
+        if queue_phase:
+            waits = []
+            for span in spans:
+                if span.get("phase") != queue_phase:
+                    continue
+                metadata = _METRICS._metadata(span)
+                value = metadata.get("queue_wait_ms")
+                if isinstance(value, (int, float)):
+                    waits.append(float(value))
+            if waits:
+                queue_wait_ms = round(sum(waits), 3)
+        stages.append(
+            {
+                "stage": stage,
+                "label": label,
+                "state": state,
+                "duration_seconds": round(
+                    running_seconds if state == "running" else completed_ms / 1000,
+                    3,
+                ),
+                "items_done": sum(value == "done" for value in states),
+                "items_total": len(rows),
+                "queue_wait_ms": queue_wait_ms,
+            }
+        )
+    findings = workspace / "traces/derived/findings"
+    selected_findings = (
+        sum(1 for path in findings.iterdir() if path.is_dir())
+        if findings.is_dir()
+        else 0
+    )
+    return {"selected_findings": selected_findings, "stages": stages}
+
+
 def metrics_payload(database: Path) -> dict[str, Any]:
     rows = load_rows(database)
     runs: dict[str, list[dict[str, Any]]] = defaultdict(list)
@@ -119,6 +228,7 @@ def metrics_payload(database: Path) -> dict[str, Any]:
                 "phases": timing["phases"],
                 "spans": timing["spans"],
                 "active": active,
+                "progress": run_progress(database, run_id, spans),
             }
         )
     phase_summaries = [
@@ -321,6 +431,13 @@ padding:9px 14px; border-radius:9px; cursor:pointer }}
 .panel {{ display:none }} .panel.active {{ display:block }}
 .active-run {{ margin:12px 0; padding:12px; border-radius:8px;
 background:#112d29; border:1px solid #1d7668; color:#95eadb }}
+.progress {{ margin:14px 0; padding:14px; border-radius:10px; background:#10172a }}
+.progress-grid {{ display:grid; grid-template-columns:minmax(150px,1fr) 110px 110px 130px;
+gap:7px 16px; align-items:center }}
+.state {{ font-weight:700 }} .state.done {{ color:#62d8a8 }}
+.state.running {{ color:#f4c15d }} .state.failed {{ color:#ff8080 }}
+.state.pending,.state.skipped {{ color:#8f9ab0 }}
+@media (max-width:700px) {{ .progress-grid {{ grid-template-columns:1fr 90px }} }}
 </style></head><body><main>
 <h1>Skill Evolver Live Metrics</h1>
 <p id="status" class="muted">Connecting…</p>
@@ -354,6 +471,16 @@ const runPanel = run => {{
   const active = (run.active || []).map(row =>
     `<div class="active-run"><b>Running now:</b> ${{esc(row.stage)}} · `+
     `${{esc(row.item)}} · <b>${{sec(row.elapsed_seconds)}}</b></div>`).join('');
+  const progress = run.progress || {{selected_findings:0, stages:[]}};
+  const progressRows = (progress.stages || []).map(row => {{
+    const duration = row.state === 'pending' || row.state === 'skipped'
+      ? '—' : sec(row.duration_seconds);
+    const queue = row.queue_wait_ms == null ? '—' : `${{Number(row.queue_wait_ms).toFixed(2)}}ms`;
+    const items = row.items_total ? `${{row.items_done}}/${{row.items_total}} items` : '—';
+    return `<span>${{esc(row.label)}}</span>`+
+      `<span class="state ${{esc(row.state)}}">${{esc(row.state)}}</span>`+
+      `<span>${{duration}}</span><span>${{items}} · queue ${{queue}}</span>`;
+  }}).join('');
   const phaseRows = (run.phases || []).map(row =>
     `<tr><td>${{esc(row.phase)}}</td><td>${{row.count}}</td>`+
     `<td>${{sec(row.sum_seconds)}}</td><td>${{sec(row.wall_seconds)}}</td>`+
@@ -366,7 +493,10 @@ const runPanel = run => {{
     `<td>${{esc(row.slice_user_turns)}}</td><td>${{esc(row.tool_events)}}</td>`+
     `<td>${{esc(row.decision)}}</td><td>${{esc(row.super_score)}}</td>`+
     `<td>${{esc(row.judge_action)}}</td><td>${{esc(row.status)}}</td></tr>`).join('');
-  return `<section class="card"><h2>${{esc(run.run_id)}}</h2>${{active}}<div class="stats">`+
+  return `<section class="card"><h2>${{esc(run.run_id)}}</h2>${{active}}`+
+    `<section class="progress"><h3>Current progress</h3>`+
+    `<p>Selected findings: <b>${{progress.selected_findings}}</b></p>`+
+    `<div class="progress-grid">${{progressRows}}</div></section><div class="stats">`+
     `<span>live wall <b>${{sec(run.wall_seconds)}}</b></span>`+
     `<span>completed agent sum <b>${{sec(run.category_seconds.llm_agent || 0)}}</b></span>`+
     `<span>deterministic <b>${{sec(run.category_seconds.deterministic || 0)}}</b></span>`+

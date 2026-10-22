@@ -346,12 +346,19 @@ class ContractTests(unittest.TestCase):
                 self.assertEqual(payload["runs"][0]["phases"][0]["phase"], "goal")
                 self.assertIn("spans", payload["runs"][0])
                 self.assertEqual(payload["runs"][0]["active"][0]["stage"], "goal")
+                progress = payload["runs"][0]["progress"]
+                goal_progress = next(
+                    row for row in progress["stages"] if row["stage"] == "goal"
+                )
+                self.assertEqual(goal_progress["state"], "running")
                 with urllib.request.urlopen(
                     f"http://127.0.0.1:{port}/"
                 ) as response:
                     live = response.read().decode()
                 self.assertIn('data-tab="total"', live)
                 self.assertIn("Running now:", live)
+                self.assertIn("Current progress", live)
+                self.assertIn("Selected findings:", live)
             finally:
                 server.shutdown()
                 server.server_close()
