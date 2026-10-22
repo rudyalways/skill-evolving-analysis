@@ -1087,6 +1087,8 @@ def validate_verification(
         f"step{index}": 0.2 for index in range(1, 6)
     }
     step_groups = required_list(data, "verification_steps", "$")
+    if not step_groups:
+        fail("$.verification_steps", "must not be empty")
     step_skills: set[str] = set()
     skill_scores: dict[str, float] = {}
     for group_index, group in enumerate(step_groups):
