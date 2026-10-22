@@ -1,0 +1,31 @@
+{
+  "skill_name": "close-implementation-choice",
+  "evals": [
+    {
+      "id": 1,
+      "kind": "should_apply",
+      "prompt": "The news update is not periodic. Should this be a local script or an entrypoint? Pick one and close the turn.",
+      "expected_output": "The assistant text ends with a short decision block that selects either the local script or the entrypoint and states why that option fits a non-periodic news update.",
+      "expectations": [
+        "The final text names the local script and the entrypoint.",
+        "The final text selects exactly one of those options.",
+        "The final text states why the selected option fits a non-periodic update.",
+        "The assistant body is non-empty."
+      ],
+      "files": [],
+      "source_trace_ids": ["sig-72a822635f776468cf5fdb23:action.ops:1"]
+    },
+    {
+      "id": 2,
+      "kind": "should_not_apply",
+      "prompt": "A follow-up listed a local script and an entrypoint, then the turn ended with empty text or with the options and no choice. The host had already failed, and that infrastructure failure explains the empty turn. Do not invent a selection.",
+      "expected_output": "The skill is not selected. The empty turn stays explained by the infrastructure failure, with no fabricated choice between the local script and the entrypoint.",
+      "expectations": [
+        "The skill is not selected when infrastructure failure already explains the empty turn.",
+        "No decision block is added that pretends an option was chosen."
+      ],
+      "files": [],
+      "source_trace_ids": []
+    }
+  ]
+}

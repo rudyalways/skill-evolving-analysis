@@ -28,6 +28,40 @@
       "unmatched_skill_types": []
     },
     {
+      "skill": "close-implementation-choice",
+      "description": "When a follow-up offers concrete implementation options, end the turn with a visible choice or a short impossibility note.",
+      "skill_types": [
+        {
+          "type": "job/output-format",
+          "weight": 1.0
+        },
+        {
+          "type": "job/verification",
+          "weight": 0.6
+        },
+        {
+          "type": "form/pattern/constraint",
+          "weight": 0.5
+        }
+      ],
+      "unmatched_skill_types": [],
+      "lifecycle": {
+        "status": "evaluated",
+        "origin_run_id": "run-codex-top5-len-2026-10-23T05-00-sig-72a822635f776468cf5fdb23-op-1",
+        "origin_finding_id": "sig-72a822635f776468cf5fdb23",
+        "origin_session_ids": [
+          "01a15433-e71b-7f22-aa75-bd4b93fb2d7a"
+        ],
+        "distinct_sessions": 1,
+        "confidence": 0.95,
+        "evidence_records": 2,
+        "distinct_windows": 0,
+        "evaluated_at": "2026-10-22T21:07:35.470556+00:00",
+        "evaluation_kind": "structural",
+        "content_sha256": "919f7c2f3ff92e11847cf740c5caec73443fc4241c1e2e3d6a82cd0de63f77a4"
+      }
+    },
+    {
       "skill": "retry-after-information-gain",
       "description": "Decide whether another attempt is justified from the last recorded action, observed state, and result.",
       "skill_types": [
@@ -58,9 +92,43 @@
         "distinct_windows": 1,
         "method_fingerprint": "method-v1:cf7966716cbe804ed979fd1c",
         "methodology_value": 0.355668,
-        "evaluated_at": "2026-10-22T15:30:24.456222+00:00",
+        "evaluated_at": "2026-10-22T21:14:20.674617+00:00",
         "evaluation_kind": "structural",
-        "content_sha256": "36b16498e55498744a8ab6fc09280f32d2815339636bc288e0823ea56093ec37"
+        "content_sha256": "079f84246aedce9b03c95ee19bd10d19abc98fecbd767cdc37b5f70d8e4235c7"
+      }
+    },
+    {
+      "skill": "standing-approval",
+      "description": "After a user approves a named action, carry that approval through the remaining prepared steps and stop only for a new irreversible choice that was explicitly reserved.",
+      "skill_types": [
+        {
+          "type": "job/methodology/workflow",
+          "weight": 0.86
+        },
+        {
+          "type": "form/pattern/constraint",
+          "weight": 0.74
+        },
+        {
+          "type": "form/technique/steps",
+          "weight": 0.62
+        }
+      ],
+      "unmatched_skill_types": [],
+      "lifecycle": {
+        "status": "evaluated",
+        "origin_run_id": "run-codex-top5-len-2026-10-23T05-00-sig-1cc1053e8b4f9320fb053738-op-1",
+        "origin_finding_id": "sig-1cc1053e8b4f9320fb053738",
+        "origin_session_ids": [
+          "01a13505-8693-7372-8ff2-2acdcfd7f457"
+        ],
+        "distinct_sessions": 1,
+        "confidence": 1.0,
+        "evidence_records": 5,
+        "distinct_windows": 0,
+        "evaluated_at": "2026-10-22T21:07:58.229443+00:00",
+        "evaluation_kind": "structural",
+        "content_sha256": "305f0da934d3fab717d72bc41410dffdfae2e935e72df1d24f7a5ec5151427a4"
       }
     },
     {
@@ -94,9 +162,9 @@
         "distinct_windows": 1,
         "method_fingerprint": "method-v1:e25374de7772344b5a141094",
         "methodology_value": 0.355668,
-        "evaluated_at": "2026-10-22T15:30:10.193268+00:00",
+        "evaluated_at": "2026-10-22T21:14:20.674617+00:00",
         "evaluation_kind": "structural",
-        "content_sha256": "004e2d63b411315650702095ee2707c4d8aaecd6aff5329452faed10317b2109"
+        "content_sha256": "0d0fba3f690619160f36e63b4e7e3b93833f6101f1ad5ec2b57adf9d9eed4216"
       }
     }
   ]

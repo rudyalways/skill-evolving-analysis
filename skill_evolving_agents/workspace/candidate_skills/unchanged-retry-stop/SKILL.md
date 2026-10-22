@@ -22,8 +22,9 @@ Do not use this skill to block a retry after any one of these:
 - A relevant state change means the observed world the action reads is different from the recorded state.
 - A meaningful search or scope refinement changes what the action is looking for or the bounds of the search.
 - A bounded transient failure is a temporary fault with a finite retry budget, not an identical successful or completed result.
+- The named gate the user asked to make green still reports failures. A remaining-failure status is not an unchanged retry and is not a completed stop.
 
-Any one of those is sufficient to allow the retry. Do not require the others to be present.
+Any one of those is sufficient to allow the retry. Do not require the others to be present. Do not apply an unchanged-retry or turn-complete stop while that named gate still reports failures.
 
 ## Workflow
 
@@ -32,6 +33,7 @@ Any one of those is sufficient to allow the retry. Do not require the others to 
 3. Refuse an unchanged repeat that is not a bounded transient failure. Do not issue the call.
 4. When the triple matches and the failure is not a bounded transient, change the action or acquire new evidence before any further call.
 5. Treat the loop as finished when the next call would not change the evidence. The terminal outcome is stop, with the compared action, state, result, and the reason.
+6. A remaining-failure status on a named gate the user asked to make green is not an unchanged retry and is not a turn-complete stop. Continue the repair loop: fix the listed failures and rerun that same gate. End the retry only when that gate passes or a hard external blocker, such as an authorization or access denial, prevents another run.
 
 ## Constraints
 

@@ -1,3 +1,9 @@
 # audit-project-ui
 - 2026-10-22 diagnosis sig-03d384a8030b611e8957f890 | When the user says to finish everything still needed, keep executing unblocked gates in that same effort instead of end…
 - 2026-10-22 goal no_change sig-03d384a8030b611e8957f890 | audit-project-ui is the only recalled skill and does not cover finishing unblocked non-UI gates. Editing it would impor…
+- 2026-10-23 diagnosis sig-c17d9a3fe09449a02a1c33bf | A user question is left unfinished when the turn ends with no assistant answer.
+- 2026-10-23 goal update sig-c17d9a3fe09449a02a1c33bf | The diagnosed gap is a missing completion check on a recalled verification skill, so one update is sufficient.
+- 2026-10-22 diagnosis sig-c17d9a3fe09449a02a1c33bf | A user question is left unfinished when the turn ends with no assistant answer.
+- 2026-10-22 goal update sig-c17d9a3fe09449a02a1c33bf | The diagnosed gap is a missing completion check on a recalled verification skill, so one update is sufficient.
+- 2026-10-22 update sig-c17d9a3fe09449a02a1c33bf/1 | verification verification
+- 2026-10-23 verify pass sig-c17d9a3fe09449a02a1c33bf/1 | 0.95 The claimed verification section and verification directory record the completion check, and the avoid outcome is…

@@ -39,13 +39,16 @@ If any of the three is missing, do not judge a retry. Record the missing item an
 
 1. Read the proposed attempt and the recorded prior action, observed state, and result.
 2. Compare the proposed attempt with that record. Note whether the action, the state, or the result would differ, and whether the result is novel.
-3. Allow the retry when any one of these is true:
+3. When the user asks to repair CI or a named verification gate until it is fully green, treat a still-failing named gate as information gain. Keep fixing the listed failures and rerun that same gate. Do not end the turn on a remaining-failure status.
+4. Allow the retry when any one of these is true:
    - A relevant state change has occurred since the prior attempt.
    - The search or scope is meaningfully narrower or otherwise refined.
    - New information is available that the prior attempt did not have.
    - The prior result was a transient failure, and this is still the one allowed retry after that failure.
-4. Otherwise do not repeat the attempt. Choose `change-action`: use a different method or gather new evidence.
-5. Emit the decision in the output format, naming what changed and the evidence for it.
+   - A named verification gate the user asked to make fully green still reports failures.
+5. Otherwise do not repeat the attempt. Choose `change-action`: use a different method or gather new evidence.
+6. Stop the named-gate repair-and-rerun loop only when that gate passes, or a hard external blocker such as an authorization or access denial prevents another run. A remaining-failure status is not a stop.
+7. Emit the decision in the output format, naming what changed and the evidence for it.
 
 ## State Machine
 
@@ -62,6 +65,7 @@ One transient-failure transition may return from `ready` to `retry`. A later unc
 - Do not keep the same action when result novelty is absent.
 - Do not treat a second unchanged result after a transient failure as another allowed retry.
 - A state change, a narrower search, new information, or one bounded transient failure remains a valid reason to retry.
+- Stop a named-gate repair loop only when that gate passes or a hard external blocker, such as an authorization or access denial, prevents another run. A still-failing named gate is information gain that requires another repair and rerun of that same gate.
 
 ## Verification
 

@@ -81,14 +81,18 @@ def active_statuses(database: Path, run_id: str) -> list[dict[str, Any]]:
             started = datetime.fromisoformat(str(raw_started).replace("Z", "+00:00"))
         except ValueError:
             continue
-        active.append(
-            {
-                "stage": row.get("stage"),
-                "item": row.get("item"),
-                "started_at": started.isoformat(),
-                "elapsed_seconds": max((now - started).total_seconds(), 0),
-            }
-        )
+        record = {
+            "stage": row.get("stage"),
+            "item": row.get("item"),
+            "started_at": started.isoformat(),
+            "elapsed_seconds": max((now - started).total_seconds(), 0),
+        }
+        skills = row.get("skills")
+        if isinstance(skills, list):
+            names = [str(name) for name in skills if str(name).strip()]
+            if names:
+                record["skills"] = names
+        active.append(record)
     return sorted(active, key=lambda row: row["started_at"])
 
 
@@ -302,7 +306,116 @@ def operation_labels(
     by_sig = {sig: ", ".join(labels) for sig, labels in grouped.items()}
     for sig in no_change:
         by_sig.setdefault(sig, "no change")
-    return {"by_op": by_op, "by_sig": by_sig}
+    skills_by_op = {
+        key: text
+        for key, label in by_op.items()
+        if (text := _skill_names_in_label(label))
+    }
+    skills_by_sig: dict[str, str] = {}
+    for key, text in skills_by_op.items():
+        sig = key.rpartition(":")[0]
+        skills_by_sig[sig] = _join_skill_names(
+            [*skills_by_sig.get(sig, "").split(", "), *text.split(", ")]
+        )
+    if root.is_dir():
+        for path in sorted(root.glob("sig-*/evolve-goal.json")):
+            names = _goal_file_skills(path)
+            if names:
+                skills_by_sig[path.parent.name] = ", ".join(names)
+        for path in sorted(root.glob("sig-*/label-matching.json")):
+            sig = path.parent.name
+            if skills_by_sig.get(sig):
+                continue
+            names = _matching_file_skills(path)
+            if names:
+                skills_by_sig[sig] = ", ".join(names)
+    return {
+        "by_op": by_op,
+        "by_sig": by_sig,
+        "skills_by_op": skills_by_op,
+        "skills_by_sig": skills_by_sig,
+    }
+
+
+def _join_skill_names(values: list[str]) -> str:
+    names: list[str] = []
+    for value in values:
+        name = value.strip()
+        if name and name not in names:
+            names.append(name)
+    return ", ".join(names)
+
+
+def _skill_names_in_label(label: str) -> str:
+    names: list[str] = []
+    for part in label.split(","):
+        name = part.split(" · ")[0].strip()
+        if name and name != "no change" and name not in names:
+            names.append(name)
+    return ", ".join(names)
+
+
+def _goal_file_skills(path: Path) -> list[str]:
+    try:
+        data = json.loads(path.read_text())
+    except (OSError, json.JSONDecodeError):
+        return []
+    if not isinstance(data, dict):
+        return []
+    names: list[str] = []
+
+    def add(value: object) -> None:
+        if not isinstance(value, str):
+            return
+        name = value.strip()
+        if name.startswith("<") and name.endswith(">") and len(name) > 2:
+            name = name[1:-1].strip()
+        if name and name not in names:
+            names.append(name)
+
+    goal = data.get("goal")
+    if isinstance(goal, dict):
+        improve = goal.get("improve_skills")
+        if isinstance(improve, list):
+            for item in improve:
+                if isinstance(item, str):
+                    add(item)
+                elif isinstance(item, dict):
+                    add(item.get("skill"))
+    action = data.get("action")
+    if isinstance(action, dict):
+        for op in action.get("ops") or []:
+            if not isinstance(op, dict):
+                continue
+            add(op.get("skill"))
+            listed = op.get("skills")
+            if isinstance(listed, list):
+                for item in listed:
+                    if isinstance(item, str):
+                        add(item)
+                    elif isinstance(item, dict):
+                        add(item.get("skill"))
+    return names
+
+
+def _matching_file_skills(path: Path) -> list[str]:
+    try:
+        data = json.loads(path.read_text())
+    except (OSError, json.JSONDecodeError):
+        return []
+    if not isinstance(data, dict):
+        return []
+    names: list[str] = []
+    for cluster in data.get("clusters") or []:
+        if not isinstance(cluster, dict):
+            continue
+        for row in cluster.get("skills") or []:
+            if not isinstance(row, dict):
+                continue
+            name = str(row.get("skill") or "").strip()
+            if name and name not in names:
+                names.append(name)
+    return names
 
 
 def _changelog_label(path: Path) -> str:
@@ -967,7 +1080,7 @@ align-items:stretch }}
 background:#0c1222; color:#aeb8cc; font:12px ui-monospace,monospace;
 white-space:nowrap; text-overflow:ellipsis }}
 .trace-group {{ padding:8px 10px 2px; color:#d7deef; font-size:12px; font-weight:700 }}
-.trace-track {{ position:relative; min-height:54px;
+.trace-track {{ position:relative; min-height:74px;
 background:repeating-linear-gradient(90deg,#243049 0,#243049 1px,transparent 1px,transparent 20%) }}
 .trace-time {{ position:absolute; top:1px; color:#9eb0cc; font:10px ui-monospace,monospace;
 white-space:nowrap; pointer-events:none; z-index:3 }}
@@ -993,6 +1106,9 @@ background-size:200% 100%; animation:trace-pulse 1.4s linear infinite }}
 .trace-ghost {{ position:absolute; height:22px; box-sizing:border-box; border:1px dashed #d7deef;
 border-radius:5px; color:#d7deef; background:#0c1222; padding:1px 6px;
 font:11px ui-monospace,monospace; white-space:nowrap; overflow:hidden; z-index:0 }}
+.trace-skill {{ position:absolute; height:16px; color:#f4f7ff;
+font:11px ui-monospace,monospace; white-space:nowrap; pointer-events:none;
+z-index:4; text-shadow:0 0 4px #0c1222, 0 1px 0 #0c1222 }}
 .trace-legend .name {{ height:0; border-top:1px dashed #d7deef; background:transparent }}
 .trace-end {{ position:absolute; height:22px; padding:1px 7px; border-radius:5px;
 box-sizing:border-box; font:11px ui-monospace,monospace; white-space:nowrap; z-index:5 }}
@@ -1160,6 +1276,29 @@ const tracePanel = run => {{
       return (operations.by_sig || {{}})[sig] || lane.cluster || '';
     return '';
   }};
+  const skillNamesFromLabel = label => String(label || '').split(',')
+    .map(part => part.split(' · ')[0].trim())
+    .filter(name => name && name !== 'no change')
+    .filter((name, index, all) => all.indexOf(name) === index)
+    .join(', ');
+  const skillText = (lane, slice) => {{
+    if (slice.phase !== 'goal' && slice.phase !== 'optimize') return '';
+    if (Array.isArray(slice.skills) && slice.skills.length)
+      return slice.skills.join(', ');
+    const sig = (String(lane.id).match(/sig-[0-9a-f]+/) || [])[0] || '';
+    const bySig = operations.skills_by_sig || {{}};
+    const byOp = operations.skills_by_op || {{}};
+    if (lane.kind === 'op') {{
+      const op = (String(lane.id).match(/:(\\d+)$/) || [])[1] || '1';
+      return byOp[`${{sig}}:${{op}}`]
+        || skillNamesFromLabel((operations.by_op || {{}})[`${{sig}}:${{op}}`])
+        || bySig[sig]
+        || '';
+    }}
+    return bySig[sig]
+      || skillNamesFromLabel((operations.by_sig || {{}})[sig])
+      || '';
+  }};
   const seen = new Set();
   const slices = [];
   (run.spans || []).forEach(row => {{
@@ -1185,8 +1324,10 @@ const tracePanel = run => {{
     const item = String(row.item);
     const pass = Number(row.pass) || 1;
     if (!Number.isFinite(start) || seen.has(`${{phase}}|${{item}}|${{pass}}`)) return;
+    const skills = Array.isArray(row.skills)
+      ? row.skills.map(name => String(name)).filter(Boolean) : [];
     slices.push({{id:`${{markerId}}-${{slices.length}}`, phase, item, category:'live', start,
-      end:null, live:true, instant:false, pass, endingLabel:'', endingDetail:'',
+      end:null, live:true, instant:false, pass, skills, endingLabel:'', endingDetail:'',
       endingBad:false, lane:traceLane(phase, item, run.run_id, names)}});
   }});
   if (!slices.length) return '';
@@ -1277,9 +1418,12 @@ const tracePanel = run => {{
       const cluster = slice.lane.cluster || '';
       const base = slice.phase === 'label-traces-cluster' ? 'diagnosis' : slice.phase;
       const prefix = passCount > 1 ? `pass ${{slice.pass}} · ` : '';
-      const text = subject && namedPhase.has(slice.phase)
-        ? `${{prefix}}${{base}} (${{subject}})`
-        : `${{prefix}}${{base}}`;
+      const skill = skillText(slice.lane, slice);
+      const text = skill
+        ? `${{prefix}}${{base}}`
+        : (subject && namedPhase.has(slice.phase)
+          ? `${{prefix}}${{base}} (${{subject}})`
+          : `${{prefix}}${{base}}`);
       const verb = subject.includes(' · ') ? subject.split(' · ').pop() : '';
       const skillOnly = verb ? subject.slice(0, subject.lastIndexOf(' · ')) : subject;
       const endingText = !slice.endingLabel || !subject || slice.endingLabel.includes(subject)
@@ -1287,9 +1431,10 @@ const tracePanel = run => {{
         : (verb && skillOnly && slice.endingLabel.includes(skillOnly)
           ? `${{slice.endingLabel}} · ${{verb}}`
           : `${{slice.endingLabel}} (${{subject}})`);
+      const shown = skill ? `${{text}} · ${{skill}}` : text;
       const tip = slice.endingDetail
-        ? `${{text}} · ${{slice.endingDetail}}`
-        : (slice.rejection ? `${{text}} · ${{slice.rejection}}` : text);
+        ? `${{shown}} · ${{slice.endingDetail}}`
+        : (slice.rejection ? `${{shown}} · ${{slice.rejection}}` : shown);
       const ending = endingText
         ? `<div class="trace-end ${{slice.endingBad ? 'bad' : 'ok'}}" data-for="${{slice.id}}" `+
           `title="${{esc(slice.endingDetail || endingText)}}">${{esc(endingText)}}</div>`
@@ -1299,6 +1444,9 @@ const tracePanel = run => {{
       const bounds = [edgeNext, later ? later.start : null].filter(value => value != null);
       const nextStart = bounds.length ? Math.min(...bounds) : '';
       const ghost = `<div class="trace-ghost" data-for="${{slice.id}}" hidden></div>`;
+      const skillLine = skill
+        ? `<div class="trace-skill" data-for="${{slice.id}}">${{esc(skill)}}</div>`
+        : '';
       return `<div id="${{slice.id}}" class="trace-block ${{esc(slice.category)}}${{slice.live ? ' live' : ''}}${{slice.instant ? ' instant' : ''}}${{slice.rejection ? ' rejected' : ''}}${{fanoutSources.has(slice.id) ? ' fanout-parent' : ''}}" `+
       `data-start="${{slice.start}}" data-end="${{slice.end == null ? '' : slice.end}}" `+
       `data-next="${{nextStart}}" `+
@@ -1308,7 +1456,7 @@ const tracePanel = run => {{
       `data-sub="0" data-instant="${{slice.instant ? '1' : '0'}}" `+
       `data-graph="${{GRAPH.has(slice.phase) || slice.live ? '1' : '0'}}" `+
       `${{!slice.live && phaseColor(slice.phase) ? `style="background:${{phaseColor(slice.phase)}}"` : ''}} `+
-      `title="${{esc(tip)}}">${{esc(text)}}</div>${{ghost}}${{ending}}`;
+      `title="${{esc(tip)}}">${{esc(text)}}</div>${{ghost}}${{skillLine}}${{ending}}`;
     }}).join('');
     const times = rowSlices.filter(slice =>
       (GRAPH.has(slice.phase) || slice.live) && !slice.instant).map(slice =>
@@ -1436,6 +1584,13 @@ const tickTraces = () => {{
         block.textContent = '';
         block.dataset.caption = name;
       }}
+    }});
+    view.querySelectorAll('.trace-skill').forEach(node => {{
+      const block = view.querySelector(`#${{CSS.escape(node.dataset.for)}}`);
+      if (!block) return;
+      node.style.left = block.style.left;
+      const top = parseFloat(block.style.top);
+      node.style.top = `${{(Number.isFinite(top) ? top : 16) + 24}}px`;
     }});
     view.querySelectorAll('.trace-end').forEach(node => {{
       const block = view.querySelector(`#${{node.dataset.for}}`);

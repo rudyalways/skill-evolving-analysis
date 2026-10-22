@@ -873,6 +873,8 @@ class ContractTests(unittest.TestCase):
                 self.assertIn("Expand", live)
                 self.assertIn("skillBySig", live)
                 self.assertIn("(${subject})", live)
+                self.assertIn("trace-skill", live)
+                self.assertIn("skills_by_sig", live)
                 self.assertIn("operations.by_op", live)
             finally:
                 server.shutdown()
@@ -1013,6 +1015,48 @@ class ContractTests(unittest.TestCase):
             self.assertEqual(
                 labels["by_sig"]["sig-bbbbbbbbbbbbbbbbbbbbbbbb"],
                 "no change",
+            )
+            goal = run / "sig-dddddddddddddddddddddddd"
+            goal.mkdir()
+            (goal / "evolve-goal.json").write_text(
+                json.dumps(
+                    {
+                        "goal": {"improve_skills": ["fresh-skill"]},
+                        "action": {
+                            "ops": [
+                                {
+                                    "op": "create",
+                                    "skills": [{"skill": "fresh-skill"}],
+                                }
+                            ]
+                        },
+                    }
+                )
+            )
+            recalled = run / "sig-eeeeeeeeeeeeeeeeeeeeeeee"
+            recalled.mkdir()
+            (recalled / "changelog.json").write_text(
+                json.dumps({"disposition": "no_change", "changes": []})
+            )
+            (recalled / "label-matching.json").write_text(
+                json.dumps(
+                    {"clusters": [{"skills": [{"skill": "audit-project-ui"}]}]}
+                )
+            )
+            labels = metrics_dashboard.operation_labels(
+                root / "metrics.sqlite", "named-run", []
+            )
+            self.assertEqual(
+                labels["skills_by_sig"]["sig-dddddddddddddddddddddddd"],
+                "fresh-skill",
+            )
+            self.assertEqual(
+                labels["skills_by_sig"]["sig-eeeeeeeeeeeeeeeeeeeeeeee"],
+                "audit-project-ui",
+            )
+            self.assertEqual(
+                labels["skills_by_op"]["sig-aaaaaaaaaaaaaaaaaaaaaaaa:1"],
+                "bounded-retry",
             )
 
     def test_assign_passes_numbers_a_rerun(self) -> None:
@@ -1361,7 +1405,13 @@ class ContractTests(unittest.TestCase):
     def test_status_records_duration_from_started_to_done(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             workspace = Path(directory)
-            runner.write_status(workspace, "goal", "item", "started")
+            runner.write_status(
+                workspace,
+                "goal",
+                "item",
+                "started",
+                skills=["audit-project-ui"],
+            )
             runner.write_status(workspace, "goal", "item", "done")
             status = json.loads(
                 (workspace / "run/status/goal/item.json").read_text()
@@ -1369,6 +1419,24 @@ class ContractTests(unittest.TestCase):
             self.assertEqual(status["state"], "done")
             self.assertIn("started_at", status)
             self.assertGreaterEqual(status["duration_ms"], 0)
+            self.assertEqual(status["skills"], ["audit-project-ui"])
+
+    def test_live_status_keeps_goal_skill_names(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            workspace = root / "runs" / "live-run"
+            runner.write_status(
+                workspace,
+                "goal",
+                "live-run-sig-abc",
+                "started",
+                skills=["audit-project-ui"],
+            )
+            runner.write_status(workspace, "goal", "live-run-sig-abc", "started")
+            active = metrics_dashboard.active_statuses(
+                root / "metrics.sqlite", "live-run"
+            )
+            self.assertEqual(active[0]["skills"], ["audit-project-ui"])
 
     def test_goal_rejects_empty_ops_and_placeholders(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

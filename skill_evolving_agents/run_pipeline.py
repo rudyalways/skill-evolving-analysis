@@ -1004,6 +1004,7 @@ def write_status(
     *,
     outputs: list[Path] | None = None,
     error: str | None = None,
+    skills: list[str] | None = None,
 ) -> None:
     safe_item = re.sub(r"[^a-zA-Z0-9_.-]+", "-", item).strip("-")
     path = workspace / "run/status" / stage / f"{safe_item}.json"
@@ -1043,6 +1044,10 @@ def write_status(
         ]
     if error:
         record["error"] = error
+    if skills:
+        record["skills"] = [str(name) for name in skills if str(name).strip()]
+    elif isinstance(previous.get("skills"), list):
+        record["skills"] = previous["skills"]
     temporary = path.with_suffix(".json.tmp")
     temporary.write_text(json.dumps(record, indent=2, ensure_ascii=False) + "\n")
     temporary.replace(path)
@@ -2222,6 +2227,60 @@ def fanout_diagnosis(
             remove_worker_workspace(private)
 
 
+def _goal_skill_names(
+    goal_path: Path | None, recalled: list[dict] | None
+) -> list[str]:
+    """Names the live goal bar can show before an operation changelog exists."""
+    names: list[str] = []
+
+    def add(value: object) -> None:
+        if not isinstance(value, str):
+            return
+        name = skill_names_mod.bare(value).strip()
+        if name and name not in names:
+            names.append(name)
+
+    if goal_path is not None and goal_path.is_file():
+        try:
+            data = json.loads(goal_path.read_text())
+        except json.JSONDecodeError:
+            data = None
+        if isinstance(data, dict):
+            goal = data.get("goal")
+            if isinstance(goal, dict):
+                improve = goal.get("improve_skills")
+                if isinstance(improve, list):
+                    for item in improve:
+                        if isinstance(item, str):
+                            add(item)
+                        elif isinstance(item, dict):
+                            add(item.get("skill"))
+            action = data.get("action")
+            if isinstance(action, dict):
+                for op in action.get("ops") or []:
+                    if isinstance(op, dict):
+                        for name in skill_names_mod.skill_names(op):
+                            add(name)
+    if names:
+        return names
+    for row in recalled or []:
+        if isinstance(row, dict):
+            add(row.get("skill"))
+    return names
+
+
+def _publish_goal_skills(
+    workspace: Path,
+    suffix: str,
+    *,
+    goal_path: Path | None = None,
+    recalled: list[dict] | None = None,
+) -> None:
+    names = _goal_skill_names(goal_path, recalled)
+    if names:
+        write_status(workspace, "goal", suffix, "started", skills=names)
+
+
 def _goal_scope(
     workspace: Path,
     cluster: str,
@@ -2388,6 +2447,7 @@ def _goal_scope(
                     f"Run select with `--cluster '{cluster}'"
                     f"{clusters_argument} --out {matching}`, then write {goal}."
                 )
+            _publish_goal_skills(workspace, suffix, recalled=recalled)
             run_session(
                 stage,
                 private,
@@ -2417,6 +2477,9 @@ def _goal_scope(
             )
         pipeline_contracts.validate_label_matching(matching, cluster)
         pipeline_contracts.validate_goal(goal)
+        _publish_goal_skills(
+            workspace, suffix, goal_path=goal, recalled=recalled
+        )
         _emit_goal_decision(workspace, str(cluster), goal)
         return cluster, suffix, private
     except BaseException as error:
@@ -5404,7 +5467,13 @@ def fanout_operations(
                     "optimize",
                     "running",
                 )
-                write_status(workspace, current_stage, suffix, "started")
+                write_status(
+                    workspace,
+                    current_stage,
+                    suffix,
+                    "started",
+                    skills=skill_names_mod.skill_names(op),
+                )
                 run_session(
                     current_stage,
                     private,

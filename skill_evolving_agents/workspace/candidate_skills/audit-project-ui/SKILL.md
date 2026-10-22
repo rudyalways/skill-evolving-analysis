@@ -58,6 +58,14 @@ Keep one clear owner for each concept in the content hierarchy. Preserve useful 
 - When deploying, verify the intended revision is live and is not being replaced by a queued deployment.
 - Report what changed, the historical constraints applied, verification performed, and any residual page-family risk.
 
+## Verification
+
+Before treating the turn as done, confirm the assistant produced a non-empty final answer that addresses the user's question. A requested choice, such as a new project versus a new database, is that answer when it is stated in the final reply.
+
+An aborted outcome with empty assistant text and no infrastructure failure means the question is unfinished. Do not treat that turn as done.
+
+When the user question is still open and the outcome is aborted with empty assistant text, read `verification/completion-check.md` and apply that recorded completion check.
+
 ## Avoid
 
 - searching only the current request file or only the newest visible label;
