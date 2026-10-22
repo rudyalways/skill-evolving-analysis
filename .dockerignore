@@ -6,4 +6,4 @@ data/processed
 **/__pycache__
 **/*.pyc
 **/.DS_Store
-skill_evolving_agent/workspace/runs
+skill_evolving_agents/workspace/runs

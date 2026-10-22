@@ -1,0 +1,125 @@
+{
+  "schema_version": 2,
+  "description": "Canonical structure for generated and evolved skills. Section names are stable machine IDs; headings are accepted Markdown headings; aliases preserve older goal files.",
+  "sections": [
+    {
+      "name": "overview",
+      "display_name": "Overview and purpose",
+      "description": "What the skill accomplishes and the scope it owns.",
+      "core": true,
+      "headings": ["Overview", "Purpose"]
+    },
+    {
+      "name": "when_to_use",
+      "display_name": "When to use",
+      "description": "Positive invocation conditions and recognizable triggers.",
+      "core": true,
+      "headings": ["When to Use", "When to Use This Skill", "Use this skill when"]
+    },
+    {
+      "name": "do_not_use",
+      "display_name": "When not to use",
+      "description": "Negative invocation boundaries; this is distinct from execution constraints.",
+      "core": true,
+      "headings": ["Do Not Use", "Do not use this skill when", "When Not to Use"]
+    },
+    {
+      "name": "workflow",
+      "display_name": "Workflow",
+      "description": "The methodology, procedure, or ordered process used to perform the work.",
+      "aliases": ["methodology", "instructions", "procedure", "process"],
+      "core": true,
+      "headings": ["Workflow", "Methodology", "Instructions", "Procedure", "Process"]
+    },
+    {
+      "name": "constraints",
+      "display_name": "Constraints and guardrails",
+      "description": "Rules, invariants, safety boundaries, and conditions that apply during execution.",
+      "aliases": ["guardrails", "rules"],
+      "core": true,
+      "headings": ["Constraints", "Guardrails", "Rules"]
+    },
+    {
+      "name": "verification",
+      "display_name": "Verification",
+      "description": "Checks, acceptance criteria, and evidence required before the work is complete.",
+      "aliases": ["validation", "acceptance_criteria"],
+      "core": true,
+      "headings": ["Verification", "Validation", "Acceptance Criteria", "Definition of Done"]
+    },
+    {
+      "name": "output_format",
+      "display_name": "Output format",
+      "description": "The required structure, fields, files, or presentation of the result.",
+      "aliases": ["output"],
+      "core": true,
+      "headings": ["Output Format", "Output"]
+    },
+    {
+      "name": "limitations",
+      "display_name": "Limitations",
+      "description": "Known capability limits, assumptions, and unsupported cases.",
+      "core": true,
+      "headings": ["Limitations", "Assumptions and Limitations"]
+    },
+    {
+      "name": "state_machine",
+      "display_name": "State machine",
+      "description": "Optional states, transitions, retries, and terminal conditions for stateful workflows.",
+      "aliases": ["states_and_transitions"],
+      "headings": ["State Machine", "States and Transitions"]
+    },
+    {
+      "name": "examples",
+      "display_name": "Examples",
+      "description": "Optional representative inputs, decisions, and outputs.",
+      "headings": ["Examples", "Example"]
+    },
+    {
+      "name": "prerequisites",
+      "display_name": "Prerequisites",
+      "description": "Optional setup, dependencies, permissions, and required context.",
+      "headings": ["Prerequisites", "Setup"]
+    },
+    {
+      "name": "best_practices",
+      "display_name": "Best practices",
+      "description": "Optional recommendations that improve quality but are not hard constraints.",
+      "headings": ["Best Practices"]
+    },
+    {
+      "name": "other",
+      "display_name": "Other or OOD section",
+      "description": "A named heading outside the current vocabulary.",
+      "aliases": ["ood"]
+    }
+  ],
+  "dirs": [
+    {
+      "name": "references",
+      "description": "Supporting documentation and source material loaded when needed.",
+      "aliases": ["reference"]
+    },
+    {
+      "name": "scripts",
+      "description": "Deterministic executable helpers."
+    },
+    {
+      "name": "agents",
+      "description": "Delegated agent definitions or prompts."
+    },
+    {
+      "name": "assets",
+      "description": "Static files used or emitted by the skill."
+    },
+    {
+      "name": "evals",
+      "description": "Evaluation fixtures, cases, and expected outcomes."
+    },
+    {
+      "name": "other",
+      "description": "A named directory outside the current vocabulary.",
+      "aliases": ["ood"]
+    }
+  ]
+}

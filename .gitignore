@@ -5,3 +5,11 @@ node_modules/
 .env
 .env.*
 public_skills/
+skill_evolving_agents/.pipeline-sessions/
+skill_evolving_agents/.pipeline-workers/
+skill_evolving_agents/workspace/candidate_traces/*
+!skill_evolving_agents/workspace/candidate_traces/.gitkeep
+skill_evolving_agents/workspace/runs/*
+!skill_evolving_agents/workspace/runs/.gitkeep
+skill_evolving_agents/workspace/metrics.sqlite
+skill_evolving_agents/workspace/metrics-dashboard.html

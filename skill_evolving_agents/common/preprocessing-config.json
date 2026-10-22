@@ -1,0 +1,154 @@
+{
+  "schema_version": 1,
+  "active_profile": "default",
+  "profiles": {
+    "default": {
+      "stages": {
+        "adapter": "multi_source",
+        "selector": "substantive_turns",
+        "evidence": "on_signal",
+        "projector": "core_text",
+        "feature": "tfidf",
+        "clusterer": "incremental_threshold",
+        "namer": "top_terms"
+      },
+      "options": {}
+    },
+    "embedding": {
+      "stages": {
+        "adapter": "multi_source",
+        "selector": "substantive_turns",
+        "evidence": "on_signal",
+        "projector": "core_text",
+        "feature": "precomputed_embeddings",
+        "clusterer": "incremental_threshold",
+        "namer": "top_terms"
+      },
+      "options": {}
+    },
+    "text-only": {
+      "stages": {
+        "adapter": "multi_source",
+        "selector": "substantive_turns",
+        "evidence": "never",
+        "projector": "core_text",
+        "feature": "tfidf",
+        "clusterer": "no_clustering",
+        "namer": "top_terms"
+      },
+      "options": {}
+    }
+  },
+  "source": {
+    "adapter": "multi_source",
+    "exclude_child_sessions": true,
+    "exclude_ambient_only": true
+  },
+  "limits": {
+    "user_chars": 12000,
+    "assistant_chars": 16000,
+    "error_chars": 4000,
+    "tool_argument_chars": 2000,
+    "tool_result_preview_chars": 4000,
+    "max_tool_events_per_turn": 64,
+    "blob_threshold_bytes": 12000
+  },
+  "tool_evidence": {
+    "policy": "on_signal",
+    "user_signal_terms": [
+      "tool",
+      "command",
+      "terminal",
+      "script",
+      "build",
+      "test",
+      "deploy",
+      "error",
+      "fail",
+      "debug"
+    ],
+    "always_keep_failed_tools": true,
+    "write_large_result_blobs": false
+  },
+  "signals": {
+    "enabled": true,
+    "min_corrections": 2,
+    "correction_rate": 0.2,
+    "min_keep_going": 2,
+    "repetition_similarity": 0.6,
+    "repetition_lookahead": 5,
+    "min_repetitions": 2,
+    "sentiment_drop": 0.4,
+    "min_failed_turns": 2,
+    "rapid_correction_seconds": 10,
+    "min_rapid_corrections": 2,
+    "infrastructure_error_patterns": [
+      "http_status_code[^0-9]*(401|403|429)",
+      "\\b(401 Unauthorized|403 Forbidden|429 Too Many Requests)\\b",
+      "response_too_many_failed_attempts",
+      "rate.?limit",
+      "authentication failed"
+    ],
+    "selection": {
+      "min_severity": "high",
+      "min_confidence": 0.6,
+      "include_infrastructure_failures": false
+    }
+  },
+  "features": {
+    "strategy": "tfidf",
+    "max_terms": 4096,
+    "min_document_frequency": 1
+  },
+  "deduplication": {
+    "enabled": true,
+    "near_duplicate_enabled": true,
+    "minhash_size": 64,
+    "near_duplicate_threshold": 0.9
+  },
+  "evolution_policy": {
+    "allow_single_session_create": false,
+    "allow_single_session_ood_create": true,
+    "create_min_confidence": 0.75,
+    "create_min_evidence_records": 2,
+    "create_min_distinct_sessions": 2,
+    "max_ops_per_skill": 5,
+    "min_super_score": 0
+  },
+  "cut": {
+    "algorithms": [
+      "consecutive_repetition",
+      "long_turn",
+      "long_turn_then_correction",
+      "correction_burst",
+      "rapid_correction",
+      "tool_failure_streak",
+      "keep_going_streak",
+      "unresolved_repeat",
+      "abandonment",
+      "repeated_assistant",
+      "oscillation"
+    ],
+    "repetition_similarity": 0.6,
+    "min_consecutive": 3,
+    "context_before": 1,
+    "context_after": 1,
+    "max_window": 5,
+    "max_user_turns": 5,
+    "max_tokens": 2000,
+    "long_turn_ms": 300000,
+    "rapid_correction_seconds": 10,
+    "assistant_repeat_similarity": 0.75,
+    "unresolved_similarity": 0.2,
+    "keep_tool_events": 12,
+    "tool_preview_chars": 400
+  },
+  "clustering": {
+    "active_strategy": "tfidf",
+    "similarity_threshold": 0.2,
+    "max_clusters": 12,
+    "top_terms_per_cluster": 3,
+    "outliers_per_cluster": 1,
+    "embedding_vectors_path": "traces/inputs/embeddings.jsonl"
+  }
+}

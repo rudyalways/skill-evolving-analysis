@@ -1,0 +1,105 @@
+{
+  "schema_version": 1,
+  "description": "Normalized, intentionally extensible capability vocabulary. Paths are dimension/value or dimension/value/specialization. Generated report clone names are excluded. Agents should record an OOD path without force-fitting whenever no defined path is accurate, and should recommend promotion when the missing capability is distinct, reusable, non-duplicate, and evidence-backed.",
+  "dimensions": {
+    "artifact": {
+      "code-change": [],
+      "document": [],
+      "html": [],
+      "image": [],
+      "none": [],
+      "slides": [],
+      "spreadsheet": [],
+      "video": []
+    },
+    "audience": {
+      "beginner": [],
+      "executive": [],
+      "expert": [],
+      "unspecified": []
+    },
+    "binding": {
+      "aws": [],
+      "azure": [],
+      "claude": [],
+      "composio": [],
+      "figma": [],
+      "github": [],
+      "google": [],
+      "instagram": [],
+      "linkedin": [],
+      "mcp": [],
+      "notion": [],
+      "openai": [],
+      "react": [],
+      "shopify": [],
+      "slack": [],
+      "stripe": [],
+      "tiktok": [],
+      "unbound": [],
+      "youtube": []
+    },
+    "domain": {
+      "ai": ["agent", "llm", "model", "prompt", "rag", "rest"],
+      "backend": [],
+      "business": [],
+      "cloud-devops": ["aws", "azure", "ci", "docker", "kubernetes", "rest", "terraform"],
+      "commerce": ["catalog", "checkout", "rest", "shopify"],
+      "data": ["analytics", "dashboard", "etl", "metrics", "notebook", "rest"],
+      "databases": ["postgres", "redis", "rest", "sql"],
+      "design": ["brand", "figma", "rest", "typography"],
+      "documents": [],
+      "education": [],
+      "finance": ["accounting", "investing", "invoice", "rest", "tax"],
+      "frontend": ["accessibility", "angular", "css", "react", "rest", "vue"],
+      "games": [],
+      "git": [],
+      "legal": ["compliance", "contract", "privacy", "rest"],
+      "life-science": [],
+      "marketing": ["campaign", "growth", "rest", "seo"],
+      "media": ["audio", "image", "rest", "video"],
+      "mobile": ["android", "expo", "ios", "react-native", "rest"],
+      "productivity": [],
+      "research": [],
+      "security": ["auth", "cve", "pentest", "rest", "secret", "threat"],
+      "software": ["go", "java", "javascript", "python", "rest", "rust", "typescript"],
+      "systems": [],
+      "testing": ["jest", "playwright", "pytest", "qa", "rest"],
+      "unspecified": [],
+      "writing": ["blog", "docs", "rest"]
+    },
+    "form": {
+      "pattern": ["constraint", "convention", "principle", "rest"],
+      "reference": ["api", "cli", "rest", "schema"],
+      "technique": ["checklist", "loop", "rest", "steps"]
+    },
+    "job": {
+      "audience": [],
+      "discovery": ["install", "rest", "route"],
+      "methodology": ["brainstorm", "debug", "plan", "rest", "tdd", "workflow"],
+      "none": [],
+      "output-format": [],
+      "reflection": ["critique", "postmortem", "rest", "review"],
+      "repo-understanding": ["architecture", "map", "onboard", "rest", "walkthrough"],
+      "skill-authoring": [],
+      "verification": ["audit", "browser-check", "eval", "evidence", "lint", "rest", "test"]
+    },
+    "language": {
+      "en": [],
+      "es": [],
+      "ko": [],
+      "pt": [],
+      "zh": []
+    },
+    "provenance": {
+      "anthropic_official": [],
+      "community": [],
+      "high_stars": [],
+      "openai_official": [],
+      "others": [],
+      "platforms": [],
+      "popular": [],
+      "social": []
+    }
+  }
+}

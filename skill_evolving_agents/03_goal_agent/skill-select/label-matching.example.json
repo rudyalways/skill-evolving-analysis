@@ -1,0 +1,36 @@
+{
+  "matching": {
+    "strategy": "<strategy>",
+    "config_version": "<positive_integer>",
+    "config_sha256": "<sha256_hex>"
+  },
+  "clusters": [
+    {
+      "cluster": "<cluster>",
+      "labels": [
+        "<job/methodology>",
+        "<job/verification>"
+      ],
+      "skills": [
+        {
+          "skill": "<skill>",
+          "score": "<non_negative_float>",
+          "labels": [
+            {
+              "type": "<job/methodology>",
+              "weight": "<float_0_to_1>"
+            }
+          ],
+          "matches": [
+            {
+              "cluster_type": "<job/methodology>",
+              "skill_type": "<job/methodology>",
+              "similarity": "<float_0_to_1>",
+              "contribution": "<non_negative_float>"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,184 @@
+{
+  "schema_version": 1,
+  "canonical_turn": {
+    "required": [
+      "schema_version",
+      "trace_id",
+      "source",
+      "session_id",
+      "turn_id",
+      "timestamp",
+      "user",
+      "assistant",
+      "outcome",
+      "tool_summary",
+      "provenance"
+    ],
+    "fields": {
+      "schema_version": "positive integer",
+      "trace_id": "stable source:session:turn identifier",
+      "source": "source adapter name",
+      "session_id": "source session identifier",
+      "turn_id": "source turn identifier",
+      "root_turn_id": "optional root turn identifier",
+      "parent_session_id": "optional parent session identifier",
+      "timestamp": "ISO-8601 timestamp",
+      "user": {
+        "text": "bounded substantive user request"
+      },
+      "assistant": {
+        "text": "bounded final assistant response"
+      },
+      "outcome": {
+        "status": "completed, failed, aborted, or unknown",
+        "error": "bounded error text or null"
+      },
+      "tool_summary": {
+        "count": "non-negative integer",
+        "names": "sorted unique tool names",
+        "error_count": "non-negative integer",
+        "evidence_path": "relative sidecar path or null"
+      },
+      "provenance": {
+        "raw_file": "relative raw source path",
+        "raw_bytes": "non-negative integer",
+        "ordinals": "source ordinal range"
+      },
+      "timing": {
+        "started_at_epoch": "Unix epoch seconds or null",
+        "completed_at_epoch": "Unix epoch seconds or null",
+        "duration_ms": "non-negative milliseconds or null",
+        "time_to_first_token_ms": "non-negative milliseconds or null"
+      }
+    }
+  },
+  "tool_event": {
+    "required": [
+      "schema_version",
+      "trace_id",
+      "sequence",
+      "tool",
+      "status",
+      "arguments",
+      "result_preview",
+      "result_bytes",
+      "result_sha256"
+    ]
+  },
+  "cluster_manifest_record": {
+    "required": [
+      "schema_version",
+      "cluster",
+      "trace_id",
+      "turn_path",
+      "score"
+    ]
+  },
+  "feature_document": {
+    "required": [
+      "schema_version",
+      "trace_id",
+      "turn_path",
+      "token_count",
+      "top_terms"
+    ]
+  },
+  "feature_vector": {
+    "required": [
+      "trace_id",
+      "strategy",
+      "values"
+    ],
+    "fields": {
+      "values": "sparse term weights or dense numeric vector"
+    }
+  },
+  "cluster_assignment": {
+    "required": [
+      "trace_id",
+      "cluster",
+      "score"
+    ]
+  },
+  "feedback_finding": {
+    "required": [
+      "schema_version",
+      "signal_id",
+      "detector",
+      "detector_version",
+      "severity",
+      "confidence",
+      "routing",
+      "trace_ids",
+      "features",
+      "evidence"
+    ],
+    "fields": {
+      "signal_id": "stable detector-derived identifier",
+      "detector": "registered deterministic detector name",
+      "severity": "low, medium, high, or critical",
+      "confidence": "number from 0 to 1",
+      "routing": "skill_evolution or infrastructure",
+      "trace_ids": "non-empty canonical trace identifier list"
+    }
+  },
+  "recurring_pattern": {
+    "required": [
+      "schema_version",
+      "pattern_id",
+      "fingerprint",
+      "kind",
+      "occurrences",
+      "distinct_sessions",
+      "severity",
+      "confidence",
+      "strength",
+      "evidence_signal_ids"
+    ]
+  },
+  "deduplication_record": {
+    "required": [
+      "schema_version",
+      "trace_id",
+      "representative_trace_id",
+      "relation",
+      "similarity",
+      "content_sha256"
+    ],
+    "fields": {
+      "relation": "representative, exact_duplicate, or near_duplicate",
+      "similarity": "number from 0 to 1"
+    }
+  },
+  "finding_manifest_record": {
+    "required": [
+      "schema_version",
+      "cluster",
+      "trace_id",
+      "turn_path",
+      "score"
+    ],
+    "fields": {
+      "cluster": "signal identifier used as the finding scope",
+      "turn_path": "relative pointer to a canonical turn"
+    }
+  },
+  "mining_profile_provenance": {
+    "required": [
+      "profile",
+      "kind",
+      "config_hash",
+      "source_hash",
+      "fingerprint",
+      "strategies"
+    ]
+  },
+  "experiment_summary": {
+    "required": [
+      "profile",
+      "fingerprint",
+      "normalization",
+      "clustering"
+    ]
+  }
+}
