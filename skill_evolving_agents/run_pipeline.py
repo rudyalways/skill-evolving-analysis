@@ -279,6 +279,53 @@ def initialize_workspace(workspace: Path) -> None:
     print("add raw traces and existing skills, then run again without --init")
 
 
+def _contains_file(root: Path) -> bool:
+    if not root.exists():
+        return False
+    return any(
+        path.is_file() and path.name != ".DS_Store" for path in root.rglob("*")
+    )
+
+
+def workspace_was_started(workspace: Path) -> bool:
+    """True once a pipeline start has written output into this directory."""
+    return any(
+        _contains_file(workspace / relative)
+        for relative in ("logs", "run", "traces/derived")
+    )
+
+
+def allocate_execution_workspace(
+    source: Path, moment: datetime | None = None
+) -> Path:
+    """Give a later start its own directory under runs/.
+
+    The first start keeps the directory that was initialized and filled with
+    traces and skills. A later start copies those inputs into
+    ``<run-id>@YYYY-MM-DDTHH:MM`` beside it and leaves the previous outputs
+    where they are.
+    """
+    if not workspace_was_started(source):
+        return source
+    started = moment.astimezone() if moment is not None else datetime.now().astimezone()
+    base = f"{source.name}@{started.strftime('%Y-%m-%dT%H:%M')}"
+    candidate = source.parent / base
+    suffix = 2
+    while candidate.exists():
+        candidate = source.parent / f"{base}-{suffix}"
+        suffix += 1
+    initialize_workspace(candidate)
+    for relative in ("traces/raw", "target"):
+        origin = source / relative
+        destination = candidate / relative
+        if not origin.is_dir():
+            continue
+        shutil.rmtree(destination)
+        shutil.copytree(origin, destination, symlinks=False)
+    print(f"execution directory: {candidate}")
+    return candidate
+
+
 def require_seed_inputs(workspace: Path) -> None:
     trace_roots = (
         workspace / "traces/raw/codex",
@@ -5123,6 +5170,8 @@ def execute(args: argparse.Namespace) -> None:
         workspace / "target/to_be_improved_skills", "existing skills directory"
     )
     require_seed_inputs(workspace)
+    workspace = allocate_execution_workspace(workspace)
+    args.run_id = workspace.name
     ACTIVE_BACKEND = select_backend(args.agent, args.allow_local_fallback)
     args.model = configured_model(ACTIVE_BACKEND, args.model)
     print(f"selected model: {args.model}")

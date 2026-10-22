@@ -270,6 +270,264 @@ def assign_passes(
         row["pass"] = number
 
 
+def execution_id(run_id: str, started_at: str) -> str:
+    """Identity of one start, stable for the minute it began."""
+    moment = datetime.fromisoformat(started_at.replace("Z", "+00:00")).astimezone()
+    return f"{run_id}@{moment.strftime('%Y-%m-%dT%H:%M')}"
+
+
+def failed_statuses(database: Path, run_id: str) -> dict[tuple[str, str], str]:
+    """Map (stage, item) to the error that stopped that item."""
+    root = database.parent / "runs" / run_id / "run/status"
+    if not root.is_dir():
+        return {}
+    found: dict[tuple[str, str], str] = {}
+    for path in root.glob("*/*.json"):
+        try:
+            row = json.loads(path.read_text())
+        except (OSError, json.JSONDecodeError):
+            continue
+        if not isinstance(row, dict) or row.get("state") != "failed":
+            continue
+        error = row.get("error")
+        stage = row.get("stage")
+        item = row.get("item")
+        if isinstance(error, str) and error and isinstance(stage, str) and isinstance(item, str):
+            found[(stage, item)] = error
+    return found
+
+
+def _short_error(error: str) -> str:
+    text = " ".join(error.split())
+    if "timed out after" in text:
+        tail = text.rsplit("timed out after", 1)[-1].strip(" .")
+        return f"timed out after {tail}" if tail else "timed out"
+    if len(text) > 180:
+        return text[:177] + "..."
+    return text
+
+
+def annotate_rejections(
+    spans: list[dict[str, Any]], failures: dict[tuple[str, str], str]
+) -> None:
+    """Mark the latest span for an item whose status record failed.
+
+    Earlier starts of the same item keep their own result. An optimize
+    rejection means verification never started.
+    """
+    latest: dict[tuple[str, str], dict[str, Any]] = {}
+    for span in spans:
+        key = (str(span.get("phase")), str(span.get("item")))
+        current = latest.get(key)
+        if current is None or str(span.get("started_at") or "") >= str(
+            current.get("started_at") or ""
+        ):
+            latest[key] = span
+    for key, error in failures.items():
+        span = latest.get(key)
+        if span is None:
+            continue
+        span["status"] = "rejected"
+        span["rejection"] = _short_error(error)
+        if span.get("phase") == "optimize":
+            span["rejection_label"] = "rejected before verification"
+
+
+def _sig(item: str) -> str:
+    marker = "sig-"
+    start = item.find(marker)
+    if start < 0:
+        return ""
+    token = []
+    for char in item[start + len(marker) :]:
+        if char not in "0123456789abcdef":
+            break
+        token.append(char)
+    return marker + "".join(token) if token else ""
+
+
+def _ending_headline(error: str, label: str = "") -> str:
+    if label:
+        return label
+    text = error.lower()
+    if "timed out" in text:
+        return error if len(error) <= 48 else "timed out"
+    if "parse" in text or "json" in text:
+        return "parse error"
+    if len(error) > 48:
+        return error[:45] + "..."
+    return error or "error"
+
+
+def _stamp_ending(
+    span: dict[str, Any], label: str, detail: str, *, bad: bool
+) -> None:
+    if span.get("ending_label"):
+        return
+    span["ending_label"] = label
+    span["ending_detail"] = detail
+    span["ending_bad"] = bad
+
+
+def _chain_continues(
+    span: dict[str, Any],
+    spans: list[dict[str, Any]],
+    active: list[dict[str, Any]],
+) -> bool:
+    """True when a later phase of this item is already running or recorded."""
+    phase = str(span.get("phase") or "")
+    sig = _sig(str(span.get("item") or ""))
+    start = str(span.get("started_at") or "")
+
+    def later(names: set[str]) -> bool:
+        return any(
+            row.get("phase") in names
+            and _sig(str(row.get("item") or "")) == sig
+            and str(row.get("started_at") or "") >= start
+            for row in spans
+        )
+
+    def live(names: set[str]) -> bool:
+        return any(
+            str(row.get("stage") or "") in names
+            and _sig(str(row.get("item") or "")) == sig
+            for row in active
+        )
+
+    if phase == "label-traces-cluster":
+        return later({"goal"}) or live({"goal"})
+    if phase == "goal":
+        return any(row.get("phase") == "reduce-goals" for row in spans)
+    if phase == "optimize":
+        return later({"verifiter"}) or live({"verifiter"})
+    if phase == "verifiter":
+        return later({"judge", "judge-decision"}) or live({"judge"})
+    return False
+
+
+def annotate_endings(
+    spans: list[dict[str, Any]], active: list[dict[str, Any]]
+) -> None:
+    """Attach the reason a chain stopped, on the bar that actually ends it.
+
+    A rejection, timeout, or parse failure is named on that span. A judge
+    result is named on the last visible bar of the operation. A bar with no
+    next phase, and nothing still running after it, is marked completed or
+    stopped before verification.
+    """
+    for span in spans:
+        rejection = str(span.get("rejection") or "")
+        if not rejection and span.get("status") == "error":
+            duration = float(span.get("duration_ms") or 0)
+            if 99_000 <= duration <= 108_000:
+                rejection = "timed out after 100 seconds"
+        if rejection or span.get("status") in {"rejected", "error"}:
+            label = _ending_headline(
+                rejection, str(span.get("rejection_label") or "")
+            )
+            if not label:
+                label = "error" if span.get("status") == "error" else "rejected"
+            _stamp_ending(span, label, rejection or label, bad=True)
+
+    for span in spans:
+        action = span.get("judge_action")
+        if not action and span.get("phase") != "judge-decision":
+            continue
+        if not action:
+            action = span.get("overall_status") or "ended"
+        sig = _sig(str(span.get("item") or ""))
+        skills = span.get("failed_skills") or []
+        if isinstance(skills, str):
+            skills = [skills]
+        if not isinstance(skills, list):
+            skills = []
+        failed = [str(skill) for skill in skills if skill]
+        if str(action) in {"fail", "failed"} and failed:
+            label = "does not pass " + ", ".join(failed)
+        elif str(action) in {"fail", "failed"}:
+            label = "judge fail"
+        else:
+            label = f"judge {action}"
+        detail = label
+        if span.get("will_retry") is False:
+            detail = f"{label} · will not retry"
+        hosts = [
+            row
+            for row in spans
+            if row.get("phase") in {"verifiter", "judge"}
+            and _sig(str(row.get("item") or "")) == sig
+        ]
+        visible = [
+            row for row in hosts if float(row.get("duration_ms") or 0) >= 800
+        ]
+        pool = visible or hosts or [span]
+        host = max(pool, key=lambda row: str(row.get("started_at") or ""))
+        bad = str(action) in {"fail", "failed"} or span.get("overall_status") in {
+            "fail",
+            "failed",
+        }
+        _stamp_ending(host, label, detail, bad=bad)
+
+    for span in spans:
+        phase = str(span.get("phase") or "")
+        if phase not in {"label-traces-cluster", "goal", "optimize", "verifiter"}:
+            continue
+        if span.get("ending_label") or _chain_continues(span, spans, active):
+            continue
+        if phase == "optimize":
+            _stamp_ending(
+                span,
+                "stopped before verification",
+                "stopped before verification",
+                bad=True,
+            )
+        else:
+            _stamp_ending(
+                span, "completed", str(span.get("status") or "completed"), bad=False
+            )
+
+
+def _phase_rows(spans: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    grouped: dict[tuple[str, str], list[dict[str, Any]]] = defaultdict(list)
+    for span in spans:
+        grouped[(str(span["phase"]), str(span["category"]))].append(span)
+    rows: list[dict[str, Any]] = []
+    for (phase, category), group in sorted(grouped.items()):
+        durations = [float(span["duration_ms"]) / 1000 for span in group]
+        ordered = sorted(durations)
+        intervals = []
+        for span in group:
+            start = datetime.fromisoformat(str(span["started_at"]))
+            intervals.append(
+                (start.timestamp(), start.timestamp() + float(span["duration_ms"]) / 1000)
+            )
+        events: list[tuple[float, int]] = []
+        for start, finish in intervals:
+            events.append((start, 1))
+            events.append((finish, -1))
+        events.sort()
+        current = peak = 0
+        for _moment, delta in events:
+            current += delta
+            peak = max(peak, current)
+        rows.append(
+            {
+                "phase": phase,
+                "category": category,
+                "count": len(group),
+                "sum_seconds": round(sum(durations), 3),
+                "wall_seconds": round(
+                    max(max(finish for _, finish in intervals) - min(start for start, _ in intervals), 0),
+                    3,
+                ),
+                "p50_seconds": round(ordered[len(ordered) // 2], 3),
+                "max_seconds": round(max(durations), 3),
+                "peak_concurrency": peak,
+            }
+        )
+    return rows
+
+
 def metrics_payload(database: Path) -> dict[str, Any]:
     rows = load_rows(database)
     runs_root = database.parent / "runs"
@@ -314,40 +572,77 @@ def metrics_payload(database: Path) -> dict[str, Any]:
         key=run_start,
         reverse=True,
     ):
-        totals: dict[str, float] = defaultdict(float)
-        for row in spans:
-            totals[row["category"]] += row["duration_us"] / 1_000_000
         active = active_by_run.get(run_id, [])
-        if spans:
-            start = min(row["started_at_us"] for row in spans)
-            end = max(row["started_at_us"] + row["duration_us"] for row in spans)
-            started_at = min(row["started_at"] for row in spans)
-        else:
-            started_at = active[0]["started_at"]
-            start = int(datetime.fromisoformat(started_at).timestamp() * 1_000_000)
-            end = start
         timing = _METRICS.summarize_spans(spans)
         assign_passes(timing["spans"], active)
-        if active:
-            end = max(end, int(datetime.now(UTC).timestamp() * 1_000_000))
-        run_summaries.append(
-            {
-                "run_id": run_id,
-                "wall_seconds": max((end - start) / 1_000_000, 0),
-                "category_seconds": dict(sorted(totals.items())),
-                "span_count": len(spans),
-                "error_count": sum(row["status"] != "ok" for row in spans),
-                "started_at": started_at,
-                "phases": timing["phases"],
-                "spans": timing["spans"],
-                "active": active,
-                "cluster_labels": cluster_labels(database, run_id, spans),
-                "progress": run_progress(database, run_id, spans),
-                "phase_metrics": _METRICS._read_json(
-                    runs_root / run_id / "logs/phase-metrics.json"
-                ),
-            }
+        annotate_rejections(timing["spans"], failed_statuses(database, run_id))
+        labels = cluster_labels(database, run_id, spans)
+        progress = run_progress(database, run_id, spans)
+        phase_metrics = _METRICS._read_json(
+            runs_root / run_id / "logs/phase-metrics.json"
         )
+        by_pass: dict[int, list[dict[str, Any]]] = defaultdict(list)
+        for span in timing["spans"]:
+            by_pass[int(span["pass"])].append(span)
+        active_by_pass: dict[int, list[dict[str, Any]]] = defaultdict(list)
+        for row in active:
+            active_by_pass[int(row["pass"])].append(row)
+        numbers = sorted(set(by_pass) | set(active_by_pass))
+        if not numbers:
+            continue
+        latest = numbers[-1]
+        single_start = len(numbers) == 1
+        now_us = int(datetime.now(UTC).timestamp() * 1_000_000)
+        for number in numbers:
+            group = by_pass.get(number, [])
+            group_active = active_by_pass.get(number, []) if number == latest else []
+            annotate_endings(group, active_by_pass.get(number, []))
+            if group:
+                started_at = min(str(span["started_at"]) for span in group)
+                start = min(
+                    datetime.fromisoformat(str(span["started_at"])).timestamp()
+                    for span in group
+                )
+                end = max(
+                    datetime.fromisoformat(str(span["started_at"])).timestamp()
+                    + float(span["duration_ms"]) / 1000
+                    for span in group
+                )
+            else:
+                started_at = group_active[0]["started_at"]
+                start = datetime.fromisoformat(started_at).timestamp()
+                end = start
+            if group_active:
+                end = max(end, now_us / 1_000_000)
+            totals: dict[str, float] = defaultdict(float)
+            for span in group:
+                totals[str(span["category"])] += float(span["duration_ms"]) / 1000
+            run_summaries.append(
+                {
+                    "run_id": run_id,
+                    "execution_id": (
+                        run_id if single_start else execution_id(run_id, started_at)
+                    ),
+                    "historical": number != latest,
+                    "wall_seconds": max(end - start, 0),
+                    "category_seconds": dict(sorted(totals.items())),
+                    "span_count": len(group),
+                    "error_count": sum(
+                        span.get("status") not in {None, "ok"} for span in group
+                    ),
+                    "started_at": started_at,
+                    "phases": _phase_rows(group),
+                    "spans": group,
+                    "active": group_active,
+                    "cluster_labels": labels,
+                    "progress": progress if number == latest else {
+                        "selected_findings": progress["selected_findings"],
+                        "stages": [],
+                    },
+                    "phase_metrics": phase_metrics,
+                }
+            )
+    run_summaries.sort(key=lambda row: row["started_at"], reverse=True)
     phase_summaries = [
         {
             "phase": phase,
@@ -363,7 +658,7 @@ def metrics_payload(database: Path) -> dict[str, Any]:
     return {
         "generated_at": datetime.now(UTC).isoformat(),
         "database": str(database),
-        "run_count": len(runs),
+        "run_count": len(run_summaries),
         "span_count": len(rows),
         "runs": run_summaries,
         "phases": phase_summaries,
@@ -566,11 +861,12 @@ gap:7px 16px; align-items:center }}
 .trace-expand {{ border:1px solid #36415f; background:#151c30; color:#cbd3e5;
 padding:7px 12px; border-radius:8px; cursor:pointer }}
 .trace-shell {{ margin:18px 0; border:1px solid #29334d; border-radius:10px;
-overflow:auto; max-height:640px; background:#0c1222 }}
+overflow:auto; max-height:640px; background:#0c1222; cursor:grab }}
+.trace-shell.dragging {{ cursor:grabbing; user-select:none }}
 .trace-shell.expanded {{ position:fixed; inset:20px; z-index:30; max-height:none;
 margin:0; box-shadow:0 0 0 100vmax #070b16cc }}
-.trace-view {{ position:relative; min-width:1180px; padding:8px 0 12px }}
-.trace-ruler,.trace-row {{ display:grid; grid-template-columns:280px minmax(860px,1fr);
+.trace-view {{ position:relative; width:max-content; min-width:100%; padding:8px 0 12px }}
+.trace-ruler,.trace-row {{ display:grid; grid-template-columns:280px var(--timeline, 860px);
 align-items:stretch }}
 .trace-label {{ position:sticky; left:0; z-index:4; overflow:hidden; padding:6px 10px;
 background:#0c1222; color:#aeb8cc; font:12px ui-monospace,monospace;
@@ -599,6 +895,11 @@ transform:rotate(45deg); transform-origin:center }}
 .trace-block.live {{ background:#d39422; box-shadow:0 0 8px #f4c15d;
 background-image:linear-gradient(110deg,transparent 25%,#f4c15d88 45%,transparent 65%);
 background-size:200% 100%; animation:trace-pulse 1.4s linear infinite }}
+.trace-block.rejected {{ box-shadow:inset 0 -3px 0 #ff6b7a, 0 0 0 1px #ff6b7a }}
+.trace-end {{ position:absolute; height:22px; padding:1px 7px; border-radius:5px;
+box-sizing:border-box; font:11px ui-monospace,monospace; white-space:nowrap; z-index:5 }}
+.trace-end.bad {{ color:#ffd5db; background:#3a1d2a; border:1px solid #ff6b7a }}
+.trace-end.ok {{ color:#c8f5e2; background:#12352c; border:1px solid #3dcea0 }}
 .trace-arrows {{ position:absolute; inset:0; width:100%; height:100%;
 pointer-events:none; z-index:2; overflow:visible }}
 .trace-legend {{ display:flex; gap:16px; color:#9aa4b8; font-size:12px; margin:0 0 8px }}
@@ -618,6 +919,33 @@ const esc = value => String(value).replace(/[&<>"']/g, c =>
 const sec = value => `${{Number(value).toFixed(3)}}s`;
 let selectedTab = 'total';
 let expandedRun = '';
+const traceScroll = new Map();
+let traceDrag = null;
+document.addEventListener('pointerdown', event => {{
+  const shell = event.target.closest('.trace-shell');
+  if (!shell || event.button !== 0 || event.target.closest('button, a')) return;
+  const bounds = shell.getBoundingClientRect();
+  if (event.clientX > bounds.left + shell.clientWidth) return;
+  if (event.clientY > bounds.top + shell.clientHeight) return;
+  traceDrag = {{
+    shell, x: event.clientX, left: shell.scrollLeft, id: event.pointerId
+  }};
+  shell.classList.add('dragging');
+  shell.setPointerCapture(event.pointerId);
+}});
+document.addEventListener('pointermove', event => {{
+  if (!traceDrag || event.pointerId !== traceDrag.id) return;
+  if (!traceDrag.shell.isConnected) {{ traceDrag = null; return; }}
+  traceDrag.shell.scrollLeft = traceDrag.left - (event.clientX - traceDrag.x);
+}});
+const endTraceDrag = event => {{
+  if (!traceDrag || event.pointerId !== traceDrag.id) return;
+  traceDrag.shell.classList.remove('dragging');
+  traceScroll.set(traceDrag.shell.dataset.run, traceDrag.shell.scrollLeft);
+  traceDrag = null;
+}};
+document.addEventListener('pointerup', endTraceDrag);
+document.addEventListener('pointercancel', endTraceDrag);
 const applyExpandedTrace = () => {{
   document.querySelectorAll('.trace-shell').forEach(shell =>
     shell.classList.toggle('expanded', shell.dataset.run === expandedRun));
@@ -682,7 +1010,8 @@ const traceLane = (phase, item, runId, names) => {{
     sortKey:`1/${{match[1]}}`}};
 }};
 const tracePanel = run => {{
-  const markerId = `trace-arrow-${{run.run_id.replace(/[^A-Za-z0-9_-]/g, '')}}`;
+  const markerSource = String(run.execution_id || run.run_id);
+  const markerId = `trace-arrow-${{markerSource.replace(/[^A-Za-z0-9_-]/g, '')}}`;
   const names = run.cluster_labels || {{}};
   const seen = new Set();
   const slices = [];
@@ -695,7 +1024,11 @@ const tracePanel = run => {{
     const pass = Number(row.pass) || 1;
     const slice = {{id:`${{markerId}}-${{slices.length}}`, phase:row.phase, item:String(row.item),
       category:row.category, start, end:start + Number(row.duration_ms),
-      live:false, instant, pass, lane}};
+      live:false, instant, pass, rejection:String(row.rejection || ''),
+      rejectionLabel:String(row.rejection_label || ''),
+      endingLabel:String(row.ending_label || ''),
+      endingDetail:String(row.ending_detail || ''),
+      endingBad:row.ending_bad !== false, lane}};
     seen.add(`${{slice.phase}}|${{slice.item}}|${{slice.pass}}`);
     slices.push(slice);
   }});
@@ -706,8 +1039,8 @@ const tracePanel = run => {{
     const pass = Number(row.pass) || 1;
     if (!Number.isFinite(start) || seen.has(`${{phase}}|${{item}}|${{pass}}`)) return;
     slices.push({{id:`${{markerId}}-${{slices.length}}`, phase, item, category:'live', start,
-      end:null, live:true, instant:false, pass,
-      lane:traceLane(phase, item, run.run_id, names)}});
+      end:null, live:true, instant:false, pass, endingLabel:'', endingDetail:'',
+      endingBad:false, lane:traceLane(phase, item, run.run_id, names)}});
   }});
   if (!slices.length) return '';
   const lanes = new Map();
@@ -779,7 +1112,7 @@ const tracePanel = run => {{
   const origin = Math.min(...slices.map(slice => slice.start));
   const completedEnds = slices.filter(slice => slice.end != null).map(slice => slice.end);
   const staticEnd = Math.max(origin + 1, ...completedEnds);
-  const maxPass = Math.max(...slices.map(slice => slice.pass || 1));
+  const passCount = new Set(slices.map(slice => slice.pass || 1)).size;
   const renderRow = (lane, row) => {{
     const rowSlices = lane.slices;
     const title = lane.kind === 'pipeline' ? 'pipeline' : lane.title;
@@ -787,15 +1120,24 @@ const tracePanel = run => {{
       const cluster = slice.lane.cluster || '';
       const base = slice.phase === 'label-traces-cluster' && cluster
         ? cluster : slice.phase;
-      const text = maxPass > 1 ? `pass ${{slice.pass}} · ${{base}}` : base;
-      return `<div id="${{slice.id}}" class="trace-block ${{esc(slice.category)}}${{slice.live ? ' live' : ''}}${{slice.instant ? ' instant' : ''}}${{fanoutSources.has(slice.id) ? ' fanout-parent' : ''}}" `+
+      const prefix = passCount > 1 ? `pass ${{slice.pass}} · ` : '';
+      const text = `${{prefix}}${{base}}`;
+      const tip = slice.endingDetail
+        ? `${{text}} · ${{slice.endingDetail}}`
+        : (slice.rejection ? `${{text}} · ${{slice.rejection}}` : text);
+      const ending = slice.endingLabel
+        ? `<div class="trace-end ${{slice.endingBad ? 'bad' : 'ok'}}" data-for="${{slice.id}}" `+
+          `title="${{esc(slice.endingDetail || slice.endingLabel)}}">${{esc(slice.endingLabel)}}</div>`
+        : '';
+      return `<div id="${{slice.id}}" class="trace-block ${{esc(slice.category)}}${{slice.live ? ' live' : ''}}${{slice.instant ? ' instant' : ''}}${{slice.rejection ? ' rejected' : ''}}${{fanoutSources.has(slice.id) ? ' fanout-parent' : ''}}" `+
       `data-start="${{slice.start}}" data-end="${{slice.end == null ? '' : slice.end}}" `+
       `data-phase="${{esc(slice.phase)}}" data-label="${{esc(text)}}" `+
       `data-cluster="${{esc(cluster)}}" data-item="${{esc(slice.item)}}" `+
+      `data-rejection="${{esc(slice.rejection)}}" `+
       `data-sub="0" data-instant="${{slice.instant ? '1' : '0'}}" `+
       `data-graph="${{GRAPH.has(slice.phase) || slice.live ? '1' : '0'}}" `+
       `${{!slice.live && phaseColor(slice.phase) ? `style="background:${{phaseColor(slice.phase)}}"` : ''}} `+
-      `title="${{esc(text)}}">${{esc(text)}}</div>`;
+      `title="${{esc(tip)}}">${{esc(text)}}</div>${{ending}}`;
     }}).join('');
     const times = rowSlices.filter(slice =>
       (GRAPH.has(slice.phase) || slice.live) && !slice.instant).map(slice =>
@@ -818,10 +1160,10 @@ const tracePanel = run => {{
   ).join('');
   return `<div class="trace-tools"><h3>Live trace</h3><div class="trace-legend">`+
     `<span><i class="chain"></i>depends</span><span><i class="fanout"></i>fanout</span>`+
-    `<span><i class="merge"></i>merge</span>`+
-    `<button type="button" class="trace-expand" data-trace-expand="${{esc(run.run_id)}}">Expand</button>`+
+    `<span><i class="merge"></i>merge</span><span>drag to pan</span>`+
+    `<button type="button" class="trace-expand" data-trace-expand="${{esc(markerSource)}}">Expand</button>`+
     `</div></div>`+
-    `<div class="trace-shell" data-run="${{esc(run.run_id)}}"><div class="trace-view" data-trace-origin="${{origin}}" `+
+    `<div class="trace-shell" data-run="${{esc(markerSource)}}"><div class="trace-view" data-trace-origin="${{origin}}" `+
     `data-trace-static-end="${{staticEnd}}" data-trace-active="${{slices.some(slice => slice.live) ? '1' : '0'}}">`+
     `<div class="trace-ruler"><div class="trace-label">start →</div><div class="trace-ticks">`+
     `${{[0,20,40,60,80,100].map(value =>
@@ -845,13 +1187,16 @@ const tickTraces = () => {{
       ? Math.max(now, Number(view.dataset.traceStaticEnd))
       : Number(view.dataset.traceStaticEnd);
     const range = Math.max(end-origin, 1);
+    const pad = 360;
+    const timeline = Math.max(860, Math.ceil(range / 1000 * 6) + pad);
+    view.style.setProperty('--timeline', `${{timeline}}px`);
+    const track = Math.max(timeline - pad, 1);
     view.querySelectorAll('.trace-tick').forEach(tick => {{
       tick.textContent = sec(range * Number(tick.dataset.fraction) / 1000);
     }});
     view.querySelectorAll('.trace-block').forEach(block => {{
       const start = Number(block.dataset.start);
       const blockEnd = block.dataset.end ? Number(block.dataset.end) : now;
-      const track = block.parentElement.getBoundingClientRect().width || 1;
       const graph = block.dataset.graph !== '0';
       block.style.top = graph ? '16px' : '4px';
       const rawLeft = Math.max(0, (start - origin) / range) * track;
@@ -860,9 +1205,11 @@ const tickTraces = () => {{
       const phase = block.dataset.phase || '';
       const label = block.dataset.label || phase;
       const cluster = block.dataset.cluster || '';
+      const rejection = block.dataset.rejection || '';
       const clock = new Date(start).toLocaleTimeString([], {{
         hour:'2-digit', minute:'2-digit', second:'2-digit'}});
       block.title = `${{phase}}${{cluster && cluster !== phase ? ` · ${{cluster}}` : ''}} · start +${{sec(started)}} (${{clock}}) · ${{sec(duration)}}`+
+        (rejection ? ` · ${{rejection}}` : '')+
         (block.dataset.item ? ` · ${{block.dataset.item}}` : '');
       if (block.dataset.instant === '1') {{
         block.style.left = `${{rawLeft}}px`;
@@ -876,6 +1223,14 @@ const tickTraces = () => {{
         if (!block.dataset.end) block.textContent =
           `${{label}} +${{started.toFixed(1)}}s · ${{sec(duration)}}`;
       }}
+    }});
+    view.querySelectorAll('.trace-end').forEach(node => {{
+      const block = view.querySelector(`#${{node.dataset.for}}`);
+      if (!block) return;
+      const left = parseFloat(block.style.left) || 0;
+      const width = parseFloat(block.style.width) || 0;
+      node.style.left = `${{left + width + 8}}px`;
+      node.style.top = block.style.top || '16px';
     }});
     view.querySelectorAll('.trace-time').forEach(label => {{
       const block = view.querySelector(`#${{label.dataset.for}}`);
@@ -955,10 +1310,13 @@ const runPanel = run => {{
     `<td>${{esc(row.slice_user_turns)}}</td><td>${{esc(row.tool_events)}}</td>`+
     `<td>${{esc(row.decision)}}</td><td>${{esc(row.super_score)}}</td>`+
     `<td>${{esc(row.judge_action)}}</td><td>${{esc(row.status)}}</td></tr>`).join('');
-  return `<section class="card"><h2>${{esc(run.run_id)}}</h2>${{active}}`+
+  const heading = run.execution_id || run.run_id;
+  const progressBlock = run.historical ? '' :
     `<section class="progress"><h3>Current progress</h3>`+
     `<p>Selected findings: <b>${{progress.selected_findings}}</b></p>`+
-    `<div class="progress-grid">${{progressRows}}</div></section><div class="stats">`+
+    `<div class="progress-grid">${{progressRows}}</div></section>`;
+  return `<section class="card"><h2>${{esc(heading)}}</h2>${{run.historical ? '' : active}}`+
+    `${{progressBlock}}<div class="stats">`+
     `<span>live wall <b${{(run.active || []).length ? ` data-live-wall-start="${{Date.parse(run.started_at)}}"` : ''}}>`+
     `${{sec(run.wall_seconds)}}</b></span>`+
     `<span>completed agent sum <b>${{sec(run.category_seconds.llm_agent || 0)}}</b></span>`+
@@ -989,8 +1347,11 @@ async function refresh() {{
     document.getElementById('tabs').innerHTML =
       `<button class="tab" data-tab="total">Total</button>`+
       data.runs.map((run,index) =>
-        `<button class="tab" data-tab="run-${{index + 1}}" title="${{esc(run.run_id)}}">`+
-        `${{esc(run.run_id)}}</button>`).join('');
+        `<button class="tab" data-tab="run-${{index + 1}}" title="${{esc(run.execution_id || run.run_id)}}">`+
+        `${{esc(run.execution_id || run.run_id)}}</button>`).join('');
+    document.querySelectorAll('.trace-shell').forEach(shell => {{
+      traceScroll.set(shell.dataset.run, shell.scrollLeft);
+    }});
     const empty = data.run_count ? '' : `<p class="muted">No runs recorded.</p>`;
     document.getElementById('panels').innerHTML =
       `<section class="panel" data-panel="total"><section class="card">`+
@@ -1005,6 +1366,10 @@ async function refresh() {{
     selectTab(selectedTab);
     applyExpandedTrace();
     tickTraces();
+    document.querySelectorAll('.trace-shell').forEach(shell => {{
+      const left = traceScroll.get(shell.dataset.run);
+      if (left) shell.scrollLeft = left;
+    }});
   }} catch (error) {{
     document.getElementById('status').className = 'error';
     document.getElementById('status').textContent = `Refresh failed: ${{error}}`;

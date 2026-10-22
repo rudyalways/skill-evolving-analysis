@@ -575,6 +575,39 @@ class ContractTests(unittest.TestCase):
                 checked["newly_detected_skill_capabilites_missing"], []
             )
 
+    def test_a_later_start_gets_its_own_run_directory(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "timed-run"
+            runner.initialize_workspace(source)
+            (source / "traces/raw/codex/trace.jsonl").write_text("{}\n")
+            skill = source / "target/to_be_improved_skills/demo"
+            skill.mkdir()
+            (skill / "SKILL.md").write_text("---\nname: demo\n---\n")
+            self.assertEqual(runner.allocate_execution_workspace(source), source)
+
+            (source / "logs").mkdir(exist_ok=True)
+            (source / "logs/execution.jsonl").write_text("{}\n")
+            findings = source / "traces/derived/findings"
+            findings.mkdir(parents=True)
+            (findings / "note.json").write_text("{}\n")
+            moment = datetime.fromisoformat("2026-10-22T09:53:10+00:00")
+            created = runner.allocate_execution_workspace(source, moment=moment)
+            stamp = moment.astimezone().strftime("%Y-%m-%dT%H:%M")
+            self.assertEqual(created.parent, source.parent)
+            self.assertEqual(created.name, f"timed-run@{stamp}")
+            self.assertEqual(
+                (created / "traces/raw/codex/trace.jsonl").read_text(), "{}\n"
+            )
+            self.assertTrue(
+                (created / "target/to_be_improved_skills/demo/SKILL.md").is_file()
+            )
+            self.assertFalse((created / "logs/execution.jsonl").exists())
+            self.assertFalse((created / "traces/derived/findings/note.json").exists())
+            self.assertFalse(runner.workspace_was_started(created))
+
+            again = runner.allocate_execution_workspace(source, moment=moment)
+            self.assertEqual(again.name, f"timed-run@{stamp}-2")
+
     def test_initialize_workspace_is_allowlisted(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -928,6 +961,148 @@ class ContractTests(unittest.TestCase):
         metrics_dashboard.assign_passes(spans, active)
         self.assertEqual([row["pass"] for row in spans], [1, 1, 1, 2, 2, 2])
         self.assertEqual(active[0]["pass"], 2)
+
+    def test_restart_ids_are_minute_scoped_and_rejections_are_marked(self) -> None:
+        first = datetime.fromisoformat("2026-10-22T09:16:43+00:00").astimezone()
+        second = datetime.fromisoformat("2026-10-22T09:20:01+00:00").astimezone()
+        self.assertEqual(
+            metrics_dashboard.execution_id(
+                "timed-run", "2026-10-22T09:16:43+00:00"
+            ),
+            f"timed-run@{first.strftime('%Y-%m-%dT%H:%M')}",
+        )
+        self.assertEqual(
+            metrics_dashboard.execution_id(
+                "timed-run", "2026-10-22T09:20:01+00:00"
+            ),
+            f"timed-run@{second.strftime('%Y-%m-%dT%H:%M')}",
+        )
+        self.assertNotEqual(
+            first.strftime("%Y-%m-%dT%H:%M"),
+            second.strftime("%Y-%m-%dT%H:%M"),
+        )
+        spans = [
+            {
+                "phase": "optimize",
+                "item": "run-op-1",
+                "status": "ok",
+                "started_at": "2026-10-22T09:16:00+00:00",
+            },
+            {
+                "phase": "optimize",
+                "item": "run-op-1",
+                "status": "ok",
+                "started_at": "2026-10-22T09:20:00+00:00",
+            },
+        ]
+        metrics_dashboard.annotate_rejections(
+            spans,
+            {
+                (
+                    "optimize",
+                    "run-op-1",
+                ): "frontmatter description contains angle brackets"
+            },
+        )
+        self.assertEqual(spans[0]["status"], "ok")
+        self.assertNotIn("rejection", spans[0])
+        self.assertEqual(spans[1]["status"], "rejected")
+        self.assertEqual(
+            spans[1]["rejection_label"], "rejected before verification"
+        )
+
+    def test_endings_name_why_a_chain_stopped(self) -> None:
+        spans = [
+            {
+                "phase": "optimize",
+                "item": "run-sig-aaa-op-1",
+                "status": "rejected",
+                "started_at": "2026-10-22T09:20:00+00:00",
+                "duration_ms": 1000,
+                "rejection": "frontmatter description contains angle brackets",
+                "rejection_label": "rejected before verification",
+            },
+            {
+                "phase": "optimize",
+                "item": "run-sig-bbb-op-1",
+                "status": "ok",
+                "started_at": "2026-10-22T09:20:00+00:00",
+                "duration_ms": 1000,
+            },
+            {
+                "phase": "verifiter",
+                "item": "run-sig-bbb-response-1",
+                "status": "ok",
+                "started_at": "2026-10-22T09:22:00+00:00",
+                "duration_ms": 5000,
+            },
+            {
+                "phase": "judge-decision",
+                "item": "run-sig-bbb-op-1-try-1",
+                "status": "ok",
+                "started_at": "2026-10-22T09:23:00+00:00",
+                "duration_ms": 0,
+                "judge_action": "fail",
+                "overall_status": "fail",
+                "failed_skills": ["retry-after-state-change"],
+                "will_retry": False,
+            },
+            {
+                "phase": "goal",
+                "item": "run-sig-ccc",
+                "status": "error",
+                "started_at": "2026-10-22T09:30:00+00:00",
+                "duration_ms": 100000,
+                "rejection": "timed out after 100 seconds",
+            },
+            {
+                "phase": "verifiter",
+                "item": "run-sig-fff",
+                "status": "error",
+                "started_at": "2026-10-22T09:31:00+00:00",
+                "duration_ms": 10,
+                "rejection": "verification response JSON parse error at line 2",
+            },
+            {
+                "phase": "goal",
+                "item": "run-sig-ddd",
+                "status": "ok",
+                "started_at": "2026-10-22T09:30:00+00:00",
+                "duration_ms": 2000,
+            },
+            {
+                "phase": "optimize",
+                "item": "run-sig-eee-op-1",
+                "status": "ok",
+                "started_at": "2026-10-22T09:20:00+00:00",
+                "duration_ms": 1000,
+            },
+        ]
+        metrics_dashboard.annotate_endings(
+            spans, [{"stage": "verifiter", "item": "run-sig-eee-op-1"}]
+        )
+        self.assertEqual(spans[0]["ending_label"], "rejected before verification")
+        self.assertIn("angle brackets", spans[0]["ending_detail"])
+        self.assertNotIn("ending_label", spans[1])
+        self.assertEqual(
+            spans[2]["ending_label"], "does not pass retry-after-state-change"
+        )
+        self.assertIn("will not retry", spans[2]["ending_detail"])
+        self.assertTrue(spans[2]["ending_bad"])
+        self.assertEqual(spans[4]["ending_label"], "timed out after 100 seconds")
+        self.assertEqual(spans[5]["ending_label"], "parse error")
+        self.assertEqual(spans[6]["ending_label"], "completed")
+        self.assertFalse(spans[6]["ending_bad"])
+        self.assertNotIn("ending_label", spans[7])
+        timed_out = {
+            "phase": "label-traces-cluster",
+            "item": "run-sig-ggg",
+            "status": "error",
+            "started_at": "2026-10-22T09:32:00+00:00",
+            "duration_ms": 100068,
+        }
+        metrics_dashboard.annotate_endings([timed_out], [])
+        self.assertEqual(timed_out["ending_label"], "timed out after 100 seconds")
 
     def test_recreated_run_clears_stale_shared_metrics(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
