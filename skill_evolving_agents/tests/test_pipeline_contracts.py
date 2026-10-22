@@ -1437,6 +1437,15 @@ class ContractTests(unittest.TestCase):
         self.assertIn('"skill": "<skill-directory-name>"', prompt)
         self.assertIn("The key is `skills_metadata`, not `skills`", prompt)
 
+    def test_diagnosis_prompt_forbids_placeholder_quotes_in_evidence(self) -> None:
+        prompt = (
+            AGENTS
+            / "02.2_label_traces_cluster_agent/dignosis/skill.md"
+        ).read_text()
+        self.assertIn("Never copy or quote placeholder text", prompt)
+        self.assertIn("including `reasoning`, descriptions, and", prompt)
+        self.assertIn("`evidence_list`", prompt)
+
     def test_skill_format_names_and_aliases(self) -> None:
         format_path = AGENTS / "common/skill_format.json"
         document = json.loads(format_path.read_text())

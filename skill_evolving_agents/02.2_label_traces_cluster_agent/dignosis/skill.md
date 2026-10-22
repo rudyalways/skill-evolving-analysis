@@ -26,6 +26,11 @@ Write only this finding's records into worker-local
 `workspace/run/diagnosis.json`. The runner validates, archives, and reduces all
 scoped files. The shape is `diagnosis.example.json`.
 
+- The example contains placeholders delimited by `<` and `>`. Replace every
+  placeholder with concrete data. Never copy or quote placeholder text
+  anywhere in the output, including `reasoning`, descriptions, and
+  `evidence_list`. Paraphrase feedback about the example instead of quoting
+  its placeholder values.
 - `type` is a relative taxonomy path. `cluster` is the finding ID (or the
   legacy cluster directory).
 - Run `evolve-goal-checker.py`. It validates diagnosis only; it does not edit skill metadata. A missing or empty capability taxonomy fails before the diagnosis is changed. A `type` that is not defined in the JSON moves to `newly_detected_skill_capabilites_missing`.
