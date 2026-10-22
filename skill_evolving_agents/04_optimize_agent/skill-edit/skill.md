@@ -18,12 +18,15 @@ Before changing or removing any existing skill, copy its complete directory to
 `workspace/target/raw_skills/<skill>`.
 
 - `update`: edit every record in `skills`. Apply its section and directory
-  goals to that skill while preserving unrelated useful content.
+  goals and delete every concrete item in optional `remove`, while preserving
+  unrelated useful content.
 - `delete`: snapshot every record in `skills`, then remove its skill directory.
 - `merge`: snapshot every source named in `skills`, write the combined skill
-  named by `into.skill`, and remove source directories other than that result.
+  named by `into.skill`, apply `into.remove`, and remove source directories
+  other than that result.
 - `split`: snapshot the source named by `skill`, write every result in `into`,
-  and remove the source unless one result keeps the same name.
+  apply each result's `remove`, and remove the source unless one result keeps
+  the same name.
 
 Write all results under `workspace/target/to_be_improved_skills`. Keep the
 active goal and diagnosis unchanged.
