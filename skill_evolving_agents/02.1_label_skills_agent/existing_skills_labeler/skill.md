@@ -12,7 +12,7 @@ Do not stop a skill at one or two labels. Do not omit the weight. Do not invent 
 
 ## Workflow
 
-List the existing skills. For each skill, write or extend its metadata record. Set `skill` to that skill's directory name. Write `skill_types` until it has at least 3 items. Each item is `type` and `weight`. `type` is a path defined in `skill_capabilites/skill_capabilites.json`. An undefined name goes in `unmatched_skill_types` as `type` and `weight`, the same shape as the example. If no defined path fits, leave `skill_types` empty and keep the unmatched names there. Preserve an existing `changelog`; initialize it to an empty list for a skill with no recorded pipeline changes.
+List the existing skills. For each skill, write or extend its metadata record. Set `skill` to that skill's directory name. Write `skill_types` until it has at least 3 items. Each item is `type` and `weight`. `type` is a path defined in `skill_capabilites/skill_capabilites.json`. An undefined name goes in `unmatched_skill_types` as `type` and `weight`, the same shape as the example. If no defined path fits, leave `skill_types` empty and keep the unmatched names there. Do not write a `changelog` field. Skill history is the append-only file `target/skill_changelogs/<skill>.md`. Do not edit that file.
 
 Write `workspace/target/to_be_improved_skills_metadata/metadata.json` with this exact top-level shape. The key is `skills_metadata`, not `skills`. Include one record for every skill directory:
 
@@ -27,8 +27,7 @@ Write `workspace/target/to_be_improved_skills_metadata/metadata.json` with this 
         {"type": "domain/frontend", "weight": 0.8},
         {"type": "form/technique/checklist", "weight": 0.7}
       ],
-      "unmatched_skill_types": [],
-      "changelog": []
+      "unmatched_skill_types": []
     }
   ]
 }

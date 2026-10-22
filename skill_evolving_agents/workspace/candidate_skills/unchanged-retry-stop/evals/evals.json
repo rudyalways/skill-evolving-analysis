@@ -1,0 +1,56 @@
+{
+  "skill_name": "unchanged-retry-stop",
+  "evals": [
+    {
+      "id": 1,
+      "kind": "should_apply",
+      "prompt": "The same action was already run against the same observed state and returned a completed result. The next call would repeat that action and state and would not change the evidence. Decide whether to retry.",
+      "expected_output": "Stop. Record the matching action, state, and result, and end the loop because the next call would not change the evidence. Change the action or acquire new evidence before another call.",
+      "expectations": [
+        "The decision is stop when action, state, and result match the prior record",
+        "The output names the compared action, state, result, and the reason the loop ended"
+      ],
+      "files": [],
+      "source_trace_ids": [
+        "sig-625a365661e7ae0025430ca7:1447",
+        "sig-625a365661e7ae0025430ca7:1449"
+      ]
+    },
+    {
+      "id": 2,
+      "kind": "should_not_apply",
+      "prompt": "The same action is proposed again, but the observed state the action reads has changed since the recorded result. Decide whether the unchanged-result stop should block the retry.",
+      "expected_output": "Do not stop. A relevant state change allows a changed-state retry. The skill must not block that retry.",
+      "expectations": [
+        "A retry is accepted because the observed state changed",
+        "The stop is not applied to a changed-state retry"
+      ],
+      "files": [],
+      "source_trace_ids": []
+    },
+    {
+      "id": 3,
+      "kind": "should_not_apply",
+      "prompt": "A later call keeps the same general action but meaningfully narrows the search scope. The prior result came from the wider scope. Decide whether the unchanged-result stop should block the retry.",
+      "expected_output": "Do not stop. A meaningful scope refinement allows a refined-scope retry.",
+      "expectations": [
+        "A retry is accepted because the search scope was meaningfully refined",
+        "The stop is not applied to a refined-scope retry"
+      ],
+      "files": [],
+      "source_trace_ids": []
+    },
+    {
+      "id": 4,
+      "kind": "should_not_apply",
+      "prompt": "The same action and state failed because of a temporary fault, the retry budget is not exhausted, and the result is not a completed identical outcome. Decide whether the unchanged-result stop should block the retry.",
+      "expected_output": "Do not stop. A bounded transient failure allows one more retry inside the remaining budget.",
+      "expectations": [
+        "A retry is accepted because the prior result is a bounded transient failure with budget remaining",
+        "The stop is not applied to a bounded transient retry"
+      ],
+      "files": [],
+      "source_trace_ids": []
+    }
+  ]
+}

@@ -33,6 +33,245 @@ def verification_status(score: float, threshold: float) -> str:
     return "pass" if score >= threshold else "fail"
 
 
+CLAIM_PENALTY_IDS = (
+    "missing_section",
+    "missing_directory",
+    "goal_contradiction",
+)
+HALF_CLAIM_PENALTY_IDS = ("missing_near_miss_eval",)
+SHAPE_PENALTY_IDS = (
+    "heading_level",
+    "unclaimed_heading",
+    "tighter_wording",
+    "description_shape",
+)
+REPLAY_PENALTY_ID = "replay_fail"
+PENALTY_IDS = (
+    *CLAIM_PENALTY_IDS,
+    *HALF_CLAIM_PENALTY_IDS,
+    *SHAPE_PENALTY_IDS,
+    REPLAY_PENALTY_ID,
+)
+SKILL_FORMAT_PATH = Path(__file__).with_name("skill_format.json")
+
+
+def _format_inventory() -> tuple[int, int]:
+    """Core section count and named directory count from skill_format.json."""
+    data = json.loads(SKILL_FORMAT_PATH.read_text())
+    core = sum(
+        1
+        for item in data.get("sections") or []
+        if isinstance(item, dict) and item.get("core") is True
+    )
+    directories = sum(
+        1
+        for item in data.get("dirs") or []
+        if isinstance(item, dict)
+        and item.get("name") not in {None, "other", "ood"}
+    )
+    return core, directories
+
+
+def _validate_soft_penalties(
+    penalties: Any, path: str, threshold: float
+) -> None:
+    """Check the two budgets that make up the decision score.
+
+    The claim budget is split across the sections and directories this
+    operation names. The quality budget is the shape cap. It must sit inside
+    the slack above ``pass_threshold``, so shape misses alone still pass, and
+    the claim budget must be larger than that slack, so missing every claim
+    fails. One replay charge is half the slack and must still pass alone.
+    """
+    if not isinstance(penalties, dict):
+        fail(path, "must be an object")
+    expected_keys = {
+        "claim_budget",
+        "quality_budget",
+        "replay_share",
+        "core_sections",
+        "directories",
+    }
+    if set(penalties) != expected_keys:
+        fail(
+            path,
+            "must contain claim_budget, quality_budget, replay_share, "
+            "core_sections, and directories",
+        )
+    core, directories = _format_inventory()
+    if penalties.get("core_sections") != core:
+        fail(
+            f"{path}.core_sections",
+            f"must equal {core}, the core sections in skill_format.json",
+        )
+    if penalties.get("directories") != directories:
+        fail(
+            f"{path}.directories",
+            f"must equal {directories}, the named directories in skill_format.json",
+        )
+    claim = penalties.get("claim_budget")
+    quality = penalties.get("quality_budget")
+    replay_share = penalties.get("replay_share")
+    if (
+        not isinstance(claim, (int, float))
+        or isinstance(claim, bool)
+        or not isinstance(quality, (int, float))
+        or isinstance(quality, bool)
+        or float(claim) <= 0
+        or float(quality) <= 0
+    ):
+        fail(path, "claim_budget and quality_budget must be numbers above 0")
+    if abs(float(claim) + float(quality) - 1.0) > 1e-9:
+        fail(path, "claim_budget and quality_budget must sum to 1")
+    if float(quality) >= 0.5:
+        fail(
+            f"{path}.quality_budget",
+            "must stay under half the score so a threshold can sit between the budgets",
+        )
+    slack = 1 - float(threshold)
+    if float(quality) > slack + 1e-12:
+        fail(
+            f"{path}.quality_budget",
+            "must be at most the slack above pass_threshold, so shape misses alone still pass",
+        )
+    if float(claim) <= slack:
+        fail(
+            f"{path}.claim_budget",
+            "must exceed the slack above pass_threshold, so missing every claim fails",
+        )
+    if (
+        not isinstance(replay_share, int)
+        or isinstance(replay_share, bool)
+        or replay_share < 1
+    ):
+        fail(f"{path}.replay_share", "must be a positive integer")
+    if 1 - slack / int(replay_share) < float(threshold):
+        fail(
+            f"{path}.replay_share",
+            "one replay_fail must stay at or above pass_threshold",
+        )
+
+
+def claim_count(skill: dict[str, Any]) -> int:
+    """Sections and directories this operation named, at least one."""
+    requirements = skill.get("requirements") or {}
+    sections = requirements.get("sections") or []
+    directories = requirements.get("directories") or []
+    return max(1, len(sections) + len(directories))
+
+
+def skill_decision_score(
+    claims: int,
+    defects: list[dict[str, Any]],
+    scoring: dict[str, Any],
+) -> float:
+    """Price each defect once. Shape charges stop at the quality budget."""
+    penalties = scoring["soft_penalties"]
+    claim_budget = float(penalties["claim_budget"])
+    quality_budget = float(penalties["quality_budget"])
+    threshold = float(scoring["pass_threshold"])
+    digits = int(scoring.get("round_digits", 6))
+    share = claim_budget / max(1, int(claims))
+    quality_share = quality_budget / len(SHAPE_PENALTY_IDS)
+    replay_amount = (1 - threshold) / int(penalties["replay_share"])
+    claim_total = 0.0
+    quality_total = 0.0
+    replay_total = 0.0
+    seen: set[tuple[str, str]] = set()
+    claim_targets: dict[str, str] = {}
+    for defect in defects:
+        kind = str(defect.get("id") or "")
+        target = str(defect.get("target") or "")
+        key = (kind, target)
+        if key in seen:
+            raise ContractError(f"duplicate penalty {kind} on {target}")
+        seen.add(key)
+        if kind in CLAIM_PENALTY_IDS or kind in HALF_CLAIM_PENALTY_IDS:
+            previous = claim_targets.get(target)
+            if previous is not None:
+                raise ContractError(f"{target} has both {previous} and {kind}")
+            claim_targets[target] = kind
+            claim_total += share if kind in CLAIM_PENALTY_IDS else share / 2
+        elif kind in SHAPE_PENALTY_IDS:
+            quality_total += quality_share
+        elif kind == REPLAY_PENALTY_ID:
+            if target != "replay":
+                raise ContractError("replay_fail target must be replay")
+            replay_total += replay_amount
+        else:
+            raise ContractError(f"unknown penalty {kind}")
+    raw = 1 - claim_total - min(quality_total, quality_budget) - replay_total
+    return round(max(0.0, raw), digits)
+
+
+def penalties_under_threshold(
+    claims: int, scoring: dict[str, Any]
+) -> list[dict[str, str]]:
+    """Claim misses that land strictly below pass_threshold."""
+    threshold = float(scoring["pass_threshold"])
+    total = 0.0
+    share = float(scoring["soft_penalties"]["claim_budget"]) / max(1, claims)
+    needed = 0
+    while 1 - total >= threshold and needed < max(1, claims):
+        needed += 1
+        total += share
+    return [
+        {"id": "goal_contradiction", "target": f"claim-{index}"}
+        for index in range(1, needed + 1)
+    ]
+
+
+def apply_decision_scores(
+    verification: dict[str, Any], verification_input: dict[str, Any]
+) -> None:
+    """Write each skill score from its penalty list. The model does not price it."""
+    scoring = verification_input["scoring"]
+    threshold = float(scoring["pass_threshold"])
+    counts = {
+        row["skill"]: claim_count(row)
+        for row in verification_input.get("skills") or []
+        if isinstance(row, dict) and isinstance(row.get("skill"), str)
+    }
+    feedback = verification.get("feedback")
+    if not isinstance(feedback, dict):
+        return
+    replay_failed = (feedback.get("replay") or {}).get("status") == "fail"
+    scores: list[float] = []
+    for row in feedback.get("per_skill") or []:
+        if not isinstance(row, dict):
+            continue
+        penalties = row.get("penalties")
+        if not isinstance(penalties, list):
+            penalties = []
+        if replay_failed and not any(
+            isinstance(item, dict) and item.get("id") == REPLAY_PENALTY_ID
+            for item in penalties
+        ):
+            penalties.append({"id": REPLAY_PENALTY_ID, "target": "replay"})
+        seen: set[tuple[Any, Any]] = set()
+        unique: list[Any] = []
+        for item in penalties:
+            if not isinstance(item, dict):
+                unique.append(item)
+                continue
+            key = (item.get("id"), item.get("target"))
+            if key in seen:
+                continue
+            seen.add(key)
+            unique.append(item)
+        row["penalties"] = unique
+        score = skill_decision_score(
+            counts.get(str(row.get("skill")), 1), unique, scoring
+        )
+        row["score"] = score
+        row["status"] = verification_status(score, threshold)
+        scores.append(score)
+    if scores:
+        overall = min(scores)
+        feedback["overall_score"] = overall
+        feedback["overall_status"] = verification_status(overall, threshold)
+
+
 def verification_step_score(scores: list[float]) -> float:
     if not scores:
         raise ContractError("cannot score a step without assertions")
@@ -568,9 +807,44 @@ def validate_dedup_manifest(
     return aliases
 
 
+def _validate_phase_changelog_entry(record: dict[str, Any], path: str) -> str:
+    """A diagnosis, goal, or verification note on one skill."""
+    required_string(record, "id", path)
+    skill = required_string(record, "skill", path)
+    phase = required_string(record, "phase", path)
+    if phase not in {"diagnosis", "goal", "verification"}:
+        fail(f"{path}.phase", "must be diagnosis, goal, or verification")
+    required_string(record, "run_id", path)
+    required_string(record, "finding_id", path)
+    changed_on = required_string(record, "date", path)
+    try:
+        parsed_date = date.fromisoformat(changed_on)
+    except ValueError:
+        fail(f"{path}.date", "must be a valid ISO date")
+    if parsed_date.isoformat() != changed_on:
+        fail(f"{path}.date", "must use YYYY-MM-DD")
+    summary = required_string(record, "summary", path)
+    if len(summary) > 500:
+        fail(f"{path}.summary", "must be at most 500 characters")
+    operation = record.get("operation")
+    if operation is not None and operation not in {*KNOWN_OPS, "no_change"}:
+        fail(f"{path}.operation", "must be an operation or no_change")
+    op_index = record.get("op_index")
+    if op_index is not None and (
+        not isinstance(op_index, int) or isinstance(op_index, bool) or op_index < 1
+    ):
+        fail(f"{path}.op_index", "must be a positive integer")
+    if phase == "verification":
+        if record.get("status") not in {"pass", "fail"}:
+            fail(f"{path}.status", "must be pass or fail")
+    return skill
+
+
 def _validate_changelog_entry(record: Any, path: str) -> str:
     if not isinstance(record, dict):
         fail(path, "must be an object")
+    if record.get("phase") in {"diagnosis", "goal", "verification"}:
+        return _validate_phase_changelog_entry(record, path)
     required_string(record, "id", path)
     skill = required_string(record, "skill", path)
     operation = required_string(record, "operation", path)
@@ -788,19 +1062,11 @@ def validate_metadata(path: Path, skill_names: set[str] | None = None) -> dict[s
         if name in dependencies:
             fail(f"{item_path}.dependencies", "must not contain the skill itself")
         dependencies_by_skill[name] = dependencies
-        changelog = row.get("changelog", [])
-        if not isinstance(changelog, list):
-            fail(f"{item_path}.changelog", "must be a list")
-        change_ids: set[str] = set()
-        for change_index, change in enumerate(changelog):
-            change_path = f"{item_path}.changelog[{change_index}]"
-            changed_skill = _validate_changelog_entry(change, change_path)
-            if changed_skill != name:
-                fail(f"{change_path}.skill", f"must equal {name!r}")
-            change_id = str(change["id"])
-            if change_id in change_ids:
-                fail(f"{change_path}.id", "duplicates another changelog entry")
-            change_ids.add(change_id)
+        if "changelog" in row:
+            fail(
+                f"{item_path}.changelog",
+                "belongs in target/skill_changelogs/<skill>.md",
+            )
         sources = row.get("sources", [])
         if not isinstance(sources, list):
             fail(f"{item_path}.sources", "must be a list")
@@ -1219,11 +1485,11 @@ def validate_verification_input(path: Path) -> dict[str, Any]:
         fail("$.scoring.pass_threshold", "must be a number above 0 and at most 1")
     expected_strategy = {
         "step_aggregation": "arithmetic_mean",
-        "skill_aggregation": "weighted_mean_applicable",
+        "skill_aggregation": "penalty_sum",
         "overall_aggregation": "minimum",
-        "required_assertion_policy": "all_must_pass",
-        "required_step_policy": "all_applicable_must_pass",
-        "replay_policy": "hard_gate",
+        "required_assertion_policy": "soft_penalty",
+        "required_step_policy": "score_threshold",
+        "replay_policy": "soft_penalty",
     }
     for field, expected_value in expected_strategy.items():
         if scoring.get(field) != expected_value:
@@ -1235,22 +1501,24 @@ def validate_verification_input(path: Path) -> dict[str, Any]:
         or not 0 <= round_digits <= 12
     ):
         fail("$.scoring.round_digits", "must be an integer from 0 to 12")
+    _validate_soft_penalties(
+        scoring.get("soft_penalties"),
+        "$.scoring.soft_penalties",
+        float(threshold),
+    )
     expected_formulas = {
         "step_score": "sum(assertion_scores) / count(assertion_scores)",
         "skill_score": (
-            "sum(applicable_step_weight * step_score) / "
-            "sum(applicable_step_weight)"
+            "max(0, 1 - claim_penalties - "
+            "min(quality_penalties, quality_budget) - replay_penalty)"
         ),
         "overall_score": "min(skill_scores)",
-        "step_status": (
-            "pass iff step_score >= pass_threshold and every assertion passes"
-        ),
-        "skill_status": (
-            "pass iff skill_score >= pass_threshold and every applicable step passes"
-        ),
-        "overall_status": (
-            "pass iff every skill passes and replay is not fail"
-        ),
+        "claim_share": "claim_budget / max(1, claimed_sections + claimed_directories)",
+        "quality_share": "quality_budget / 4",
+        "replay_penalty": "(1 - pass_threshold) / replay_share",
+        "step_status": "pass iff step_score >= pass_threshold",
+        "skill_status": "pass iff skill_score >= pass_threshold",
+        "overall_status": "pass iff overall_score >= pass_threshold",
     }
     if scoring.get("formulas") != expected_formulas:
         fail("$.scoring.formulas", "does not match scoring strategy version 1")
@@ -1556,7 +1824,6 @@ def validate_verification(
     input_checks = (input_data or {}).get("checks") or {}
     step_skills: set[str] = set()
     skill_scores: dict[str, float] = {}
-    skill_required_steps_pass: dict[str, bool] = {}
     skill_applicable_weights: dict[str, float] = {}
     skill_failed_steps: dict[str, list[str]] = {}
     for group_index, group in enumerate(step_groups):
@@ -1608,7 +1875,6 @@ def validate_verification(
         steps = required_list(group, "steps", group_path)
         step_ids: set[str] = set()
         weighted_scores: list[tuple[float, float]] = []
-        all_applicable_steps_pass = True
         failed_steps: list[str] = []
         for step_index, step in enumerate(steps):
             step_path = f"{group_path}.steps[{step_index}]"
@@ -1700,7 +1966,6 @@ def validate_verification(
             }
             result_ids: set[str] = set()
             assertion_scores: list[float] = []
-            all_assertions_pass = True
             for result_index, result in enumerate(assertion_results):
                 result_path = (
                     f"{step_path}.assertion_results[{result_index}]"
@@ -1729,11 +1994,6 @@ def validate_verification(
                         f"{result_path}.score",
                         "must be a number from 0 to 1",
                     )
-                if float(assertion_score) not in ASSERTION_SCORE_ANCHORS:
-                    fail(
-                        f"{result_path}.score",
-                        "must use a configured assertion score anchor",
-                    )
                 if (
                     verification_status(
                         float(assertion_score), pass_threshold
@@ -1757,9 +2017,6 @@ def validate_verification(
                         "must contain non-empty strings",
                     )
                 assertion_scores.append(float(assertion_score))
-                all_assertions_pass = (
-                    all_assertions_pass and assertion_status == "pass"
-                )
             if input_check is not None and result_ids != set(expected_assertions):
                 fail(
                     f"{step_path}.assertion_results",
@@ -1778,22 +2035,16 @@ def validate_verification(
                     f"{step_path}.score",
                     "must equal the mean assertion score",
                 )
-            expected_step_status = (
-                "pass"
-                if verification_status(float(score), pass_threshold) == "pass"
-                and all_assertions_pass
-                else "fail"
+            expected_step_status = verification_status(
+                float(score), pass_threshold
             )
             if status != expected_step_status:
                 fail(
                     step_path,
-                    "status must reflect score threshold and all assertion gates",
+                    "status must reflect the score threshold",
                 )
             weight = float(step_weights[step_id])
             weighted_scores.append((float(score), weight))
-            all_applicable_steps_pass = (
-                all_applicable_steps_pass and status == "pass"
-            )
             if status == "fail":
                 failed_steps.append(step_id)
         if step_ids != {
@@ -1801,13 +2052,11 @@ def validate_verification(
             for index in range(1, VERIFICATION_STEP_COUNT + 1)
         }:
             fail(f"{group_path}.steps", "must contain exactly step1 through step8")
-        try:
-            skill_scores[group_skill] = round(
-                verification_skill_score(weighted_scores), round_digits
-            )
-        except ContractError as error:
-            fail(group_path, str(error))
-        skill_required_steps_pass[group_skill] = all_applicable_steps_pass
+        if not weighted_scores and any(
+            isinstance(step, dict) and step.get("applicable")
+            for step in steps
+        ):
+            fail(group_path, "cannot score a skill without applicable weight")
         skill_applicable_weights[group_skill] = sum(
             weight for _, weight in weighted_scores
         )
@@ -1845,29 +2094,11 @@ def validate_verification(
         or not 0 <= float(overall_score) <= 1
     ):
         fail("$.feedback.overall_score", "must be a number from 0 to 1")
-    expected_overall = verification_overall_score(
-        list(skill_scores.values())
-    )
-    if abs(float(overall_score) - expected_overall) > 1e-6:
-        fail(
-            "$.feedback.overall_score",
-            "must equal the minimum per-skill score",
-        )
     bottlenecks = required_list(feedback, "bottleneck_skills", "$.feedback")
     if not all(isinstance(value, str) and value for value in bottlenecks):
         fail(
             "$.feedback.bottleneck_skills",
             "must contain non-empty skill names",
-        )
-    expected_bottlenecks = sorted(
-        name
-        for name, score in skill_scores.items()
-        if abs(score - expected_overall) <= 1e-6
-    )
-    if sorted(bottlenecks) != expected_bottlenecks:
-        fail(
-            "$.feedback.bottleneck_skills",
-            "must name every skill at the minimum score",
         )
     required_string(feedback, "overall_feedback", "$.feedback")
     replay = feedback.get("replay")
@@ -1887,14 +2118,6 @@ def validate_verification(
             fail("$.feedback.replay.before", "must be an object when available")
         if not isinstance(replay.get("after"), dict):
             fail("$.feedback.replay.after", "must be an object when available")
-        if (
-            replay_status == "fail"
-            and feedback.get("overall_status") != "fail"
-        ):
-            fail(
-                "$.feedback.overall_status",
-                "must be fail when behavioral replay fails",
-            )
         if replay_kind == "paired_skill_eval":
             after = replay.get("after") or {}
             held_out_cases = after.get("held_out_cases")
@@ -1952,12 +2175,71 @@ def validate_verification(
             or not 0 <= float(score) <= 1
         ):
             fail(f"{item_path}.score", "must be a number from 0 to 1")
-        expected_score = skill_scores.get(name)
-        if expected_score is None or abs(float(score) - expected_score) > 1e-6:
-            fail(
-                f"{item_path}.score",
-                "must equal this skill's weighted step score",
+        raw_penalties = row.get("penalties", [])
+        if not isinstance(raw_penalties, list):
+            fail(f"{item_path}.penalties", "must be a list")
+        priced: list[dict[str, Any]] = []
+        for penalty_index, penalty in enumerate(raw_penalties):
+            penalty_path = f"{item_path}.penalties[{penalty_index}]"
+            if not isinstance(penalty, dict):
+                fail(penalty_path, "must be an object")
+            if set(penalty) != {"id", "target"}:
+                fail(penalty_path, "must contain only id and target")
+            penalty_id = required_string(penalty, "id", penalty_path)
+            target = required_string(penalty, "target", penalty_path)
+            if penalty_id not in PENALTY_IDS:
+                fail(f"{penalty_path}.id", "is not a configured penalty")
+            priced.append({"id": penalty_id, "target": target})
+        if scoring.get("soft_penalties"):
+            replay_failed = replay.get("status") == "fail"
+            listed_replay = any(
+                item["id"] == REPLAY_PENALTY_ID for item in priced
             )
+            if replay_failed and not listed_replay:
+                fail(
+                    item_path,
+                    "replay status fail must include a replay_fail penalty",
+                )
+            if listed_replay and not replay_failed:
+                fail(item_path, "replay_fail requires replay status fail")
+            assertion_below_one = False
+            for group in step_groups:
+                if not isinstance(group, dict) or group.get("skill") != name:
+                    continue
+                for step in group.get("steps") or []:
+                    if not isinstance(step, dict) or not step.get("applicable"):
+                        continue
+                    for assertion in step.get("assertion_results") or []:
+                        assertion_score = (
+                            assertion.get("score")
+                            if isinstance(assertion, dict)
+                            else None
+                        )
+                        if (
+                            isinstance(assertion_score, (int, float))
+                            and not isinstance(assertion_score, bool)
+                            and float(assertion_score) < 1
+                        ):
+                            assertion_below_one = True
+            if assertion_below_one and not priced:
+                fail(
+                    item_path,
+                    "an assertion below 1 must be listed in penalties",
+                )
+            try:
+                expected_score = skill_decision_score(
+                    claim_count(input_skills.get(name) or {}),
+                    priced,
+                    scoring,
+                )
+            except ContractError as error:
+                fail(item_path, str(error))
+            if abs(float(score) - expected_score) > 1e-6:
+                fail(
+                    f"{item_path}.score",
+                    "must equal 1 minus the priced penalties",
+                )
+        skill_scores[name] = float(score)
         applicable_weight = row.get("applicable_weight")
         if (
             not isinstance(applicable_weight, (int, float))
@@ -1987,16 +2269,11 @@ def validate_verification(
                 f"{item_path}.failed_required_steps",
                 "must list every failed applicable step",
             )
-        expected_status = (
-            "pass"
-            if verification_status(float(score), pass_threshold) == "pass"
-            and skill_required_steps_pass.get(name) is True
-            else "fail"
-        )
+        expected_status = verification_status(float(score), pass_threshold)
         if row.get("status") != expected_status:
             fail(
                 item_path,
-                "status must reflect score threshold and all applicable step gates",
+                "status must reflect the score threshold",
             )
         required_string(row, "feedback", item_path)
         if row.get("action") is not None:
@@ -2008,16 +2285,30 @@ def validate_verification(
             fail(f"{item_path}.retries_used", "must be 0 while retries are disabled")
     if contract_skills is not None and names != contract_skills:
         fail("$.feedback.per_skill", "does not match the verification skill set")
-    expected_overall_status = (
-        "pass"
-        if all(row.get("status") == "pass" for row in rows)
-        and replay_status != "fail"
-        else "fail"
+    if skill_scores:
+        expected_overall = verification_overall_score(list(skill_scores.values()))
+        if abs(float(overall_score) - expected_overall) > 1e-6:
+            fail(
+                "$.feedback.overall_score",
+                "must equal the minimum per-skill score",
+            )
+        expected_bottlenecks = sorted(
+            skill_name
+            for skill_name, skill_score in skill_scores.items()
+            if abs(skill_score - expected_overall) <= 1e-6
+        )
+        if sorted(bottlenecks) != expected_bottlenecks:
+            fail(
+                "$.feedback.bottleneck_skills",
+                "must name every skill at the minimum score",
+            )
+    expected_overall_status = verification_status(
+        float(overall_score), pass_threshold
     )
     if feedback.get("overall_status") != expected_overall_status:
         fail(
             "$.feedback.overall_status",
-            "must reflect every per-skill gate and the replay hard gate",
+            "must reflect the score threshold",
         )
     ood = required_list(feedback, "ood", "$.feedback")
     for index, item in enumerate(ood):

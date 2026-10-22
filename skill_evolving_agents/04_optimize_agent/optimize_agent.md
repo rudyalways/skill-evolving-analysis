@@ -8,11 +8,11 @@ The default host-CLI pipeline creates a temporary allowlisted session view conta
 
 ### Input
 
-The selected `workspace/runs/<run_id>` is available as `workspace`: through a temporary symlink for a host CLI or a bind mount for Docker. Input includes one authoritative op goal at `workspace/run/<cluster>/ops/<op>/evolve-goal.json`, its active compatibility copy at `workspace/run/evolve-goal.json`, and the skills that op lists under `workspace/target/to_be_improved_skills`. The active file contains exactly one `action.ops` item. When several findings update the same skill, the runner has already merged the top edits into that one item. `bundle.selected` names those source edits. Apply every section, directory, and removal goal in this pass. Do not start another session per source edit. The section list comes from the session package.
+The selected `workspace/runs/<run_id>` stays on the runner. This session's `workspace/` is a temporary directory containing one target skill directory and that skill's changelog beside it, `<skill>.md`. Explore those two. Edit the skill directory. Do not edit the changelog. Do not read or write metadata; the runner reads metadata and writes it back. The session block contains the one operation. Apply every section, directory, and removal goal in this pass.
 
 ### Output
 
-Output is the edited skills under worker-local `workspace/target/to_be_improved_skills`. Before update, delete, merge, or split, copy every source skill to `workspace/target/raw_skills`. Create writes that skill's labels into `workspace/target/to_be_improved_skills_metadata/metadata.json`. Merge writes the `into.skill` result and removes source names other than that result. Split writes every `into[].skill` result and removes the source unless one result keeps its name. Delete removes its named skill. An out-of-distribution gap stays on `newly_detected_skill_capabilites_missing` in `workspace/run/diagnosis.json`. The runner executes operations with disjoint affected skill names in parallel copies; conflicting operations run in later batches. A single reducer merges validated skills, snapshots, metadata, verification, statuses, and logs into the authoritative run.
+Output is the edited skill directory in that same `workspace/`. The runner copies it back to `target/to_be_improved_skills` and leaves the changelog file behind. The runner already copied an existing source to `target/raw_skills/<skill>`. Create does not write metadata; the runner does. Merge writes the `into.skill` directory and the runner removes source names other than that result. Split writes every `into[].skill` directory and the runner removes the source unless one result keeps its name. Delete removes its skill directory from `workspace/`.
 
 ### Stop condition
 

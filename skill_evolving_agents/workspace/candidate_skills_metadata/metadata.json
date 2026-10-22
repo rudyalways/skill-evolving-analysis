@@ -1,0 +1,103 @@
+{
+  "skills_metadata": [
+    {
+      "skill": "audit-project-ui",
+      "description": "Covers a project web-UI audit: classify the shared layout boundary, review first-viewport hierarchy, density, navigation, and responsive behavior against a failure-mode checklist, then verify the rendered page.",
+      "skill_types": [
+        {
+          "type": "job/verification/audit",
+          "weight": 0.95
+        },
+        {
+          "type": "domain/frontend",
+          "weight": 0.9
+        },
+        {
+          "type": "form/technique/checklist",
+          "weight": 0.82
+        },
+        {
+          "type": "job/verification/browser-check",
+          "weight": 0.78
+        },
+        {
+          "type": "domain/design/typography",
+          "weight": 0.6
+        }
+      ],
+      "unmatched_skill_types": []
+    },
+    {
+      "skill": "retry-after-information-gain",
+      "description": "Decide whether another attempt is justified from the last recorded action, observed state, and result.",
+      "skill_types": [
+        {
+          "type": "job/methodology",
+          "weight": 1.0
+        },
+        {
+          "type": "job/methodology/workflow",
+          "weight": 0.8
+        },
+        {
+          "type": "form/technique/loop",
+          "weight": 0.7
+        }
+      ],
+      "unmatched_skill_types": [],
+      "lifecycle": {
+        "status": "evaluated",
+        "origin_run_id": "run-codex-01a135-30turns-2026-10-22T23-22-sig-d11f532c46418581aa57cdf4-op-1",
+        "origin_finding_id": "sig-d11f532c46418581aa57cdf4",
+        "origin_session_ids": [
+          "01a13505-8693-7372-8ff2-2acdcfd7f457"
+        ],
+        "distinct_sessions": 1,
+        "confidence": 0.9,
+        "evidence_records": 1,
+        "distinct_windows": 1,
+        "method_fingerprint": "method-v1:cf7966716cbe804ed979fd1c",
+        "methodology_value": 0.355668,
+        "evaluated_at": "2026-10-22T15:30:24.456222+00:00",
+        "evaluation_kind": "structural",
+        "content_sha256": "36b16498e55498744a8ab6fc09280f32d2815339636bc288e0823ea56093ec37"
+      }
+    },
+    {
+      "skill": "unchanged-retry-stop",
+      "description": "Stop a retry loop when the action, observed state, and result are unchanged. Retry only after a relevant state change, a meaningful search or scope refinement, or a bounded transient failure; otherwise change the action or acquire new evidence.",
+      "skill_types": [
+        {
+          "type": "form/technique/loop",
+          "weight": 1.0
+        },
+        {
+          "type": "job/methodology/workflow",
+          "weight": 0.7
+        },
+        {
+          "type": "form/pattern/constraint",
+          "weight": 0.6
+        }
+      ],
+      "unmatched_skill_types": [],
+      "lifecycle": {
+        "status": "evaluated",
+        "origin_run_id": "run-codex-01a135-30turns-2026-10-22T23-22-sig-625a365661e7ae0025430ca7-op-1",
+        "origin_finding_id": "sig-625a365661e7ae0025430ca7",
+        "origin_session_ids": [
+          "01a13505-8693-7372-8ff2-2acdcfd7f457"
+        ],
+        "distinct_sessions": 1,
+        "confidence": 0.9,
+        "evidence_records": 1,
+        "distinct_windows": 1,
+        "method_fingerprint": "method-v1:e25374de7772344b5a141094",
+        "methodology_value": 0.355668,
+        "evaluated_at": "2026-10-22T15:30:10.193268+00:00",
+        "evaluation_kind": "structural",
+        "content_sha256": "004e2d63b411315650702095ee2707c4d8aaecd6aff5329452faed10317b2109"
+      }
+    }
+  ]
+}

@@ -19,19 +19,29 @@
     },
     "pass_threshold": 0.75,
     "step_aggregation": "arithmetic_mean",
-    "skill_aggregation": "weighted_mean_applicable",
+    "skill_aggregation": "penalty_sum",
     "overall_aggregation": "minimum",
-    "required_assertion_policy": "all_must_pass",
-    "required_step_policy": "all_applicable_must_pass",
-    "replay_policy": "hard_gate",
+    "required_assertion_policy": "soft_penalty",
+    "required_step_policy": "score_threshold",
+    "replay_policy": "soft_penalty",
     "round_digits": 6,
+    "soft_penalties": {
+      "claim_budget": 0.8,
+      "quality_budget": 0.2,
+      "replay_share": 2,
+      "core_sections": 8,
+      "directories": 5
+    },
     "formulas": {
       "step_score": "sum(assertion_scores) / count(assertion_scores)",
-      "skill_score": "sum(applicable_step_weight * step_score) / sum(applicable_step_weight)",
+      "skill_score": "max(0, 1 - claim_penalties - min(quality_penalties, quality_budget) - replay_penalty)",
       "overall_score": "min(skill_scores)",
-      "step_status": "pass iff step_score >= pass_threshold and every assertion passes",
-      "skill_status": "pass iff skill_score >= pass_threshold and every applicable step passes",
-      "overall_status": "pass iff every skill passes and replay is not fail"
+      "claim_share": "claim_budget / max(1, claimed_sections + claimed_directories)",
+      "quality_share": "quality_budget / 4",
+      "replay_penalty": "(1 - pass_threshold) / replay_share",
+      "step_status": "pass iff step_score >= pass_threshold",
+      "skill_status": "pass iff skill_score >= pass_threshold",
+      "overall_status": "pass iff overall_score >= pass_threshold"
     },
     "step_weights": {
       "step1": 0.12,

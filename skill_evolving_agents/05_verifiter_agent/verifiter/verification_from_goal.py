@@ -189,6 +189,7 @@ def build(
             "score": 0.0,
             "applicable_weight": applicable_weight,
             "failed_required_steps": [],
+            "penalties": [],
             "feedback": "<text>",
             "retries_used": 0,
             "action": None,

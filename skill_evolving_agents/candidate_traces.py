@@ -202,6 +202,7 @@ def create_run(
         for relative in (
             "target/to_be_improved_skills",
             "target/to_be_improved_skills_metadata",
+            "target/skill_changelogs",
         ):
             source_dir = seed / relative
             if source_dir.is_dir():
@@ -222,6 +223,42 @@ def create_run(
                         dirs_exist_ok=True,
                     )
                     copied_skills.append(skill_dir.name)
+        changelog_dir = skills_pool.parent / "candidate_skills_changelog"
+        if changelog_dir.is_dir() and copied_skills:
+            destination_dir = workspace / "target/skill_changelogs"
+            destination_dir.mkdir(parents=True, exist_ok=True)
+            for name in copied_skills:
+                source_log = changelog_dir / f"{name}.md"
+                if source_log.is_file():
+                    shutil.copy2(source_log, destination_dir / source_log.name)
+        metadata_file = (
+            skills_pool.parent / "candidate_skills_metadata/metadata.json"
+        )
+        if metadata_file.is_file() and copied_skills:
+            document = json.loads(metadata_file.read_text())
+            kept = [
+                record
+                for record in document.get("skills_metadata") or []
+                if isinstance(record, dict) and record.get("skill") in copied_skills
+            ]
+            for record in kept:
+                history = record.pop("changelog", None)
+                skill = record.get("skill")
+                if isinstance(skill, str) and isinstance(history, list):
+                    run_pipeline.append_changelog_lines(
+                        workspace / "target/skill_changelogs",
+                        skill,
+                        run_pipeline.lines_from_history(history),
+                    )
+            metadata_destination = (
+                workspace / "target/to_be_improved_skills_metadata/metadata.json"
+            )
+            metadata_destination.write_text(
+                json.dumps(
+                    {"skills_metadata": kept}, indent=2, ensure_ascii=False
+                )
+                + "\n"
+            )
     destination = workspace / "traces/raw" / source / str(row["file"])
     shutil.copy2(trace_source, destination)
     selection = {

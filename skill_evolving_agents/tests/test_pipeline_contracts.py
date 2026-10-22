@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import importlib.util
 import json
+import shutil
 import sqlite3
 import subprocess
 import sys
@@ -451,10 +452,23 @@ def write_operation_bundle(
             for assertion in step["assertion_results"]:
                 assertion["status"] = "fail"
                 assertion["score"] = 0.0
+        skill_row = next(
+            row
+            for row in verification_input["skills"]
+            if row["skill"] == skill
+        )
+        claims = contracts.claim_count(skill_row)
+        penalties = contracts.penalties_under_threshold(
+            claims, verification_input["scoring"]
+        )
+        score = contracts.skill_decision_score(
+            claims, penalties, verification_input["scoring"]
+        )
         verification["feedback"]["overall_status"] = "fail"
-        verification["feedback"]["overall_score"] = 0.0
+        verification["feedback"]["overall_score"] = score
         verification["feedback"]["per_skill"][0]["status"] = "fail"
-        verification["feedback"]["per_skill"][0]["score"] = 0.0
+        verification["feedback"]["per_skill"][0]["score"] = score
+        verification["feedback"]["per_skill"][0]["penalties"] = penalties
         verification["feedback"]["per_skill"][0][
             "failed_required_steps"
         ] = failed_steps
@@ -1773,6 +1787,54 @@ class ContractTests(unittest.TestCase):
             Path(runner.SESSION_ROOT).resolve().is_relative_to(runner.REPO.resolve())
         )
 
+    def test_optimize_prompt_includes_each_skill_changelog(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            skill = workspace / "target/to_be_improved_skills/audit-project-ui"
+            skill.mkdir(parents=True)
+            (skill / "SKILL.md").write_text("# Audit\n")
+            other = workspace / "target/to_be_improved_skills/other-skill"
+            other.mkdir()
+            (other / "SKILL.md").write_text("# Other\n")
+            logs = workspace / "target/skill_changelogs"
+            logs.mkdir()
+            (logs / "audit-project-ui.md").write_text(
+                "# audit-project-ui\n- 2026-10-22 update sig-old/1 | step 1\n"
+            )
+            (logs / "other-skill.md").write_text(
+                "# other-skill\n- 2026-10-22 update sig-old/1 | ignored\n"
+            )
+            metadata = workspace / "target/to_be_improved_skills_metadata"
+            metadata.mkdir()
+            (metadata / "metadata.json").write_text("{}\n")
+            op = {"op": "update", "skill": "audit-project-ui"}
+            prepared = runner.prepare_optimize_input(workspace, op)
+            self.assertEqual(
+                (prepared / "audit-project-ui/SKILL.md").read_text(),
+                "# Audit\n",
+            )
+            self.assertIn("step 1", (prepared / "audit-project-ui.md").read_text())
+            self.assertFalse((prepared / "other-skill").exists())
+            self.assertFalse((prepared / "metadata.json").exists())
+            self.assertFalse((prepared / "target").exists())
+            context = runner.optimize_session_context("sig-1", 1, op, "")
+            self.assertIn("`audit-project-ui/` and `audit-project-ui.md`", context)
+            self.assertIn("Do not read or write metadata.", context)
+            self.assertNotIn("step 1", context)
+            self.assertNotIn("ignored", context)
+            prompt = runner.instruction("optimize", context)
+            self.assertIn("Explore that skill and its changelog.", prompt)
+            self.assertNotIn("Do not explore.", prompt)
+            runner.snapshot_optimize_sources(workspace, op)
+            self.assertEqual(
+                (workspace / "target/raw_skills/audit-project-ui/SKILL.md").read_text(),
+                "# Audit\n",
+            )
+            (prepared / "audit-project-ui/SKILL.md").write_text("# Edited\n")
+            runner.collect_optimize_input(workspace, op)
+            self.assertEqual((skill / "SKILL.md").read_text(), "# Edited\n")
+            self.assertTrue((other / "SKILL.md").is_file())
+
     def test_verifier_prompt_embeds_one_skill_input_and_output_json(self) -> None:
         root = AGENTS / "05_verifiter_agent/verifiter"
         verification_input = json.loads(
@@ -1829,13 +1891,19 @@ class ContractTests(unittest.TestCase):
         self.assertIn("<verification-output-json>", prompt)
         self.assertIn('"skill": "example-skill"', prompt)
         self.assertIn("Return only one JSON object", prompt)
-        self.assertIn("`## Overview`", prompt)
-        self.assertIn("`# Overview` does", prompt)
-        self.assertIn("heading-level miss", prompt)
-        self.assertIn("contains no angle brackets", prompt)
+        self.assertIn("loose regex", prompt)
+        self.assertIn("`# Overview` are the same name", prompt)
+        self.assertIn("all of the following are true", prompt)
         self.assertIn("Do not reimplement that digest", prompt)
-        self.assertIn("skill score above 0.75 still fails", prompt)
-        self.assertIn("Do not open the checker source", prompt)
+        self.assertIn("0.80 claim budget", prompt)
+        self.assertIn("0.05", prompt)
+        self.assertIn("shape charges stop at 0.20", prompt)
+        self.assertIn("Do not open the checker", prompt)
+        self.assertIn('{"id", "target"}', prompt)
+        self.assertIn("description: >", runner.OPTIMIZE_AVOIDANCE)
+        avoid = runner.instruction("optimize", runner.OPTIMIZE_AVOIDANCE)
+        self.assertIn("frontmatter description contains angle brackets", avoid)
+        self.assertIn("scored 0.99 and still failed", avoid)
 
     def test_verifier_response_parser_reads_json_from_event_stream(self) -> None:
         response = {
@@ -2973,7 +3041,7 @@ class ContractTests(unittest.TestCase):
                 rows[0]["lifecycle"]["seeded_from"],
                 "run-codex-example-40turns",
             )
-            self.assertEqual(rows[0]["changelog"], [])
+            self.assertNotIn("changelog", rows[0])
 
     def test_operation_changelog_is_hashed_and_added_to_metadata(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -2995,7 +3063,6 @@ class ContractTests(unittest.TestCase):
                         {
                             "skill": "example",
                             "skill_types": [],
-                            "changelog": [],
                         }
                     ]
                 },
@@ -3023,7 +3090,11 @@ class ContractTests(unittest.TestCase):
                 change["before_sha256"], change["after_sha256"]
             )
             row = json.loads(metadata.read_text())["skills_metadata"][0]
-            self.assertEqual(row["changelog"], [change])
+            self.assertNotIn("changelog", row)
+            changelog_text = (
+                workspace / "target/skill_changelogs/example.md"
+            ).read_text()
+            self.assertIn("update finding-1/1 | workflow", changelog_text)
             contracts.validate_metadata(metadata, {"example"})
             template = json.loads(
                 runner.VERIFICATION_INPUT_TEMPLATE.read_text()
@@ -3686,13 +3757,50 @@ class ContractTests(unittest.TestCase):
             contracts.validate_verification(path, judged=False)
             value["feedback"]["replay"]["status"] = "fail"
             write_json(path, value)
-            with self.assertRaises(contracts.ContractError):
-                contracts.validate_verification(path, judged=False)
+            contracts.validate_verification(path, judged=False)
             value["feedback"]["overall_status"] = "fail"
             write_json(path, value)
-            contracts.validate_verification(path, judged=False)
+            with self.assertRaises(contracts.ContractError):
+                contracts.validate_verification(path, judged=False)
 
-    def test_failed_assertion_cannot_be_hidden_by_high_weighted_score(self) -> None:
+    def test_decision_score_prices_each_defect_once(self) -> None:
+        scoring = json.loads(
+            (VERIFIER / "verification-input.template.json").read_text()
+        )["scoring"]
+        price = contracts.skill_decision_score
+        self.assertEqual(price(8, [], scoring), 1.0)
+        self.assertEqual(
+            price(8, [{"id": "tighter_wording", "target": "when_to_use"}], scoring),
+            0.95,
+        )
+        self.assertEqual(
+            price(8, [{"id": "missing_section", "target": "workflow"}], scoring),
+            0.9,
+        )
+        self.assertEqual(
+            price(1, [{"id": "missing_section", "target": "workflow"}], scoring),
+            0.2,
+        )
+        near_miss = price(
+            9, [{"id": "missing_near_miss_eval", "target": "evals"}], scoring
+        )
+        self.assertEqual(near_miss, round(1 - (0.8 / 9) / 2, 6))
+        self.assertGreaterEqual(near_miss, 0.75)
+        self.assertEqual(
+            price(4, [{"id": "replay_fail", "target": "replay"}], scoring),
+            0.875,
+        )
+        with self.assertRaises(contracts.ContractError):
+            price(
+                2,
+                [
+                    {"id": "missing_section", "target": "workflow"},
+                    {"id": "missing_section", "target": "workflow"},
+                ],
+                scoring,
+            )
+
+    def test_soft_penalty_above_threshold_passes(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             workspace = Path(directory)
             verification_input = runner.materialize_verification_input(
@@ -3727,24 +3835,41 @@ class ContractTests(unittest.TestCase):
             value["verification_input"]["sha256"] = hashlib.sha256(
                 verification_input.read_bytes()
             ).hexdigest()
-            first_step = value["verification_steps"][0]["steps"][0]
-            first_step["assertion_results"][0]["score"] = 0.5
-            first_step["assertion_results"][0]["status"] = "fail"
-            first_step["score"] = 0.75
-            first_step["status"] = "fail"
-            value["feedback"]["per_skill"][0]["score"] = 0.97
-            value["feedback"]["per_skill"][0]["status"] = "fail"
-            value["feedback"]["per_skill"][0]["failed_required_steps"] = [
-                "step1"
+            loaded = json.loads(verification_input.read_text())
+            scoring = loaded["scoring"]
+            claims = contracts.claim_count(loaded["skills"][0])
+            self.assertEqual(claims, 1)
+            shape = [
+                {"id": "heading_level", "target": "workflow"},
+                {"id": "unclaimed_heading", "target": "workflow"},
+                {"id": "tighter_wording", "target": "when_to_use"},
+                {"id": "description_shape", "target": "description"},
+                {"id": "heading_level", "target": "constraints"},
             ]
-            value["feedback"]["overall_score"] = 0.97
-            value["feedback"]["overall_status"] = "fail"
+            skill_score = contracts.skill_decision_score(claims, shape, scoring)
+            self.assertEqual(skill_score, 0.8)
+            value["feedback"]["per_skill"][0]["penalties"] = shape
+            value["feedback"]["per_skill"][0]["score"] = skill_score
+            value["feedback"]["per_skill"][0]["status"] = "pass"
+            value["feedback"]["overall_score"] = skill_score
+            value["feedback"]["overall_status"] = "pass"
             path = workspace / "run/verification.json"
             write_json(path, value)
             contracts.validate_verification(path, judged=False)
-            value["feedback"]["action"] = {"op": "fail", "to": None}
+            missed = [{"id": "missing_section", "target": "workflow"}]
+            missed_score = contracts.skill_decision_score(claims, missed, scoring)
+            self.assertEqual(missed_score, 0.2)
+            value["feedback"]["per_skill"][0]["penalties"] = missed
+            value["feedback"]["per_skill"][0]["score"] = missed_score
+            value["feedback"]["per_skill"][0]["status"] = "fail"
+            value["feedback"]["overall_score"] = missed_score
+            value["feedback"]["overall_status"] = "fail"
             write_json(path, value)
-            contracts.validate_verification(path, judged=True)
+            contracts.validate_verification(path, judged=False)
+            value["feedback"]["overall_status"] = "pass"
+            write_json(path, value)
+            with self.assertRaises(contracts.ContractError):
+                contracts.validate_verification(path, judged=False)
 
     def test_verification_builder_clears_actions(self) -> None:
         template = json.loads(
@@ -5900,6 +6025,7 @@ class MockedPipelineTest(unittest.TestCase):
                 patch.object(runner, "select_backend", return_value="cursor"),
             ):
                 runner.execute(args)
+            workspace = root / "workspace/runs" / args.run_id
             self.assertTrue(
                 (workspace / "run/cut/ops/1/evolve-goal.json").is_file()
             )
@@ -6015,6 +6141,205 @@ class MockedPipelineTest(unittest.TestCase):
                 (workspace / "run/trace-selection.json").read_text()
             )
             self.assertEqual(selection["candidate_skills"], ["example"])
+
+    def test_skill_changelog_records_phases_and_copies_back(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory) / "run-codex-example@2026-10-22T23:22"
+            skill = workspace / "target/to_be_improved_skills/example"
+            skill.mkdir(parents=True)
+            (skill / "SKILL.md").write_text("# Example\n")
+            scope = workspace / "run/sig-1"
+            (scope / "ops/1").mkdir(parents=True)
+            write_json(
+                scope / "diagnosis.json",
+                {
+                    "skill_capabilities_missing": [
+                        {"description": "Stop when the result is unchanged."}
+                    ],
+                    "newly_detected_skill_capabilites_missing": [],
+                },
+            )
+            write_json(
+                scope / "label-matching.json",
+                {"clusters": [{"cluster": "sig-1", "skills": [{"skill": "example"}]}]},
+            )
+            write_json(
+                scope / "evolve-goal.json",
+                {
+                    "goal": {"improve_skills": ["example"]},
+                    "action": {
+                        "disposition": "update",
+                        "reason": "The recalled skill owns the retry guard.",
+                        "ops": [
+                            {
+                                "op": "update",
+                                "skills": [{"skill": "example"}],
+                            }
+                        ],
+                    },
+                },
+            )
+            write_json(
+                scope / "ops/1/verification.json",
+                {
+                    "feedback": {
+                        "per_skill": [
+                            {
+                                "skill": "example",
+                                "status": "pass",
+                                "score": 0.95,
+                                "feedback": "The guard is present.",
+                            }
+                        ]
+                    }
+                },
+            )
+            (scope / "ops/1/verification.json").unlink()
+            metadata = (
+                workspace / "target/to_be_improved_skills_metadata/metadata.json"
+            )
+            write_json(
+                metadata,
+                {
+                    "skills_metadata": [
+                        {
+                            "skill": "example",
+                            "skill_types": [
+                                {"type": "job/methodology", "weight": 1.0}
+                            ],
+                        }
+                    ]
+                },
+            )
+            runner.sync_skill_changelogs(workspace)
+            write_json(
+                metadata,
+                {
+                    "skills_metadata": [
+                        {
+                            "skill": "example",
+                            "skill_types": [
+                                {"type": "job/methodology", "weight": 1.0}
+                            ],
+                            "changelog": [
+                                {
+                                    "id": "run:sig-1:1:example",
+                                    "skill": "example",
+                                    "operation": "update",
+                                    "run_id": "run-codex-example@2026-10-22T23:22",
+                                    "finding_id": "sig-1",
+                                    "op_index": 1,
+                                    "date": "2026-10-22",
+                                    "sections": ["workflow"],
+                                    "directories": [],
+                                    "before_sha256": "a" * 64,
+                                    "after_sha256": "b" * 64,
+                                    "status": "accepted",
+                                }
+                            ],
+                        }
+                    ]
+                },
+            )
+            write_json(
+                scope / "ops/1/verification.json",
+                {
+                    "feedback": {
+                        "per_skill": [
+                            {
+                                "skill": "example",
+                                "status": "pass",
+                                "score": 0.95,
+                                "feedback": "The guard is present.",
+                            }
+                        ]
+                    }
+                },
+            )
+            runner.sync_skill_changelogs(workspace)
+            log_path = workspace / "target/skill_changelogs/example.md"
+            lines = [
+                line
+                for line in log_path.read_text().splitlines()
+                if line.startswith("- ")
+            ]
+            self.assertEqual(
+                lines,
+                [
+                    "- 2026-10-22 diagnosis sig-1 | Stop when the result is unchanged.",
+                    "- 2026-10-22 goal update sig-1 | The recalled skill owns the retry guard.",
+                    "- 2026-10-22 update sig-1/1 | workflow",
+                    "- 2026-10-22 verify pass sig-1/1 | 0.95 The guard is present.",
+                ],
+            )
+            stored_row = json.loads(metadata.read_text())["skills_metadata"][0]
+            self.assertNotIn("changelog", stored_row)
+            before = log_path.read_text()
+            runner.sync_skill_changelogs(workspace)
+            self.assertEqual(log_path.read_text(), before)
+            contracts.validate_metadata(metadata, {"example"})
+            inventory = Path(directory) / "inventory"
+            runner.publish_inventory(workspace, inventory)
+            copied = inventory / "candidate_skills/example/SKILL.md"
+            self.assertEqual(copied.read_text(), "# Example\n")
+            stored = json.loads(
+                (
+                    inventory / "candidate_skills_metadata/metadata.json"
+                ).read_text()
+            )
+            self.assertNotIn("changelog", stored["skills_metadata"][0])
+            self.assertEqual(
+                (inventory / "candidate_skills_changelog/example.md").read_text(),
+                before,
+            )
+            shutil.rmtree(skill)
+            runner.update_candidate_pool(workspace, {"example"}, inventory)
+            self.assertFalse((inventory / "candidate_skills/example").exists())
+            removed = json.loads(
+                (
+                    inventory / "candidate_skills_metadata/metadata.json"
+                ).read_text()
+            )
+            self.assertEqual(removed["skills_metadata"], [])
+            self.assertEqual(
+                (inventory / "candidate_skills_changelog/example.md").read_text(),
+                before,
+            )
+            skill.mkdir()
+            (skill / "SKILL.md").write_text("# Example\n")
+            runner.update_candidate_pool(workspace, {"example"}, inventory)
+            pool = Path(directory) / "candidate_traces"
+            runs = Path(directory) / "runs"
+            pool.mkdir()
+            (pool / "trace.jsonl").write_text(
+                json.dumps(
+                    {
+                        "type": "session_meta",
+                        "payload": {"session_id": "abc123"},
+                    }
+                )
+                + "\n"
+            )
+            seeded = candidates.create_run(
+                "trace.jsonl",
+                pool,
+                runs,
+                candidate_skills=inventory / "candidate_skills",
+            )
+            restored = json.loads(
+                (
+                    seeded
+                    / "target/to_be_improved_skills_metadata/metadata.json"
+                ).read_text()
+            )
+            self.assertNotIn("changelog", restored["skills_metadata"][0])
+            self.assertTrue(
+                (
+                    seeded / "target/skill_changelogs/example.md"
+                ).read_text().startswith(
+                    "# example\n- 2026-10-22 diagnosis sig-1 |"
+                )
+            )
 
     def test_candidate_run_can_inherit_seed_skills(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

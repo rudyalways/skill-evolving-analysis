@@ -39,6 +39,9 @@ SESSION_ROOT = Path(
     os.environ.get("SKILL_EVOLVER_SESSION_ROOT", "")
     or Path(tempfile.gettempdir()) / "skill-evolver-sessions"
 )
+SKILL_CHANGELOG_DIR = Path("target/skill_changelogs")
+POOL_CHANGELOG_DIR = Path("candidate_skills_changelog")
+CHANGELOG_SUMMARY_LIMIT = 120
 DEFAULT_CLUSTER_WORKERS = 16
 DEFAULT_OP_WORKERS = 16
 RETRY_BUDGET = 0
@@ -395,15 +398,31 @@ def instruction(
     if stage == "preprocessing" and cluster:
         paths.append("01_preprocessing_agent/cluster/skill.md")
     skills = "\n".join(f"- {path}" for path in paths)
-    return f"""Fast decision. One pass. Do not explore.
-
-Read only AGENT.md and these skill files:
-{skills}
-
-Then read only the input paths named in the session block below. Write the required output and stop.
-Do not open the parent repository, other stages, logs, pipeline traces, raw vendor logs, or any cluster, finding, or skill this session does not name.
-Do not search. Do not reread a file. Run a command only when one of those skill files tells you to run that command.
-Follow the output schema and stop condition in the stage skill; do not substitute a generic decision object.
+    if stage == "optimize":
+        scope = (
+            "Fast decision. One pass.\n\n"
+            "Read AGENT.md and these skill files:\n"
+            f"{skills}\n\n"
+            "The working directory is `workspace/`. It contains the target skill "
+            "directory and that skill's changelog beside it, `<skill>.md`. "
+            "Explore that skill and its changelog. Edit the skill directory. "
+            "Do not edit the changelog. Do not read or write metadata; the runner does that.\n"
+            "Do not open the parent repository, other stages, logs, pipeline traces, "
+            "raw vendor logs, or any skill this session does not name.\n"
+        )
+    else:
+        scope = (
+            "Fast decision. One pass. Do not explore.\n\n"
+            "Read only AGENT.md and these skill files:\n"
+            f"{skills}\n\n"
+            "Then read only the input paths named in the session block below. "
+            "Write the required output and stop.\n"
+            "Do not open the parent repository, other stages, logs, pipeline traces, "
+            "raw vendor logs, or any cluster, finding, or skill this session does not name.\n"
+            "Do not search. Do not reread a file. Run a command only when one of those "
+            "skill files tells you to run that command.\n"
+        )
+    return f"""{scope}Follow the output schema and stop condition in the stage skill; do not substitute a generic decision object.
 Do not ask questions. Do not work on another stage, cluster, or op.
 
 Session:
@@ -437,8 +456,10 @@ def run_docker_session(
     log_path: Path | None = None,
     details: dict[str, object] | None = None,
     json_output: bool = False,
+    input_root: Path | None = None,
 ) -> None:
     del json_output
+    data_root = input_root or workspace
     safe_suffix = re.sub(r"[^a-zA-Z0-9_.-]+", "-", suffix).strip("-")
     name = f"skill-evolver-{stage}-{safe_suffix}"[:120]
     container_root = "/opt/skill-evolver/skill_evolving_agents"
@@ -464,7 +485,7 @@ def run_docker_session(
         "--name",
         name,
         "-v",
-        f"{workspace}:{CONTAINER_WORKSPACE}",
+        f"{data_root}:{CONTAINER_WORKSPACE}",
         "-e",
         f"SESSION_INSTRUCTION={prompt}",
         "-e",
@@ -484,7 +505,7 @@ def run_docker_session(
     )
     if details is not None:
         details["session_cwd"] = "docker"
-        details["session_add_dir"] = str(workspace)
+        details["session_add_dir"] = str(data_root)
     run(
         command,
         display=[
@@ -494,7 +515,7 @@ def run_docker_session(
             "--name",
             name,
             "-v",
-            f"{workspace}:{CONTAINER_WORKSPACE}",
+            f"{data_root}:{CONTAINER_WORKSPACE}",
             "[credentials and instruction omitted]",
             AGENT_RUNTIME_IMAGE,
         ],
@@ -669,16 +690,18 @@ def run_host_session(
     log_path: Path | None = None,
     details: dict[str, object] | None = None,
     json_output: bool = False,
+    input_root: Path | None = None,
 ) -> None:
-    view = make_session_view(stage, workspace, suffix)
-    allowed = [str(workspace)]
+    data_root = input_root or workspace
+    view = make_session_view(stage, data_root, suffix)
+    allowed = [str(data_root)]
     if details is not None:
         details["session_cwd"] = str(view)
-        details["session_add_dir"] = str(workspace)
+        details["session_add_dir"] = str(data_root)
 
     try:
         if backend == "cursor":
-            command = cursor_command(view, workspace, prompt, model)
+            command = cursor_command(view, data_root, prompt, model)
             run(
                 command,
                 cwd=view,
@@ -909,6 +932,7 @@ def run_session(
     metadata: dict[str, object] | None = None,
     *,
     json_output: bool = False,
+    input_root: Path | None = None,
 ) -> Path:
     details: dict[str, object] = dict(metadata or {})
     log_path = session_log_path(workspace, stage, suffix)
@@ -945,6 +969,7 @@ def run_session(
                         log_path,
                         details,
                         json_output,
+                        input_root,
                     )
                 else:
                     run_host_session(
@@ -957,6 +982,7 @@ def run_session(
                         log_path,
                         details,
                         json_output,
+                        input_root,
                     )
             finally:
                 details.update(session_counts(log_path))
@@ -1278,6 +1304,7 @@ def drop_created_skills(workspace: Path, names: list[str]) -> None:
     atomic_write_json(metadata, data)
     if improved.is_dir():
         current = {path.name for path in improved.iterdir() if path.is_dir()}
+        detach_skill_changelogs(workspace)
         pipeline_contracts.validate_metadata(metadata, current)
 
 
@@ -1646,7 +1673,10 @@ def materialize_op_goal(
 
 
 def materialize_created_skill_metadata(
-    workspace: Path, op: dict, cluster: str | None = None
+    workspace: Path,
+    op: dict,
+    cluster: str | None = None,
+    run_id: str | None = None,
 ) -> None:
     """Merge create labels into the canonical metadata shape deterministically."""
     if op.get("op") != "create":
@@ -1748,12 +1778,28 @@ def materialize_created_skill_metadata(
             "description": str(skill.get("description") or ""),
             "skill_types": labels,
             "unmatched_skill_types": [],
-            "changelog": copy.deepcopy(
-                existing.get("changelog") or []
-                if isinstance(existing, dict)
-                else []
-            ),
         }
+        carried = (
+            existing.get("changelog")
+            if isinstance(existing, dict)
+            else None
+        )
+        if isinstance(carried, list):
+            append_changelog_lines(
+                workspace / SKILL_CHANGELOG_DIR,
+                name,
+                lines_from_history(carried),
+            )
+        phase_lines = []
+        for entry in skill_phase_entries(workspace, name, run_id):
+            if entry.get("phase") == "verification":
+                continue
+            line = _phase_line(entry)
+            if line:
+                phase_lines.append(line)
+        append_changelog_lines(
+            workspace / SKILL_CHANGELOG_DIR, name, phase_lines
+        )
         for field in ("dependencies", "sources"):
             value = skill.get(field)
             if value is None and isinstance(existing, dict):
@@ -1763,6 +1809,16 @@ def materialize_created_skill_metadata(
         if lifecycle is not None:
             row["lifecycle"] = lifecycle
         by_name[name] = row
+    for name, row in by_name.items():
+        if not isinstance(row, dict) or "changelog" not in row:
+            continue
+        history = row.pop("changelog")
+        if isinstance(name, str) and isinstance(history, list):
+            append_changelog_lines(
+                workspace / SKILL_CHANGELOG_DIR,
+                name,
+                lines_from_history(history),
+            )
     atomic_write_json(
         path,
         {
@@ -1841,6 +1897,7 @@ def validate_optimized_op(workspace: Path, op: dict) -> list[Path]:
             raise SystemExit(f"raw skill snapshot was not produced: {skill}")
     current = {path.name for path in improved.iterdir() if path.is_dir()}
     metadata = workspace / "target/to_be_improved_skills_metadata/metadata.json"
+    detach_skill_changelogs(workspace)
     pipeline_contracts.validate_metadata(metadata, current)
     return [improved, raw, metadata]
 
@@ -2381,6 +2438,7 @@ def _publish_goal(
     replace_path(source / "label-matching.json", matching)
     replace_path(source / "evolve-goal.json", goal)
     merge_worker_log(private, workspace)
+    sync_skill_changelogs(workspace)
     complete_session(workspace, "goal", suffix, [matching, goal])
 
 
@@ -3115,6 +3173,8 @@ def merge_metadata(
     workspace: Path, worker: Path, affected: set[str]
 ) -> Path:
     relative = Path("target/to_be_improved_skills_metadata/metadata.json")
+    detach_skill_changelogs(workspace)
+    detach_skill_changelogs(worker)
     main_path = workspace / relative
     worker_path = worker / relative
     main = json.loads(main_path.read_text())
@@ -3382,31 +3442,13 @@ def materialize_operation_changelog(
     mark_operation_phase(
         workspace, finding_id, op_index, "optimize", "completed"
     )
-
-    metadata_path = (
-        workspace / "target/to_be_improved_skills_metadata/metadata.json"
-    )
-    document = json.loads(metadata_path.read_text())
-    by_skill = {
-        str(change["skill"]): change
-        for change in changes
-        if change.get("after_sha256") is not None
-    }
-    for row in document.get("skills_metadata") or []:
-        if not isinstance(row, dict) or row.get("skill") not in by_skill:
-            continue
-        history = row.get("changelog")
-        if not isinstance(history, list):
-            history = []
-        change = by_skill[str(row["skill"])]
-        history = [
-            item
-            for item in history
-            if not isinstance(item, dict) or item.get("id") != change["id"]
-        ]
-        history.append(copy.deepcopy(change))
-        row["changelog"] = history
-    atomic_write_json(metadata_path, document)
+    for change in changes:
+        skill = change.get("skill")
+        line = _operation_line(change)
+        if isinstance(skill, str) and line:
+            append_changelog_lines(
+                workspace / SKILL_CHANGELOG_DIR, skill, [line]
+            )
     return path
 
 
@@ -3798,14 +3840,17 @@ Read AGENT.md and 05_verifiter_agent/verifiter/skill.md, then inspect only the
 workspace evidence named by the concrete input below. Run the prescribed
 deterministic checks. Do not edit skills and do not write verification.json.
 
-Mechanical standards. These are low-level misses that fail the skill. Apply
+Mechanical standards. These are the defects the decision score prices. Apply
 them from this list and from one run of verify_sections.py and verify_goal.py.
-Do not open the checker source or the parent repository to re-derive them.
+A script finding is one listed penalty, not a veto. Do not open the checker
+source or the parent repository to re-derive them.
 
-- Headings: a required section counts only as a level-2 heading whose text is
-  listed in common/skill_format.json. `## Overview` matches. `# Overview` does
-  not, so the checker reports the section missing even when the prose is
-  present. Score that as a heading-level miss.
+- Section match: for this one skill, match a claimed name with a loose regex.
+  Case, extra words, and heading level do not matter. `overview`,
+  `## Overview`, and `# Overview` are the same name. Pass that claim when its
+  content is new, deleted, or changed in the direction of the goal. That is
+  enough. Do not fail it because the wording is tighter than the goal, including
+  "all of the following are true", when the goal's cases are present.
 - Frontmatter: YAML between `---` lines. `name` is lowercase hyphen-case,
   matches the skill directory, and is at most 64 characters. `description` is
   required, at most 1024 characters, and contains no angle brackets. Allowed
@@ -3825,9 +3870,19 @@ Do not open the checker source or the parent repository to re-derive them.
   keep the source snapshot and remove only the sources the operation names.
 - Hashes: changelog.json already stores the before and after content hashes.
   Do not reimplement that digest.
-- Gate: pass_threshold is 0.75, and every applicable assertion and step must
-  pass. A skill score above 0.75 still fails when one assertion fails. Score
-  that assertion and stop. Do not search for another formula.
+- Decision: list each defect once in feedback.per_skill[].penalties as
+  {{"id", "target"}}. The runner prices that list and writes the skill score
+  and status. Do not fold a penalty into an assertion average or a step
+  weight. The score starts at 1.0. The sections and directories this goal
+  names share a 0.80 claim budget; do not charge a section or directory the
+  goal did not name. The 8 core sections are the inventory, not the divisor.
+  missing_section, missing_directory, and goal_contradiction each cost one
+  share of that budget. missing_near_miss_eval costs half a share.
+  heading_level, unclaimed_heading, tighter_wording, and description_shape
+  each cost 0.05, and those shape charges stop at 0.20, so shape alone stays
+  at or above 0.80 and still passes. replay_fail costs 0.125. The runner adds
+  it when replay status is fail, and one replay failure still passes. Pass
+  when the priced score is at least pass_threshold.
 
 The concrete verification input for this skill is part of this prompt:
 <verification-input-json>
@@ -3918,6 +3973,7 @@ def validate_skill_verifier_response(
         if isinstance(row, dict):
             row["action"] = None
             row["retries_used"] = 0
+    pipeline_contracts.apply_decision_scores(candidate, verification_input)
     atomic_write_json(output_path, candidate)
     return pipeline_contracts.validate_verification(
         output_path,
@@ -3972,10 +4028,7 @@ def aggregate_skill_verifications(
     feedback["bottleneck_skills"] = bottlenecks
     feedback["replay"] = copy.deepcopy(replay)
     feedback["overall_status"] = (
-        "pass"
-        if all(row["status"] == "pass" for row in rows)
-        and replay.get("status") != "fail"
-        else "fail"
+        "pass" if all(row["status"] == "pass" for row in rows) else "fail"
     )
     feedback["overall_feedback"] = " | ".join(
         f"{row['skill']}: {row['feedback']}" for row in rows
@@ -4348,14 +4401,14 @@ def transition_worker_lifecycle(
     for row in document.get("skills_metadata") or []:
         if not isinstance(row, dict) or row.get("skill") not in affected:
             continue
-        for change in row.get("changelog") or []:
-            if (
-                isinstance(change, dict)
-                and change.get("finding_id") == cluster
-                and change.get("op_index") == op_index
-            ):
-                change["status"] = "accepted"
-                changed = True
+        entry = verification_changelog_entry(
+            worker, cluster, op_index, str(row.get("skill"))
+        )
+        line = _phase_line(entry) if entry is not None else ""
+        if line:
+            append_changelog_lines(
+                worker / SKILL_CHANGELOG_DIR, str(row.get("skill")), [line]
+            )
         lifecycle = row.get("lifecycle")
         if not isinstance(lifecycle, dict):
             continue
@@ -4432,6 +4485,9 @@ def publish_operation_result(
         )
         return
     merge_operation_result(workspace, result)
+    update_candidate_pool(
+        workspace, {str(name) for name in result.get("affected") or []}
+    )
     write_publication(
         workspace, cluster, op_index, accepted=True, reason=None
     )
@@ -4524,6 +4580,11 @@ def _merge_operation_result(
         if raw_source.is_dir():
             replace_path(raw_source, workspace / raw_rel / skill)
     metadata = merge_metadata(workspace, worker, affected)
+    for skill in sorted(affected):
+        merge_changelog_file(
+            worker / SKILL_CHANGELOG_DIR / f"{skill}.md",
+            workspace / SKILL_CHANGELOG_DIR / f"{skill}.md",
+        )
     current = {
         path.name
         for path in (workspace / improved_rel).iterdir()
@@ -4813,6 +4874,7 @@ def restore_optimized_candidate(
             rows.append(row)
     document["skills_metadata"] = rows
     atomic_write_json(destination, document)
+    detach_skill_changelogs(worker)
     current = {
         path.name
         for path in (worker / "target/to_be_improved_skills").iterdir()
@@ -5305,14 +5367,9 @@ def fanout_operations(
                 "source edits of this skill. Apply every section, directory, and removal "
                 "goal in this one op. Verification and judge run once, with --op 1."
             )
-        context = (
-            f"This isolated session is cluster <{cluster}>, action.ops item "
-            f"{op_index}: {json.dumps(op, ensure_ascii=False)}. The active goal "
-            "contains only this op. Use --op 1 where a checker accepts it. "
-            "workspace/run/evolve-goal.json is the worker-local compatibility "
-            f"copy; the authoritative op goal is workspace/run/{cluster}/ops/"
-            f"{op_index}/evolve-goal.json.{bundle_note}"
-        )
+        snapshot_optimize_sources(private, op)
+        optimize_input = prepare_optimize_input(private, op)
+        context = optimize_session_context(cluster, op_index, op, bundle_note)
         action = "pending"
         attempt = 0
         suffixes: list[str] = []
@@ -5357,8 +5414,12 @@ def fanout_operations(
                     install_agent,
                     suffix,
                     {**op_metadata, "attempt": attempt},
+                    input_root=optimize_input,
                 )
-                materialize_created_skill_metadata(private, op, cluster)
+                collect_optimize_input(private, op)
+                materialize_created_skill_metadata(
+                    private, op, cluster, run_id
+                )
                 optimized_outputs = validate_optimized_op(private, op)
                 changelog = materialize_operation_changelog(
                     private,
@@ -5678,6 +5739,651 @@ def write_pipeline_summary(workspace: Path, clusters: list[str]) -> Path:
     return destination
 
 
+OPTIMIZE_AVOIDANCE = """
+Important. These reject the skill. Avoid them.
+
+- Description: put it on the same line as `description:`. Do not write
+  `description: >` or `description: |`. The checker reads only that line, so
+  `>` is the description and the run fails before verification with
+  "frontmatter description contains angle brackets". No `<` or `>` on that line.
+- Triggers: when the goal says a first case and a later restatement are each
+  enough, do not write "all of the following are true" and do not make the
+  restatement a required condition. That wording scored 0.99 and still failed:
+  When to Use required every bullet at once, so a first authorization that had
+  not yet been restated was outside the skill.
+- Headings: a required section is a level-2 heading, `## Overview`. `# Overview`
+  is reported missing.
+""".strip()
+
+
+def _clip_changelog(text: object) -> str:
+    collapsed = " ".join(str(text).split())
+    if len(collapsed) <= CHANGELOG_SUMMARY_LIMIT:
+        return collapsed
+    return collapsed[: CHANGELOG_SUMMARY_LIMIT - 1].rstrip() + "…"
+
+
+def _compact_number(value: float) -> str:
+    return f"{value:.4f}".rstrip("0").rstrip(".") or "0"
+
+
+def _changelog_filename(skill: str) -> str | None:
+    if (
+        not skill
+        or skill in {".", ".."}
+        or "/" in skill
+        or "\\" in skill
+        or skill.startswith(".")
+    ):
+        return None
+    return f"{skill}.md"
+
+
+def _phase_line(entry: dict | None) -> str:
+    if not isinstance(entry, dict):
+        return ""
+    phase = entry.get("phase")
+    finding = entry.get("finding_id")
+    day = entry.get("date")
+    if not isinstance(finding, str) or not finding or not isinstance(day, str):
+        return ""
+    if phase == "diagnosis":
+        kind = f"diagnosis {finding}"
+    elif phase == "goal":
+        kind = f"goal {entry.get('operation') or 'no_change'} {finding}"
+    elif phase == "verification":
+        status = entry.get("status")
+        op_index = entry.get("op_index")
+        if status not in {"pass", "fail"} or not isinstance(op_index, int):
+            return ""
+        kind = f"verify {status} {finding}/{op_index}"
+    else:
+        return ""
+    return f"- {day} {kind} | {_clip_changelog(entry.get('summary') or '')}"
+
+
+def _operation_line(change: dict) -> str:
+    operation = change.get("operation")
+    finding = change.get("finding_id")
+    op_index = change.get("op_index")
+    day = change.get("date")
+    if operation not in {"create", "update", "delete", "merge", "split"}:
+        return ""
+    if not isinstance(finding, str) or not isinstance(day, str):
+        return ""
+    if not isinstance(op_index, int) or isinstance(op_index, bool):
+        return ""
+    sections = ",".join(
+        value
+        for value in change.get("sections") or []
+        if isinstance(value, str) and value
+    )
+    directories = ",".join(
+        value
+        for value in change.get("directories") or []
+        if isinstance(value, str) and value
+    )
+    detail = " ".join(part for part in (directories, sections) if part)
+    if len(detail) > CHANGELOG_SUMMARY_LIMIT:
+        count = sections.count(",") + (1 if sections else 0)
+        detail = f"{count} sections"
+        if directories:
+            detail = f"{directories} {detail}"
+    if not detail and operation == "delete":
+        detail = "removed"
+    return (
+        f"- {day} {operation} {finding}/{op_index} | {_clip_changelog(detail)}"
+    )
+
+
+def lines_from_history(history: list) -> list[str]:
+    lines: list[str] = []
+    for record in history:
+        if not isinstance(record, dict):
+            continue
+        if record.get("phase") in {"diagnosis", "goal", "verification"}:
+            line = _phase_line(record)
+        else:
+            line = _operation_line(record)
+        if line:
+            lines.append(line)
+    return lines
+
+
+def append_changelog_lines(
+    directory: Path, skill: str, lines: list[str]
+) -> None:
+    """Append changelog lines. Existing lines are never rewritten."""
+    filename = _changelog_filename(skill)
+    if filename is None or not lines:
+        return
+    directory.mkdir(parents=True, exist_ok=True)
+    path = directory / filename
+    if not path.is_file():
+        path.write_text(f"# {skill}\n")
+    existing = path.read_text()
+    keys = {
+        line.split(" | ", 1)[0]
+        for line in existing.splitlines()
+        if line.startswith("- ")
+    }
+    fresh: list[str] = []
+    for line in lines:
+        if not line.startswith("- "):
+            continue
+        key = line.split(" | ", 1)[0]
+        if key in keys:
+            continue
+        keys.add(key)
+        fresh.append(line)
+    if not fresh:
+        return
+    with path.open("a", encoding="utf-8") as handle:
+        if existing and not existing.endswith("\n"):
+            handle.write("\n")
+        handle.write("\n".join(fresh) + "\n")
+
+
+def merge_changelog_file(source: Path, destination: Path) -> None:
+    """Append lines from source that destination does not already have."""
+    if not source.is_file():
+        return
+    skill = source.stem
+    append_changelog_lines(
+        destination.parent,
+        skill,
+        [
+            line
+            for line in source.read_text().splitlines()
+            if line.startswith("- ")
+        ],
+    )
+
+
+def _run_day(workspace: Path) -> str:
+    match = re.search(r"@(\d{4}-\d{2}-\d{2})", workspace.name)
+    if match:
+        return match.group(1)
+    return datetime.now(UTC).date().isoformat()
+
+
+def _read_json_object(path: Path) -> dict:
+    if not path.is_file():
+        return {}
+    try:
+        value = json.loads(path.read_text())
+    except json.JSONDecodeError:
+        return {}
+    return value if isinstance(value, dict) else {}
+
+
+def _changelog_skills(workspace: Path, cluster: str) -> list[str]:
+    """Skills this finding diagnosed, targeted, or recalled."""
+    names: list[str] = []
+    goal = _read_json_object(workspace / "run" / cluster / "evolve-goal.json")
+    improve = (goal.get("goal") or {}).get("improve_skills") or []
+    if isinstance(improve, list):
+        names.extend(value for value in improve if isinstance(value, str) and value)
+    for op in (goal.get("action") or {}).get("ops") or []:
+        if isinstance(op, dict):
+            names.extend(skill_names_mod.skill_names(op))
+    matching = _read_json_object(
+        workspace / "run" / cluster / "label-matching.json"
+    )
+    for group in matching.get("clusters") or []:
+        if not isinstance(group, dict):
+            continue
+        if group.get("cluster") not in {cluster, None} and cluster != "cut":
+            continue
+        for row in group.get("skills") or []:
+            if isinstance(row, dict) and isinstance(row.get("skill"), str):
+                names.append(row["skill"])
+    ordered: list[str] = []
+    for name in names:
+        if name not in ordered:
+            ordered.append(name)
+    return ordered
+
+
+def _goal_operation(goal: dict, skill: str) -> str:
+    for op in (goal.get("action") or {}).get("ops") or []:
+        if isinstance(op, dict) and skill in skill_names_mod.skill_names(op):
+            return str(op.get("op") or "no_change")
+    return "no_change"
+
+
+def skill_phase_entries(
+    workspace: Path, skill: str, run_id: str | None = None
+) -> list[dict[str, object]]:
+    """Diagnosis, goal, and verification notes for one skill."""
+    run_name = run_id or workspace.name
+    day = _run_day(workspace if run_id is None else Path(run_name))
+    if run_id is not None:
+        match = re.search(r"@(\d{4}-\d{2}-\d{2})", run_id)
+        day = match.group(1) if match else datetime.now(UTC).date().isoformat()
+    entries: list[dict[str, object]] = []
+    run_root = workspace / "run"
+    if not run_root.is_dir():
+        return entries
+    for goal_path in sorted(run_root.glob("*/evolve-goal.json")):
+        cluster = goal_path.parent.name
+        if skill not in _changelog_skills(workspace, cluster):
+            continue
+        diagnosis = _read_json_object(goal_path.parent / "diagnosis.json")
+        gaps = [
+            str(item.get("description") or item.get("reasoning") or "")
+            for item in diagnosis.get("skill_capabilities_missing") or []
+            if isinstance(item, dict)
+        ]
+        goal = _read_json_object(goal_path)
+        action = goal.get("action") if isinstance(goal.get("action"), dict) else {}
+        entries.append(
+            {
+                "id": f"{run_name}:{cluster}:{skill}:diagnosis",
+                "skill": skill,
+                "phase": "diagnosis",
+                "run_id": run_name,
+                "finding_id": cluster,
+                "date": day,
+                "summary": _clip_changelog(" ".join(gaps)),
+            }
+        )
+        entries.append(
+            {
+                "id": f"{run_name}:{cluster}:{skill}:goal",
+                "skill": skill,
+                "phase": "goal",
+                "operation": _goal_operation(goal, skill),
+                "run_id": run_name,
+                "finding_id": cluster,
+                "date": day,
+                "summary": _clip_changelog(
+                    action.get("reason") or goal.get("plan") or goal.get("reasoning")
+                ),
+            }
+        )
+        ops_root = goal_path.parent / "ops"
+        if not ops_root.is_dir():
+            continue
+        for verification_path in sorted(ops_root.glob("*/verification.json")):
+            if not verification_path.parent.name.isdigit():
+                continue
+            op_index = int(verification_path.parent.name)
+            verification = _read_json_object(verification_path)
+            feedback = verification.get("feedback") or {}
+            row = next(
+                (
+                    item
+                    for item in feedback.get("per_skill") or []
+                    if isinstance(item, dict) and item.get("skill") == skill
+                ),
+                None,
+            )
+            if row is None:
+                continue
+            status = row.get("status")
+            if status not in {"pass", "fail"}:
+                continue
+            score = row.get("score")
+            feedback = str(row.get("feedback") or "")
+            if isinstance(score, (int, float)) and not isinstance(score, bool):
+                feedback = f"{_compact_number(float(score))} {feedback}"
+            entries.append(
+                {
+                    "id": f"{run_name}:{cluster}:{op_index}:{skill}:verification",
+                    "skill": skill,
+                    "phase": "verification",
+                    "operation": _goal_operation(goal, skill),
+                    "run_id": run_name,
+                    "finding_id": cluster,
+                    "op_index": op_index,
+                    "date": day,
+                    "status": status,
+                    "summary": _clip_changelog(feedback),
+                }
+            )
+    return entries
+
+
+def verification_changelog_entry(
+    workspace: Path, cluster: str, op_index: int, skill: str
+) -> dict[str, object] | None:
+    changelog = _read_json_object(
+        workspace / "run" / cluster / "ops" / str(op_index) / "changelog.json"
+    )
+    changes = changelog.get("changes") or []
+    run_id = (
+        str(changes[0].get("run_id"))
+        if changes and isinstance(changes[0], dict) and changes[0].get("run_id")
+        else None
+    )
+    for entry in skill_phase_entries(workspace, skill, run_id):
+        if (
+            entry.get("phase") == "verification"
+            and entry.get("finding_id") == cluster
+            and entry.get("op_index") == op_index
+        ):
+            return entry
+    return None
+
+
+def detach_skill_changelogs(workspace: Path) -> None:
+    """Move changelog lists off metadata and onto the append-only files."""
+    path = workspace / "target/to_be_improved_skills_metadata/metadata.json"
+    if not path.is_file():
+        return
+    try:
+        document = json.loads(path.read_text())
+    except json.JSONDecodeError:
+        return
+    rows = document.get("skills_metadata")
+    if not isinstance(rows, list):
+        return
+    moved = False
+    directory = workspace / SKILL_CHANGELOG_DIR
+    for row in rows:
+        if not isinstance(row, dict) or "changelog" not in row:
+            continue
+        history = row.pop("changelog")
+        moved = True
+        skill = row.get("skill")
+        if isinstance(skill, str) and isinstance(history, list):
+            append_changelog_lines(directory, skill, lines_from_history(history))
+    if moved:
+        atomic_write_json(path, document)
+
+
+def sync_skill_changelogs(workspace: Path) -> None:
+    """Append diagnosis, goal, and verification onto each skill changelog."""
+    detach_skill_changelogs(workspace)
+    path = workspace / "target/to_be_improved_skills_metadata/metadata.json"
+    if not path.is_file():
+        return
+    try:
+        document = json.loads(path.read_text())
+    except json.JSONDecodeError:
+        return
+    rows = document.get("skills_metadata")
+    if not isinstance(rows, list):
+        return
+    names: list[str] = []
+    run_root = workspace / "run"
+    if run_root.is_dir():
+        for goal_path in run_root.glob("*/evolve-goal.json"):
+            for name in _changelog_skills(workspace, goal_path.parent.name):
+                if name not in names:
+                    names.append(name)
+    present = {
+        row.get("skill")
+        for row in rows
+        if isinstance(row, dict)
+    }
+    directory = workspace / SKILL_CHANGELOG_DIR
+    for skill in names:
+        if skill not in present:
+            continue
+        append_changelog_lines(
+            directory,
+            skill,
+            [
+                line
+                for entry in skill_phase_entries(workspace, skill)
+                if (line := _phase_line(entry))
+            ],
+        )
+
+
+def _row_without_changelog(row: dict, directory: Path) -> dict:
+    row = copy.deepcopy(row)
+    history = row.pop("changelog", None)
+    skill = row.get("skill")
+    if isinstance(skill, str) and isinstance(history, list):
+        append_changelog_lines(directory, skill, lines_from_history(history))
+    return row
+
+
+def update_candidate_pool(
+    workspace: Path,
+    names: set[str],
+    inventory: Path | None = None,
+) -> None:
+    """Write accepted creates and updates into the candidate pool.
+
+    A name with no skill directory left in the run is removed from the pool.
+    Its changelog file stays.
+    """
+    detach_skill_changelogs(workspace)
+    root = inventory or (ROOT / "workspace")
+    skills_src = workspace / "target/to_be_improved_skills"
+    skills_dest = root / "candidate_skills"
+    meta_src = workspace / "target/to_be_improved_skills_metadata/metadata.json"
+    meta_dest = root / "candidate_skills_metadata/metadata.json"
+    run_logs = workspace / SKILL_CHANGELOG_DIR
+    pool_logs = root / POOL_CHANGELOG_DIR
+    skills_dest.mkdir(parents=True, exist_ok=True)
+    incoming: dict[str, dict] = {}
+    if meta_src.is_file():
+        try:
+            document = json.loads(meta_src.read_text())
+        except json.JSONDecodeError:
+            document = {}
+        incoming = {
+            str(row["skill"]): row
+            for row in document.get("skills_metadata") or []
+            if isinstance(row, dict) and isinstance(row.get("skill"), str)
+        }
+    current: dict[str, dict] = {}
+    if meta_dest.is_file():
+        try:
+            document = json.loads(meta_dest.read_text())
+        except json.JSONDecodeError:
+            document = {}
+        current = {
+            str(row["skill"]): _row_without_changelog(row, pool_logs)
+            for row in document.get("skills_metadata") or []
+            if isinstance(row, dict) and isinstance(row.get("skill"), str)
+        }
+    for name in sorted(names):
+        merge_changelog_file(
+            run_logs / f"{name}.md", pool_logs / f"{name}.md"
+        )
+        source = skills_src / name
+        destination = skills_dest / name
+        if source.is_dir() and (source / "SKILL.md").is_file():
+            if destination.exists():
+                shutil.rmtree(destination)
+            shutil.copytree(source, destination)
+            if name in incoming:
+                current[name] = _row_without_changelog(incoming[name], pool_logs)
+        else:
+            if destination.exists():
+                shutil.rmtree(destination)
+            current.pop(name, None)
+    meta_dest.parent.mkdir(parents=True, exist_ok=True)
+    atomic_write_json(
+        meta_dest,
+        {
+            "skills_metadata": [
+                current[name] for name in sorted(current, key=str.casefold)
+            ]
+        },
+    )
+
+
+def publish_inventory(
+    workspace: Path, inventory: Path | None = None
+) -> None:
+    """Copy accepted skills, metadata, and changelogs out of the run."""
+    detach_skill_changelogs(workspace)
+    root = inventory or (ROOT / "workspace")
+    skills_src = workspace / "target/to_be_improved_skills"
+    meta_src = workspace / "target/to_be_improved_skills_metadata/metadata.json"
+    skills_dest = root / "candidate_skills"
+    meta_dest = root / "candidate_skills_metadata/metadata.json"
+    pool_logs = root / POOL_CHANGELOG_DIR
+    run_logs = workspace / SKILL_CHANGELOG_DIR
+    if skills_src.is_dir():
+        skills_dest.mkdir(parents=True, exist_ok=True)
+        for skill_dir in skills_src.iterdir():
+            if not skill_dir.is_dir() or not (skill_dir / "SKILL.md").is_file():
+                continue
+            destination = skills_dest / skill_dir.name
+            if destination.exists():
+                shutil.rmtree(destination)
+            shutil.copytree(skill_dir, destination)
+    if run_logs.is_dir():
+        for path in sorted(run_logs.glob("*.md")):
+            merge_changelog_file(path, pool_logs / path.name)
+    if not meta_src.is_file():
+        return
+    try:
+        incoming = json.loads(meta_src.read_text())
+    except json.JSONDecodeError:
+        return
+    rows = [
+        _row_without_changelog(row, pool_logs)
+        for row in incoming.get("skills_metadata") or []
+        if isinstance(row, dict) and isinstance(row.get("skill"), str)
+    ]
+    by_name = {str(row["skill"]): row for row in rows}
+    if meta_dest.is_file():
+        try:
+            current = json.loads(meta_dest.read_text())
+        except json.JSONDecodeError:
+            current = {}
+        for row in current.get("skills_metadata") or []:
+            if (
+                isinstance(row, dict)
+                and isinstance(row.get("skill"), str)
+                and row["skill"] not in by_name
+            ):
+                by_name[row["skill"]] = _row_without_changelog(row, pool_logs)
+    meta_dest.parent.mkdir(parents=True, exist_ok=True)
+    atomic_write_json(
+        meta_dest,
+        {
+            "skills_metadata": [
+                by_name[name]
+                for name in sorted(by_name, key=str.casefold)
+            ]
+        },
+    )
+
+
+OPTIMIZE_INPUT = Path("optimize-input")
+
+
+def optimize_written_and_removed(op: dict) -> tuple[list[str], list[str]]:
+    """Skill directories this op writes, and skill directories it removes."""
+    operation = op.get("op")
+    names = skill_names_mod.skill_names(op)
+    if operation == "delete":
+        return [], names
+    if operation == "merge":
+        target = (op.get("into") or {}).get("skill")
+        written = [target] if isinstance(target, str) and target else []
+        return written, [name for name in names if name not in written]
+    if operation == "split":
+        written = [
+            row.get("skill")
+            for row in op.get("into") or []
+            if isinstance(row, dict) and isinstance(row.get("skill"), str)
+        ]
+        source = op.get("skill")
+        removed = (
+            [source]
+            if isinstance(source, str) and source not in written
+            else []
+        )
+        return written, removed
+    if operation == "update":
+        return names, []
+    return names, []
+
+
+def snapshot_optimize_sources(workspace: Path, op: dict) -> None:
+    """Copy source skills to raw_skills before the optimize session."""
+    if op.get("op") == "create":
+        return
+    improved = workspace / "target/to_be_improved_skills"
+    raw = workspace / "target/raw_skills"
+    for name in skill_names_mod.skill_names(op):
+        source = improved / name
+        if not source.is_dir() or not (source / "SKILL.md").is_file():
+            continue
+        destination = raw / name
+        if destination.exists():
+            shutil.rmtree(destination)
+        shutil.copytree(source, destination)
+
+
+def prepare_optimize_input(workspace: Path, op: dict) -> Path:
+    """Temp directory with each target skill and its changelog beside it."""
+    root = workspace / OPTIMIZE_INPUT
+    if root.exists():
+        shutil.rmtree(root)
+    root.mkdir(parents=True)
+    improved = workspace / "target/to_be_improved_skills"
+    logs = workspace / SKILL_CHANGELOG_DIR
+    for name in skill_names_mod.skill_names(op):
+        append_changelog_lines(
+            logs,
+            name,
+            [
+                line
+                for entry in skill_phase_entries(workspace, name)
+                if entry.get("phase") != "verification"
+                and (line := _phase_line(entry))
+            ],
+        )
+        source = improved / name
+        if source.is_dir() and (source / "SKILL.md").is_file():
+            shutil.copytree(source, root / name)
+        changelog = logs / f"{name}.md"
+        aside = root / f"{name}.md"
+        if changelog.is_file():
+            shutil.copy2(changelog, aside)
+        else:
+            aside.write_text(f"# {name}\n")
+    return root
+
+
+def collect_optimize_input(workspace: Path, op: dict) -> None:
+    """Copy edited skill directories back. Leave changelog files behind."""
+    root = workspace / OPTIMIZE_INPUT
+    improved = workspace / "target/to_be_improved_skills"
+    improved.mkdir(parents=True, exist_ok=True)
+    written, removed = optimize_written_and_removed(op)
+    for name in written:
+        source = root / name
+        if not source.is_dir() or not (source / "SKILL.md").is_file():
+            continue
+        destination = improved / name
+        if destination.exists():
+            shutil.rmtree(destination)
+        shutil.copytree(source, destination)
+    for name in removed:
+        destination = improved / name
+        if destination.exists():
+            shutil.rmtree(destination)
+
+
+def optimize_session_context(
+    cluster: str, op_index: int, op: dict, bundle_note: str
+) -> str:
+    names = skill_names_mod.skill_names(op)
+    listed = ", ".join(f"`{name}/` and `{name}.md`" for name in names)
+    return (
+        f"This isolated session is cluster <{cluster}>, action.ops item "
+        f"{op_index}: {json.dumps(op, ensure_ascii=False)}. "
+        f"workspace/ contains {listed}. "
+        "Each `.md` file beside a skill directory is that skill's changelog, "
+        "not the skill. Read it. Do not edit it. Edit only the skill directory. "
+        f"Do not read or write metadata.{bundle_note}\n\n"
+        f"{OPTIMIZE_AVOIDANCE}"
+    )
+
+
 def execute(args: argparse.Namespace) -> None:
     global ACTIVE_BACKEND
     workspace = (ROOT / "workspace/runs" / args.run_id).resolve()
@@ -5722,6 +6428,8 @@ def execute(args: argparse.Namespace) -> None:
             )
             if clusters:
                 write_pipeline_summary(workspace, clusters)
+            sync_skill_changelogs(workspace)
+            publish_inventory(workspace)
             print(
                 f"completed continuation {args.run_id} from "
                 f"{args.resume_from}: {workspace}"
@@ -5790,6 +6498,7 @@ def execute(args: argparse.Namespace) -> None:
             for path in (workspace / "target/to_be_improved_skills").iterdir()
             if path.is_dir()
         }
+        detach_skill_changelogs(workspace)
         try:
             pipeline_contracts.validate_metadata(metadata_path, seed_names)
         except (FileNotFoundError, json.JSONDecodeError, pipeline_contracts.ContractError):
@@ -5820,6 +6529,7 @@ def execute(args: argparse.Namespace) -> None:
             args.run_id,
             "deterministic",
         ):
+            detach_skill_changelogs(workspace)
             pipeline_contracts.validate_metadata(metadata_path, seed_names)
         complete_session(workspace, "label-skills", args.run_id, [metadata_path])
 
@@ -5827,6 +6537,7 @@ def execute(args: argparse.Namespace) -> None:
         clusters = evolution_units(workspace, active_clustered, unit_kind)
         refuse_blocked_scopes(workspace, active_clustered, unit_kind)
         if not clusters:
+            publish_inventory(workspace)
             print(
                 f"completed run {args.run_id}: no evolution units remained after "
                 "the configured selection and infrastructure filters"
@@ -5863,6 +6574,8 @@ def execute(args: argparse.Namespace) -> None:
             getattr(args, "min_super_score", None),
         )
         write_pipeline_summary(workspace, successful_clusters)
+        sync_skill_changelogs(workspace)
+        publish_inventory(workspace)
 
         print(f"completed run {args.run_id}: {workspace}")
 

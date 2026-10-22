@@ -267,6 +267,7 @@
         "score": 1.0,
         "applicable_weight": 1.0,
         "failed_required_steps": [],
+        "penalties": [],
         "feedback": "The update satisfies every shared and goal-specific assertion.",
         "retries_used": 0,
         "action": null

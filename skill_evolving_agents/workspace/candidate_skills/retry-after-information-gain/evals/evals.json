@@ -1,0 +1,29 @@
+{
+  "skill_name": "retry-after-information-gain",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "A recorded search returned no matches for a broad query. The observed state has since changed: a new record now exists in the searched scope. Decide whether to run the search once more.",
+      "expected_output": "retry, because state changed when a new record appeared in scope, with that state change as the evidence.",
+      "expectations": [
+        "The decision is retry.",
+        "The justification names a state change or new information that was absent from the prior result."
+      ],
+      "kind": "should_apply",
+      "files": [],
+      "source_trace_ids": []
+    },
+    {
+      "id": 2,
+      "prompt": "The same action was just repeated. The observed state is unchanged and the result is empty again, identical to the previous result, with no new information and no transient failure. Decide whether to repeat that same action once more.",
+      "expected_output": "change-action. Action, state, and result are unchanged, so the identical empty result is not progress and the retry must stop.",
+      "expectations": [
+        "The same action is not retried.",
+        "The decision treats the unchanged empty result as terminal rather than as progress."
+      ],
+      "kind": "should_not_apply",
+      "files": [],
+      "source_trace_ids": []
+    }
+  ]
+}

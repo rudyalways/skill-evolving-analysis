@@ -9,8 +9,10 @@ guidance to this pipeline's closed section and directory vocabulary; see
 
 ## When to Use
 
-Use only when `workspace/run/evolve-goal.json` contains one `op: create`.
-Judge ends the operation with pass or fail; retries are disabled.
+Use only when the session operation is `op: create`. The working directory
+is `workspace/`. Write the new skill at `workspace/<skill>/`. Its changelog,
+if any, is `workspace/<skill>.md` beside that directory. Read it and do not
+edit it.
 
 ## Do Not Use
 
@@ -27,9 +29,9 @@ unknown capability into a nearby taxonomy leaf.
 3. Design the smallest reusable procedure that resolves the diagnosed pattern.
    Choose the degree of freedom deliberately: prose for judgment, a template
    for constrained variation, and a script only for fragile deterministic work.
-   Reuse existing skills through metadata `dependencies` instead of copying
-   their instructions.
-4. Write `target/to_be_improved_skills/<skill>/SKILL.md` with only the headings
+   Reuse an existing procedure only when the goal names that dependency. Do not
+   open metadata to look for one.
+4. Write `workspace/<skill>/SKILL.md` with only the headings
    named by the goal. Use the canonical heading text from
    `common/skill_format.json` as a level-2 Markdown heading, for example
    `## Overview`. `# Overview` fails verification: the section checker does not
@@ -43,10 +45,9 @@ unknown capability into a nearby taxonomy leaf.
 7. For objectively verifiable behavior, create discriminating positive and
    near-miss cases. Follow `references/evaluation-loop.md`; do not treat a
    structural check as behavioral proof.
-8. Write metadata and preserve all existing records. Hand an
-   out-of-distribution capability to `ood-data-updater`.
-   For external knowledge, add a `sources` record with URL, pinned revision,
-   retrieval timestamp, and SHA-256 content digest.
+8. Do not read or write metadata. The runner writes the metadata record from
+   the goal. Do not edit `workspace/<skill>.md`. Hand an out-of-distribution
+   capability to `ood-data-updater`.
 
 ## Constraints
 
@@ -54,11 +55,16 @@ unknown capability into a nearby taxonomy leaf.
   when the goal explicitly names the custom heading or directory.
 - Write every required section as a level-2 heading. `# Overview` is not an
   accepted form of `## Overview`. The checker then reports the section missing.
-- Frontmatter is YAML between `---` lines. `name` is lowercase hyphen-case,
-  matches the skill directory, and is at most 64 characters. `description` is
-  required, at most 1024 characters, and contains no angle brackets. Allowed
-  fields are name, description, license, compatibility, allowed-tools, and
-  metadata.
+- Important. The description goes on the same line as `description:`. Do not
+  write `description: >` or `description: |`. The checker reads only that line,
+  so `>` is the description and the run fails before verification with
+  "frontmatter description contains angle brackets". No `<` or `>` on that line.
+  `name` is lowercase hyphen-case, matches the directory, and is at most 64
+  characters. `description` is at most 1024 characters. Allowed fields are name,
+  description, license, compatibility, allowed-tools, and metadata.
+- Important. When the goal says a first case and a later restatement are each
+  enough, do not write "all of the following are true" and do not make the
+  restatement a required condition. That wording scored 0.99 and still failed.
 - Keep `SKILL.md` at most 500 lines. Do not repeat reference content. Remove
   `TODO`, `[TODO`, `EXAMPLE_SCRIPT`, `EXAMPLE_REFERENCE`, and
   `EXAMPLE_ASSET` before completion.
@@ -69,7 +75,9 @@ unknown capability into a nearby taxonomy leaf.
 - Add scripts only when they replace repeated or error-prone generated code.
 - Compile every generated Python script and execute a representative safe
   fixture. Do not claim an unexecuted script works.
-- Do not add README, changelog, installation guide, or other process debris.
+- Do not add a README, an installation guide, or a changelog file inside the
+  skill directory. The changelog is the `<skill>.md` file beside the skill
+  directory. Do not edit it. Do not read or write metadata.
 - Do not copy platform-specific Claude, Codex, or Cursor orchestration into a
   generated domain skill.
 - Generalize trace-specific names, paths, IDs, and one-off corrections into
@@ -101,16 +109,13 @@ Before returning:
 
 ## Output Format
 
-Write the skill under `target/to_be_improved_skills`. Metadata uses the
-top-level `skills_metadata` list. Each new record has `skill`, `description`,
-`skill_types`, `unmatched_skill_types`, and `changelog`; it may include
-`dependencies` and `sources`. Initialize `changelog` to `[]`; the runner adds
-the content-hashed operation record before verification. Preserve existing
-records and their changelog entries.
+Write the skill under `workspace/<skill>/`. Do not write metadata and do not
+edit the changelog file beside the directory. The runner appends one short
+line to the changelog after this session and writes the metadata record.
 
 The runner reconstructs metadata deterministically. A single-session create
 also receives a `lifecycle` record with provisional status, origin run and
-finding, session IDs, confidence, and evidence counts. Do not remove it.
+finding, session IDs, confidence, and evidence counts. The runner writes it.
 
 ## Limitations
 

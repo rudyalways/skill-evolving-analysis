@@ -275,7 +275,7 @@ and later runs:
 - `traces/derived/signals`, selected findings, deduplication features, the cut
   manifest, and optional pointer-only cluster manifests
 - `target/to_be_improved_skills` and `target/raw_skills`
-- `target/to_be_improved_skills_metadata/metadata.json`
+- `target/to_be_improved_skills_metadata/metadata.json` holds skill records and no changelog. The runner reads and writes it. Each skill's history is the append-only `target/skill_changelogs/<skill>.md`. An optimize session receives a temp directory, `optimize-input/`, containing that skill directory and `<skill>.md` beside it, and does not receive metadata. After the run, skill directories go to `workspace/candidate_skills`, metadata to `workspace/candidate_skills_metadata/metadata.json`, and changelogs to `workspace/candidate_skills_changelog/<skill>.md`. The next `candidate_traces.py new` copies those three into the run.
 - `run/diagnosis.json`, each `run/<cluster>/evolve-goal.json`, each sliced `run/<cluster>/ops/<op>/evolve-goal.json`, the active compatibility files, and archived `run/<cluster>/ops/<op>/verification.json`
 - runner-owned completion records under `run/status/<stage>/<item>.json`
 - `logs/execution.jsonl`
