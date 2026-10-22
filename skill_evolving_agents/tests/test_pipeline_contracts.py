@@ -1446,6 +1446,16 @@ class ContractTests(unittest.TestCase):
         self.assertIn("including `reasoning`, descriptions, and", prompt)
         self.assertIn("`evidence_list`", prompt)
 
+    def test_goal_prompt_names_the_validated_no_change_shape(self) -> None:
+        prompt = (
+            AGENTS / "03_goal_agent/goal-generator/skill.md"
+        ).read_text()
+        self.assertIn("`goal` is always an object", prompt)
+        self.assertIn('"improve_skills": []', prompt)
+        self.assertIn('"feedback_to": "diagnosis"', prompt)
+        self.assertIn('"disposition": "no_change"', prompt)
+        self.assertIn("Write concrete values without angle brackets", prompt)
+
     def test_skill_format_names_and_aliases(self) -> None:
         format_path = AGENTS / "common/skill_format.json"
         document = json.loads(format_path.read_text())

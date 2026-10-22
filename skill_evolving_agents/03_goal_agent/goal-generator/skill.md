@@ -34,7 +34,29 @@ one `action.ops` item. Fill `goal`, `reasoning`, `plan`, `action`, and
 stops before Optimize, Verifiter, and Judge. The runner later
 deduplicates identical operations proposed by different findings.
 
-Each item in `action.ops` is an object. The five op names are fixed: `create`, `update`, `delete`, `merge`, `split`. Use `<other>` only when the action is not one of those. Each op has its own parameters. `create` is a list of new skills, each with a description, its sections, its dirs, and at least 3 labels. A label is a path in `skill_capabilites/skill_capabilites.json` and a weight. The core sections are overview, when_to_use, do_not_use, workflow, constraints, verification, output_format, and limitations. Workflow includes methodology, instructions, procedure, and process. State_machine is optional and is used only when states, transitions, retries, or terminal conditions add value. `update` is a list of existing skills, each with a goal, a facet, `sections`, and `dirs`. Each section is `section` and `goal`. Each dir is `dir` and `goal`. Names and backward-compatible aliases come from `common/skill_format.json`. `other` and `ood` name a heading or directory that is not one of those closed names. An other section also has `heading`. An other dir also has `name`. `delete` is a list of skills, each with a reason. `merge` names the skills to combine and `into`, the resulting skill, what it covers, and its dirs. `split` names one skill and `into`, the parts, what each part keeps, and the dirs that part keeps. `<other>` has a description, the skills it touches, and its dirs. Wrap fill-in values in `<>`. Leave the op names unwrapped. Name the skills on every op from the label matching. Put the recalled skills on `improve_skills`. A cluster with an empty `skills` list can be a create. A cluster with recalled skills can be an update, merge, split, or delete.
+`goal` is always an object, never a summary string. `feedback_to` is always
+one non-empty string, never an object copied from diagnosis feedback. For
+`no_change`, write exactly this shape with concrete explanatory strings:
+
+```json
+{
+  "goal": {
+    "improve_harness": {"scope": "out_of_scope"},
+    "improve_skills": [],
+    "avoid": "Do not create or edit a skill without policy-qualified evidence."
+  },
+  "reasoning": "Explain the evidence and policy decision.",
+  "plan": "Leave skills unchanged.",
+  "feedback_to": "diagnosis",
+  "action": {
+    "disposition": "no_change",
+    "reason": "Explain why no operation is allowed.",
+    "ops": []
+  }
+}
+```
+
+Each item in `action.ops` is an object. The five op names are fixed: `create`, `update`, `delete`, `merge`, `split`. Use `other` only when the action is not one of those. Each op has its own parameters. `create` is a list of new skills, each with a description, its sections, its dirs, and at least 3 labels. A label is a path in `skill_capabilites/skill_capabilites.json` and a weight. The core sections are overview, when_to_use, do_not_use, workflow, constraints, verification, output_format, and limitations. Workflow includes methodology, instructions, procedure, and process. State_machine is optional and is used only when states, transitions, retries, or terminal conditions add value. `update` is a list of existing skills, each with a goal, a facet, `sections`, and `dirs`. Each section is `section` and `goal`. Each dir is `dir` and `goal`. Names and backward-compatible aliases come from `common/skill_format.json`. `other` and `ood` name a heading or directory that is not one of those closed names. An other section also has `heading`. An other dir also has `name`. `delete` is a list of skills, each with a reason. `merge` names the skills to combine and `into`, the resulting skill, what it covers, and its dirs. `split` names one skill and `into`, the parts, what each part keeps, and the dirs that part keeps. `other` has a description, the skills it touches, and its dirs. The example uses angle brackets only to mark fields that must be replaced. Write concrete values without angle brackets, and never copy placeholder text into any output field. Name the skills on every op from the label matching. Put the recalled skills on `improve_skills`. A cluster with an empty `skills` list can be a create. A cluster with recalled skills can be an update, merge, split, or delete.
 
 ## Applies when
 
