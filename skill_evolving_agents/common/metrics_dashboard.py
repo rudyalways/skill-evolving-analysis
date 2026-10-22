@@ -526,7 +526,7 @@ async function refresh() {{
       `<button class="tab" data-tab="total">Total</button>`+
       data.runs.map((run,index) =>
         `<button class="tab" data-tab="run-${{index + 1}}" title="${{esc(run.run_id)}}">`+
-        `Run ${{index + 1}}</button>`).join('');
+        `${{esc(run.run_id)}}</button>`).join('');
     document.getElementById('panels').innerHTML =
       `<section class="panel" data-panel="total"><section class="card">`+
       `<h2>Total across runs</h2><div class="stats"><span>runs <b>${{data.run_count}}</b></span>`+
