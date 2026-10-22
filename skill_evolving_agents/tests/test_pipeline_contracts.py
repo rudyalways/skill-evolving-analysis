@@ -1099,10 +1099,10 @@ class ContractTests(unittest.TestCase):
             "item": "run-sig-ggg",
             "status": "error",
             "started_at": "2026-10-22T09:32:00+00:00",
-            "duration_ms": 100068,
+            "duration_ms": 180068,
         }
         metrics_dashboard.annotate_endings([timed_out], [])
-        self.assertEqual(timed_out["ending_label"], "timed out after 100 seconds")
+        self.assertEqual(timed_out["ending_label"], "timed out after 180 seconds")
 
     def test_recreated_run_clears_stale_shared_metrics(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

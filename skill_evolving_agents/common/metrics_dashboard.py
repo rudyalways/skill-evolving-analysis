@@ -419,8 +419,8 @@ def annotate_endings(
         rejection = str(span.get("rejection") or "")
         if not rejection and span.get("status") == "error":
             duration = float(span.get("duration_ms") or 0)
-            if 99_000 <= duration <= 108_000:
-                rejection = "timed out after 100 seconds"
+            if 179_000 <= duration <= 188_000:
+                rejection = "timed out after 180 seconds"
         if rejection or span.get("status") in {"rejected", "error"}:
             label = _ending_headline(
                 rejection, str(span.get("rejection_label") or "")
@@ -1118,8 +1118,7 @@ const tracePanel = run => {{
     const title = lane.kind === 'pipeline' ? 'pipeline' : lane.title;
     const blocks = rowSlices.map(slice => {{
       const cluster = slice.lane.cluster || '';
-      const base = slice.phase === 'label-traces-cluster' && cluster
-        ? cluster : slice.phase;
+      const base = slice.phase === 'label-traces-cluster' ? 'diagnosis' : slice.phase;
       const prefix = passCount > 1 ? `pass ${{slice.pass}} · ` : '';
       const text = `${{prefix}}${{base}}`;
       const tip = slice.endingDetail

@@ -169,7 +169,7 @@ long-thinking or stalled provider session by extending the wait. Preserve the
 phase statuses and timing artifacts, then investigate fanout size, prompt/input
 size, provider latency, and missing process timeouts before retrying.
 
-Each hosted agent session is terminated after 100 seconds so one stalled
+Each hosted agent session is terminated after 180 seconds so one stalled
 fanout item cannot consume the total-run budget. Set
 `SKILL_EVOLVER_AGENT_TIMEOUT_SECONDS` only for a measured diagnostic override;
 raising it does not change the 5/10-minute total-run ceilings.
