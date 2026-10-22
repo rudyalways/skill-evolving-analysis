@@ -7,6 +7,7 @@ import argparse
 import html
 import importlib.util
 import json
+import re
 import sqlite3
 import statistics
 from collections import defaultdict
@@ -28,6 +29,15 @@ def _load_metrics():
 
 
 _METRICS = _load_metrics()
+_SIG_RE = re.compile(r"(sig-[0-9a-f]+)")
+_TRUNK = {
+    "normalize-traces",
+    "detect-signals",
+    "deduplicate-and-cluster",
+    "validate-preprocessing",
+    "label-skills",
+    "validate-skill-labels",
+}
 
 
 def percentile(values: list[float], fraction: float) -> float:
@@ -191,6 +201,75 @@ def run_progress(
     return {"selected_findings": selected_findings, "stages": stages}
 
 
+def cluster_labels(
+    database: Path, run_id: str, spans: list[dict[str, Any]]
+) -> dict[str, str]:
+    """Name each finding by its detector.
+
+    Repeated detectors keep a short signature so those lanes stay distinct.
+    """
+    detectors: dict[str, str] = {}
+    findings = database.parent / "runs" / run_id / "traces/derived/findings"
+    if findings.is_dir():
+        for path in sorted(findings.glob("*/finding.json")):
+            try:
+                data = json.loads(path.read_text())
+            except (OSError, json.JSONDecodeError):
+                continue
+            if not isinstance(data, dict):
+                continue
+            detector = data.get("detector")
+            if isinstance(detector, str) and detector.strip():
+                detectors[path.parent.name] = detector.strip()
+    for span in spans:
+        metadata = _METRICS._metadata(span)
+        detector = metadata.get("detector")
+        match = _SIG_RE.search(str(span.get("item") or ""))
+        if (
+            match
+            and isinstance(detector, str)
+            and detector.strip()
+            and match.group(1) not in detectors
+        ):
+            detectors[match.group(1)] = detector.strip()
+    counts: dict[str, int] = defaultdict(int)
+    for detector in detectors.values():
+        counts[detector] += 1
+    labels: dict[str, str] = {}
+    for sig, detector in detectors.items():
+        short = sig[4:12]
+        labels[sig] = detector if counts[detector] == 1 else f"{detector} · {short}"
+    return labels
+
+
+def assign_passes(
+    spans: list[dict[str, Any]], active: list[dict[str, Any]]
+) -> None:
+    """Number each execution of the pipeline.
+
+    A repeated trunk phase means the run was started again. Later spans,
+    including a still-running goal, belong to that later pass.
+    """
+    events: list[tuple[str, dict[str, Any], str]] = []
+    events.extend(
+        (str(row.get("started_at") or ""), row, "phase") for row in spans
+    )
+    events.extend(
+        (str(row.get("started_at") or ""), row, "stage") for row in active
+    )
+    events.sort(key=lambda item: item[0])
+    number = 1
+    seen: set[str] = set()
+    for _started, row, key in events:
+        phase = str(row.get(key) or "")
+        if phase in _TRUNK:
+            if phase in seen:
+                number += 1
+                seen.clear()
+            seen.add(phase)
+        row["pass"] = number
+
+
 def metrics_payload(database: Path) -> dict[str, Any]:
     rows = load_rows(database)
     runs_root = database.parent / "runs"
@@ -248,6 +327,7 @@ def metrics_payload(database: Path) -> dict[str, Any]:
             start = int(datetime.fromisoformat(started_at).timestamp() * 1_000_000)
             end = start
         timing = _METRICS.summarize_spans(spans)
+        assign_passes(timing["spans"], active)
         if active:
             end = max(end, int(datetime.now(UTC).timestamp() * 1_000_000))
         run_summaries.append(
@@ -261,6 +341,7 @@ def metrics_payload(database: Path) -> dict[str, Any]:
                 "phases": timing["phases"],
                 "spans": timing["spans"],
                 "active": active,
+                "cluster_labels": cluster_labels(database, run_id, spans),
                 "progress": run_progress(database, run_id, spans),
                 "phase_metrics": _METRICS._read_json(
                     runs_root / run_id / "logs/phase-metrics.json"
@@ -488,8 +569,8 @@ padding:7px 12px; border-radius:8px; cursor:pointer }}
 overflow:auto; max-height:640px; background:#0c1222 }}
 .trace-shell.expanded {{ position:fixed; inset:20px; z-index:30; max-height:none;
 margin:0; box-shadow:0 0 0 100vmax #070b16cc }}
-.trace-view {{ position:relative; min-width:1100px; padding:8px 0 12px }}
-.trace-ruler,.trace-row {{ display:grid; grid-template-columns:128px minmax(860px,1fr);
+.trace-view {{ position:relative; min-width:1180px; padding:8px 0 12px }}
+.trace-ruler,.trace-row {{ display:grid; grid-template-columns:280px minmax(860px,1fr);
 align-items:stretch }}
 .trace-label {{ position:sticky; left:0; z-index:4; overflow:hidden; padding:6px 10px;
 background:#0c1222; color:#aeb8cc; font:12px ui-monospace,monospace;
@@ -580,46 +661,53 @@ const PHASE_COLORS = {{
   'verifiter':'#d84f8b', 'judge':'#2ca56f'
 }};
 const phaseColor = phase => PHASE_COLORS[phase] || '';
-const traceLane = (phase, item, runId) => {{
+const traceLane = (phase, item, runId, names) => {{
+  const pipeline = {{id:'pipeline', kind:'pipeline', title:'pipeline', cluster:'', sortKey:'0'}};
   if (TRUNK.includes(phase) || phase === 'reduce-goals' || item === runId ||
       phase === 'preprocessing' || phase === 'label-skills')
-    return {{id:'pipeline', kind:'pipeline', title:'pipeline', sortKey:'0'}};
+    return pipeline;
   const rest = item.startsWith(`${{runId}}-`) ? item.slice(runId.length + 1) : item;
   const match = rest.match(/(sig-[0-9a-f]+)(?:-op-(\\d+))?/);
-  if (!match) return {{id:'pipeline', kind:'pipeline', title:'pipeline', sortKey:'0'}};
+  if (!match) return pipeline;
   const short = match[1].slice(4, 12);
+  const cluster = (names || {{}})[match[1]] || short;
   const opPhases = ['edit-decision','operation-queue','optimize','verifiter',
     'judge','judge-decision','merge-operation'];
   if (match[2] || opPhases.includes(phase)) {{
     const op = match[2] || '1';
-    return {{id:`op:${{match[1]}}:${{op}}`, kind:'op', title:`${{short}}/op-${{op}}`,
-      sortKey:`1/${{match[1]}}/op-${{op.padStart(4, '0')}}`}};
+    return {{id:`op:${{match[1]}}:${{op}}`, kind:'op', title:`${{cluster}}/op-${{op}}`,
+      cluster, sortKey:`1/${{match[1]}}/op-${{op.padStart(4, '0')}}`}};
   }}
-  return {{id:`finding:${{match[1]}}`, kind:'finding', title:short,
+  return {{id:`finding:${{match[1]}}`, kind:'finding', title:cluster, cluster,
     sortKey:`1/${{match[1]}}`}};
 }};
 const tracePanel = run => {{
   const markerId = `trace-arrow-${{run.run_id.replace(/[^A-Za-z0-9_-]/g, '')}}`;
+  const names = run.cluster_labels || {{}};
   const seen = new Set();
   const slices = [];
   (run.spans || []).forEach(row => {{
     const start = Date.parse(row.started_at);
     if (!Number.isFinite(start)) return;
-    const lane = traceLane(row.phase, String(row.item), run.run_id);
-    const instant = row.category === 'audit' || Number(row.duration_ms) === 0;
+    const lane = traceLane(row.phase, String(row.item), run.run_id, names);
+    const instant = row.phase !== 'reduce-goals' &&
+      (row.category === 'audit' || Number(row.duration_ms) === 0);
+    const pass = Number(row.pass) || 1;
     const slice = {{id:`${{markerId}}-${{slices.length}}`, phase:row.phase, item:String(row.item),
       category:row.category, start, end:start + Number(row.duration_ms),
-      live:false, instant, lane}};
-    seen.add(`${{slice.phase}}|${{slice.item}}`);
+      live:false, instant, pass, lane}};
+    seen.add(`${{slice.phase}}|${{slice.item}}|${{slice.pass}}`);
     slices.push(slice);
   }});
   (run.active || []).forEach(row => {{
     const start = Date.parse(row.started_at);
     const phase = String(row.stage);
     const item = String(row.item);
-    if (!Number.isFinite(start) || seen.has(`${{phase}}|${{item}}`)) return;
+    const pass = Number(row.pass) || 1;
+    if (!Number.isFinite(start) || seen.has(`${{phase}}|${{item}}|${{pass}}`)) return;
     slices.push({{id:`${{markerId}}-${{slices.length}}`, phase, item, category:'live', start,
-      end:null, live:true, instant:false, lane:traceLane(phase, item, run.run_id)}});
+      end:null, live:true, instant:false, pass,
+      lane:traceLane(phase, item, run.run_id, names)}});
   }});
   if (!slices.length) return '';
   const lanes = new Map();
@@ -640,7 +728,10 @@ const tracePanel = run => {{
     slice.live || durationOf(slice) >= 800);
   const chain = rows => {{
     const nodes = shown(rows);
-    nodes.forEach((row, index) => link(row, nodes[index + 1], 'depends'));
+    nodes.forEach((row, index) => {{
+      const next = nodes[index + 1];
+      if (next && row.pass === next.pass) link(row, next, 'depends');
+    }});
   }};
   const pipeline = byKind('pipeline')[0];
   const trunk = (pipeline?.slices || []).filter(slice => TRUNK.includes(slice.phase))
@@ -657,22 +748,29 @@ const tracePanel = run => {{
     lane.slices.forEach(slice => {{ slice.row = row; }}));
   findings.forEach(lane => chain(lane.slices));
   ops.forEach(lane => chain(lane.slices));
-  const fork = shown(trunk).at(-1);
-  const firstShown = lane => shown(lane.slices)[0];
-  const lastShown = lane => shown(lane.slices).at(-1);
-  const reduceShown = reduce && durationOf(reduce) >= 800 ? reduce : null;
-  findings.forEach(lane =>
-    link(fork, firstShown(lane), findings.length > 1 ? 'fanout' : 'depends'));
-  if (reduceShown) {{
+  const firstShown = (lane, pass) => shown(
+    lane.slices.filter(slice => slice.pass === pass))[0];
+  const lastShown = (lane, pass) => shown(
+    lane.slices.filter(slice => slice.pass === pass)).at(-1);
+  const passes = [...new Set(slices.map(slice => slice.pass))].sort((a, b) => a - b);
+  passes.forEach(pass => {{
+    const passTrunk = trunk.filter(slice => slice.pass === pass);
+    const fork = shown(passTrunk).at(-1) || passTrunk.at(-1);
+    const lanes = findings.filter(lane => lane.slices.some(slice => slice.pass === pass));
+    lanes.forEach(lane =>
+      link(fork, firstShown(lane, pass), lanes.length > 1 ? 'fanout' : 'depends'));
+  }});
+  const reducePass = reduce ? reduce.pass : null;
+  if (reduce) {{
     findings.forEach(lane =>
-      link(lastShown(lane), reduceShown, findings.length > 1 ? 'merge' : 'depends'));
+      link(lastShown(lane, reducePass), reduce, findings.length > 1 ? 'merge' : 'depends'));
     ops.forEach(lane =>
-      link(reduceShown, firstShown(lane), ops.length > 1 ? 'fanout' : 'depends'));
+      link(reduce, firstShown(lane, lane.slices[0]?.pass), ops.length > 1 ? 'fanout' : 'depends'));
   }} else {{
     findings.forEach(lane => {{
       const sig = lane.id.replace(/^finding:/, '');
       ops.filter(op => op.id.startsWith(`op:${{sig}}:`)).forEach(op =>
-        link(lastShown(lane), firstShown(op), 'merge'));
+        link(lastShown(lane, lane.slices.at(-1)?.pass), firstShown(op, op.slices[0]?.pass), 'merge'));
     }});
   }}
   const fanoutSources = new Set(
@@ -681,18 +779,24 @@ const tracePanel = run => {{
   const origin = Math.min(...slices.map(slice => slice.start));
   const completedEnds = slices.filter(slice => slice.end != null).map(slice => slice.end);
   const staticEnd = Math.max(origin + 1, ...completedEnds);
+  const maxPass = Math.max(...slices.map(slice => slice.pass || 1));
   const renderRow = (lane, row) => {{
     const rowSlices = lane.slices;
     const title = lane.kind === 'pipeline' ? 'pipeline' : lane.title;
-    const blocks = rowSlices.map(slice =>
-      `<div id="${{slice.id}}" class="trace-block ${{esc(slice.category)}}${{slice.live ? ' live' : ''}}${{slice.instant ? ' instant' : ''}}${{fanoutSources.has(slice.id) ? ' fanout-parent' : ''}}" `+
+    const blocks = rowSlices.map(slice => {{
+      const cluster = slice.lane.cluster || '';
+      const base = slice.phase === 'label-traces-cluster' && cluster
+        ? cluster : slice.phase;
+      const text = maxPass > 1 ? `pass ${{slice.pass}} · ${{base}}` : base;
+      return `<div id="${{slice.id}}" class="trace-block ${{esc(slice.category)}}${{slice.live ? ' live' : ''}}${{slice.instant ? ' instant' : ''}}${{fanoutSources.has(slice.id) ? ' fanout-parent' : ''}}" `+
       `data-start="${{slice.start}}" data-end="${{slice.end == null ? '' : slice.end}}" `+
-      `data-phase="${{esc(slice.phase)}}" data-item="${{esc(slice.item)}}" `+
+      `data-phase="${{esc(slice.phase)}}" data-label="${{esc(text)}}" `+
+      `data-cluster="${{esc(cluster)}}" data-item="${{esc(slice.item)}}" `+
       `data-sub="0" data-instant="${{slice.instant ? '1' : '0'}}" `+
       `data-graph="${{GRAPH.has(slice.phase) || slice.live ? '1' : '0'}}" `+
       `${{!slice.live && phaseColor(slice.phase) ? `style="background:${{phaseColor(slice.phase)}}"` : ''}} `+
-      `title="${{esc(slice.phase)}}">${{esc(slice.phase)}}</div>`
-    ).join('');
+      `title="${{esc(text)}}">${{esc(text)}}</div>`;
+    }}).join('');
     const times = rowSlices.filter(slice =>
       (GRAPH.has(slice.phase) || slice.live) && !slice.instant).map(slice =>
       `<div class="trace-time" data-for="${{slice.id}}"></div>`).join('');
@@ -754,9 +858,11 @@ const tickTraces = () => {{
       const started = Math.max(0, (start - origin) / 1000);
       const duration = Math.max(0, (blockEnd - start) / 1000);
       const phase = block.dataset.phase || '';
+      const label = block.dataset.label || phase;
+      const cluster = block.dataset.cluster || '';
       const clock = new Date(start).toLocaleTimeString([], {{
         hour:'2-digit', minute:'2-digit', second:'2-digit'}});
-      block.title = `${{phase}} · start +${{sec(started)}} (${{clock}}) · ${{sec(duration)}}`+
+      block.title = `${{phase}}${{cluster && cluster !== phase ? ` · ${{cluster}}` : ''}} · start +${{sec(started)}} (${{clock}}) · ${{sec(duration)}}`+
         (block.dataset.item ? ` · ${{block.dataset.item}}` : '');
       if (block.dataset.instant === '1') {{
         block.style.left = `${{rawLeft}}px`;
@@ -764,10 +870,11 @@ const tickTraces = () => {{
       }} else {{
         const rawWidth = Math.max(2, (blockEnd - start) / range * track);
         const trim = graph && rawWidth >= 36 ? 8 : 0;
+        const minWidth = phase === 'reduce-goals' ? 168 : 2;
         block.style.left = `${{rawLeft}}px`;
-        block.style.width = `${{Math.max(2, rawWidth - trim)}}px`;
+        block.style.width = `${{Math.max(minWidth, rawWidth - trim)}}px`;
         if (!block.dataset.end) block.textContent =
-          `${{phase}} +${{started.toFixed(1)}}s · ${{sec(duration)}}`;
+          `${{label}} +${{started.toFixed(1)}}s · ${{sec(duration)}}`;
       }}
     }});
     view.querySelectorAll('.trace-time').forEach(label => {{

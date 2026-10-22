@@ -4,6 +4,7 @@ import hashlib
 import importlib.util
 import json
 import sqlite3
+import subprocess
 import sys
 import tempfile
 import threading
@@ -869,6 +870,64 @@ class ContractTests(unittest.TestCase):
             self.assertEqual(phase["peak_concurrency"], 2)
             self.assertLess(phase["wall_seconds"], phase["sum_seconds"])
             self.assertEqual(overlapped["spans"][0]["slice_user_turns"], 2)
+
+    def test_cluster_labels_use_detector_and_disambiguate_duplicates(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            run = root / "runs" / "named-run"
+            findings = {
+                "sig-aaaaaaaaaaaaaaaaaaaaaaaa": "method-critical-path",
+                "sig-bbbbbbbbbbbbbbbbbbbbbbbb": "method-retry-oscillation",
+                "sig-cccccccccccccccccccccccc": "method-retry-oscillation",
+            }
+            for sig, detector in findings.items():
+                path = run / "traces/derived/findings" / sig
+                path.mkdir(parents=True)
+                (path / "finding.json").write_text(
+                    json.dumps({"detector": detector})
+                )
+            labels = metrics_dashboard.cluster_labels(
+                root / "metrics.sqlite",
+                "named-run",
+                [
+                    {
+                        "item": "named-run-sig-dddddddddddddddddddddddd",
+                        "metadata_json": json.dumps(
+                            {"detector": "missing-final-response"}
+                        ),
+                    }
+                ],
+            )
+            self.assertEqual(
+                labels["sig-aaaaaaaaaaaaaaaaaaaaaaaa"], "method-critical-path"
+            )
+            self.assertEqual(
+                labels["sig-bbbbbbbbbbbbbbbbbbbbbbbb"],
+                "method-retry-oscillation · bbbbbbbb",
+            )
+            self.assertEqual(
+                labels["sig-cccccccccccccccccccccccc"],
+                "method-retry-oscillation · cccccccc",
+            )
+            self.assertEqual(
+                labels["sig-dddddddddddddddddddddddd"], "missing-final-response"
+            )
+
+    def test_assign_passes_numbers_a_rerun(self) -> None:
+        spans = [
+            {"phase": "normalize-traces", "started_at": "2026-01-01T00:00:00+00:00"},
+            {"phase": "label-skills", "started_at": "2026-01-01T00:00:01+00:00"},
+            {"phase": "goal", "started_at": "2026-01-01T00:00:02+00:00"},
+            {"phase": "normalize-traces", "started_at": "2026-01-01T00:01:00+00:00"},
+            {"phase": "goal", "started_at": "2026-01-01T00:01:30+00:00"},
+            {"phase": "reduce-goals", "started_at": "2026-01-01T00:02:00+00:00"},
+        ]
+        active = [
+            {"stage": "goal", "started_at": "2026-01-01T00:01:40+00:00"}
+        ]
+        metrics_dashboard.assign_passes(spans, active)
+        self.assertEqual([row["pass"] for row in spans], [1, 1, 1, 2, 2, 2])
+        self.assertEqual(active[0]["pass"], 2)
 
     def test_recreated_run_clears_stale_shared_metrics(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -3506,7 +3565,11 @@ class ContractTests(unittest.TestCase):
                         "features": {
                             "candidate_source": "signal_detector",
                             "distinct_windows": 1,
-                            "lesson": f"lesson-{finding_id}",
+                            "lesson": (
+                                {"kind": "retry_guard", "rule": finding_id}
+                                if finding_id == "finding-a"
+                                else f"lesson-{finding_id}"
+                            ),
                         },
                     },
                 )
@@ -3536,6 +3599,10 @@ class ContractTests(unittest.TestCase):
             self.assertEqual(
                 [row["finding_id"] for row in evidence["findings"]],
                 ["finding-a", "finding-b"],
+            )
+            self.assertEqual(
+                evidence["findings"][0]["lesson"],
+                {"kind": "retry_guard", "rule": "finding-a"},
             )
             self.assertTrue(all(row["path"] for row in evidence["findings"]))
             broken = json.loads(path.read_text())
@@ -4592,6 +4659,10 @@ class ContractTests(unittest.TestCase):
                     "run-a",
                 )
             command = invoke.call_args.args[0]
+            self.assertEqual(
+                invoke.call_args.kwargs["timeout"],
+                runner.AGENT_SESSION_TIMEOUT_SECONDS,
+            )
             mounts = [
                 command[index + 1]
                 for index, value in enumerate(command)
@@ -4619,6 +4690,22 @@ class ContractTests(unittest.TestCase):
             shell_command = command[-1]
             self.assertNotIn("apt-get", shell_command)
             self.assertNotIn("npm install", shell_command)
+
+    def test_logged_command_timeout_terminates_the_process_group(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            log = Path(directory) / "session.jsonl"
+            started = time.monotonic()
+            with self.assertRaises(subprocess.TimeoutExpired):
+                runner.run(
+                    [
+                        sys.executable,
+                        "-c",
+                        "import time; time.sleep(10)",
+                    ],
+                    log_path=log,
+                    timeout=0.1,
+                )
+            self.assertLess(time.monotonic() - started, 2)
 
     def test_build_creates_one_shared_docker_image(self) -> None:
         with patch.object(runner, "run") as invoke:

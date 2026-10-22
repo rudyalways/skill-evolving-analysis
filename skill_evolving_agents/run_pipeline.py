@@ -10,11 +10,13 @@ import importlib.util
 import json
 import os
 import re
+import signal
 import shlex
 import shutil
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 from concurrent.futures import Future, ThreadPoolExecutor, as_completed
 from datetime import UTC, datetime
@@ -41,6 +43,9 @@ DEFAULT_CLUSTER_WORKERS = 16
 DEFAULT_OP_WORKERS = 16
 RETRY_BUDGET = 0
 VERIFIER_RESPONSE_RETRY_BUDGET = 2
+AGENT_SESSION_TIMEOUT_SECONDS = int(
+    os.environ.get("SKILL_EVOLVER_AGENT_TIMEOUT_SECONDS", "100")
+)
 ACTIVE_BACKEND = "docker-claude"
 AGENT_NUMBERS = {
     "preprocessing": "01",
@@ -181,6 +186,7 @@ def run(
     cwd: Path | None = None,
     log_path: Path | None = None,
     input_text: str | None = None,
+    timeout: float | None = None,
 ) -> subprocess.CompletedProcess[str]:
     print("+", " ".join(display or command), flush=True)
     if log_path is None:
@@ -190,6 +196,7 @@ def run(
             text=True,
             input=input_text,
             check=check,
+            timeout=timeout,
         )
     log_path.parent.mkdir(parents=True, exist_ok=True)
     with log_path.open("w") as log:
@@ -200,18 +207,33 @@ def run(
             stdin=subprocess.PIPE if input_text is not None else None,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
+            start_new_session=True,
         )
         if input_text is not None and process.stdin is not None:
             process.stdin.write(input_text)
             process.stdin.close()
-        try:
+
+        def pump_output() -> None:
             if process.stdout is not None:
                 for line in process.stdout:
                     sys.stdout.write(line)
                     sys.stdout.flush()
                     log.write(line)
-            code = process.wait()
+
+        pump = threading.Thread(target=pump_output, daemon=True)
+        pump.start()
+        try:
+            code = process.wait(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            os.killpg(process.pid, signal.SIGTERM)
+            try:
+                process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                os.killpg(process.pid, signal.SIGKILL)
+                process.wait()
+            raise
         finally:
+            pump.join(timeout=5)
             if process.stdout is not None:
                 process.stdout.close()
     if check and code != 0:
@@ -409,6 +431,7 @@ def run_docker_session(
             AGENT_RUNTIME_IMAGE,
         ],
         log_path=log_path,
+        timeout=AGENT_SESSION_TIMEOUT_SECONDS,
     )
 
 
@@ -588,7 +611,12 @@ def run_host_session(
     try:
         if backend == "cursor":
             command = cursor_command(view, workspace, prompt, model)
-            run(command, cwd=view, log_path=log_path)
+            run(
+                command,
+                cwd=view,
+                log_path=log_path,
+                timeout=AGENT_SESSION_TIMEOUT_SECONDS,
+            )
         elif backend in {"codex", "ollama"}:
             command = [
                 "codex",
@@ -617,7 +645,13 @@ def run_host_session(
                 command.extend(["--model", model])
             command.append("-")
             print(f"+ {backend} session {stage} ({suffix})", flush=True)
-            run(command, cwd=view, log_path=log_path, input_text=prompt)
+            run(
+                command,
+                cwd=view,
+                log_path=log_path,
+                input_text=prompt,
+                timeout=AGENT_SESSION_TIMEOUT_SECONDS,
+            )
         elif backend == "claude":
             command = [
                 "claude",
@@ -633,7 +667,13 @@ def run_host_session(
                 command.extend(["--add-dir", path])
             command.extend(["--model", model or "claude-sonnet-5-5"])
             print(f"+ claude session {stage} ({suffix})", flush=True)
-            run(command, cwd=view, log_path=log_path, input_text=prompt)
+            run(
+                command,
+                cwd=view,
+                log_path=log_path,
+                input_text=prompt,
+                timeout=AGENT_SESSION_TIMEOUT_SECONDS,
+            )
         else:
             raise SystemExit(f"unknown agent backend: {backend}")
     finally:

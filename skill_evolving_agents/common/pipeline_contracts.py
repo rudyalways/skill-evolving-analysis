@@ -1403,10 +1403,18 @@ def validate_verification_input(path: Path) -> dict[str, Any]:
                 f"{finding_path}.distinct_windows",
                 "must be a non-negative integer or null",
             )
-        for field in ("candidate_source", "lesson"):
-            value = finding.get(field)
-            if value is not None and not isinstance(value, str):
-                fail(f"{finding_path}.{field}", "must be a string or null")
+        candidate_source = finding.get("candidate_source")
+        if candidate_source is not None and not isinstance(candidate_source, str):
+            fail(
+                f"{finding_path}.candidate_source",
+                "must be a string or null",
+            )
+        lesson = finding.get("lesson")
+        if lesson is not None and not isinstance(lesson, (str, dict, list)):
+            fail(
+                f"{finding_path}.lesson",
+                "must be a string, object, array, or null",
+            )
     if data["finding_id"] not in finding_ids:
         fail(
             "$.checks.step3.evidence.findings",
