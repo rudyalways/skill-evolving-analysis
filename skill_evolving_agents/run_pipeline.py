@@ -25,6 +25,12 @@ ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parent
 CONFIG_PATH = ROOT / "common/preprocessing-config.json"
 AGENT_CONFIG_PATH = ROOT / "common/agent-config.json"
+VERIFICATION_INPUT_TEMPLATE = (
+    ROOT
+    / "05_verifiter_agent"
+    / "verifiter"
+    / "verification-input.example.json"
+)
 KNOWN_BACKENDS = ("cursor", "codex", "claude", "docker-claude")
 CONTAINER_WORKSPACE = "/opt/skill-evolver/skill_evolving_agents/workspace"
 SESSION_ROOT = Path(
@@ -2586,6 +2592,7 @@ def materialize_operation_changelog(
 def _verification_requirements(op: dict, skill: str, avoid: object) -> dict:
     sections: list[dict[str, str]] = []
     directories: list[dict[str, str]] = []
+    removals: list[str] = []
 
     def collect(values: object, name_key: str, output_key: str) -> None:
         if not isinstance(values, list):
@@ -2604,6 +2611,14 @@ def _verification_requirements(op: dict, skill: str, avoid: object) -> dict:
             if value.get("skill") == skill:
                 collect(value.get("sections"), "section", "section")
                 collect(value.get("dirs"), "dir", "directory")
+                removals.extend(
+                    item.strip()
+                    for item in value.get("remove") or []
+                    if isinstance(item, str) and item.strip()
+                )
+                reason = value.get("reason")
+                if op.get("op") == "delete" and isinstance(reason, str) and reason:
+                    removals.append(f"entire skill: {reason}")
             for child in value.values():
                 walk(child)
         elif isinstance(value, list):
@@ -2622,7 +2637,37 @@ def _verification_requirements(op: dict, skill: str, avoid: object) -> dict:
         "sections": sections,
         "directories": directories,
         "avoid": avoid_items,
+        "removals": removals,
     }
+
+
+def _verification_skill_role(op: dict, skill: str) -> tuple[str, bool, bool]:
+    operation = op.get("op")
+    if operation == "create":
+        return "created", False, True
+    if operation == "update":
+        return "updated", True, True
+    if operation == "delete":
+        return "deleted", True, False
+    if operation == "merge":
+        target = (op.get("into") or {}).get("skill")
+        if skill == target:
+            sources = op.get("skills") or []
+            return "merge_target", skill in sources, True
+        return "merge_source", True, False
+    if operation == "split":
+        source = op.get("skill")
+        targets = {
+            row.get("skill")
+            for row in op.get("into") or []
+            if isinstance(row, dict)
+        }
+        if skill in targets:
+            return "split_target", skill == source, True
+        return "split_source", True, False
+    raise pipeline_contracts.ContractError(
+        f"cannot build verification role for operation {operation!r}"
+    )
 
 
 def materialize_verification_input(
@@ -2651,96 +2696,50 @@ def materialize_verification_input(
     quality = features.get("quality") or {}
     policy = preprocessing_config().get("evolution_policy") or {}
     avoid = (goal.get("goal") or {}).get("avoid")
-    skills = [
+    skills = []
+    for skill in skill_names_mod.skill_names(op):
+        role, baseline_expected, candidate_expected = _verification_skill_role(
+            op, skill
+        )
+        skills.append(
+            {
+                "skill": skill,
+                "role": role,
+                "baseline_expected": baseline_expected,
+                "candidate_expected": candidate_expected,
+                "requirements": _verification_requirements(op, skill, avoid),
+            }
+        )
+    document = json.loads(VERIFICATION_INPUT_TEMPLATE.read_text())
+    document.update(
         {
-            "skill": skill,
-            "requirements": _verification_requirements(op, skill, avoid),
+            "run_id": run_id,
+            "finding_id": finding_id,
+            "op_index": op_index,
+            "operation": str(op.get("op") or ""),
+            "skills": skills,
         }
-        for skill in skill_names_mod.skill_names(op)
-    ]
-    document = {
-        "schema_version": 1,
-        "run_id": run_id,
-        "finding_id": finding_id,
-        "op_index": op_index,
-        "operation": str(op.get("op") or ""),
-        "scoring": {
-            "scale": {"min": 0.0, "max": 1.0},
-            "pass_threshold": 0.7,
-            "step_weights": {
-                "step1": 0.2,
-                "step2": 0.25,
-                "step3": 0.15,
-                "step4": 0.15,
-                "step5": 0.25,
-            },
-        },
-        "skills": skills,
-        "checks": {
-            "step1": {
-                "check": "changelog reverse check",
-                "inputs": {
-                    "changelog": "run/changelog.json",
-                    "baseline_root": "target/raw_skills",
-                    "candidate_root": "target/to_be_improved_skills",
-                },
-                "assertions": [
-                    "The before and after hashes match the baseline and candidate skill trees.",
-                    "Every changed section and directory is claimed by the active operation.",
-                ],
-            },
-            "step2": {
-                "check": "goal align",
-                "inputs": {"goal": "run/evolve-goal.json"},
-                "assertions": [
-                    "Each candidate satisfies every section and directory expectation for its skill.",
-                    "No unclaimed section or directory changed.",
-                ],
-            },
-            "step3": {
-                "check": "difficulty level check",
-                "evidence": {
-                    "finding": (
-                        f"traces/derived/findings/{finding_id}/finding.json"
-                        if finding_path.is_file()
-                        else None
-                    ),
-                    "candidate_source": features.get("candidate_source"),
-                    "confidence": finding.get("confidence"),
-                    "evidence_records": len(finding.get("evidence") or []),
-                    "distinct_windows": features.get("distinct_windows"),
-                    "lesson": features.get("lesson"),
-                },
-                "assertions": [
-                    "The skill captures an evidence-dependent reusable procedure rather than baseline model knowledge.",
-                    "The requested behavior is sufficiently non-trivial to justify skill instructions.",
-                ],
-            },
-            "step4": {
-                "check": "not too complicated, not overfitting",
-                "thresholds": {
-                    "min_methodology_value": policy.get(
-                        "min_methodology_value", 0.08
-                    ),
-                    "novelty_max_similarity": policy.get(
-                        "novelty_max_similarity", 0.82
-                    ),
-                    "methodology_value": quality.get("value"),
-                },
-                "assertions": [
-                    "The candidate is the smallest procedure that satisfies the requirements.",
-                    "The candidate does not copy incidental details from one trace or duplicate another skill.",
-                ],
-            },
-            "step5": {
-                "check": "checklist",
-                "from": "skills[].requirements",
-                "assertions": [
-                    "Evaluate every section, directory, and avoid item; do not infer a pass from names or keyword presence.",
-                    "Record concrete evidence for each failed expectation.",
-                ],
-            },
-        },
+    )
+    document["checks"]["step3"]["evidence"] = {
+        "finding": (
+            f"traces/derived/findings/{finding_id}/finding.json"
+            if finding_path.is_file()
+            else None
+        ),
+        "candidate_source": features.get("candidate_source"),
+        "confidence": finding.get("confidence"),
+        "evidence_records": len(finding.get("evidence") or []),
+        "distinct_windows": features.get("distinct_windows"),
+        "lesson": features.get("lesson"),
+    }
+    document["checks"]["step4"]["thresholds"] = {
+        "min_methodology_value": policy.get("min_methodology_value", 0.08),
+        "methodology_value": quality.get("value"),
+    }
+    document["checks"]["step7"]["thresholds"] = {
+        "novelty_max_similarity": policy.get(
+            "novelty_max_similarity", 0.82
+        )
     }
     path = workspace / "run/verification-input.json"
     atomic_write_json(path, document)

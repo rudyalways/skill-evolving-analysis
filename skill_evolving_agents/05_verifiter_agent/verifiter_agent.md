@@ -20,7 +20,7 @@ start a verification per source edit.
 ### Output
 
 Output is active `workspace/run/verification.json` for that op: the SHA-256
-reference to the verification input, a status and evidence for all five
+reference to the verification input, a status and evidence for all eight
 input-bound steps, normalized weighted scores and causal reasoning, the
 runner-owned changelog copied from
 `workspace/run/changelog.json`, overall and per-skill status, feedback, and

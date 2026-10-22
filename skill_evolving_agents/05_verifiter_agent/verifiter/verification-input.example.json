@@ -11,16 +11,22 @@
     },
     "pass_threshold": 0.7,
     "step_weights": {
-      "step1": 0.2,
-      "step2": 0.25,
-      "step3": 0.15,
-      "step4": 0.15,
-      "step5": 0.25
+      "step1": 0.12,
+      "step2": 0.16,
+      "step3": 0.1,
+      "step4": 0.1,
+      "step5": 0.14,
+      "step6": 0.16,
+      "step7": 0.11,
+      "step8": 0.11
     }
   },
   "skills": [
     {
       "skill": "<skill>",
+      "role": "<created|updated|deleted|merge_source|merge_target|split_source|split_target>",
+      "baseline_expected": true,
+      "candidate_expected": true,
       "requirements": {
         "sections": [
           {
@@ -34,7 +40,8 @@
             "expectation": "<observable directory goal>"
           }
         ],
-        "avoid": ["<behavior or outcome that must not appear>"]
+        "avoid": ["<behavior or outcome that must not appear>"],
+        "removals": ["<obsolete or redundant information that must be removed>"]
       }
     }
   ],
@@ -46,9 +53,16 @@
         "baseline_root": "target/raw_skills",
         "candidate_root": "target/to_be_improved_skills"
       },
+      "applies_to": ["created", "updated", "deleted", "merge_source", "merge_target", "split_source", "split_target"],
       "assertions": [
-        "The before and after hashes match the baseline and candidate skill trees.",
-        "Every changed section and directory is claimed by the active operation."
+        {
+          "id": "step1-hashes",
+          "text": "The before and after hashes match the baseline and candidate skill trees."
+        },
+        {
+          "id": "step1-claimed-changes",
+          "text": "Every changed section and directory is claimed by the active operation."
+        }
       ]
     },
     "step2": {
@@ -56,9 +70,16 @@
       "inputs": {
         "goal": "run/evolve-goal.json"
       },
+      "applies_to": ["created", "updated", "deleted", "merge_source", "merge_target", "split_source", "split_target"],
       "assertions": [
-        "Each candidate satisfies every section and directory expectation for its skill.",
-        "No unclaimed section or directory changed."
+        {
+          "id": "step2-requirements",
+          "text": "The operation outcome satisfies every applicable section, directory, removal, and avoid expectation for the skill role."
+        },
+        {
+          "id": "step2-unclaimed-changes",
+          "text": "No unclaimed section or directory changed."
+        }
       ]
     },
     "step3": {
@@ -71,28 +92,101 @@
         "distinct_windows": 0,
         "lesson": null
       },
+      "applies_to": ["created", "updated", "merge_target", "split_target"],
       "assertions": [
-        "The skill captures an evidence-dependent reusable procedure rather than baseline model knowledge.",
-        "The requested behavior is sufficiently non-trivial to justify skill instructions."
+        {
+          "id": "step3-evidence-dependent",
+          "text": "The skill captures an evidence-dependent reusable procedure rather than baseline model knowledge."
+        },
+        {
+          "id": "step3-non-trivial",
+          "text": "The requested behavior is sufficiently non-trivial to justify skill instructions."
+        }
       ]
     },
     "step4": {
-      "check": "not too complicated, not overfitting",
+      "check": "not too complicated",
       "thresholds": {
-        "min_methodology_value": 0.0,
-        "novelty_max_similarity": 0.0
+        "min_methodology_value": 0.0
       },
+      "applies_to": ["created", "updated", "merge_target", "split_target"],
       "assertions": [
-        "The candidate is the smallest procedure that satisfies the requirements.",
-        "The candidate does not copy incidental details from one trace or duplicate another skill."
+        {
+          "id": "step4-minimal-procedure",
+          "text": "The candidate is the smallest procedure that satisfies the requirements."
+        },
+        {
+          "id": "step4-no-unnecessary-content",
+          "text": "The procedure does not add branches, files, or instructions that are unnecessary for the goal."
+        }
       ]
     },
     "step5": {
       "check": "checklist",
       "from": "skills[].requirements",
+      "applies_to": ["created", "updated", "deleted", "merge_source", "merge_target", "split_source", "split_target"],
       "assertions": [
-        "Evaluate every section, directory, and avoid item; do not infer a pass from names or keyword presence.",
-        "Record concrete evidence for each failed expectation."
+        {
+          "id": "step5-every-requirement",
+          "text": "Evaluate every applicable section, directory, removal, and avoid item; do not infer a pass from names or keyword presence."
+        },
+        {
+          "id": "step5-failure-evidence",
+          "text": "Record concrete evidence for each failed expectation."
+        }
+      ]
+    },
+    "step6": {
+      "check": "no degradation of existing capabilities or sections",
+      "inputs": {
+        "baseline_root": "target/raw_skills",
+        "candidate_root": "target/to_be_improved_skills"
+      },
+      "applies_to": ["updated", "merge_target", "split_target"],
+      "assertions": [
+        {
+          "id": "step6-capabilities-preserved",
+          "text": "Every pre-existing capability not explicitly replaced or removed by the goal remains available."
+        },
+        {
+          "id": "step6-valid-guidance-preserved",
+          "text": "Changed sections preserve still-valid constraints, recovery behavior, and verification guidance from the baseline."
+        }
+      ]
+    },
+    "step7": {
+      "check": "no overfitting",
+      "thresholds": {
+        "novelty_max_similarity": 0.0
+      },
+      "applies_to": ["created", "updated", "merge_target", "split_target"],
+      "assertions": [
+        {
+          "id": "step7-generalizes",
+          "text": "The candidate generalizes beyond the triggering trace, project, provider, filenames, and incidental values."
+        },
+        {
+          "id": "step7-no-eval-overfit",
+          "text": "The candidate does not duplicate another skill or optimize repeatedly against one evaluation case."
+        }
+      ]
+    },
+    "step8": {
+      "check": "unhelpful or redundant information removed",
+      "inputs": {
+        "baseline_root": "target/raw_skills",
+        "candidate_root": "target/to_be_improved_skills"
+      },
+      "applies_to": ["updated", "merge_target", "split_target"],
+      "assertions": [
+        {
+          "id": "step8-no-redundancy",
+          "text": "The candidate contains no duplicated, superseded, generic, or non-actionable instructions."
+        },
+        {
+          "id": "step8-removals-applied",
+          "text": "Every item in skills[].requirements.removals is absent rather than retained beside its replacement."
+        }
       ]
     }
   }

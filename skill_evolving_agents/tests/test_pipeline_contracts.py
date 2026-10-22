@@ -220,7 +220,47 @@ def valid_goal(op: dict | None = None) -> dict:
     }
 
 
-def valid_verification(skill: str, action=None) -> dict:
+def valid_verification(
+    skill: str, action=None, role: str = "updated"
+) -> dict:
+    template = json.loads(
+        (VERIFIER / "verification-input.example.json").read_text()
+    )
+    steps = []
+    for index in range(1, 9):
+        step_id = f"step{index}"
+        check = template["checks"][step_id]
+        applicable = role in check["applies_to"]
+        steps.append(
+            {
+                "id": step_id,
+                "check": check["check"],
+                "input_ref": f"#/checks/{step_id}",
+                "applicable": applicable,
+                "status": "pass" if applicable else "not_applicable",
+                "score": 1.0 if applicable else None,
+                "reasoning": (
+                    "All assertions were satisfied."
+                    if applicable
+                    else f"Step does not apply to skill role {role}."
+                ),
+                "evidence": ["verified"] if applicable else [],
+                "assertion_results": (
+                    [
+                        {
+                            "assertion_id": assertion["id"],
+                            "status": "pass",
+                            "score": 1.0,
+                            "reasoning": "Assertion satisfied.",
+                            "evidence": ["verified"],
+                        }
+                        for assertion in check["assertions"]
+                    ]
+                    if applicable
+                    else []
+                ),
+            }
+        )
     return {
         "diagnosis": None,
         "verification_input": {
@@ -230,18 +270,7 @@ def valid_verification(skill: str, action=None) -> dict:
         "verification_steps": [
             {
                 "skill": skill,
-                "steps": [
-                    {
-                        "id": f"step{index}",
-                        "check": f"check {index}",
-                        "input_ref": f"#/checks/step{index}",
-                        "status": "pass",
-                        "score": 1.0,
-                        "reasoning": "All assertions were satisfied.",
-                        "evidence": ["verified"],
-                    }
-                    for index in range(1, 6)
-                ],
+                "steps": steps,
             }
         ],
         "nod": None,
@@ -2266,30 +2295,51 @@ class ContractTests(unittest.TestCase):
             row = json.loads(metadata.read_text())["skills_metadata"][0]
             self.assertEqual(row["changelog"], [change])
             contracts.validate_metadata(metadata, {"example"})
-            verification_input = runner.materialize_verification_input(
-                workspace,
-                {"goal": {"avoid": "Do not regress existing behavior."}},
-                {
-                    "op": "update",
-                    "skills": [
-                        {
-                            "skill": "example",
-                            "sections": [
-                                {
-                                    "section": "workflow",
-                                    "goal": "Require an observable result.",
-                                }
-                            ],
-                            "dirs": [],
-                        }
-                    ],
-                },
-                "run-1",
-                "finding-1",
-                1,
+            template = json.loads(
+                runner.VERIFICATION_INPUT_TEMPLATE.read_text()
             )
+            template["checks"]["step1"]["assertions"] = [
+                {
+                    "id": "step1-template",
+                    "text": "Template-owned assertion.",
+                }
+            ]
+            template_path = workspace / "verification-input-template.json"
+            write_json(template_path, template)
+            with patch.object(
+                runner, "VERIFICATION_INPUT_TEMPLATE", template_path
+            ):
+                verification_input = runner.materialize_verification_input(
+                    workspace,
+                    {"goal": {"avoid": "Do not regress existing behavior."}},
+                    {
+                        "op": "update",
+                        "skills": [
+                            {
+                                "skill": "example",
+                                "sections": [
+                                    {
+                                        "section": "workflow",
+                                        "goal": "Require an observable result.",
+                                    }
+                                ],
+                                "dirs": [],
+                            }
+                        ],
+                    },
+                    "run-1",
+                    "finding-1",
+                    1,
+                )
             input_data = contracts.validate_verification_input(
                 verification_input
+            )
+            self.assertEqual(input_data["skills"][0]["role"], "updated")
+            self.assertTrue(
+                input_data["skills"][0]["baseline_expected"]
+            )
+            self.assertTrue(
+                input_data["skills"][0]["candidate_expected"]
             )
             requirements = input_data["skills"][0]["requirements"]
             self.assertEqual(
@@ -2298,6 +2348,16 @@ class ContractTests(unittest.TestCase):
             )
             self.assertEqual(
                 requirements["avoid"], ["Do not regress existing behavior."]
+            )
+            self.assertEqual(requirements["removals"], [])
+            self.assertEqual(
+                input_data["checks"]["step1"]["assertions"],
+                [
+                    {
+                        "id": "step1-template",
+                        "text": "Template-owned assertion.",
+                    }
+                ],
             )
 
     def test_skill_format_names_and_aliases(self) -> None:
@@ -2793,6 +2853,35 @@ class ContractTests(unittest.TestCase):
         )
         self.assertEqual(out["changelog"], [change])
         self.assertEqual(out["verification_input"]["sha256"], "d" * 64)
+
+    def test_verification_input_and_output_templates_align(self) -> None:
+        input_template = json.loads(
+            (VERIFIER / "verification-input.example.json").read_text()
+        )
+        output_template = json.loads(
+            (VERIFIER / "verification-output.example.json").read_text()
+        )
+        output_steps = output_template["verification_steps"][0]["steps"]
+        self.assertEqual(
+            [step["id"] for step in output_steps],
+            list(input_template["checks"]),
+        )
+        for step in output_steps:
+            source = input_template["checks"][step["id"]]
+            self.assertEqual(step["check"], source["check"])
+            self.assertEqual(
+                step["input_ref"], f"#/checks/{step['id']}"
+            )
+            self.assertEqual(
+                {
+                    result["assertion_id"]
+                    for result in step["assertion_results"]
+                },
+                {assertion["id"] for assertion in source["assertions"]},
+            )
+        self.assertNotIn(
+            "step_n", output_template["verification_steps"][0]
+        )
 
     def test_materialized_goal_contains_one_op(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -3949,7 +4038,9 @@ class MockedPipelineTest(unittest.TestCase):
                         },
                     )
                 elif stage == "verifiter":
-                    verification = valid_verification("created")
+                    verification = valid_verification(
+                        "created", role="created"
+                    )
                     verification["verification_input"]["sha256"] = hashlib.sha256(
                         (ws / "run/verification-input.json").read_bytes()
                     ).hexdigest()
@@ -3959,7 +4050,9 @@ class MockedPipelineTest(unittest.TestCase):
                     )
                 elif stage == "judge":
                     verification = valid_verification(
-                        "created", {"op": "pass", "to": ""}
+                        "created",
+                        {"op": "pass", "to": ""},
+                        role="created",
                     )
                     verification["verification_input"]["sha256"] = hashlib.sha256(
                         (ws / "run/verification-input.json").read_bytes()

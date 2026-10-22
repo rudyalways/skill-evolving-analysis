@@ -13,6 +13,16 @@ from typing import Any
 PLACEHOLDER = re.compile(r"<[^<>]+>")
 INLINE_CODE = re.compile(r"`[^`]*`")
 KNOWN_OPS = {"create", "update", "delete", "merge", "split"}
+VERIFICATION_STEP_COUNT = 8
+VERIFICATION_ROLES = {
+    "created",
+    "updated",
+    "deleted",
+    "merge_source",
+    "merge_target",
+    "split_source",
+    "split_target",
+}
 
 
 class ContractError(ValueError):
@@ -848,6 +858,11 @@ def _validate_change_lists(record: dict[str, Any], path: str) -> None:
             field = "section" if key == "sections" else "dir"
             required_string(value, field, item_path)
             required_string(value, "goal", item_path)
+    removals = record.get("remove", [])
+    if not isinstance(removals, list) or any(
+        not isinstance(value, str) or not value.strip() for value in removals
+    ):
+        fail(f"{path}.remove", "must be a list of non-empty strings")
 
 
 def validate_goal(path: Path, *, exactly_one_op: bool = False) -> dict[str, Any]:
@@ -995,9 +1010,11 @@ def validate_verification_input(path: Path) -> dict[str, Any]:
     ):
         fail("$.scoring.pass_threshold", "must be a number above 0 and at most 1")
     weights = scoring.get("step_weights")
-    expected_steps = {f"step{index}" for index in range(1, 6)}
+    expected_steps = {
+        f"step{index}" for index in range(1, VERIFICATION_STEP_COUNT + 1)
+    }
     if not isinstance(weights, dict) or set(weights) != expected_steps:
-        fail("$.scoring.step_weights", "must contain exactly step1 through step5")
+        fail("$.scoring.step_weights", "must contain exactly step1 through step8")
     if any(
         not isinstance(weight, (int, float))
         or isinstance(weight, bool)
@@ -1010,11 +1027,21 @@ def validate_verification_input(path: Path) -> dict[str, Any]:
     skills = required_list(data, "skills", "$")
     if not skills:
         fail("$.skills", "must not be empty")
+    skill_names_seen: set[str] = set()
     for index, skill in enumerate(skills):
         item_path = f"$.skills[{index}]"
         if not isinstance(skill, dict):
             fail(item_path, "must be an object")
-        required_string(skill, "skill", item_path)
+        skill_name = required_string(skill, "skill", item_path)
+        if skill_name in skill_names_seen:
+            fail(f"{item_path}.skill", "duplicates another input skill")
+        skill_names_seen.add(skill_name)
+        role = required_string(skill, "role", item_path)
+        if role not in VERIFICATION_ROLES:
+            fail(f"{item_path}.role", "has an unknown verification role")
+        for field in ("baseline_expected", "candidate_expected"):
+            if not isinstance(skill.get(field), bool):
+                fail(f"{item_path}.{field}", "must be boolean")
         requirements = skill.get("requirements")
         if not isinstance(requirements, dict):
             fail(f"{item_path}.requirements", "must be an object")
@@ -1032,22 +1059,55 @@ def validate_verification_input(path: Path) -> dict[str, Any]:
         avoid = required_list(requirements, "avoid", f"{item_path}.requirements")
         if not all(isinstance(value, str) and value.strip() for value in avoid):
             fail(f"{item_path}.requirements.avoid", "must contain non-empty strings")
+        removals = required_list(
+            requirements, "removals", f"{item_path}.requirements"
+        )
+        if not all(
+            isinstance(value, str) and value.strip() for value in removals
+        ):
+            fail(
+                f"{item_path}.requirements.removals",
+                "must contain non-empty strings",
+            )
     checks = data.get("checks")
     if not isinstance(checks, dict):
         fail("$.checks", "must be an object")
     expected = expected_steps
     if set(checks) != expected:
-        fail("$.checks", "must contain exactly step1 through step5")
+        fail("$.checks", "must contain exactly step1 through step8")
     for step_id, check in checks.items():
         check_path = f"$.checks.{step_id}"
         if not isinstance(check, dict):
             fail(check_path, "must be an object")
         required_string(check, "check", check_path)
-        assertions = required_list(check, "assertions", check_path)
-        if not assertions or not all(
-            isinstance(value, str) and value.strip() for value in assertions
+        applies_to = required_list(check, "applies_to", check_path)
+        if not applies_to or not all(
+            isinstance(role, str) and role in VERIFICATION_ROLES
+            for role in applies_to
         ):
-            fail(f"{check_path}.assertions", "must contain non-empty strings")
+            fail(
+                f"{check_path}.applies_to",
+                "must contain known verification roles",
+            )
+        if len(set(applies_to)) != len(applies_to):
+            fail(f"{check_path}.applies_to", "must not contain duplicates")
+        assertions = required_list(check, "assertions", check_path)
+        if not assertions:
+            fail(f"{check_path}.assertions", "must not be empty")
+        assertion_ids: set[str] = set()
+        for assertion_index, assertion in enumerate(assertions):
+            assertion_path = (
+                f"{check_path}.assertions[{assertion_index}]"
+            )
+            if not isinstance(assertion, dict):
+                fail(assertion_path, "must be an object")
+            assertion_id = required_string(
+                assertion, "id", assertion_path
+            )
+            if assertion_id in assertion_ids:
+                fail(f"{assertion_path}.id", "duplicates another assertion")
+            assertion_ids.add(assertion_id)
+            required_string(assertion, "text", assertion_path)
     return data
 
 
@@ -1084,11 +1144,18 @@ def validate_verification(
     scoring = (input_data or {}).get("scoring") or {}
     pass_threshold = float(scoring.get("pass_threshold", 0.7))
     step_weights = scoring.get("step_weights") or {
-        f"step{index}": 0.2 for index in range(1, 6)
+        f"step{index}": 1 / VERIFICATION_STEP_COUNT
+        for index in range(1, VERIFICATION_STEP_COUNT + 1)
     }
     step_groups = required_list(data, "verification_steps", "$")
     if not step_groups:
         fail("$.verification_steps", "must not be empty")
+    input_skills = {
+        row["skill"]: row
+        for row in (input_data or {}).get("skills") or []
+        if isinstance(row, dict) and isinstance(row.get("skill"), str)
+    }
+    input_checks = (input_data or {}).get("checks") or {}
     step_skills: set[str] = set()
     skill_scores: dict[str, float] = {}
     for group_index, group in enumerate(step_groups):
@@ -1096,25 +1163,71 @@ def validate_verification(
         if not isinstance(group, dict):
             fail(group_path, "must be an object")
         group_skill = required_string(group, "skill", group_path)
+        if group_skill in step_skills:
+            fail(f"{group_path}.skill", "duplicates another output skill")
         step_skills.add(group_skill)
+        input_skill = input_skills.get(group_skill)
+        if input_data is not None and input_skill is None:
+            fail(f"{group_path}.skill", "is not present in verification input")
+        role = input_skill.get("role") if input_skill else None
         steps = required_list(group, "steps", group_path)
         step_ids: set[str] = set()
         weighted_score = 0.0
+        applicable_weight = 0.0
         for step_index, step in enumerate(steps):
             step_path = f"{group_path}.steps[{step_index}]"
             if not isinstance(step, dict):
                 fail(step_path, "must be an object")
             step_id = required_string(step, "id", step_path)
+            if step_id in step_ids:
+                fail(f"{step_path}.id", "duplicates another step")
             step_ids.add(step_id)
+            input_check = input_checks.get(step_id)
+            if input_data is not None and not isinstance(input_check, dict):
+                fail(f"{step_path}.id", "is not present in verification input")
+            if input_check is not None and step.get("check") != input_check.get("check"):
+                fail(f"{step_path}.check", "does not match verification input")
             if step.get("input_ref") != f"#/checks/{step_id}":
                 fail(
                     f"{step_path}.input_ref",
                     f"must equal #/checks/{step_id}",
                 )
+            expected_applicable = (
+                role in (input_check.get("applies_to") or [])
+                if input_check is not None
+                else True
+            )
+            if step.get("applicable") is not expected_applicable:
+                fail(
+                    f"{step_path}.applicable",
+                    "does not match the input role applicability",
+                )
             status = step.get("status")
+            score = step.get("score")
+            required_string(step, "reasoning", step_path)
+            evidence = required_list(step, "evidence", step_path)
+            assertion_results = required_list(
+                step, "assertion_results", step_path
+            )
+            if not expected_applicable:
+                if status != "not_applicable":
+                    fail(
+                        f"{step_path}.status",
+                        "must be not_applicable when the step does not apply",
+                    )
+                if score is not None:
+                    fail(
+                        f"{step_path}.score",
+                        "must be null when the step does not apply",
+                    )
+                if evidence or assertion_results:
+                    fail(
+                        step_path,
+                        "non-applicable steps must have empty evidence and assertion_results",
+                    )
+                continue
             if status not in {"pass", "fail"}:
                 fail(f"{step_path}.status", "must be pass or fail")
-            score = step.get("score")
             if (
                 not isinstance(score, (int, float))
                 or isinstance(score, bool)
@@ -1126,26 +1239,111 @@ def validate_verification(
                     step_path,
                     "status must pass exactly when score meets the input threshold",
                 )
-            required_string(step, "reasoning", step_path)
-            evidence = required_list(step, "evidence", step_path)
             if not evidence or not all(
                 isinstance(value, str) and value.strip() for value in evidence
             ):
                 fail(f"{step_path}.evidence", "must contain non-empty strings")
-            weighted_score += float(score) * float(step_weights[step_id])
-        if step_ids != {f"step{index}" for index in range(1, 6)}:
-            fail(f"{group_path}.steps", "must contain exactly step1 through step5")
-        skill_scores[group_skill] = weighted_score
+            expected_assertions = {
+                assertion["id"]: assertion
+                for assertion in (input_check or {}).get("assertions") or []
+                if isinstance(assertion, dict)
+            }
+            result_ids: set[str] = set()
+            assertion_scores: list[float] = []
+            for result_index, result in enumerate(assertion_results):
+                result_path = (
+                    f"{step_path}.assertion_results[{result_index}]"
+                )
+                if not isinstance(result, dict):
+                    fail(result_path, "must be an object")
+                assertion_id = required_string(
+                    result, "assertion_id", result_path
+                )
+                if assertion_id in result_ids:
+                    fail(
+                        f"{result_path}.assertion_id",
+                        "duplicates another assertion result",
+                    )
+                result_ids.add(assertion_id)
+                assertion_status = result.get("status")
+                assertion_score = result.get("score")
+                if assertion_status not in {"pass", "fail"}:
+                    fail(f"{result_path}.status", "must be pass or fail")
+                if (
+                    not isinstance(assertion_score, (int, float))
+                    or isinstance(assertion_score, bool)
+                    or not 0 <= float(assertion_score) <= 1
+                ):
+                    fail(
+                        f"{result_path}.score",
+                        "must be a number from 0 to 1",
+                    )
+                if (float(assertion_score) >= pass_threshold) != (
+                    assertion_status == "pass"
+                ):
+                    fail(
+                        result_path,
+                        "status must match the input pass threshold",
+                    )
+                required_string(result, "reasoning", result_path)
+                result_evidence = required_list(
+                    result, "evidence", result_path
+                )
+                if not result_evidence or not all(
+                    isinstance(value, str) and value.strip()
+                    for value in result_evidence
+                ):
+                    fail(
+                        f"{result_path}.evidence",
+                        "must contain non-empty strings",
+                    )
+                assertion_scores.append(float(assertion_score))
+            if input_check is not None and result_ids != set(expected_assertions):
+                fail(
+                    f"{step_path}.assertion_results",
+                    "must cover every input assertion exactly once",
+                )
+            if not assertion_scores:
+                fail(
+                    f"{step_path}.assertion_results",
+                    "must not be empty for an applicable step",
+                )
+            assertion_mean = sum(assertion_scores) / len(assertion_scores)
+            if abs(float(score) - assertion_mean) > 1e-6:
+                fail(
+                    f"{step_path}.score",
+                    "must equal the mean assertion score",
+                )
+            weight = float(step_weights[step_id])
+            weighted_score += float(score) * weight
+            applicable_weight += weight
+        if step_ids != {
+            f"step{index}"
+            for index in range(1, VERIFICATION_STEP_COUNT + 1)
+        }:
+            fail(f"{group_path}.steps", "must contain exactly step1 through step8")
+        if applicable_weight <= 0:
+            fail(group_path, "must contain at least one applicable step")
+        skill_scores[group_skill] = weighted_score / applicable_weight
+    if input_data is not None and step_skills != set(input_skills):
+        fail("$.verification_steps", "does not match verification input skills")
     if expected_skills is not None and step_skills != expected_skills:
         fail("$.verification_steps", "does not match the active op's skills")
+    contract_skills = (
+        expected_skills
+        if expected_skills is not None
+        else set(input_skills)
+        if input_data is not None
+        else None
+    )
     changelog = required_list(data, "changelog", "$")
     changed_names: set[str] = set()
     for index, change in enumerate(changelog):
         changed_names.add(
             _validate_changelog_entry(change, f"$.changelog[{index}]")
         )
-    if expected_skills is not None and changed_names != expected_skills:
-        fail("$.changelog", "does not match the active op's skills")
+    if contract_skills is not None and changed_names != contract_skills:
+        fail("$.changelog", "does not match the verification skill set")
     feedback = data.get("feedback")
     if not isinstance(feedback, dict):
         fail("$.feedback", "must be an object")
@@ -1258,8 +1456,8 @@ def validate_verification(
         retries = row.get("retries_used")
         if not isinstance(retries, int) or isinstance(retries, bool) or retries < 0:
             fail(f"{item_path}.retries_used", "must be a non-negative integer")
-    if expected_skills is not None and names != expected_skills:
-        fail("$.feedback.per_skill", "does not match the active op's skills")
+    if contract_skills is not None and names != contract_skills:
+        fail("$.feedback.per_skill", "does not match the verification skill set")
     action = feedback.get("action")
     if not judged:
         if action is not None:

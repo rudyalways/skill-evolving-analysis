@@ -87,6 +87,7 @@ def build(
     budget: int | None,
     changelog: dict | None = None,
     input_sha256: str | None = None,
+    verification_input: dict | None = None,
 ) -> dict:
     skills = skills_in_ops(goal)
     if not skills:
@@ -119,9 +120,41 @@ def build(
         }
     if budget is not None:
         out["feedback"]["retry_budget"] = budget
+    input_skills = {
+        row.get("skill"): row
+        for row in (verification_input or {}).get("skills") or []
+        if isinstance(row, dict)
+    }
+    input_checks = (verification_input or {}).get("checks") or {}
     for name in skills:
         step = copy.deepcopy(steps[0])
         step["skill"] = name
+        input_skill = input_skills.get(name) or {}
+        role = input_skill.get("role")
+        for result in step.get("steps") or []:
+            step_id = result.get("id")
+            input_check = input_checks.get(step_id) or {}
+            result["check"] = input_check.get("check", result.get("check"))
+            applicable = role in (input_check.get("applies_to") or [])
+            result["applicable"] = applicable
+            if not applicable:
+                result["status"] = "not_applicable"
+                result["score"] = None
+                result["reasoning"] = f"Step does not apply to skill role {role}."
+                result["evidence"] = []
+                result["assertion_results"] = []
+                continue
+            result["assertion_results"] = [
+                {
+                    "assertion_id": assertion.get("id"),
+                    "status": "<pass|fail>",
+                    "score": 0.0,
+                    "reasoning": "<why the assertion passed or failed>",
+                    "evidence": ["<observed result>"],
+                }
+                for assertion in input_check.get("assertions") or []
+                if isinstance(assertion, dict)
+            ]
         out["verification_steps"].append(step)
         row = copy.deepcopy(per_skill[0])
         row["skill"] = name
@@ -156,7 +189,7 @@ def main() -> None:
         )
     try:
         input_bytes = args.input.read_bytes()
-        json.loads(input_bytes)
+        verification_input = json.loads(input_bytes)
     except FileNotFoundError:
         fail(
             "verification input was not produced",
@@ -174,6 +207,7 @@ def main() -> None:
         budget,
         changelog,
         hashlib.sha256(input_bytes).hexdigest(),
+        verification_input,
     )
     text = json.dumps(out, indent=2, ensure_ascii=False) + "\n"
     if args.stdout:

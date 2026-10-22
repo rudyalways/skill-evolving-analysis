@@ -13,59 +13,211 @@
           "id": "step1",
           "check": "changelog reverse check",
           "input_ref": "#/checks/step1",
-          "status": "<pass|fail>",
-          "score": 0.0,
+          "applicable": true,
+          "status": "<pass|fail|not_applicable>",
+          "score": "<0..1|null>",
           "reasoning": "<why this score follows from the assertions and evidence>",
-          "evidence": ["<observed result>"]
+          "evidence": ["<observed result>"],
+          "assertion_results": [
+            {
+              "assertion_id": "step1-hashes",
+              "status": "<pass|fail>",
+              "score": 0.0,
+              "reasoning": "<why the assertion passed or failed>",
+              "evidence": ["<observed result>"]
+            },
+            {
+              "assertion_id": "step1-claimed-changes",
+              "status": "<pass|fail>",
+              "score": 0.0,
+              "reasoning": "<why the assertion passed or failed>",
+              "evidence": ["<observed result>"]
+            }
+          ]
         },
         {
           "id": "step2",
           "check": "goal align",
-          "ref": "evolve-goal",
           "input_ref": "#/checks/step2",
-          "status": "<pass|fail>",
-          "score": 0.0,
+          "applicable": true,
+          "status": "<pass|fail|not_applicable>",
+          "score": "<0..1|null>",
           "reasoning": "<why this score follows from the assertions and evidence>",
-          "evidence": ["<observed result>"]
+          "evidence": ["<observed result>"],
+          "assertion_results": [
+            {
+              "assertion_id": "step2-requirements",
+              "status": "<pass|fail>",
+              "score": 0.0,
+              "reasoning": "<why the assertion passed or failed>",
+              "evidence": ["<observed result>"]
+            },
+            {
+              "assertion_id": "step2-unclaimed-changes",
+              "status": "<pass|fail>",
+              "score": 0.0,
+              "reasoning": "<why the assertion passed or failed>",
+              "evidence": ["<observed result>"]
+            }
+          ]
         },
         {
           "id": "step3",
           "check": "difficulty level check",
           "input_ref": "#/checks/step3",
-          "status": "<pass|fail>",
-          "score": 0.0,
+          "applicable": true,
+          "status": "<pass|fail|not_applicable>",
+          "score": "<0..1|null>",
           "reasoning": "<why this score follows from the assertions and evidence>",
-          "evidence": ["<observed result>"]
+          "evidence": ["<observed result>"],
+          "assertion_results": [
+            {
+              "assertion_id": "step3-evidence-dependent",
+              "status": "<pass|fail>",
+              "score": 0.0,
+              "reasoning": "<why the assertion passed or failed>",
+              "evidence": ["<observed result>"]
+            },
+            {
+              "assertion_id": "step3-non-trivial",
+              "status": "<pass|fail>",
+              "score": 0.0,
+              "reasoning": "<why the assertion passed or failed>",
+              "evidence": ["<observed result>"]
+            }
+          ]
         },
         {
           "id": "step4",
-          "check": "not too complicated, not overfitting",
+          "check": "not too complicated",
           "input_ref": "#/checks/step4",
-          "status": "<pass|fail>",
-          "score": 0.0,
+          "applicable": true,
+          "status": "<pass|fail|not_applicable>",
+          "score": "<0..1|null>",
           "reasoning": "<why this score follows from the assertions and evidence>",
-          "evidence": ["<observed result>"]
+          "evidence": ["<observed result>"],
+          "assertion_results": [
+            {
+              "assertion_id": "step4-minimal-procedure",
+              "status": "<pass|fail>",
+              "score": 0.0,
+              "reasoning": "<why the assertion passed or failed>",
+              "evidence": ["<observed result>"]
+            },
+            {
+              "assertion_id": "step4-no-unnecessary-content",
+              "status": "<pass|fail>",
+              "score": 0.0,
+              "reasoning": "<why the assertion passed or failed>",
+              "evidence": ["<observed result>"]
+            }
+          ]
         },
         {
           "id": "step5",
           "check": "checklist",
-          "from": "verification input requirements",
           "input_ref": "#/checks/step5",
-          "status": "<pass|fail>",
-          "score": 0.0,
+          "applicable": true,
+          "status": "<pass|fail|not_applicable>",
+          "score": "<0..1|null>",
           "reasoning": "<why this score follows from the assertions and evidence>",
-          "evidence": ["<observed result>"]
+          "evidence": ["<observed result>"],
+          "assertion_results": [
+            {
+              "assertion_id": "step5-every-requirement",
+              "status": "<pass|fail>",
+              "score": 0.0,
+              "reasoning": "<why the assertion passed or failed>",
+              "evidence": ["<observed result>"]
+            },
+            {
+              "assertion_id": "step5-failure-evidence",
+              "status": "<pass|fail>",
+              "score": 0.0,
+              "reasoning": "<why the assertion passed or failed>",
+              "evidence": ["<observed result>"]
+            }
+          ]
+        },
+        {
+          "id": "step6",
+          "check": "no degradation of existing capabilities or sections",
+          "input_ref": "#/checks/step6",
+          "applicable": true,
+          "status": "<pass|fail|not_applicable>",
+          "score": "<0..1|null>",
+          "reasoning": "<why this score follows from the assertions and evidence>",
+          "evidence": ["<observed result>"],
+          "assertion_results": [
+            {
+              "assertion_id": "step6-capabilities-preserved",
+              "status": "<pass|fail>",
+              "score": 0.0,
+              "reasoning": "<why the assertion passed or failed>",
+              "evidence": ["<observed result>"]
+            },
+            {
+              "assertion_id": "step6-valid-guidance-preserved",
+              "status": "<pass|fail>",
+              "score": 0.0,
+              "reasoning": "<why the assertion passed or failed>",
+              "evidence": ["<observed result>"]
+            }
+          ]
+        },
+        {
+          "id": "step7",
+          "check": "no overfitting",
+          "input_ref": "#/checks/step7",
+          "applicable": true,
+          "status": "<pass|fail|not_applicable>",
+          "score": "<0..1|null>",
+          "reasoning": "<why this score follows from the assertions and evidence>",
+          "evidence": ["<observed result>"],
+          "assertion_results": [
+            {
+              "assertion_id": "step7-generalizes",
+              "status": "<pass|fail>",
+              "score": 0.0,
+              "reasoning": "<why the assertion passed or failed>",
+              "evidence": ["<observed result>"]
+            },
+            {
+              "assertion_id": "step7-no-eval-overfit",
+              "status": "<pass|fail>",
+              "score": 0.0,
+              "reasoning": "<why the assertion passed or failed>",
+              "evidence": ["<observed result>"]
+            }
+          ]
+        },
+        {
+          "id": "step8",
+          "check": "unhelpful or redundant information removed",
+          "input_ref": "#/checks/step8",
+          "applicable": true,
+          "status": "<pass|fail|not_applicable>",
+          "score": "<0..1|null>",
+          "reasoning": "<why this score follows from the assertions and evidence>",
+          "evidence": ["<observed result>"],
+          "assertion_results": [
+            {
+              "assertion_id": "step8-no-redundancy",
+              "status": "<pass|fail>",
+              "score": 0.0,
+              "reasoning": "<why the assertion passed or failed>",
+              "evidence": ["<observed result>"]
+            },
+            {
+              "assertion_id": "step8-removals-applied",
+              "status": "<pass|fail>",
+              "score": 0.0,
+              "reasoning": "<why the assertion passed or failed>",
+              "evidence": ["<observed result>"]
+            }
+          ]
         }
-      ],
-      "step_n": {
-        "id": "stepN",
-        "enabled": false,
-        "method": "agent_run",
-        "verify_list": {
-          "target": ["response", "trace", "workspace", "logs"],
-          "verifier": ["regex", "script"]
-        }
-      }
+      ]
     }
   ],
   "nod": null,
