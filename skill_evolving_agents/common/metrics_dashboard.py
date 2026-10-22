@@ -242,6 +242,91 @@ def cluster_labels(
     return labels
 
 
+def operation_labels(
+    database: Path, run_id: str, spans: list[dict[str, Any]]
+) -> dict[str, Any]:
+    """Name each operation by its skill and verb.
+
+    Changelogs already written for this run supply create, update, and the
+    other verbs. Span metadata fills an operation whose changelog is not on
+    disk yet. A finding with no operation is labeled no change.
+    """
+    by_op: dict[str, str] = {}
+    no_change: set[str] = set()
+    for span in spans:
+        item = str(span.get("item") or "")
+        match = _SIG_RE.search(item)
+        if not match:
+            continue
+        operation = span.get("operation")
+        if not isinstance(operation, str) or not operation.strip():
+            detail = span.get("detail")
+            if isinstance(detail, dict):
+                operation = detail.get("operation")
+        conflicts = span.get("conflicts")
+        if not isinstance(conflicts, list):
+            detail = span.get("detail")
+            conflicts = detail.get("conflicts") if isinstance(detail, dict) else None
+        skills = [
+            str(name)
+            for name in conflicts or []
+            if str(name).strip() and str(name) != "*"
+        ]
+        if not isinstance(operation, str) or not operation.strip() or not skills:
+            continue
+        op_match = re.search(r"-op-(\d+)", item)
+        op_index = op_match.group(1) if op_match else "1"
+        by_op.setdefault(
+            f"{match.group(1)}:{op_index}",
+            f"{', '.join(skills)} · {operation.strip()}",
+        )
+    root = database.parent / "runs" / run_id / "run"
+    if root.is_dir():
+        for path in sorted(root.glob("sig-*/ops/*/changelog.json")):
+            label = _changelog_label(path)
+            if not label:
+                continue
+            by_op[f"{path.parents[2].name}:{path.parent.name}"] = label
+        for path in sorted(root.glob("sig-*/changelog.json")):
+            try:
+                data = json.loads(path.read_text())
+            except (OSError, json.JSONDecodeError):
+                continue
+            if isinstance(data, dict) and data.get("disposition") == "no_change":
+                no_change.add(path.parent.name)
+    grouped: dict[str, list[str]] = defaultdict(list)
+    for key, label in by_op.items():
+        sig, _sep, _op = key.rpartition(":")
+        if label not in grouped[sig]:
+            grouped[sig].append(label)
+    by_sig = {sig: ", ".join(labels) for sig, labels in grouped.items()}
+    for sig in no_change:
+        by_sig.setdefault(sig, "no change")
+    return {"by_op": by_op, "by_sig": by_sig}
+
+
+def _changelog_label(path: Path) -> str:
+    try:
+        data = json.loads(path.read_text())
+    except (OSError, json.JSONDecodeError):
+        return ""
+    if not isinstance(data, dict):
+        return ""
+    parts: list[str] = []
+    for change in data.get("changes") or []:
+        if not isinstance(change, dict):
+            continue
+        skill = str(change.get("skill") or "").strip()
+        operation = str(change.get("operation") or "").strip()
+        if skill and operation:
+            label = f"{skill} · {operation}"
+        else:
+            label = skill or operation
+        if label and label not in parts:
+            parts.append(label)
+    return ", ".join(parts)
+
+
 def assign_passes(
     spans: list[dict[str, Any]], active: list[dict[str, Any]]
 ) -> None:
@@ -405,6 +490,14 @@ def _chain_continues(
     return False
 
 
+def _inferred_timeout(duration_ms: float) -> str:
+    """Name a session killed at the 180s or 360s verifier limit."""
+    for limit in (180_000, 360_000):
+        if limit - 1_000 <= duration_ms <= limit + 8_000:
+            return f"timed out after {limit // 1000} seconds"
+    return ""
+
+
 def annotate_endings(
     spans: list[dict[str, Any]], active: list[dict[str, Any]]
 ) -> None:
@@ -418,9 +511,7 @@ def annotate_endings(
     for span in spans:
         rejection = str(span.get("rejection") or "")
         if not rejection and span.get("status") == "error":
-            duration = float(span.get("duration_ms") or 0)
-            if 179_000 <= duration <= 188_000:
-                rejection = "timed out after 180 seconds"
+            rejection = _inferred_timeout(float(span.get("duration_ms") or 0))
         if rejection or span.get("status") in {"rejected", "error"}:
             label = _ending_headline(
                 rejection, str(span.get("rejection_label") or "")
@@ -577,6 +668,7 @@ def metrics_payload(database: Path) -> dict[str, Any]:
         assign_passes(timing["spans"], active)
         annotate_rejections(timing["spans"], failed_statuses(database, run_id))
         labels = cluster_labels(database, run_id, spans)
+        operations = operation_labels(database, run_id, timing["spans"])
         progress = run_progress(database, run_id, spans)
         phase_metrics = _METRICS._read_json(
             runs_root / run_id / "logs/phase-metrics.json"
@@ -635,6 +727,7 @@ def metrics_payload(database: Path) -> dict[str, Any]:
                     "spans": group,
                     "active": group_active,
                     "cluster_labels": labels,
+                    "operations": operations,
                     "progress": progress if number == latest else {
                         "selected_findings": progress["selected_findings"],
                         "stages": [],
@@ -857,11 +950,13 @@ gap:7px 16px; align-items:center }}
 .state {{ font-weight:700 }} .state.done {{ color:#62d8a8 }}
 .state.running {{ color:#f4c15d }} .state.failed {{ color:#ff8080 }}
 .state.pending,.state.skipped {{ color:#8f9ab0 }}
-.trace-tools {{ position:relative; z-index:31; display:flex; justify-content:space-between; align-items:center; gap:12px }}
+.trace-tools {{ position:relative; z-index:6; display:flex; justify-content:space-between; align-items:center; gap:12px;
+padding:8px 12px; background:#10182c }}
 .trace-expand {{ border:1px solid #36415f; background:#151c30; color:#cbd3e5;
 padding:7px 12px; border-radius:8px; cursor:pointer }}
 .trace-shell {{ margin:18px 0; border:1px solid #29334d; border-radius:10px;
 overflow:auto; max-height:640px; background:#0c1222; cursor:grab }}
+.trace-shell .trace-tools {{ position:sticky; top:0; border-bottom:1px solid #29334d }}
 .trace-shell.dragging {{ cursor:grabbing; user-select:none }}
 .trace-shell.expanded {{ position:fixed; inset:20px; z-index:30; max-height:none;
 margin:0; box-shadow:0 0 0 100vmax #070b16cc }}
@@ -895,7 +990,10 @@ transform:rotate(45deg); transform-origin:center }}
 .trace-block.live {{ background:#d39422; box-shadow:0 0 8px #f4c15d;
 background-image:linear-gradient(110deg,transparent 25%,#f4c15d88 45%,transparent 65%);
 background-size:200% 100%; animation:trace-pulse 1.4s linear infinite }}
-.trace-block.rejected {{ box-shadow:inset 0 -3px 0 #ff6b7a, 0 0 0 1px #ff6b7a }}
+.trace-ghost {{ position:absolute; height:22px; box-sizing:border-box; border:1px dashed #d7deef;
+border-radius:5px; color:#d7deef; background:#0c1222; padding:1px 6px;
+font:11px ui-monospace,monospace; white-space:nowrap; overflow:hidden; z-index:0 }}
+.trace-legend .name {{ height:0; border-top:1px dashed #d7deef; background:transparent }}
 .trace-end {{ position:absolute; height:22px; padding:1px 7px; border-radius:5px;
 box-sizing:border-box; font:11px ui-monospace,monospace; white-space:nowrap; z-index:5 }}
 .trace-end.bad {{ color:#ffd5db; background:#3a1d2a; border:1px solid #ff6b7a }}
@@ -917,8 +1015,29 @@ pointer-events:none; z-index:2; overflow:visible }}
 const esc = value => String(value).replace(/[&<>"']/g, c =>
   ({{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}})[c]);
 const sec = value => `${{Number(value).toFixed(3)}}s`;
-let selectedTab = 'total';
-let expandedRun = '';
+const VIEW_COOKIE = 'skill-evolver-view';
+const readView = () => {{
+  const prefix = `${{VIEW_COOKIE}}=`;
+  const raw = document.cookie.split('; ').find(part => part.startsWith(prefix));
+  if (!raw) return {{run:'', expanded:false}};
+  try {{
+    const data = JSON.parse(decodeURIComponent(raw.slice(prefix.length)));
+    const run = typeof data.run === 'string' ? data.run : '';
+    return {{run, expanded: data.expanded === true && run !== ''}};
+  }} catch (error) {{
+    return {{run:'', expanded:false}};
+  }}
+}};
+const savedView = readView();
+let selectedTab = savedView.run || 'total';
+let expandedRun = savedView.expanded ? savedView.run : '';
+const writeView = () => {{
+  const run = expandedRun || (selectedTab === 'total' ? '' : selectedTab);
+  const payload = encodeURIComponent(JSON.stringify({{
+    run, expanded: Boolean(expandedRun)
+  }}));
+  document.cookie = `${{VIEW_COOKIE}}=${{payload}}; Path=/; Max-Age=31536000; SameSite=Lax`;
+}};
 const traceScroll = new Map();
 let traceDrag = null;
 document.addEventListener('pointerdown', event => {{
@@ -957,6 +1076,8 @@ document.addEventListener('click', event => {{
   const button = event.target.closest('[data-trace-expand]');
   if (!button) return;
   expandedRun = expandedRun === button.dataset.traceExpand ? '' : button.dataset.traceExpand;
+  if (expandedRun) selectedTab = expandedRun;
+  writeView();
   applyExpandedTrace();
   tickTraces();
 }});
@@ -966,6 +1087,7 @@ const selectTab = id => {{
     node.classList.toggle('active', node.dataset.tab === id));
   document.querySelectorAll('.panel').forEach(node =>
     node.classList.toggle('active', node.dataset.panel === id));
+  writeView();
   if (typeof tickTraces === 'function') tickTraces();
 }};
 const phaseTable = rows =>
@@ -1013,6 +1135,31 @@ const tracePanel = run => {{
   const markerSource = String(run.execution_id || run.run_id);
   const markerId = `trace-arrow-${{markerSource.replace(/[^A-Za-z0-9_-]/g, '')}}`;
   const names = run.cluster_labels || {{}};
+  const operations = run.operations || {{by_op:{{}}, by_sig:{{}}}};
+  const skillBySig = {{}};
+  (run.spans || []).forEach(row => {{
+    const match = String(row.item || '').match(/sig-[0-9a-f]+/);
+    const skills = (Array.isArray(row.conflicts) ? row.conflicts : [])
+      .map(name => String(name)).filter(name => name && name !== '*');
+    const operation = String(row.operation || '').trim();
+    if (!match || !skills.length) return;
+    if (!skillBySig[match[0]]) skillBySig[match[0]] = skills.join(', ');
+    const opMatch = String(row.item || '').match(/-op-(\\d+)/);
+    const key = `${{match[0]}}:${{opMatch ? opMatch[1] : '1'}}`;
+    if (operation && operations.by_op && !operations.by_op[key])
+      operations.by_op[key] = `${{skills.join(', ')}} · ${{operation}}`;
+  }});
+  const namedPhase = new Set(['label-traces-cluster','goal','optimize','verifiter','judge']);
+  const subjectFor = lane => {{
+    const sig = (String(lane.id).match(/sig-[0-9a-f]+/) || [])[0] || '';
+    if (lane.kind === 'op') {{
+      const op = (String(lane.id).match(/:(\\d+)$/) || [])[1] || '1';
+      return (operations.by_op || {{}})[`${{sig}}:${{op}}`] || skillBySig[sig] || lane.cluster || '';
+    }}
+    if (lane.kind === 'finding')
+      return (operations.by_sig || {{}})[sig] || lane.cluster || '';
+    return '';
+  }};
   const seen = new Set();
   const slices = [];
   (run.spans || []).forEach(row => {{
@@ -1073,7 +1220,8 @@ const tracePanel = run => {{
   ordered.forEach(lane => lane.slices.sort((a, b) =>
     a.start - b.start || String(a.item).localeCompare(String(b.item))));
   chain(trunk);
-  const displayLanes = [...ordered].sort((a, b) =>
+  const onTrace = slice => GRAPH.has(slice.phase) || slice.live;
+  const displayLanes = [...ordered].filter(lane => lane.slices.some(onTrace)).sort((a, b) =>
     (a.sortKey || a.id).localeCompare(b.sortKey || b.id) || a.id.localeCompare(b.id));
   const findings = displayLanes.filter(lane => lane.kind === 'finding');
   const ops = displayLanes.filter(lane => lane.kind === 'op');
@@ -1106,6 +1254,13 @@ const tracePanel = run => {{
         link(lastShown(lane, lane.slices.at(-1)?.pass), firstShown(op, op.slices[0]?.pass), 'merge'));
     }});
   }}
+  const successorStart = new Map();
+  edges.forEach(edge => {{
+    const target = slices.find(slice => slice.id === edge.to);
+    if (!target) return;
+    const known = successorStart.get(edge.from);
+    if (known == null || target.start < known) successorStart.set(edge.from, target.start);
+  }});
   const fanoutSources = new Set(
     edges.filter(edge => edge.kind === 'fanout').map(edge => edge.from)
   );
@@ -1114,29 +1269,46 @@ const tracePanel = run => {{
   const staticEnd = Math.max(origin + 1, ...completedEnds);
   const passCount = new Set(slices.map(slice => slice.pass || 1)).size;
   const renderRow = (lane, row) => {{
-    const rowSlices = lane.slices;
-    const title = lane.kind === 'pipeline' ? 'pipeline' : lane.title;
+    const rowSlices = lane.slices.filter(onTrace);
+    const subject = subjectFor(lane);
+    const title = lane.kind === 'pipeline' ? 'pipeline'
+      : (lane.kind === 'op' && subject ? subject : lane.title);
     const blocks = rowSlices.map(slice => {{
       const cluster = slice.lane.cluster || '';
       const base = slice.phase === 'label-traces-cluster' ? 'diagnosis' : slice.phase;
       const prefix = passCount > 1 ? `pass ${{slice.pass}} · ` : '';
-      const text = `${{prefix}}${{base}}`;
+      const text = subject && namedPhase.has(slice.phase)
+        ? `${{prefix}}${{base}} (${{subject}})`
+        : `${{prefix}}${{base}}`;
+      const verb = subject.includes(' · ') ? subject.split(' · ').pop() : '';
+      const skillOnly = verb ? subject.slice(0, subject.lastIndexOf(' · ')) : subject;
+      const endingText = !slice.endingLabel || !subject || slice.endingLabel.includes(subject)
+        ? slice.endingLabel
+        : (verb && skillOnly && slice.endingLabel.includes(skillOnly)
+          ? `${{slice.endingLabel}} · ${{verb}}`
+          : `${{slice.endingLabel}} (${{subject}})`);
       const tip = slice.endingDetail
         ? `${{text}} · ${{slice.endingDetail}}`
         : (slice.rejection ? `${{text}} · ${{slice.rejection}}` : text);
-      const ending = slice.endingLabel
+      const ending = endingText
         ? `<div class="trace-end ${{slice.endingBad ? 'bad' : 'ok'}}" data-for="${{slice.id}}" `+
-          `title="${{esc(slice.endingDetail || slice.endingLabel)}}">${{esc(slice.endingLabel)}}</div>`
+          `title="${{esc(slice.endingDetail || endingText)}}">${{esc(endingText)}}</div>`
         : '';
+      const edgeNext = successorStart.has(slice.id) ? successorStart.get(slice.id) : null;
+      const later = rowSlices.find(other => other !== slice && other.start > slice.start);
+      const bounds = [edgeNext, later ? later.start : null].filter(value => value != null);
+      const nextStart = bounds.length ? Math.min(...bounds) : '';
+      const ghost = `<div class="trace-ghost" data-for="${{slice.id}}" hidden></div>`;
       return `<div id="${{slice.id}}" class="trace-block ${{esc(slice.category)}}${{slice.live ? ' live' : ''}}${{slice.instant ? ' instant' : ''}}${{slice.rejection ? ' rejected' : ''}}${{fanoutSources.has(slice.id) ? ' fanout-parent' : ''}}" `+
       `data-start="${{slice.start}}" data-end="${{slice.end == null ? '' : slice.end}}" `+
+      `data-next="${{nextStart}}" `+
       `data-phase="${{esc(slice.phase)}}" data-label="${{esc(text)}}" `+
       `data-cluster="${{esc(cluster)}}" data-item="${{esc(slice.item)}}" `+
       `data-rejection="${{esc(slice.rejection)}}" `+
       `data-sub="0" data-instant="${{slice.instant ? '1' : '0'}}" `+
       `data-graph="${{GRAPH.has(slice.phase) || slice.live ? '1' : '0'}}" `+
       `${{!slice.live && phaseColor(slice.phase) ? `style="background:${{phaseColor(slice.phase)}}"` : ''}} `+
-      `title="${{esc(tip)}}">${{esc(text)}}</div>${{ending}}`;
+      `title="${{esc(tip)}}">${{esc(text)}}</div>${{ghost}}${{ending}}`;
     }}).join('');
     const times = rowSlices.filter(slice =>
       (GRAPH.has(slice.phase) || slice.live) && !slice.instant).map(slice =>
@@ -1157,12 +1329,13 @@ const tracePanel = run => {{
     `markerUnits="userSpaceOnUse" markerWidth="9" markerHeight="9" orient="auto">`+
     `<path d="M 0 1 L 10 5 L 0 9 z" fill="${{arrowColor(kind)}}"/></marker>`
   ).join('');
-  return `<div class="trace-tools"><h3>Live trace</h3><div class="trace-legend">`+
+  return `<div class="trace-shell" data-run="${{esc(markerSource)}}">`+
+    `<div class="trace-tools"><h3>Live trace</h3><div class="trace-legend">`+
     `<span><i class="chain"></i>depends</span><span><i class="fanout"></i>fanout</span>`+
-    `<span><i class="merge"></i>merge</span><span>drag to pan</span>`+
+    `<span><i class="merge"></i>merge</span><span><i class="name"></i>name only</span><span>drag to pan</span>`+
     `<button type="button" class="trace-expand" data-trace-expand="${{esc(markerSource)}}">Expand</button>`+
     `</div></div>`+
-    `<div class="trace-shell" data-run="${{esc(markerSource)}}"><div class="trace-view" data-trace-origin="${{origin}}" `+
+    `<div class="trace-view" data-trace-origin="${{origin}}" `+
     `data-trace-static-end="${{staticEnd}}" data-trace-active="${{slices.some(slice => slice.live) ? '1' : '0'}}">`+
     `<div class="trace-ruler"><div class="trace-label">start →</div><div class="trace-ticks">`+
     `${{[0,20,40,60,80,100].map(value =>
@@ -1190,8 +1363,12 @@ const tickTraces = () => {{
     const timeline = Math.max(860, Math.ceil(range / 1000 * 6) + pad);
     view.style.setProperty('--timeline', `${{timeline}}px`);
     const track = Math.max(timeline - pad, 1);
+    const ticks = view.querySelector('.trace-ticks');
+    if (ticks) ticks.style.width = `${{track}}px`;
     view.querySelectorAll('.trace-tick').forEach(tick => {{
-      tick.textContent = sec(range * Number(tick.dataset.fraction) / 1000);
+      const fraction = Number(tick.dataset.fraction);
+      tick.textContent = sec(range * fraction / 1000);
+      tick.style.left = `${{fraction * track}}px`;
     }});
     view.querySelectorAll('.trace-block').forEach(block => {{
       const start = Number(block.dataset.start);
@@ -1216,11 +1393,48 @@ const tickTraces = () => {{
       }} else {{
         const rawWidth = Math.max(2, (blockEnd - start) / range * track);
         const trim = graph && rawWidth >= 36 ? 8 : 0;
-        const minWidth = phase === 'reduce-goals' ? 168 : 2;
         block.style.left = `${{rawLeft}}px`;
-        block.style.width = `${{Math.max(minWidth, rawWidth - trim)}}px`;
+        block.style.width = `${{Math.max(2, rawWidth - trim)}}px`;
         if (!block.dataset.end) block.textContent =
           `${{label}} +${{started.toFixed(1)}}s · ${{sec(duration)}}`;
+      }}
+      block.dataset.caption = '';
+      if (block.dataset.instant === '1') return;
+      const name = block.dataset.label || '';
+      const textWidth = Math.ceil(name.length * 6.7 + 16);
+      const left = parseFloat(block.style.left) || 0;
+      let width = parseFloat(block.style.width) || 2;
+      const next = block.dataset.next === '' ? NaN : Number(block.dataset.next);
+      const nextLeft = Number.isFinite(next)
+        ? Math.max(0, (next - origin) / range) * track : NaN;
+      if (Number.isFinite(nextLeft)) {{
+        const capped = Math.max(2, nextLeft - left - 6);
+        if (width > capped) {{
+          width = capped;
+          block.style.width = `${{width}}px`;
+        }}
+      }}
+      const roomEnd = Number.isFinite(nextLeft) ? nextLeft - 6 : left + width + textWidth;
+      const gap = roomEnd - (left + width);
+      const ghost = block.parentElement.querySelector(
+        `.trace-ghost[data-for="${{CSS.escape(block.id)}}"]`);
+      if (width >= textWidth) {{
+        if (ghost) ghost.hidden = true;
+        if (block.dataset.end) block.textContent = name;
+      }} else if (gap >= 28) {{
+        if (ghost) {{
+          ghost.hidden = false;
+          ghost.style.left = `${{left + width}}px`;
+          ghost.style.width = `${{Math.min(textWidth, gap)}}px`;
+          ghost.style.top = block.style.top;
+          ghost.style.borderColor = block.style.background || '#d7deef';
+          ghost.textContent = name;
+        }}
+        block.textContent = '';
+      }} else {{
+        if (ghost) ghost.hidden = true;
+        block.textContent = '';
+        block.dataset.caption = name;
       }}
     }});
     view.querySelectorAll('.trace-end').forEach(node => {{
@@ -1236,17 +1450,19 @@ const tickTraces = () => {{
       if (!block) return;
       const start = Number(block.dataset.start);
       label.style.left = block.style.left;
-      label.textContent = `+${{Math.max(0, (start - origin) / 1000).toFixed(1)}}s`;
+      const caption = block.dataset.caption ? ` · ${{block.dataset.caption}}` : '';
+      label.textContent = `+${{Math.max(0, (start - origin) / 1000).toFixed(1)}}s${{caption}}`;
     }});
     view.querySelectorAll('.trace-track').forEach(track => {{
-      let last = -Infinity;
+      let lastEnd = -Infinity;
       [...track.querySelectorAll('.trace-time')]
         .sort((a, b) => parseFloat(a.style.left) - parseFloat(b.style.left))
         .forEach(label => {{
           const x = parseFloat(label.style.left);
-          const hide = x < last + 46;
+          const width = Math.ceil(label.textContent.length * 6.2);
+          const hide = x < lastEnd + 8;
           label.style.visibility = hide ? 'hidden' : 'visible';
-          if (!hide) last = x;
+          if (!hide) lastEnd = x + width;
         }});
     }});
     const root = view.getBoundingClientRect();
@@ -1341,13 +1557,16 @@ async function refresh() {{
     document.getElementById('status').className = 'muted';
     document.getElementById('status').innerHTML =
       `${{data.run_count}} runs · ${{data.span_count}} spans · refreshed ${{esc(data.generated_at)}} · <code>${{esc(data.database)}}</code>`;
-    const ids = ['total', ...data.runs.map((_, index) => `run-${{index + 1}}`)];
-    if (!ids.includes(selectedTab)) selectedTab = 'total';
+    const runIds = data.runs.map(run => String(run.execution_id || run.run_id));
+    if (expandedRun && !runIds.includes(expandedRun)) expandedRun = '';
+    if (selectedTab !== 'total' && !runIds.includes(selectedTab)) selectedTab = 'total';
+    if (expandedRun) selectedTab = expandedRun;
     document.getElementById('tabs').innerHTML =
       `<button class="tab" data-tab="total">Total</button>`+
-      data.runs.map((run,index) =>
-        `<button class="tab" data-tab="run-${{index + 1}}" title="${{esc(run.execution_id || run.run_id)}}">`+
-        `${{esc(run.execution_id || run.run_id)}}</button>`).join('');
+      data.runs.map(run => {{
+        const id = String(run.execution_id || run.run_id);
+        return `<button class="tab" data-tab="${{esc(id)}}" title="${{esc(id)}}">${{esc(id)}}</button>`;
+      }}).join('');
     document.querySelectorAll('.trace-shell').forEach(shell => {{
       traceScroll.set(shell.dataset.run, shell.scrollLeft);
     }});
@@ -1357,9 +1576,10 @@ async function refresh() {{
       `<h2>Total across runs</h2>${{empty}}<div class="stats"><span>runs <b>${{data.run_count}}</b></span>`+
       `<span>completed spans <b>${{data.span_count}}</b></span></div>`+
       `<h3>Cross-run phase statistics</h3>${{phaseTable(data.phases)}}</section></section>`+
-      data.runs.map((run,index) =>
-        `<div class="panel" data-panel="run-${{index + 1}}">${{runPanel(run)}}</div>`
-      ).join('');
+      data.runs.map(run => {{
+        const id = String(run.execution_id || run.run_id);
+        return `<div class="panel" data-panel="${{esc(id)}}">${{runPanel(run)}}</div>`;
+      }}).join('');
     document.querySelectorAll('.tab').forEach(node =>
       node.addEventListener('click', () => selectTab(node.dataset.tab)));
     selectTab(selectedTab);

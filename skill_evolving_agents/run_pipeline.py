@@ -46,6 +46,11 @@ VERIFIER_RESPONSE_RETRY_BUDGET = 2
 AGENT_SESSION_TIMEOUT_SECONDS = int(
     os.environ.get("SKILL_EVOLVER_AGENT_TIMEOUT_SECONDS", "180")
 )
+# One skill's checks and scored JSON were still being written at 180 seconds.
+VERIFIER_SESSION_TIMEOUT_SECONDS = int(
+    os.environ.get("SKILL_EVOLVER_VERIFIER_TIMEOUT_SECONDS", "360")
+)
+_EXECUTION_LOG_LOCK = threading.Lock()
 ACTIVE_BACKEND = "docker-claude"
 AGENT_NUMBERS = {
     "preprocessing": "01",
@@ -241,6 +246,17 @@ def run(
     return subprocess.CompletedProcess(command, code)
 
 
+def failure_text(error: BaseException) -> str:
+    """Short lane failure text. Timeout errors omit the agent command."""
+    if isinstance(error, subprocess.TimeoutExpired):
+        if error.timeout is None:
+            return "timed out"
+        return f"timed out after {error.timeout} seconds"
+    lines = str(error).strip().splitlines()
+    text = lines[0] if lines else error.__class__.__name__
+    return text[:500]
+
+
 def require_auth() -> dict[str, str]:
     names = (
         "ANTHROPIC_API_KEY",
@@ -289,24 +305,27 @@ def _contains_file(root: Path) -> bool:
 
 def workspace_was_started(workspace: Path) -> bool:
     """True once a pipeline start has written output into this directory."""
-    return any(
-        _contains_file(workspace / relative)
-        for relative in ("logs", "run", "traces/derived")
+    if _contains_file(workspace / "logs") or _contains_file(
+        workspace / "traces/derived"
+    ):
+        return True
+    run_root = workspace / "run"
+    return run_root.is_dir() and any(
+        path.is_file()
+        and path.name != ".DS_Store"
+        and path.relative_to(run_root).as_posix() != "trace-selection.json"
+        for path in run_root.rglob("*")
     )
 
 
 def allocate_execution_workspace(
     source: Path, moment: datetime | None = None
 ) -> Path:
-    """Give a later start its own directory under runs/.
+    """Move the seed into a minute-stamped execution directory.
 
-    The first start keeps the directory that was initialized and filled with
-    traces and skills. A later start copies those inputs into
-    ``<run-id>@YYYY-MM-DDTHH:MM`` beside it and leaves the previous outputs
-    where they are.
+    Every start writes ``<run-id>@YYYY-MM-DDTHH:MM`` and removes the unstamped
+    seed. A second start in the same minute gets ``-2``.
     """
-    if not workspace_was_started(source):
-        return source
     started = moment.astimezone() if moment is not None else datetime.now().astimezone()
     base = f"{source.name}@{started.strftime('%Y-%m-%dT%H:%M')}"
     candidate = source.parent / base
@@ -322,6 +341,8 @@ def allocate_execution_workspace(
             continue
         shutil.rmtree(destination)
         shutil.copytree(origin, destination, symlinks=False)
+    if candidate != source and "@" not in source.name:
+        shutil.rmtree(source)
     print(f"execution directory: {candidate}")
     return candidate
 
@@ -478,7 +499,7 @@ def run_docker_session(
             AGENT_RUNTIME_IMAGE,
         ],
         log_path=log_path,
-        timeout=AGENT_SESSION_TIMEOUT_SECONDS,
+        timeout=session_timeout_seconds(stage),
     )
 
 
@@ -662,7 +683,7 @@ def run_host_session(
                 command,
                 cwd=view,
                 log_path=log_path,
-                timeout=AGENT_SESSION_TIMEOUT_SECONDS,
+                timeout=session_timeout_seconds(stage),
             )
         elif backend in {"codex", "ollama"}:
             command = [
@@ -697,7 +718,7 @@ def run_host_session(
                 cwd=view,
                 log_path=log_path,
                 input_text=prompt,
-                timeout=AGENT_SESSION_TIMEOUT_SECONDS,
+                timeout=session_timeout_seconds(stage),
             )
         elif backend == "claude":
             command = [
@@ -719,7 +740,7 @@ def run_host_session(
                 cwd=view,
                 log_path=log_path,
                 input_text=prompt,
-                timeout=AGENT_SESSION_TIMEOUT_SECONDS,
+                timeout=session_timeout_seconds(stage),
             )
         else:
             raise SystemExit(f"unknown agent backend: {backend}")
@@ -855,6 +876,13 @@ def diagnosis_slice_metadata(
     }
 
 
+def session_timeout_seconds(stage: str) -> int:
+    """Verifier sessions get the longer limit. Every other stage stays at 180."""
+    if stage == "verifiter":
+        return VERIFIER_SESSION_TIMEOUT_SECONDS
+    return AGENT_SESSION_TIMEOUT_SECONDS
+
+
 def append_execution_event(workspace: Path, stage: str, event: str) -> None:
     path = workspace / "logs/execution.jsonl"
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -864,8 +892,10 @@ def append_execution_event(workspace: Path, stage: str, event: str) -> None:
         "event": event,
         "at": datetime.now(UTC).isoformat(),
     }
-    with path.open("a") as stream:
-        stream.write(json.dumps(row, separators=(",", ":")) + "\n")
+    line = json.dumps(row, separators=(",", ":")) + "\n"
+    with _EXECUTION_LOG_LOCK:
+        with path.open("a") as stream:
+            stream.write(line)
 
 
 def run_session(
@@ -932,7 +962,9 @@ def run_session(
                 details.update(session_counts(log_path))
     except BaseException as error:
         append_execution_event(workspace, stage, "failed")
-        write_status(workspace, stage, suffix, "failed", error=str(error))
+        write_status(
+            workspace, stage, suffix, "failed", error=failure_text(error)
+        )
         raise
     append_execution_event(workspace, stage, "done")
     return log_path
@@ -2031,7 +2063,9 @@ def _diagnose_scope(
         )
         return cluster, suffix, private
     except BaseException as error:
-        write_status(workspace, stage, suffix, "failed", error=str(error))
+        write_status(
+            workspace, stage, suffix, "failed", error=failure_text(error)
+        )
         remove_worker_workspace(private)
         raise
 
@@ -2329,7 +2363,9 @@ def _goal_scope(
         _emit_goal_decision(workspace, str(cluster), goal)
         return cluster, suffix, private
     except BaseException as error:
-        write_status(workspace, stage, suffix, "failed", error=str(error))
+        write_status(
+            workspace, stage, suffix, "failed", error=failure_text(error)
+        )
         remove_worker_workspace(private)
         raise
 
@@ -2449,7 +2485,21 @@ def pipeline_diagnosis_and_goals(
             }
             try:
                 for future in as_completed(diagnosis_futures):
-                    cluster, suffix, private = future.result()
+                    _expected_cluster, expected_suffix = diagnosis_futures[future]
+                    try:
+                        cluster, suffix, private = future.result()
+                    except BaseException as error:
+                        write_status(
+                            workspace,
+                            "goal",
+                            expected_suffix,
+                            "skipped",
+                            error=(
+                                "upstream diagnosis failed: "
+                                f"{failure_text(error)}"
+                            ),
+                        )
+                        continue
                     try:
                         published[str(cluster)] = _publish_diagnosis(
                             workspace, str(cluster), str(suffix), private
@@ -2473,7 +2523,10 @@ def pipeline_diagnosis_and_goals(
                             install_agent=install_agent,
                         )
                     ] = (str(cluster), str(suffix))
-                document = _diagnosis_document(clusters, published)
+                successful_diagnoses = [
+                    cluster for cluster in clusters if cluster in published
+                ]
+                document = _diagnosis_document(successful_diagnoses, published)
                 with tempfile.NamedTemporaryFile(
                     suffix=".json", delete=False
                 ) as handle:
@@ -2481,19 +2534,24 @@ def pipeline_diagnosis_and_goals(
                 try:
                     atomic_write_json(temporary, document)
                     pipeline_contracts.validate_diagnosis(
-                        temporary, set(clusters) if clustered else None
+                        temporary,
+                        set(successful_diagnoses) if clustered else None,
                     )
                 finally:
                     temporary.unlink(missing_ok=True)
                 for future in as_completed(list(goal_futures)):
-                    cluster, suffix, private = future.result()
+                    try:
+                        cluster, suffix, private = future.result()
+                    except BaseException:
+                        continue
                     try:
                         _publish_goal(workspace, cluster, suffix, private)
                     finally:
                         remove_worker_workspace(private)
                 atomic_write_json(aggregate, document)
                 pipeline_contracts.validate_diagnosis(
-                    aggregate, set(clusters) if clustered else None
+                    aggregate,
+                    set(successful_diagnoses) if clustered else None,
                 )
             except BaseException:
                 for future in (*diagnosis_futures, *goal_futures):
@@ -3694,6 +3752,32 @@ def verifier_skill_payloads(
     return skill_input, required_output
 
 
+def _prompt_lesson(lesson: object) -> object:
+    """Keep the reusable rule and drop per-event retry rows from the prompt."""
+    if not isinstance(lesson, dict) or "retry_classifications" not in lesson:
+        return lesson
+    compact = {
+        key: value
+        for key, value in lesson.items()
+        if key != "retry_classifications"
+    }
+    return compact or {"kind": lesson.get("kind")}
+
+
+def _prompt_verification_input(
+    verification_input: dict[str, object],
+) -> dict[str, object]:
+    document = copy.deepcopy(verification_input)
+    findings = (
+        ((document.get("checks") or {}).get("step3") or {}).get("evidence") or {}
+    ).get("findings")
+    if isinstance(findings, list):
+        for row in findings:
+            if isinstance(row, dict) and "lesson" in row:
+                row["lesson"] = _prompt_lesson(row["lesson"])
+    return document
+
+
 def verifier_response_prompt(
     skill: str,
     verification_input: dict[str, object],
@@ -3707,11 +3791,43 @@ def verifier_response_prompt(
         if previous_error
         else ""
     )
+    verification_input = _prompt_verification_input(verification_input)
     return f"""Verify exactly one skill: {skill}.
 
 Read AGENT.md and 05_verifiter_agent/verifiter/skill.md, then inspect only the
 workspace evidence named by the concrete input below. Run the prescribed
 deterministic checks. Do not edit skills and do not write verification.json.
+
+Mechanical standards. These are low-level misses that fail the skill. Apply
+them from this list and from one run of verify_sections.py and verify_goal.py.
+Do not open the checker source or the parent repository to re-derive them.
+
+- Headings: a required section counts only as a level-2 heading whose text is
+  listed in common/skill_format.json. `## Overview` matches. `# Overview` does
+  not, so the checker reports the section missing even when the prose is
+  present. Score that as a heading-level miss.
+- Frontmatter: YAML between `---` lines. `name` is lowercase hyphen-case,
+  matches the skill directory, and is at most 64 characters. `description` is
+  required, at most 1024 characters, and contains no angle brackets. Allowed
+  fields are name, description, license, compatibility, allowed-tools, and
+  metadata.
+- Shape: SKILL.md is at most 500 lines. No `TODO`, `[TODO`, `EXAMPLE_SCRIPT`,
+  `EXAMPLE_REFERENCE`, or `EXAMPLE_ASSET` placeholder. No symbolic links. No
+  file over 10MB. Reference files are one directory level deep. A named
+  `scripts/*.py` file must compile. A named `evals` directory must contain
+  `evals/evals.json`, including the positive and near-miss cases the goal
+  requires. Directories are only references, scripts, agents, assets, evals,
+  or a goal-named other/ood directory.
+- Edit diff: create must contain every claimed section and directory. Update
+  must change every claimed section and leave frontmatter, the text before the
+  first heading, and every unclaimed section identical to target/raw_skills.
+  Both copies must exist. Delete removes the skill directory. Merge and split
+  keep the source snapshot and remove only the sources the operation names.
+- Hashes: changelog.json already stores the before and after content hashes.
+  Do not reimplement that digest.
+- Gate: pass_threshold is 0.75, and every applicable assertion and step must
+  pass. A skill score above 0.75 still fails when one assertion fails. Score
+  that assertion and stop. Do not search for another formula.
 
 The concrete verification input for this skill is part of this prompt:
 <verification-input-json>
@@ -3897,8 +4013,8 @@ def run_per_skill_verification(
         verification_input,
     )
     atomic_write_json(skeleton_path, output_skeleton)
-    responses: list[dict[str, object]] = []
-    for skill_row in verification_input["skills"]:
+
+    def verify_skill(skill_row: dict[str, object]) -> dict[str, object]:
         skill = str(skill_row["skill"])
         skill_input, required_output = verifier_skill_payloads(
             verification_input,
@@ -3934,7 +4050,7 @@ def run_per_skill_verification(
             )
             try:
                 response = parse_verifier_response_log(log_path)
-                validated = validate_skill_verifier_response(
+                return validate_skill_verifier_response(
                     operation_directory,
                     skill,
                     skill_input,
@@ -3948,9 +4064,19 @@ def run_per_skill_verification(
                 previous_error = str(error)
                 if response_attempt >= VERIFIER_RESPONSE_RETRY_BUDGET:
                     raise
-                continue
-            responses.append(validated)
-            break
+        raise pipeline_contracts.ContractError(
+            f"verifier produced no response for {skill}"
+        )
+
+    responses = [
+        row
+        for row in run_pool(
+            list(verification_input["skills"]),
+            DEFAULT_OP_WORKERS,
+            verify_skill,
+        )
+        if isinstance(row, dict)
+    ]
     final = aggregate_skill_verifications(output_skeleton, responses)
     verification_path = operation_directory / "verification.json"
     atomic_write_json(verification_path, final)
@@ -4585,6 +4711,429 @@ def _finding_confidence(workspace: Path, cluster: str) -> float:
         return 0.0
 
 
+def candidate_directory(workspace: Path, cluster: str, op_index: int) -> Path:
+    return workspace / "run" / cluster / "ops" / str(op_index) / "candidate"
+
+
+def preserve_optimized_candidate(
+    workspace: Path,
+    private: Path,
+    cluster: str,
+    op_index: int,
+    op: dict,
+) -> None:
+    """Keep the optimized skill in the run so verification can be repeated."""
+    root = candidate_directory(workspace, cluster, op_index)
+    if root.exists():
+        shutil.rmtree(root)
+    names = skill_names_mod.skill_names(op)
+    improved = private / "target/to_be_improved_skills"
+    raw = private / "target/raw_skills"
+    for name in names:
+        source = improved / name
+        if source.is_dir():
+            shutil.copytree(source, root / "to_be_improved_skills" / name)
+        raw_source = raw / name
+        if raw_source.is_dir():
+            shutil.copytree(raw_source, root / "raw_skills" / name)
+    metadata_path = (
+        private / "target/to_be_improved_skills_metadata/metadata.json"
+    )
+    rows: list[object] = []
+    if metadata_path.is_file():
+        document = json.loads(metadata_path.read_text())
+        wanted = set(names)
+        rows = [
+            row
+            for row in document.get("skills_metadata") or []
+            if isinstance(row, dict) and row.get("skill") in wanted
+        ]
+    atomic_write_json(root / "metadata.json", {"skills_metadata": rows})
+    operation_directory = workspace / "run" / cluster / "ops" / str(op_index)
+    private_directory = private / "run" / cluster / "ops" / str(op_index)
+    for filename in (
+        "evolve-goal.json",
+        "verification-input.json",
+        "changelog.json",
+    ):
+        source = private_directory / filename
+        if source.is_file():
+            replace_path(source, operation_directory / filename)
+
+
+def restore_optimized_candidate(
+    worker: Path, workspace: Path, cluster: str, op_index: int
+) -> None:
+    """Put a saved optimized skill back into an operation worker."""
+    root = candidate_directory(workspace, cluster, op_index)
+    if not root.is_dir():
+        raise SystemExit(
+            f"optimized skill was not saved for {cluster} op {op_index}"
+        )
+    improved = root / "to_be_improved_skills"
+    if improved.is_dir():
+        for skill_dir in improved.iterdir():
+            if skill_dir.is_dir():
+                replace_path(
+                    skill_dir,
+                    worker / "target/to_be_improved_skills" / skill_dir.name,
+                )
+    raw = root / "raw_skills"
+    if raw.is_dir():
+        for skill_dir in raw.iterdir():
+            if skill_dir.is_dir():
+                replace_path(
+                    skill_dir, worker / "target/raw_skills" / skill_dir.name
+                )
+    saved_metadata = root / "metadata.json"
+    if not saved_metadata.is_file():
+        return
+    incoming = json.loads(saved_metadata.read_text()).get("skills_metadata") or []
+    destination = worker / "target/to_be_improved_skills_metadata/metadata.json"
+    document = (
+        json.loads(destination.read_text())
+        if destination.is_file()
+        else {"skills_metadata": []}
+    )
+    rows = [
+        row
+        for row in document.get("skills_metadata") or []
+        if isinstance(row, dict)
+    ]
+    index_by_name = {
+        row.get("skill"): index for index, row in enumerate(rows)
+    }
+    for row in incoming:
+        if not isinstance(row, dict):
+            continue
+        name = row.get("skill")
+        if name in index_by_name:
+            rows[index_by_name[name]] = row
+        else:
+            rows.append(row)
+    document["skills_metadata"] = rows
+    atomic_write_json(destination, document)
+    current = {
+        path.name
+        for path in (worker / "target/to_be_improved_skills").iterdir()
+        if path.is_dir()
+    }
+    pipeline_contracts.validate_metadata(destination, current)
+
+
+def stage_saved_operation(
+    worker: Path, cluster: str, op_index: int, *, include_verification: bool
+) -> None:
+    """Point the worker's active run files at one saved operation."""
+    operation_directory = worker / "run" / cluster / "ops" / str(op_index)
+    for filename in (
+        "evolve-goal.json",
+        "verification-input.json",
+        "changelog.json",
+    ):
+        replace_path(
+            operation_directory / filename, worker / "run" / filename
+        )
+    if include_verification:
+        replace_path(
+            operation_directory / "verification.json",
+            worker / "run/verification.json",
+        )
+
+
+def changelog_phase_status(path: Path, phase: str) -> str:
+    if not path.is_file():
+        return ""
+    try:
+        document = json.loads(path.read_text())
+    except json.JSONDecodeError:
+        return ""
+    for marker in document.get("phase_markers") or []:
+        if isinstance(marker, dict) and marker.get("phase") == phase:
+            return str(marker.get("status") or "")
+    return ""
+
+
+def verification_has_feedback(path: Path) -> bool:
+    if not path.is_file():
+        return False
+    try:
+        document = json.loads(path.read_text())
+    except json.JSONDecodeError:
+        return False
+    return isinstance(document, dict) and isinstance(
+        document.get("feedback"), dict
+    )
+
+
+def resumable_operations(
+    workspace: Path, phase: str
+) -> tuple[list[dict[str, object]], list[str]]:
+    """Operations whose optimized skill is saved and not yet accepted."""
+    ready: list[dict[str, object]] = []
+    skipped: list[str] = []
+    run_root = workspace / "run"
+    if not run_root.is_dir():
+        return ready, skipped
+    for operation_directory in sorted(run_root.glob("*/ops/*")):
+        if not operation_directory.is_dir():
+            continue
+        if not str(operation_directory.name).isdigit():
+            continue
+        cluster = operation_directory.parent.parent.name
+        op_index = int(operation_directory.name)
+        label = f"{cluster} op {op_index}"
+        publication_path = operation_directory / "publication.json"
+        if publication_path.is_file():
+            try:
+                publication = json.loads(publication_path.read_text())
+            except json.JSONDecodeError:
+                publication = {}
+            if publication.get("accepted") is True:
+                continue
+        if not candidate_directory(workspace, cluster, op_index).is_dir():
+            skipped.append(f"{label}: optimized skill was not saved")
+            continue
+        if (
+            changelog_phase_status(
+                operation_directory / "changelog.json", "optimize"
+            )
+            != "completed"
+        ):
+            skipped.append(f"{label}: optimize did not finish")
+            continue
+        goal_path = operation_directory / "evolve-goal.json"
+        if not goal_path.is_file():
+            skipped.append(f"{label}: operation goal is missing")
+            continue
+        goal = pipeline_contracts.validate_goal(goal_path)
+        ops = goal["action"]["ops"]
+        if len(ops) != 1:
+            skipped.append(f"{label}: saved goal does not contain one operation")
+            continue
+        if phase == "judge" and not verification_has_feedback(
+            operation_directory / "verification.json"
+        ):
+            skipped.append(f"{label}: verification has no result to judge")
+            continue
+        op = ops[0]
+        affected = set(skill_names_mod.skill_names(op))
+        ready.append(
+            {
+                "cluster": cluster,
+                "op_index": op_index,
+                "op": op,
+                "affected": affected,
+                "conflicts": affected or {"*"},
+                "bundle": {},
+                "rank": {},
+            }
+        )
+    return ready, skipped
+
+
+def run_verification_and_judge(
+    *,
+    workspace: Path,
+    private: Path,
+    cluster: str,
+    op_index: int,
+    op: dict,
+    suffix: str,
+    attempt: int,
+    op_metadata: dict[str, object],
+    auth: dict[str, str],
+    model: str | None,
+    install_agent: bool,
+    stage_box: dict[str, str],
+    start_stage: str,
+) -> str:
+    """Run verification and judge, or judge alone when verification is saved."""
+    if start_stage == "verifiter":
+        stage_box["stage"] = "verifiter"
+        mark_operation_phase(
+            private,
+            cluster,
+            op_index,
+            "verification",
+            "running",
+        )
+        write_status(workspace, "verifiter", suffix, "started")
+        verification = run_per_skill_verification(
+            private,
+            auth=auth,
+            model=model,
+            install_agent=install_agent,
+            suffix=suffix,
+            metadata={**op_metadata, "attempt": attempt},
+        )
+        verification_data = pipeline_contracts.validate_verification(
+            verification,
+            judged=False,
+            expected_skills=set(skill_names_mod.skill_names(op)),
+        )
+        mark_operation_phase(
+            private,
+            cluster,
+            op_index,
+            "verification",
+            "completed",
+        )
+        operation_directory = (
+            workspace / "run" / cluster / "ops" / str(op_index)
+        )
+        replace_path(verification, operation_directory / "verification.json")
+        saved_changelog = (
+            private / "run" / cluster / "ops" / str(op_index) / "changelog.json"
+        )
+        if saved_changelog.is_file():
+            replace_path(saved_changelog, operation_directory / "changelog.json")
+        replay_outputs = validate_replay_artifacts(private, verification_data)
+        complete_session(
+            private,
+            "verifiter",
+            suffix,
+            [verification, *replay_outputs],
+        )
+    else:
+        verification = private / "run/verification.json"
+        require_path(verification, "verification")
+    stage_box["stage"] = "judge"
+    mark_operation_phase(private, cluster, op_index, "judge", "running")
+    write_status(workspace, "judge", suffix, "started")
+    append_execution_event(private, "judge", "started")
+    try:
+        with pipeline_metrics.span(
+            metrics_workspace(private),
+            "judge",
+            suffix,
+            "deterministic",
+            metadata={
+                **op_metadata,
+                "attempt": attempt,
+                "formula": "overall_status",
+            },
+        ):
+            action = apply_judge_formula(verification)
+    except BaseException:
+        append_execution_event(private, "judge", "failed")
+        raise
+    else:
+        append_execution_event(private, "judge", "done")
+    mark_operation_phase(
+        private,
+        cluster,
+        op_index,
+        "judge",
+        "completed",
+        f"decision: {action}",
+    )
+    _emit_judge_decision(workspace, cluster, op_index, verification, attempt)
+    archive_verification(private, cluster, op_index)
+    archived = private / "run" / cluster / "ops" / str(op_index)
+    complete_session(
+        private,
+        "judge",
+        suffix,
+        [
+            archived / "verification.json",
+            archived / "judge.json",
+            archived / "changelog.json",
+            archived / "evolve-goal.json",
+        ],
+    )
+    return action
+
+
+def settle_failed_operation(
+    *,
+    workspace: Path,
+    private: Path,
+    cluster: str,
+    op_index: int,
+    current_stage: str,
+    suffix: str,
+    suffixes: list[str],
+    task: dict[str, object],
+    error: BaseException,
+) -> dict[str, object]:
+    """Record one lane failure and keep any optimized skill already saved."""
+    reason = failure_text(error)
+    phase = {
+        "optimize": "optimize",
+        "verifiter": "verification",
+        "judge": "judge",
+    }.get(current_stage)
+    if phase is not None:
+        try:
+            mark_operation_phase(
+                private, cluster, op_index, phase, "failed", reason
+            )
+            remaining = OPERATION_PHASES[OPERATION_PHASES.index(phase) + 1 :]
+            if remaining:
+                skip_operation_phases(
+                    private,
+                    cluster,
+                    op_index,
+                    remaining,
+                    f"blocked by failed {phase} phase",
+                )
+            failed_directory = finalize_unexecuted_operation(
+                private,
+                cluster,
+                op_index,
+                status="failed",
+                reason=f"{phase} failed: {reason}",
+            )
+            target_directory = (
+                workspace / "run" / cluster / "ops" / str(op_index)
+            )
+            for filename in (
+                "evolve-goal.json",
+                "verification-input.json",
+                "verification.json",
+                "judge.json",
+                "changelog.json",
+            ):
+                if filename == "verification.json" and verification_has_feedback(
+                    target_directory / filename
+                ):
+                    continue
+                replace_path(
+                    failed_directory / filename, target_directory / filename
+                )
+            write_publication(
+                workspace,
+                cluster,
+                op_index,
+                accepted=False,
+                reason=f"{phase}-failed",
+            )
+        except BaseException as archival_error:
+            note = (
+                "failed to archive the operation failure: "
+                f"{failure_text(archival_error)}"
+            )
+            write_status(
+                workspace,
+                current_stage,
+                suffix,
+                "failed",
+                error=f"{reason}; {note}",
+            )
+    for done_suffix in suffixes:
+        merge_worker_statuses(private, workspace, done_suffix)
+    write_status(workspace, current_stage, suffix, "failed", error=reason)
+    return {
+        **task,
+        "worker": private,
+        "suffixes": suffixes,
+        "judge_action": None,
+        "failed": True,
+        "published": True,
+    }
+
+
 def fanout_operations(
     workspace: Path,
     run_id: str,
@@ -4716,6 +5265,12 @@ def fanout_operations(
         "batch_count": len(batches),
         "batch_size": 0,
     }
+    publish_lock = threading.Lock()
+
+    def publish_now(result: dict[str, object]) -> None:
+        with publish_lock:
+            publish_operation_result(workspace, result)
+        result["published"] = True
 
     def work(task_object: object) -> object:
         task = task_object
@@ -4769,6 +5324,7 @@ def fanout_operations(
             "batch_index": batch_state["batch_index"],
             "batch_count": batch_state["batch_count"],
             "conflicts": conflicts,
+            "operation": str(op.get("op") or ""),
             "queue_wait_ms": queue_wait_ms,
             "bundle_size": len(bundle.get("selected") or []) or 1,
             "super_score": (task.get("rank") or {}).get("super_score"),
@@ -4776,12 +5332,14 @@ def fanout_operations(
             "max_attempts": RETRY_BUDGET + 1,
             **_rank_fields(task),
         }
+        stage_box = {"stage": "optimize"}
         try:
             while action == "pending" and attempt < RETRY_BUDGET + 1:
                 attempt += 1
                 suffix = f"{item}-try-{attempt}"
                 suffixes.append(suffix)
                 current_stage = "optimize"
+                stage_box["stage"] = "optimize"
                 mark_operation_phase(
                     private,
                     cluster,
@@ -4828,187 +5386,44 @@ def fanout_operations(
                         verification_input,
                     ],
                 )
-                current_stage = "verifiter"
-                mark_operation_phase(
-                    private,
-                    cluster,
-                    op_index,
-                    "verification",
-                    "running",
+                preserve_optimized_candidate(
+                    workspace, private, cluster, op_index, op
                 )
-                write_status(workspace, current_stage, suffix, "started")
-                verification = run_per_skill_verification(
-                    private,
+                action = run_verification_and_judge(
+                    workspace=workspace,
+                    private=private,
+                    cluster=cluster,
+                    op_index=op_index,
+                    op=op,
+                    suffix=suffix,
+                    attempt=attempt,
+                    op_metadata=op_metadata,
                     auth=auth,
                     model=model,
                     install_agent=install_agent,
-                    suffix=suffix,
-                    metadata={**op_metadata, "attempt": attempt},
+                    stage_box=stage_box,
+                    start_stage="verifiter",
                 )
-                verification_data = pipeline_contracts.validate_verification(
-                    verification,
-                    judged=False,
-                    expected_skills=set(skill_names_mod.skill_names(op)),
-                )
-                mark_operation_phase(
-                    private,
-                    cluster,
-                    op_index,
-                    "verification",
-                    "completed",
-                )
-                replay_outputs = validate_replay_artifacts(
-                    private, verification_data
-                )
-                complete_session(
-                    private,
-                    current_stage,
-                    suffix,
-                    [verification, *replay_outputs],
-                )
-                current_stage = "judge"
-                mark_operation_phase(
-                    private,
-                    cluster,
-                    op_index,
-                    "judge",
-                    "running",
-                )
-                write_status(workspace, current_stage, suffix, "started")
-                append_execution_event(private, current_stage, "started")
-                try:
-                    with pipeline_metrics.span(
-                        metrics_workspace(private),
-                        current_stage,
-                        suffix,
-                        "deterministic",
-                        metadata={
-                            **op_metadata,
-                            "attempt": attempt,
-                            "formula": "overall_status",
-                        },
-                    ):
-                        action = apply_judge_formula(verification)
-                except BaseException:
-                    append_execution_event(private, current_stage, "failed")
-                    raise
-                else:
-                    append_execution_event(private, current_stage, "done")
-                mark_operation_phase(
-                    private,
-                    cluster,
-                    op_index,
-                    "judge",
-                    "completed",
-                    f"decision: {action}",
-                )
-                _emit_judge_decision(
-                    workspace, cluster, op_index, verification, attempt
-                )
-                archive_verification(private, cluster, op_index)
-                archived = (
-                    private
-                    / "run"
-                    / cluster
-                    / "ops"
-                    / str(op_index)
-                )
-                complete_session(
-                    private,
-                    current_stage,
-                    suffix,
-                    [
-                        archived / "verification.json",
-                        archived / "judge.json",
-                        archived / "changelog.json",
-                        archived / "evolve-goal.json",
-                    ],
-                )
-            return {
+            result = {
                 **task,
                 "worker": private,
                 "suffixes": suffixes,
                 "judge_action": action,
             }
+            publish_now(result)
+            return result
         except BaseException as error:
-            phase = {
-                "optimize": "optimize",
-                "verifiter": "verification",
-                "judge": "judge",
-            }.get(current_stage)
-            if phase is not None:
-                try:
-                    mark_operation_phase(
-                        private,
-                        cluster,
-                        op_index,
-                        phase,
-                        "failed",
-                        str(error),
-                    )
-                    remaining = OPERATION_PHASES[
-                        OPERATION_PHASES.index(phase) + 1 :
-                    ]
-                    if remaining:
-                        skip_operation_phases(
-                            private,
-                            cluster,
-                            op_index,
-                            remaining,
-                            f"blocked by failed {phase} phase",
-                        )
-                    failed_directory = finalize_unexecuted_operation(
-                        private,
-                        cluster,
-                        op_index,
-                        status="failed",
-                        reason=f"{phase} failed: {error}",
-                    )
-                    target_directory = (
-                        workspace
-                        / "run"
-                        / cluster
-                        / "ops"
-                        / str(op_index)
-                    )
-                    for filename in (
-                        "evolve-goal.json",
-                        "verification-input.json",
-                        "verification.json",
-                        "judge.json",
-                        "changelog.json",
-                    ):
-                        replace_path(
-                            failed_directory / filename,
-                            target_directory / filename,
-                        )
-                    write_publication(
-                        workspace,
-                        cluster,
-                        op_index,
-                        accepted=False,
-                        reason=f"{phase}-failed",
-                    )
-                except BaseException as archival_error:
-                    note = (
-                        "failed to archive the operation failure: "
-                        f"{archival_error}"
-                    )
-                    if hasattr(error, "add_note"):
-                        error.add_note(note)
-                    else:
-                        write_status(
-                            workspace,
-                            current_stage,
-                            suffix,
-                            "failed",
-                            error=f"{error}; {note}",
-                        )
-            write_status(
-                workspace, current_stage, suffix, "failed", error=str(error)
+            return settle_failed_operation(
+                workspace=workspace,
+                private=private,
+                cluster=cluster,
+                op_index=op_index,
+                current_stage=stage_box["stage"],
+                suffix=suffix,
+                suffixes=suffixes,
+                task=task,
+                error=error,
             )
-            remove_worker_workspace(private)
-            raise
 
     for batch_index, batch in enumerate(batches, start=1):
         batch_state["batch_index"] = batch_index
@@ -5020,10 +5435,114 @@ def fanout_operations(
             raise
         try:
             for result in results:
-                publish_operation_result(workspace, result)
+                if result.get("failed") or result.get("published"):
+                    continue
+                publish_now(result)
         finally:
             for result in results:
                 remove_worker_workspace(result["worker"])
+
+
+def continue_operations(
+    workspace: Path,
+    run_id: str,
+    phase: str,
+    workers: int,
+    auth: dict[str, str],
+    model: str | None,
+    install_agent: bool,
+) -> list[str]:
+    """Rerun verification or judge for operations with a saved skill."""
+    tasks, skipped = resumable_operations(workspace, phase)
+    for note in skipped:
+        print(f"skip {note}", flush=True)
+    if not tasks:
+        print(f"no saved operation to continue from {phase}", flush=True)
+        return []
+    print(
+        f"continuing {len(tasks)} operation"
+        f"{'' if len(tasks) == 1 else 's'} from {phase}",
+        flush=True,
+    )
+    publish_lock = threading.Lock()
+
+    def publish_now(result: dict[str, object]) -> None:
+        with publish_lock:
+            publish_operation_result(workspace, result)
+        result["published"] = True
+
+    def work(task_object: object) -> object:
+        task = task_object
+        cluster = str(task["cluster"])
+        op_index = int(task["op_index"])
+        op = task["op"]
+        item = f"{run_id}-{cluster}-op-{op_index}-resume-1"
+        conflicts = sorted(str(name) for name in task["conflicts"])
+        private = copy_worker(workspace, "operations", item)
+        suffix = item
+        suffixes = [suffix]
+        stage_name = "verifiter" if phase == "verification" else "judge"
+        stage_box = {"stage": stage_name}
+        op_metadata = {
+            "workers": workers,
+            "pool_items": len(tasks),
+            "conflicts": conflicts,
+            "operation": str(op.get("op") or ""),
+            "resume_from": phase,
+            "attempt": 1,
+        }
+        try:
+            restore_optimized_candidate(private, workspace, cluster, op_index)
+            stage_saved_operation(
+                private,
+                cluster,
+                op_index,
+                include_verification=phase == "judge",
+            )
+            action = run_verification_and_judge(
+                workspace=workspace,
+                private=private,
+                cluster=cluster,
+                op_index=op_index,
+                op=op,
+                suffix=suffix,
+                attempt=1,
+                op_metadata=op_metadata,
+                auth=auth,
+                model=model,
+                install_agent=install_agent,
+                stage_box=stage_box,
+                start_stage=stage_name,
+            )
+            result = {
+                **task,
+                "worker": private,
+                "suffixes": suffixes,
+                "judge_action": action,
+            }
+            publish_now(result)
+            return result
+        except BaseException as error:
+            return settle_failed_operation(
+                workspace=workspace,
+                private=private,
+                cluster=cluster,
+                op_index=op_index,
+                current_stage=stage_box["stage"],
+                suffix=suffix,
+                suffixes=suffixes,
+                task=task,
+                error=error,
+            )
+
+    try:
+        results = run_pool(tasks, workers, work)
+    except BaseException:
+        remove_worker_stage(workspace, "operations")
+        raise
+    for result in results:
+        remove_worker_workspace(result["worker"])
+    return sorted({str(task["cluster"]) for task in tasks})
 
 
 def write_pipeline_summary(workspace: Path, clusters: list[str]) -> Path:
@@ -5166,12 +5685,18 @@ def execute(args: argparse.Namespace) -> None:
         initialize_workspace(workspace)
         return
     require_path(workspace, "run workspace")
-    require_path(
-        workspace / "target/to_be_improved_skills", "existing skills directory"
-    )
-    require_seed_inputs(workspace)
-    workspace = allocate_execution_workspace(workspace)
-    args.run_id = workspace.name
+    resuming = bool(getattr(args, "resume_from", None))
+    if resuming:
+        if not workspace_was_started(workspace):
+            raise SystemExit(f"{workspace.name} has not been started")
+    else:
+        require_path(
+            workspace / "target/to_be_improved_skills",
+            "existing skills directory",
+        )
+        require_seed_inputs(workspace)
+        workspace = allocate_execution_workspace(workspace)
+        args.run_id = workspace.name
     ACTIVE_BACKEND = select_backend(args.agent, args.allow_local_fallback)
     args.model = configured_model(ACTIVE_BACKEND, args.model)
     print(f"selected model: {args.model}")
@@ -5180,6 +5705,28 @@ def execute(args: argparse.Namespace) -> None:
         build_images()
 
     try:
+        if resuming:
+            continue_operations(
+                workspace,
+                args.run_id,
+                args.resume_from,
+                getattr(args, "op_workers", DEFAULT_OP_WORKERS),
+                auth,
+                args.model,
+                not args.agent_installed,
+            )
+            clusters = sorted(
+                path.parent.name
+                for path in (workspace / "run").glob("*/evolve-goal.json")
+                if path.is_file()
+            )
+            if clusters:
+                write_pipeline_summary(workspace, clusters)
+            print(
+                f"completed continuation {args.run_id} from "
+                f"{args.resume_from}: {workspace}"
+            )
+            return
         write_status(workspace, "preprocessing", args.run_id, "started")
         config_path = ROOT / "common/preprocessing-config.json"
         try:
@@ -5215,7 +5762,11 @@ def execute(args: argparse.Namespace) -> None:
                 )
         except BaseException as error:
             write_status(
-                workspace, "preprocessing", args.run_id, "failed", error=str(error)
+                workspace,
+                "preprocessing",
+                args.run_id,
+                "failed",
+                error=failure_text(error),
             )
             raise
         with pipeline_metrics.span(
@@ -5295,10 +5846,15 @@ def execute(args: argparse.Namespace) -> None:
             not args.agent_installed,
             unit_kind,
         )
+        successful_clusters = [
+            cluster
+            for cluster in clusters
+            if (workspace / "run" / cluster / "evolve-goal.json").is_file()
+        ]
         fanout_operations(
             workspace,
             args.run_id,
-            clusters,
+            successful_clusters,
             op_workers,
             auth,
             args.model,
@@ -5306,7 +5862,7 @@ def execute(args: argparse.Namespace) -> None:
             getattr(args, "max_ops_per_skill", None),
             getattr(args, "min_super_score", None),
         )
-        write_pipeline_summary(workspace, clusters)
+        write_pipeline_summary(workspace, successful_clusters)
 
         print(f"completed run {args.run_id}: {workspace}")
 
@@ -5327,6 +5883,15 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("run_id", help="directory name under workspace/runs")
     parser.add_argument(
         "--init", action="store_true", help="create the run workspace and stop"
+    )
+    parser.add_argument(
+        "--from",
+        dest="resume_from",
+        choices=("verification", "judge"),
+        help=(
+            "continue a stamped run from verification or judge for every "
+            "operation whose optimized skill was saved and not accepted"
+        ),
     )
     parser.add_argument(
         "--build", action="store_true", help="build the shared agent runtime image"
@@ -5408,8 +5973,22 @@ def parse_args() -> argparse.Namespace:
         help=argparse.SUPPRESS,
     )
     args = parser.parse_args()
-    if not re.fullmatch(r"[A-Za-z0-9_.-]+", args.run_id):
-        parser.error("run_id may contain only letters, numbers, dot, underscore, dash")
+    if args.resume_from and args.init:
+        parser.error("--from cannot be combined with --init")
+    stamped = re.fullmatch(
+        r"[A-Za-z0-9_.-]+@[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}(?:-[0-9]+)?",
+        args.run_id,
+    )
+    if args.resume_from:
+        if not stamped:
+            parser.error(
+                "--from requires the stamped run directory name, "
+                "such as run-id@YYYY-MM-DDTHH:MM"
+            )
+    elif not re.fullmatch(r"[A-Za-z0-9_.-]+", args.run_id):
+        parser.error(
+            "run_id may contain only letters, numbers, dot, underscore, dash"
+        )
     if args.cluster_workers < 1 or args.op_workers < 1:
         parser.error("worker counts must be at least 1")
     if args.max_ops_per_skill is not None and args.max_ops_per_skill < 1:

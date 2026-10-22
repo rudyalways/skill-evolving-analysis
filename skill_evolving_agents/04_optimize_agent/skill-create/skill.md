@@ -30,7 +30,10 @@ unknown capability into a nearby taxonomy leaf.
    Reuse existing skills through metadata `dependencies` instead of copying
    their instructions.
 4. Write `target/to_be_improved_skills/<skill>/SKILL.md` with only the headings
-   named by the goal. Use canonical headings from `common/skill_format.json`.
+   named by the goal. Use the canonical heading text from
+   `common/skill_format.json` as a level-2 Markdown heading, for example
+   `## Overview`. `# Overview` fails verification: the section checker does not
+   see a level-1 heading and reports that section missing.
 5. Use progressive disclosure. Keep essential procedure in `SKILL.md`; put
    detailed evidence or domain material in `references`, deterministic helpers
    in `scripts`, delegated prompts in `agents`, reusable output material in
@@ -49,9 +52,18 @@ unknown capability into a nearby taxonomy leaf.
 
 - Treat `common/skill_format.json` as authoritative. Use `other` or `ood` only
   when the goal explicitly names the custom heading or directory.
-- Keep `SKILL.md` concise and below 500 lines. Do not repeat reference content.
-- Keep names at most 64 characters and descriptions at most 1024 characters.
-  Remove placeholders before completion.
+- Write every required section as a level-2 heading. `# Overview` is not an
+  accepted form of `## Overview`. The checker then reports the section missing.
+- Frontmatter is YAML between `---` lines. `name` is lowercase hyphen-case,
+  matches the skill directory, and is at most 64 characters. `description` is
+  required, at most 1024 characters, and contains no angle brackets. Allowed
+  fields are name, description, license, compatibility, allowed-tools, and
+  metadata.
+- Keep `SKILL.md` at most 500 lines. Do not repeat reference content. Remove
+  `TODO`, `[TODO`, `EXAMPLE_SCRIPT`, `EXAMPLE_REFERENCE`, and
+  `EXAMPLE_ASSET` before completion.
+- Use only references, scripts, agents, assets, evals, or a directory the goal
+  names as other or ood. No symbolic links. No file over 10MB.
 - Keep references one level below `SKILL.md` and state when to read each one.
 - Give reference files over 100 lines a table of contents or search guidance.
 - Add scripts only when they replace repeated or error-prone generated code.

@@ -56,11 +56,27 @@ and copies that trace plus the stable candidate skill inventory:
 python3 skill_evolving_agents/candidate_traces.py new run-codex-01a135-73turns
 ```
 
-Run without clustering:
+Run without clustering. The command moves that seed to
+`workspace/runs/<run-id>@YYYY-MM-DDTHH:MM` and removes the unstamped directory:
 
 ```bash
 python3 skill_evolving_agents/run_pipeline.py run-codex-01a135-73turns
 ```
+
+Continue a stamped run after optimize has saved a skill. This reruns
+verification and judge, or judge alone, and does not repeat preprocessing,
+labeling, diagnosis, goal, or optimize. Accepted operations are left as they
+are. The run id is the stamped directory name:
+
+```bash
+python3 skill_evolving_agents/run_pipeline.py \
+  run-codex-01a135-30turns@2026-10-22T19:32 --from verification
+python3 skill_evolving_agents/run_pipeline.py \
+  run-codex-01a135-30turns@2026-10-22T19:32 --from judge
+```
+
+`--from judge` requires a completed verification result. A verification
+timeout has no result to judge, so continue it with `--from verification`.
 
 Run with optional semantic clustering. Evolution still defaults to selected
 high-confidence findings:
@@ -170,9 +186,21 @@ phase statuses and timing artifacts, then investigate fanout size, prompt/input
 size, provider latency, and missing process timeouts before retrying.
 
 Each hosted agent session is terminated after 180 seconds so one stalled
-fanout item cannot consume the total-run budget. Set
-`SKILL_EVOLVER_AGENT_TIMEOUT_SECONDS` only for a measured diagnostic override;
-raising it does not change the 5/10-minute total-run ceilings.
+fanout item cannot consume the total-run budget. Verification is the
+exception. One skill's checks and scored JSON were still being written at
+180 seconds, so a verifier session is terminated after 360 seconds
+(`SKILL_EVOLVER_VERIFIER_TIMEOUT_SECONDS`). Skills named by one operation
+start together, and the operation waits for the slowest skill. Set
+`SKILL_EVOLVER_AGENT_TIMEOUT_SECONDS` only for a measured diagnostic override
+of the other stages. Raising either limit does not change the 5/10-minute
+total-run ceilings.
+Diagnosis, goal, optimize, verification, and judge timeouts are lane-local.
+The failed lane records a short status and stays out of later phases.
+When optimize finishes, its skill is saved under
+`run/<finding>/ops/<n>/candidate/` before verification starts. A later
+verification or judge failure keeps that copy. Continue that run with
+`--from verification` or `--from judge`. Successful lanes continue through
+reduction, optimization, verification, judge, and publication.
 
 `--agent` overrides the active backend for one invocation and still uses that
 backend's configured model. `--model` overrides only the model.

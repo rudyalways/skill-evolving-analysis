@@ -416,6 +416,7 @@ def summarize_spans(rows: list[dict[str, Any]]) -> dict[str, Any]:
                 "batch_index": metadata.get("batch_index"),
                 "batch_count": metadata.get("batch_count"),
                 "conflicts": metadata.get("conflicts"),
+                "operation": metadata.get("operation"),
                 "attempt": metadata.get("attempt"),
                 "bundle_size": metadata.get("bundle_size"),
                 "super_score": metadata.get("super_score"),

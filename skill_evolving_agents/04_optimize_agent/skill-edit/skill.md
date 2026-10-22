@@ -10,7 +10,18 @@ not a `no_change` decision when this skill applies.
 Read the single operation in `workspace/run/evolve-goal.json`. Read only the
 source skills named by that operation under
 `workspace/target/to_be_improved_skills`. Section and directory names follow
-`common/skill_format.json`.
+`common/skill_format.json`. Write every required section as a level-2 heading
+(`## Overview`). The verifier does not recognize `# Overview` and reports that
+section missing. Frontmatter `name` is lowercase hyphen-case, matches the
+directory, and is at most 64 characters. `description` has no angle brackets
+and is at most 1024 characters. Allowed fields are name, description, license,
+compatibility, allowed-tools, and metadata. Keep `SKILL.md` at most 500 lines,
+with no TODO or EXAMPLE_ placeholder, no symbolic links, and no file over
+10MB. Reference files stay one directory level deep. An update changes every
+claimed section and leaves frontmatter, the preamble, and every unclaimed
+section identical to the raw snapshot. A claimed section must actually change.
+Delete removes the skill directory. Merge and split keep the source snapshot
+and remove only the sources the operation names.
 
 ## Workflow
 

@@ -696,8 +696,8 @@ def validate_changelog(
         "pending": {"running", "skipped", "failed"},
         "running": {"completed", "failed"},
         "completed": {"running"},
-        "skipped": set(),
-        "failed": set(),
+        "skipped": {"running"},
+        "failed": {"running"},
     }
     for index, event in enumerate(events):
         event_path = f"$.phase_events[{index}]"

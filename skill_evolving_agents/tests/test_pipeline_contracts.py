@@ -583,18 +583,17 @@ class ContractTests(unittest.TestCase):
             skill = source / "target/to_be_improved_skills/demo"
             skill.mkdir()
             (skill / "SKILL.md").write_text("---\nname: demo\n---\n")
-            self.assertEqual(runner.allocate_execution_workspace(source), source)
-
-            (source / "logs").mkdir(exist_ok=True)
-            (source / "logs/execution.jsonl").write_text("{}\n")
-            findings = source / "traces/derived/findings"
-            findings.mkdir(parents=True)
-            (findings / "note.json").write_text("{}\n")
+            write_json(
+                source / "run/trace-selection.json",
+                {"candidate": "candidate_traces/trace.jsonl"},
+            )
             moment = datetime.fromisoformat("2026-10-22T09:53:10+00:00")
             created = runner.allocate_execution_workspace(source, moment=moment)
             stamp = moment.astimezone().strftime("%Y-%m-%dT%H:%M")
             self.assertEqual(created.parent, source.parent)
+            self.assertNotEqual(created, source)
             self.assertEqual(created.name, f"timed-run@{stamp}")
+            self.assertFalse(source.exists())
             self.assertEqual(
                 (created / "traces/raw/codex/trace.jsonl").read_text(), "{}\n"
             )
@@ -605,8 +604,13 @@ class ContractTests(unittest.TestCase):
             self.assertFalse((created / "traces/derived/findings/note.json").exists())
             self.assertFalse(runner.workspace_was_started(created))
 
+            runner.initialize_workspace(source)
+            (source / "traces/raw/codex/trace.jsonl").write_text("{}\n")
+            skill.mkdir()
+            (skill / "SKILL.md").write_text("---\nname: demo\n---\n")
             again = runner.allocate_execution_workspace(source, moment=moment)
             self.assertEqual(again.name, f"timed-run@{stamp}-2")
+            self.assertFalse(source.exists())
 
     def test_initialize_workspace_is_allowlisted(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -853,6 +857,9 @@ class ContractTests(unittest.TestCase):
                 self.assertIn("fanout-parent", live)
                 self.assertIn("trace-arrows", live)
                 self.assertIn("Expand", live)
+                self.assertIn("skillBySig", live)
+                self.assertIn("(${subject})", live)
+                self.assertIn("operations.by_op", live)
             finally:
                 server.shutdown()
                 server.server_close()
@@ -944,6 +951,54 @@ class ContractTests(unittest.TestCase):
             )
             self.assertEqual(
                 labels["sig-dddddddddddddddddddddddd"], "missing-final-response"
+            )
+
+    def test_operation_labels_name_skill_and_verb(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            run = root / "runs" / "named-run" / "run"
+            created = run / "sig-aaaaaaaaaaaaaaaaaaaaaaaa" / "ops" / "1"
+            created.mkdir(parents=True)
+            (created / "changelog.json").write_text(
+                json.dumps(
+                    {
+                        "changes": [
+                            {"skill": "bounded-retry", "operation": "create"}
+                        ]
+                    }
+                )
+            )
+            skipped = run / "sig-bbbbbbbbbbbbbbbbbbbbbbbb"
+            skipped.mkdir(parents=True)
+            (skipped / "changelog.json").write_text(
+                json.dumps({"disposition": "no_change", "changes": []})
+            )
+            labels = metrics_dashboard.operation_labels(
+                root / "metrics.sqlite",
+                "named-run",
+                [
+                    {
+                        "item": "named-run-sig-cccccccccccccccccccccccc-op-2",
+                        "operation": "update",
+                        "conflicts": ["audit-project-ui"],
+                    }
+                ],
+            )
+            self.assertEqual(
+                labels["by_op"]["sig-aaaaaaaaaaaaaaaaaaaaaaaa:1"],
+                "bounded-retry · create",
+            )
+            self.assertEqual(
+                labels["by_op"]["sig-cccccccccccccccccccccccc:2"],
+                "audit-project-ui · update",
+            )
+            self.assertEqual(
+                labels["by_sig"]["sig-aaaaaaaaaaaaaaaaaaaaaaaa"],
+                "bounded-retry · create",
+            )
+            self.assertEqual(
+                labels["by_sig"]["sig-bbbbbbbbbbbbbbbbbbbbbbbb"],
+                "no change",
             )
 
     def test_assign_passes_numbers_a_rerun(self) -> None:
@@ -1103,6 +1158,17 @@ class ContractTests(unittest.TestCase):
         }
         metrics_dashboard.annotate_endings([timed_out], [])
         self.assertEqual(timed_out["ending_label"], "timed out after 180 seconds")
+        verifier_timeout = {
+            "phase": "verifiter",
+            "item": "run-sig-hhh",
+            "status": "error",
+            "started_at": "2026-10-22T09:33:00+00:00",
+            "duration_ms": 360049,
+        }
+        metrics_dashboard.annotate_endings([verifier_timeout], [])
+        self.assertEqual(
+            verifier_timeout["ending_label"], "timed out after 360 seconds"
+        )
 
     def test_recreated_run_clears_stale_shared_metrics(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -1720,6 +1786,32 @@ class ContractTests(unittest.TestCase):
             output,
             "example-skill",
         )
+        compact = runner.verifier_response_prompt(
+            "example-skill",
+            {
+                "checks": {
+                    "step3": {
+                        "evidence": {
+                            "findings": [
+                                {
+                                    "lesson": {
+                                        "kind": "retry_guard",
+                                        "rule": "Stop when the attempt is unchanged.",
+                                        "retry_classifications": [
+                                            {"retry_sequence": 1, "waste_score": 1}
+                                        ],
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            {"feedback": {}},
+        )
+        self.assertIn("Stop when the attempt is unchanged.", compact)
+        self.assertNotIn("retry_classifications", compact)
+        self.assertNotIn("waste_score", compact)
         prompt = runner.verifier_response_prompt(
             "example-skill",
             skill_input,
@@ -1737,6 +1829,13 @@ class ContractTests(unittest.TestCase):
         self.assertIn("<verification-output-json>", prompt)
         self.assertIn('"skill": "example-skill"', prompt)
         self.assertIn("Return only one JSON object", prompt)
+        self.assertIn("`## Overview`", prompt)
+        self.assertIn("`# Overview` does", prompt)
+        self.assertIn("heading-level miss", prompt)
+        self.assertIn("contains no angle brackets", prompt)
+        self.assertIn("Do not reimplement that digest", prompt)
+        self.assertIn("skill score above 0.75 still fails", prompt)
+        self.assertIn("Do not open the checker source", prompt)
 
     def test_verifier_response_parser_reads_json_from_event_stream(self) -> None:
         response = {
@@ -4160,6 +4259,100 @@ class ContractTests(unittest.TestCase):
                 )
             self.assertFalse((root / ".pipeline-workers").exists())
 
+    def test_failed_diagnosis_and_goal_lanes_do_not_stop_other_lanes(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "skill_evolving_agents"
+            workspace = root / "workspace/runs/run"
+            (workspace / "logs").mkdir(parents=True)
+            (workspace / "run").mkdir()
+
+            def fake_session(
+                stage, worker, prompt, auth, model, install, suffix,
+                metadata=None, **kwargs
+            ):
+                cluster = suffix.removeprefix("run-")
+                if stage == "label-traces-cluster":
+                    if cluster == "diagnosis-fail":
+                        raise subprocess.TimeoutExpired("agent", 180)
+                    write_json(
+                        worker / "run/diagnosis.json",
+                        {
+                            "skill_capabilities_missing": [
+                                {
+                                    "type": "job/methodology",
+                                    "cluster": cluster,
+                                    "description": "missing process",
+                                    "confidence": 0.8,
+                                    "reasoning": "trace evidence",
+                                    "evidence_list": ["missing steps"],
+                                }
+                            ],
+                            "newly_detected_skill_capabilites_missing": [],
+                        },
+                    )
+                    return
+                if cluster == "goal-fail":
+                    raise subprocess.TimeoutExpired("agent", 180)
+                write_json(
+                    worker / f"run/{cluster}/label-matching.json",
+                    {
+                        "matching": {
+                            "strategy": "weighted_path_similarity",
+                            "config_version": 1,
+                            "config_sha256": "0" * 64,
+                        },
+                        "clusters": [
+                            {"cluster": cluster, "labels": [], "skills": []}
+                        ],
+                    },
+                )
+                write_json(worker / f"run/{cluster}/evolve-goal.json", valid_goal())
+
+            with (
+                patch.object(runner, "ROOT", root),
+                patch.object(runner, "run_session", side_effect=fake_session),
+            ):
+                aggregate = runner.pipeline_diagnosis_and_goals(
+                    workspace,
+                    "run",
+                    ["diagnosis-fail", "goal-fail", "ok"],
+                    True,
+                    3,
+                    {},
+                    None,
+                    True,
+                    "finding",
+                )
+
+            diagnosis = json.loads(aggregate.read_text())
+            self.assertEqual(
+                {
+                    row["cluster"]
+                    for row in diagnosis["skill_capabilities_missing"]
+                },
+                {"goal-fail", "ok"},
+            )
+            self.assertTrue((workspace / "run/ok/evolve-goal.json").is_file())
+            self.assertFalse(
+                (workspace / "run/goal-fail/evolve-goal.json").exists()
+            )
+            skipped = json.loads(
+                (
+                    workspace
+                    / "run/status/goal/run-diagnosis-fail.json"
+                ).read_text()
+            )
+            failed = json.loads(
+                (
+                    workspace
+                    / "run/status/goal/run-goal-fail.json"
+                ).read_text()
+            )
+            self.assertEqual(skipped["state"], "skipped")
+            self.assertEqual(failed["state"], "failed")
+            self.assertEqual(failed["error"], "timed out after 180 seconds")
+            self.assertFalse((root / ".pipeline-workers").exists())
+
     def test_operation_batches_serialize_overlapping_skills(self) -> None:
         tasks = [
             {"affected": {"a"}, "conflicts": {"a"}},
@@ -5067,6 +5260,431 @@ class ContractTests(unittest.TestCase):
                     ).is_file()
                 )
             self.assertFalse((root / ".pipeline-workers").exists())
+
+    def test_failed_operation_lane_does_not_stop_other_lanes(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "skill_evolving_agents"
+            workspace = root / "workspace/runs/run"
+            for skill in ("a", "b"):
+                path = workspace / "target/to_be_improved_skills" / skill
+                path.mkdir(parents=True)
+                (path / "SKILL.md").write_text(f"# {skill}\n")
+            (workspace / "target/raw_skills").mkdir(parents=True)
+            (workspace / "logs").mkdir(parents=True)
+            labels = [
+                {"type": "job/a", "weight": 1.0},
+                {"type": "job/b", "weight": 0.8},
+                {"type": "job/c", "weight": 0.6},
+            ]
+            write_json(
+                workspace
+                / "target/to_be_improved_skills_metadata/metadata.json",
+                {
+                    "skills_metadata": [
+                        {
+                            "skill": skill,
+                            "skill_types": labels,
+                            "description": skill,
+                        }
+                        for skill in ("a", "b")
+                    ]
+                },
+            )
+            goal = valid_goal()
+            goal["action"]["ops"] = [
+                {
+                    "op": "update",
+                    "skills": [
+                        {
+                            "skill": skill,
+                            "goal": "improve",
+                            "facet": "workflow",
+                            "sections": [
+                                {"section": "workflow", "goal": "improve"}
+                            ],
+                        }
+                    ],
+                }
+                for skill in ("a", "b")
+            ]
+            write_json(workspace / "run/cut/evolve-goal.json", goal)
+            started = threading.Barrier(2)
+
+            def fake_session(
+                stage, worker, prompt, auth, model, install, suffix,
+                metadata=None, **kwargs
+            ):
+                active = json.loads((worker / "run/evolve-goal.json").read_text())
+                skill = active["action"]["ops"][0]["skills"][0]["skill"]
+                if stage == "optimize":
+                    started.wait(timeout=2)
+                    if skill == "a":
+                        raise subprocess.TimeoutExpired("agent", 180)
+                    raw = worker / "target/raw_skills" / skill
+                    raw.mkdir(parents=True, exist_ok=True)
+                    (raw / "SKILL.md").write_text(f"# {skill}\n")
+                    return
+                verification_input = json.loads(
+                    (worker / "run/verification-input.json").read_text()
+                )
+                verification = valid_verification(
+                    skill, verification_input=verification_input
+                )
+                verification["changelog"] = json.loads(
+                    (worker / "run/changelog.json").read_text()
+                )["changes"]
+                verification["verification_input"]["sha256"] = hashlib.sha256(
+                    (worker / "run/verification-input.json").read_bytes()
+                ).hexdigest()
+                log_path = runner.session_log_path(worker, stage, suffix)
+                log_path.parent.mkdir(parents=True, exist_ok=True)
+                log_path.write_text(
+                    json.dumps(
+                        {
+                            "type": "item.completed",
+                            "item": {
+                                "type": "agent_message",
+                                "text": json.dumps(verification),
+                            },
+                        }
+                    )
+                    + "\n"
+                )
+                return log_path
+
+            with (
+                patch.object(runner, "ROOT", root),
+                patch.object(runner, "run_session", side_effect=fake_session),
+            ):
+                runner.fanout_operations(
+                    workspace,
+                    "run",
+                    ["cut"],
+                    2,
+                    {},
+                    None,
+                    True,
+                )
+
+            failed = json.loads(
+                (
+                    workspace
+                    / "run/status/optimize/run-cut-op-1-try-1.json"
+                ).read_text()
+            )
+            self.assertEqual(failed["state"], "failed")
+            self.assertEqual(failed["error"], "timed out after 180 seconds")
+            publication = json.loads(
+                (workspace / "run/cut/ops/1/publication.json").read_text()
+            )
+            self.assertFalse(publication["accepted"])
+            self.assertTrue(
+                (workspace / "run/cut/ops/2/verification.json").is_file()
+            )
+            published = json.loads(
+                (workspace / "run/cut/ops/2/publication.json").read_text()
+            )
+            self.assertTrue(published["accepted"])
+            self.assertEqual(
+                (workspace / "target/to_be_improved_skills/b/SKILL.md").read_text(),
+                "# b\n",
+            )
+            self.assertFalse((root / ".pipeline-workers").exists())
+
+    def test_verification_can_continue_from_the_saved_skill(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "skill_evolving_agents"
+            workspace = root / "workspace/runs/run"
+            skill = workspace / "target/to_be_improved_skills/b"
+            skill.mkdir(parents=True)
+            (skill / "SKILL.md").write_text("# old\n")
+            (workspace / "target/raw_skills").mkdir(parents=True)
+            (workspace / "logs").mkdir(parents=True)
+            labels = [
+                {"type": "job/a", "weight": 1.0},
+                {"type": "job/b", "weight": 0.8},
+                {"type": "job/c", "weight": 0.6},
+            ]
+            write_json(
+                workspace / "target/to_be_improved_skills_metadata/metadata.json",
+                {
+                    "skills_metadata": [
+                        {
+                            "skill": "b",
+                            "skill_types": labels,
+                            "description": "b",
+                        }
+                    ]
+                },
+            )
+            goal = valid_goal()
+            goal["action"]["ops"] = [
+                {
+                    "op": "update",
+                    "skills": [
+                        {
+                            "skill": "b",
+                            "goal": "improve",
+                            "facet": "workflow",
+                            "sections": [
+                                {"section": "workflow", "goal": "improve"}
+                            ],
+                        }
+                    ],
+                }
+            ]
+            write_json(workspace / "run/cut/evolve-goal.json", goal)
+
+            def timeout_verification(
+                stage, worker, prompt, auth, model, install, suffix,
+                metadata=None, **kwargs
+            ):
+                if stage == "optimize":
+                    raw = worker / "target/raw_skills/b"
+                    raw.mkdir(parents=True, exist_ok=True)
+                    (raw / "SKILL.md").write_text("# old\n")
+                    (
+                        worker / "target/to_be_improved_skills/b/SKILL.md"
+                    ).write_text("# new\n")
+                    return
+                raise subprocess.TimeoutExpired("agent", 180)
+
+            def pass_verification(
+                stage, worker, prompt, auth, model, install, suffix,
+                metadata=None, **kwargs
+            ):
+                verification_input = json.loads(
+                    (worker / "run/verification-input.json").read_text()
+                )
+                verification = valid_verification(
+                    "b", verification_input=verification_input
+                )
+                verification["changelog"] = json.loads(
+                    (worker / "run/changelog.json").read_text()
+                )["changes"]
+                verification["verification_input"]["sha256"] = hashlib.sha256(
+                    (worker / "run/verification-input.json").read_bytes()
+                ).hexdigest()
+                log_path = runner.session_log_path(worker, stage, suffix)
+                log_path.parent.mkdir(parents=True, exist_ok=True)
+                log_path.write_text(
+                    json.dumps(
+                        {
+                            "type": "item.completed",
+                            "item": {
+                                "type": "agent_message",
+                                "text": json.dumps(verification),
+                            },
+                        }
+                    )
+                    + "\n"
+                )
+                return log_path
+
+            with (
+                patch.object(runner, "ROOT", root),
+                patch.object(runner, "run_session", side_effect=timeout_verification),
+            ):
+                runner.fanout_operations(
+                    workspace, "run", ["cut"], 1, {}, None, True
+                )
+            saved = (
+                workspace
+                / "run/cut/ops/1/candidate/to_be_improved_skills/b/SKILL.md"
+            )
+            self.assertEqual(saved.read_text(), "# new\n")
+            self.assertEqual(
+                (workspace / "target/to_be_improved_skills/b/SKILL.md").read_text(),
+                "# old\n",
+            )
+            rejected = json.loads(
+                (workspace / "run/cut/ops/1/publication.json").read_text()
+            )
+            self.assertFalse(rejected["accepted"])
+            with (
+                patch.object(runner, "ROOT", root),
+                patch.object(runner, "run_session", side_effect=pass_verification),
+            ):
+                continued = runner.continue_operations(
+                    workspace, "run", "verification", 1, {}, None, True
+                )
+            self.assertEqual(continued, ["cut"])
+            self.assertEqual(
+                (workspace / "target/to_be_improved_skills/b/SKILL.md").read_text(),
+                "# new\n",
+            )
+            accepted = json.loads(
+                (workspace / "run/cut/ops/1/publication.json").read_text()
+            )
+            self.assertTrue(accepted["accepted"])
+            self.assertFalse((root / ".pipeline-workers").exists())
+            with patch.object(
+                sys,
+                "argv",
+                [
+                    "run_pipeline.py",
+                    "run-codex@2026-10-22T19:32",
+                    "--from",
+                    "verification",
+                ],
+            ):
+                parsed = runner.parse_args()
+            self.assertEqual(parsed.resume_from, "verification")
+            with patch.object(
+                sys, "argv", ["run_pipeline.py", "run-codex@2026-10-22T19:32"]
+            ):
+                with self.assertRaises(SystemExit):
+                    runner.parse_args()
+
+    def test_verifier_session_uses_the_longer_timeout(self) -> None:
+        self.assertGreater(
+            runner.VERIFIER_SESSION_TIMEOUT_SECONDS,
+            runner.AGENT_SESSION_TIMEOUT_SECONDS,
+        )
+        self.assertEqual(runner.session_timeout_seconds("goal"), 180)
+        self.assertEqual(runner.session_timeout_seconds("verifiter"), 360)
+        with tempfile.TemporaryDirectory() as directory:
+            view = Path(directory) / "view"
+            view.mkdir()
+            workspace = Path(directory) / "workspace"
+            workspace.mkdir()
+            with (
+                patch.object(runner, "make_session_view", return_value=view),
+                patch.object(runner, "run") as invoke,
+            ):
+                runner.run_host_session(
+                    "cursor", "goal", workspace, "prompt", None, "goal-item"
+                )
+                runner.run_host_session(
+                    "cursor",
+                    "verifiter",
+                    workspace,
+                    "prompt",
+                    None,
+                    "verify-item",
+                )
+            self.assertEqual(
+                [call.kwargs["timeout"] for call in invoke.call_args_list],
+                [180, 360],
+            )
+
+    def test_one_operation_verifies_its_skills_together(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            operation = workspace / "run"
+            operation.mkdir(parents=True)
+            (operation / "evolve-goal.json").write_text("{}\n")
+            (operation / "changelog.json").write_text("{}\n")
+            verification_input = {
+                "skills": [{"skill": "alpha"}, {"skill": "beta"}]
+            }
+            (operation / "verification-input.json").write_text(
+                json.dumps(verification_input) + "\n"
+            )
+            barrier = threading.Barrier(2)
+            started: list[str] = []
+
+            def fake_build(*args, **kwargs):
+                return {
+                    "verification_steps": [
+                        {"skill": "alpha", "steps": []},
+                        {"skill": "beta", "steps": []},
+                    ],
+                    "feedback": {
+                        "per_skill": [
+                            {
+                                "skill": "alpha",
+                                "score": 0,
+                                "status": "fail",
+                                "feedback": "",
+                            },
+                            {
+                                "skill": "beta",
+                                "score": 0,
+                                "status": "fail",
+                                "feedback": "",
+                            },
+                        ],
+                        "replay": {"available": False, "status": "not_run"},
+                        "ood": [],
+                        "action": None,
+                        "retry_budget": 0,
+                    },
+                    "changelog": [],
+                }
+
+            def fake_session(
+                stage, worker, prompt, auth, model, install, suffix,
+                metadata=None, **kwargs
+            ):
+                skill = str((metadata or {})["skill"])
+                started.append(skill)
+                barrier.wait(timeout=2)
+                body = {
+                    "verification_steps": [{"skill": skill, "steps": []}],
+                    "feedback": {
+                        "per_skill": [
+                            {
+                                "skill": skill,
+                                "score": 1.0 if skill == "alpha" else 0.4,
+                                "status": "pass" if skill == "alpha" else "fail",
+                                "feedback": skill,
+                            }
+                        ],
+                        "replay": {"available": False, "status": "not_run"},
+                        "ood": [],
+                    },
+                }
+                log_path = runner.session_log_path(worker, stage, suffix)
+                log_path.parent.mkdir(parents=True, exist_ok=True)
+                log_path.write_text(
+                    json.dumps(
+                        {
+                            "type": "item.completed",
+                            "item": {
+                                "type": "agent_message",
+                                "text": json.dumps(body),
+                            },
+                        }
+                    )
+                    + "\n"
+                )
+                return log_path
+
+            with (
+                patch.object(
+                    runner.verification_builder, "build", side_effect=fake_build
+                ),
+                patch.object(
+                    runner,
+                    "validate_skill_verifier_response",
+                    side_effect=lambda *args, **kwargs: args[4],
+                ),
+                patch.object(
+                    runner.pipeline_contracts,
+                    "validate_verification",
+                    side_effect=lambda path, **kwargs: json.loads(
+                        Path(path).read_text()
+                    ),
+                ),
+                patch.object(runner, "run_session", side_effect=fake_session),
+            ):
+                path = runner.run_per_skill_verification(
+                    workspace,
+                    auth={},
+                    model=None,
+                    install_agent=False,
+                    suffix="op",
+                    metadata={},
+                )
+            self.assertEqual(sorted(started), ["alpha", "beta"])
+            saved = json.loads(path.read_text())
+            self.assertEqual(
+                [row["skill"] for row in saved["feedback"]["per_skill"]],
+                ["alpha", "beta"],
+            )
+            self.assertEqual(saved["feedback"]["overall_score"], 0.4)
+            self.assertEqual(saved["feedback"]["overall_status"], "fail")
 
 
 class MockedPipelineTest(unittest.TestCase):
