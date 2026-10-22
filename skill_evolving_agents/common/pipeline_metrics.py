@@ -71,6 +71,51 @@ def _databases(workspace: Path) -> list[Path]:
     return [local] if local == shared else [local, shared]
 
 
+def clear_shared_run(workspace: Path) -> None:
+    """Remove stale cross-run rows when a run id is intentionally recreated."""
+    shared = workspace.resolve().parents[1] / "metrics.sqlite"
+    if not shared.is_file():
+        return
+    with _LOCK, sqlite3.connect(shared, timeout=30) as connection:
+        _initialize(connection)
+        connection.execute(
+            "DELETE FROM pipeline_spans WHERE run_id = ?",
+            (workspace.name,),
+        )
+
+
+def replace_shared_run(workspace: Path) -> None:
+    """Replace one shared run with its authoritative local timing rows."""
+    workspace = workspace.resolve()
+    local = workspace / "logs/metrics.sqlite"
+    shared = workspace.parents[1] / "metrics.sqlite"
+    if not local.is_file():
+        clear_shared_run(workspace)
+        return
+    with _LOCK:
+        with sqlite3.connect(local, timeout=30) as source:
+            try:
+                rows = source.execute(
+                    "SELECT * FROM pipeline_spans WHERE run_id = ? "
+                    "ORDER BY started_at_us",
+                    (workspace.name,),
+                ).fetchall()
+            except sqlite3.OperationalError:
+                rows = []
+        with sqlite3.connect(shared, timeout=30) as destination:
+            _initialize(destination)
+            destination.execute(
+                "DELETE FROM pipeline_spans WHERE run_id = ?",
+                (workspace.name,),
+            )
+            if rows:
+                destination.executemany(
+                    "INSERT INTO pipeline_spans VALUES "
+                    "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    rows,
+                )
+
+
 def _thread_name(pid: int, tid: int, item: str) -> dict[str, Any]:
     return {
         "name": "thread_name",

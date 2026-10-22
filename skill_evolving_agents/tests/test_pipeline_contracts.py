@@ -9,6 +9,7 @@ import threading
 import time
 import unittest
 import urllib.request
+from datetime import UTC, datetime
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -317,6 +318,18 @@ class ContractTests(unittest.TestCase):
             self.assertIn("timed-run", rendered)
             self.assertIn("Cross-run phase statistics", rendered)
             self.assertIn("Phase wall", rendered)
+            status = workspace / "run/status/goal/live.json"
+            status.parent.mkdir(parents=True)
+            status.write_text(
+                json.dumps(
+                    {
+                        "stage": "goal",
+                        "item": "live",
+                        "state": "started",
+                        "started_at": datetime.now(UTC).isoformat(),
+                    }
+                )
+            )
             server = metrics_dashboard.make_server(
                 shared, "127.0.0.1", 0, 0.25
             )
@@ -332,6 +345,13 @@ class ContractTests(unittest.TestCase):
                 self.assertEqual(payload["runs"][0]["run_id"], "timed-run")
                 self.assertEqual(payload["runs"][0]["phases"][0]["phase"], "goal")
                 self.assertIn("spans", payload["runs"][0])
+                self.assertEqual(payload["runs"][0]["active"][0]["stage"], "goal")
+                with urllib.request.urlopen(
+                    f"http://127.0.0.1:{port}/"
+                ) as response:
+                    live = response.read().decode()
+                self.assertIn('data-tab="total"', live)
+                self.assertIn("Running now:", live)
             finally:
                 server.shutdown()
                 server.server_close()
@@ -382,6 +402,23 @@ class ContractTests(unittest.TestCase):
             self.assertEqual(phase["peak_concurrency"], 2)
             self.assertLess(phase["wall_seconds"], phase["sum_seconds"])
             self.assertEqual(overlapped["spans"][0]["slice_user_turns"], 2)
+
+    def test_recreated_run_clears_stale_shared_metrics(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory) / "workspace/runs/reused"
+            workspace.mkdir(parents=True)
+            with runner.pipeline_metrics.span(
+                workspace, "goal", "old-attempt", "llm_agent"
+            ):
+                pass
+            shared = workspace.parents[1] / "metrics.sqlite"
+            runner.pipeline_metrics.clear_shared_run(workspace)
+            with sqlite3.connect(shared) as connection:
+                count = connection.execute(
+                    "SELECT COUNT(*) FROM pipeline_spans WHERE run_id = ?",
+                    ("reused",),
+                ).fetchone()[0]
+            self.assertEqual(count, 0)
 
     def test_session_log_slice_and_queue_are_in_the_timing_report(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

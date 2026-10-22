@@ -195,6 +195,7 @@ def require_auth() -> dict[str, str]:
 def initialize_workspace(workspace: Path) -> None:
     if workspace.exists():
         raise SystemExit(f"refusing to replace existing run: {workspace}")
+    pipeline_metrics.clear_shared_run(workspace)
     workspace.mkdir(parents=True)
     for relative in (
         "logs",
