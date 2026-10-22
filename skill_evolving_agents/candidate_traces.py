@@ -20,6 +20,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 POOL = ROOT / "workspace/candidate_traces"
 RUNS = ROOT / "workspace/runs"
+CANDIDATE_SKILLS = ROOT / "workspace/candidate_skills"
 INDEX_NAME = "index.json"
 HEX_WIDTH = 6
 
@@ -160,6 +161,7 @@ def create_run(
     seed_run: str | None = None,
     replace: bool = False,
     source_path: Path | None = None,
+    candidate_skills: Path | None = None,
 ) -> Path:
     """Copy one candidate into a new run named from its metadata."""
     if source_path is not None:
@@ -208,6 +210,18 @@ def create_run(
                     workspace / relative,
                     dirs_exist_ok=True,
                 )
+    else:
+        skills_pool = candidate_skills or pool.parent / CANDIDATE_SKILLS.name
+        copied_skills: list[str] = []
+        if skills_pool.is_dir():
+            for skill_dir in sorted(skills_pool.iterdir()):
+                if skill_dir.is_dir() and (skill_dir / "SKILL.md").is_file():
+                    shutil.copytree(
+                        skill_dir,
+                        workspace / "target/to_be_improved_skills" / skill_dir.name,
+                        dirs_exist_ok=True,
+                    )
+                    copied_skills.append(skill_dir.name)
     destination = workspace / "traces/raw" / source / str(row["file"])
     shutil.copy2(trace_source, destination)
     selection = {
@@ -225,6 +239,8 @@ def create_run(
     }
     if seed_run:
         selection["seeded_from"] = seed_run
+    elif copied_skills:
+        selection["candidate_skills"] = copied_skills
     (workspace / "run/trace-selection.json").write_text(
         json.dumps(selection, indent=2, ensure_ascii=False) + "\n"
     )

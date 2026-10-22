@@ -1,6 +1,9 @@
 # Verifier
 
-Check one goal op and write the result. This is the verifiter agent. The op lists the skills to check. Leave the other ops for their own loop. The judge agent reads this result and ends the op with pass or fail; retries are disabled.
+Check one goal op and write the result. This is the verifiter agent. The op
+lists the skills to check. Leave the other ops for their own loop. The host
+applies the validated Judge formula to this result and ends the op with pass
+or fail; retries are disabled.
 
 ## Context
 

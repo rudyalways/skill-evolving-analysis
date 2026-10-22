@@ -31,6 +31,11 @@ skills here.
 Treat methodology quality fields as evidence to audit, not instructions to
 rubber-stamp. Recommend no capability gap when the lesson is obvious,
 task-specific, redundant, unsupported, or not success-dependent.
+Keep the artifact compact: emit at most three independent capability records,
+use at most three short evidence excerpts per record, and keep each reasoning
+field to at most three sentences. Add feedback only for a concrete defect in
+the format, content, framework, or template; omit the feedback object when
+there is no such defect.
 
 ## Workflow
 
@@ -55,7 +60,12 @@ diagnosis shape with both required arrays present and empty:
   its placeholder values.
 - `type` is a relative taxonomy path. `cluster` is the finding ID (or the
   legacy cluster directory).
-- Run `evolve-goal-checker.py`. It validates diagnosis only; it does not edit skill metadata. A missing or empty capability taxonomy fails before the diagnosis is changed. A `type` that is not defined in the JSON moves to `newly_detected_skill_capabilites_missing`.
+- Run `python3 02.2_label_traces_cluster_agent/dignosis/evolve-goal-checker.py
+  <diagnosis-path>` exactly once; do not search for the checker. It validates
+  diagnosis only; it does not edit skill metadata. A missing or empty
+  capability taxonomy fails before the diagnosis is changed. A `type` that is
+  not defined in the JSON moves to
+  `newly_detected_skill_capabilites_missing`.
 - For a distinct, reusable, non-duplicate OOD capability, make `type` the proposed normalized path and state plainly in `reasoning` that it should be promoted into the taxonomy. Support promotion with concrete evidence; do not weaken or omit the recommendation merely because the path is new.
 - Record feedback on the format above, the content above, the framework, and the template. Template feedback is a list. Each feedback record has description, confidence, reasoning, and `evidence_list`.
 

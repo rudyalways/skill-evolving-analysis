@@ -2076,6 +2076,124 @@ def _operation_skill_names(operation: dict[str, Any]) -> set[str]:
     return set()
 
 
+def validate_no_change_artifacts(directory: Path) -> dict[str, Any]:
+    """Require the dated terminal bundle for a scope with no operation."""
+    paths = {
+        name: directory / filename
+        for name, filename in {
+            "goal": "evolve-goal.json",
+            "verification_input": "verification-input.json",
+            "verification": "verification.json",
+            "judge": "judge.json",
+            "changelog": "changelog.json",
+        }.items()
+    }
+    for name, path in paths.items():
+        if not path.is_file():
+            fail(str(path), f"{name} artifact was not produced")
+    goal = validate_goal(paths["goal"])
+    action = goal["action"]
+    if action.get("disposition") != "no_change" or action.get("ops"):
+        fail(str(paths["goal"]), "must be a no_change goal with no operations")
+    reason = required_string(action, "reason", "$.action")
+    records = {
+        name: load_json_object(path)
+        for name, path in paths.items()
+        if name != "goal"
+    }
+    changelog = records["changelog"]
+    if changelog.get("schema_version") != 1:
+        fail("$.schema_version", "must equal 1")
+    if changelog.get("disposition") != "no_change":
+        fail("$.disposition", "must equal no_change")
+    if changelog.get("changes") != []:
+        fail("$.changes", "must be empty for no_change")
+    if changelog.get("reason") != reason:
+        fail("$.reason", "must match the goal reason")
+    date_value = required_string(changelog, "date", "$")
+    try:
+        parsed_date = date.fromisoformat(date_value)
+    except ValueError:
+        fail("$.date", "must be a valid ISO date")
+    if parsed_date.isoformat() != date_value:
+        fail("$.date", "must use YYYY-MM-DD")
+    markers = required_list(changelog, "phase_markers", "$")
+    events = required_list(changelog, "phase_events", "$")
+    if events != markers:
+        fail("$.phase_events", "must preserve every terminal phase marker")
+    states = {
+        marker.get("phase"): marker.get("status")
+        for marker in markers
+        if isinstance(marker, dict)
+    }
+    expected_states = {
+        "goal": "completed",
+        "optimize": "skipped",
+        "verification": "skipped",
+        "judge": "skipped",
+    }
+    if states != expected_states:
+        fail("$.phase_markers", "must mark goal completed and later phases skipped")
+    for index, marker in enumerate(markers):
+        marker_path = f"$.phase_markers[{index}]"
+        marker_date = required_string(marker, "date", marker_path)
+        required_string(marker, "at", marker_path)
+        if marker_date != date_value:
+            fail(f"{marker_path}.date", "must match the bundle date")
+        if marker.get("status") == "skipped" and marker.get("reason") != reason:
+            fail(f"{marker_path}.reason", "must match the goal reason")
+
+    identity = {
+        "run_id": required_string(changelog, "run_id", "$"),
+        "finding_id": required_string(changelog, "finding_id", "$"),
+    }
+    for name in ("verification_input", "verification", "judge"):
+        record = records[name]
+        if record.get("schema_version") != 1:
+            fail(f"{paths[name]}:$.schema_version", "must equal 1")
+        for key, value in identity.items():
+            if record.get(key) != value:
+                fail(f"{paths[name]}:{key}", "does not match changelog.json")
+        if record.get("date") != date_value:
+            fail(f"{paths[name]}:date", "does not match changelog.json")
+        if record.get("op_index") != 0:
+            fail(f"{paths[name]}:op_index", "must equal 0 for no_change")
+        if record.get("status") != "skipped":
+            fail(f"{paths[name]}:status", "must equal skipped")
+        if record.get("reason") != reason:
+            fail(f"{paths[name]}:reason", "must match the goal reason")
+        if record.get("skills") != []:
+            fail(f"{paths[name]}:skills", "must be empty for no_change")
+    if records["verification_input"].get("operation") != "no_change":
+        fail("$.operation", "must equal no_change")
+    verification = records["verification"]
+    if verification.get("operation") != "no_change":
+        fail("$.operation", "must equal no_change")
+    if verification.get("phase") != "verification":
+        fail("$.phase", "must equal verification")
+    input_ref = verification.get("verification_input")
+    expected_input = hashlib.sha256(paths["verification_input"].read_bytes()).hexdigest()
+    if not isinstance(input_ref, dict) or input_ref.get("path") != "verification-input.json":
+        fail("$.verification_input", "must reference verification-input.json")
+    if input_ref.get("sha256") != expected_input:
+        fail("$.verification_input.sha256", "does not match verification-input.json")
+    judge = records["judge"]
+    if judge.get("action") is not None:
+        fail("$.action", "must be null for skipped no_change")
+    artifacts = judge.get("artifacts")
+    if not isinstance(artifacts, dict):
+        fail("$.artifacts", "must be an object")
+    for name in ("goal", "verification_input", "verification", "changelog"):
+        reference = artifacts.get(name)
+        expected_path = paths[name].name
+        expected_digest = hashlib.sha256(paths[name].read_bytes()).hexdigest()
+        if not isinstance(reference, dict) or reference.get("path") != expected_path:
+            fail(f"$.artifacts.{name}", f"must reference {expected_path}")
+        if reference.get("sha256") != expected_digest:
+            fail(f"$.artifacts.{name}.sha256", f"does not match {expected_path}")
+    return {"goal": goal, **records}
+
+
 def validate_operation_artifacts(directory: Path) -> dict[str, Any]:
     """Require one dated goal, verification, judge, and changelog bundle."""
     paths = {

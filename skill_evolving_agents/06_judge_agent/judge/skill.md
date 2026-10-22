@@ -1,6 +1,8 @@
-# Judge
+# Judge formula
 
-Decide whether this op passes or fails. This is the judge agent. It reads the verifiter output for the current op and does not check the skill again. Do not return to Edit, cut traces, labeling, or the goal.
+This is the reference contract for the deterministic host Judge. It reads the
+verifiter output for the current op, sets pass or fail from the already
+validated formula, and does not check the skill again.
 
 ## Context
 

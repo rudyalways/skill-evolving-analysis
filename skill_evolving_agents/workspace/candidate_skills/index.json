@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "source_project": "deep_prep",
+  "indexed_date": "2026-10-22",
+  "skills": [
+    {
+      "name": "audit-project-ui",
+      "source": "agent/skills/audit-project-ui",
+      "path": "audit-project-ui",
+      "sha256": "a1bb322d73f99510812176e1abbb2847f90a28bc1324e06883cdca3a6a9f3b82"
+    }
+  ]
+}

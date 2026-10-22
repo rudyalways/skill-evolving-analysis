@@ -42,6 +42,15 @@ DEFAULT_OP_WORKERS = 16
 RETRY_BUDGET = 0
 VERIFIER_RESPONSE_RETRY_BUDGET = 2
 ACTIVE_BACKEND = "docker-claude"
+AGENT_NUMBERS = {
+    "preprocessing": "01",
+    "label-skills": "02.1",
+    "label-traces-cluster": "02.2",
+    "goal": "03",
+    "optimize": "04",
+    "verifiter": "05",
+    "judge": "06",
+}
 
 
 _CONTRACTS_PATH = ROOT / "common/pipeline_contracts.py"
@@ -285,8 +294,14 @@ def build_images() -> None:
     )
 
 
-def instruction(stage: str, context: str, *, cluster: bool = False) -> str:
-    paths = list(SKILLS[stage])
+def instruction(
+    stage: str,
+    context: str,
+    *,
+    cluster: bool = False,
+    skill_paths: list[str] | None = None,
+) -> str:
+    paths = list(skill_paths if skill_paths is not None else SKILLS[stage])
     if stage == "preprocessing" and cluster:
         paths.append("01_preprocessing_agent/cluster/skill.md")
     skills = "\n".join(f"- {path}" for path in paths)
@@ -304,9 +319,7 @@ Do not ask questions. Do not work on another stage, cluster, or op.
 Session:
 {context}
 
-After the output exists, append one started record and one done (or failed) record to workspace/logs/execution.jsonl.
-Every record must be exactly shaped as
-{{"agent":"<agent number>","state":"<state>","event":"<started|done|failed>","at":"<iso8601>"}}.
+The host records execution status. Do not write logs or status records.
 Exit nonzero if the required output cannot be produced.
 """
 
@@ -755,6 +768,19 @@ def diagnosis_slice_metadata(
     }
 
 
+def append_execution_event(workspace: Path, stage: str, event: str) -> None:
+    path = workspace / "logs/execution.jsonl"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    row = {
+        "agent": AGENT_NUMBERS[stage],
+        "state": stage,
+        "event": event,
+        "at": datetime.now(UTC).isoformat(),
+    }
+    with path.open("a") as stream:
+        stream.write(json.dumps(row, separators=(",", ":")) + "\n")
+
+
 def run_session(
     stage: str,
     workspace: Path,
@@ -778,6 +804,7 @@ def run_session(
         details["session_log"] = str(log_path)
     details["prompt_chars"] = len(prompt)
     write_status(workspace, stage, suffix, "started")
+    append_execution_event(workspace, stage, "started")
     try:
         with pipeline_metrics.span(
             authoritative,
@@ -817,8 +844,10 @@ def run_session(
             finally:
                 details.update(session_counts(log_path))
     except BaseException as error:
+        append_execution_event(workspace, stage, "failed")
         write_status(workspace, stage, suffix, "failed", error=str(error))
         raise
+    append_execution_event(workspace, stage, "done")
     return log_path
 
 
@@ -1705,6 +1734,17 @@ def judge_action(verification: Path) -> str:
     return action
 
 
+def apply_judge_formula(verification: Path) -> str:
+    """Apply the validated, non-discretionary Judge pass/fail formula."""
+    data = pipeline_contracts.validate_verification(verification, judged=False)
+    feedback = data["feedback"]
+    action = "pass" if feedback["overall_status"] == "pass" else "fail"
+    feedback["action"] = {"op": action, "to": None}
+    atomic_write_json(verification, data)
+    pipeline_contracts.validate_verification(verification, judged=True)
+    return action
+
+
 def validate_replay_artifacts(
     workspace: Path, verification: dict
 ) -> list[Path]:
@@ -1824,6 +1864,124 @@ def archive_verification(workspace: Path, cluster: str, op_index: int) -> None:
     pipeline_contracts.validate_operation_artifacts(target)
 
 
+def _empty_diagnosis() -> dict[str, object]:
+    return {
+        "skill_capabilities_missing": [],
+        "newly_detected_skill_capabilites_missing": [],
+    }
+
+
+def _diagnose_scope(
+    workspace: Path,
+    cluster: str,
+    suffix: str,
+    *,
+    clustered: bool,
+    unit_kind: str,
+    workers: int,
+    pool_items: int,
+    ready_us: int,
+    auth: dict[str, str],
+    model: str | None,
+    install_agent: bool,
+) -> tuple[str, str, Path]:
+    stage = "label-traces-cluster"
+    queue_wait_ms = record_queue(
+        workspace,
+        "diagnosis-queue",
+        suffix,
+        ready_us,
+        {"workers": workers, "pool_items": pool_items},
+    )
+    private = copy_worker(workspace, stage, suffix)
+    diagnosis = private / "run/diagnosis.json"
+    diagnosis.unlink(missing_ok=True)
+    source = scope_source(cluster, clustered, unit_kind)
+    embedded_source = ""
+    if unit_kind == "finding":
+        finding_path = private / source / "finding.json"
+        if finding_path.is_file():
+            embedded_source = (
+                "The complete finding.json input is embedded below. Do not "
+                "read it from disk or look for alternate copies.\n"
+                "<finding-json>\n"
+                f"{finding_path.read_text()}"
+                "</finding-json>\n"
+            )
+    try:
+        run_session(
+            stage,
+            private,
+            instruction(
+                stage,
+                f"This isolated session is cluster <{cluster}> at {source}. "
+                f"{embedded_source}"
+                "Use the finding slice as the trace. "
+                "In legacy cluster mode read slice in cut.jsonl when it "
+                "exists. Do not open canonical turns, manifest turn paths, "
+                "or tool sidecars. The cwd's workspace entry already points "
+                "at the worker root; do not create a nested workspace "
+                f"directory. Write only this cluster's records exactly to "
+                f"{diagnosis}. Then run exactly `python3 "
+                "02.2_label_traces_cluster_agent/dignosis/"
+                f"evolve-goal-checker.py {diagnosis}` once. Do not search "
+                "for the checker.",
+            ),
+            auth,
+            model,
+            install_agent,
+            suffix,
+            {
+                "workers": workers,
+                "pool_items": pool_items,
+                "queue_wait_ms": queue_wait_ms,
+                **diagnosis_slice_metadata(workspace, str(cluster), unit_kind),
+                **_finding_audit(workspace, str(cluster)),
+            },
+        )
+        pipeline_contracts.validate_diagnosis(
+            diagnosis, {cluster} if clustered else None
+        )
+        return cluster, suffix, private
+    except BaseException as error:
+        write_status(workspace, stage, suffix, "failed", error=str(error))
+        remove_worker_workspace(private)
+        raise
+
+
+def _publish_diagnosis(
+    workspace: Path, cluster: str, suffix: str, private: Path
+) -> dict[str, object]:
+    source = private / "run/diagnosis.json"
+    data = json.loads(source.read_text())
+    scoped = workspace / "run" / cluster / "diagnosis.json"
+    replace_path(source, scoped)
+    merge_worker_log(private, workspace)
+    complete_session(workspace, "label-traces-cluster", suffix, [scoped])
+    return data if isinstance(data, dict) else {}
+
+
+def _diagnosis_document(
+    clusters: list[str], published: dict[str, dict[str, object]]
+) -> dict[str, object]:
+    known: list[object] = []
+    ood: list[object] = []
+    feedback: dict[str, object] = {}
+    for cluster in clusters:
+        data = published[cluster]
+        known.extend(data.get("skill_capabilities_missing") or [])
+        ood.extend(data.get("newly_detected_skill_capabilites_missing") or [])
+        if "feedback" in data:
+            feedback[cluster] = data["feedback"]
+    document: dict[str, object] = {
+        "skill_capabilities_missing": known,
+        "newly_detected_skill_capabilites_missing": ood,
+    }
+    if feedback:
+        document["feedback_by_cluster"] = feedback
+    return document
+
+
 def fanout_diagnosis(
     workspace: Path,
     run_id: str,
@@ -1839,13 +1997,7 @@ def fanout_diagnosis(
     clusters = agent_scopes(workspace, clusters)
     aggregate = workspace / "run/diagnosis.json"
     if not clusters:
-        atomic_write_json(
-            aggregate,
-            {
-                "skill_capabilities_missing": [],
-                "newly_detected_skill_capabilites_missing": [],
-            },
-        )
+        atomic_write_json(aggregate, _empty_diagnosis())
         return aggregate
     items = [(cluster, f"{run_id}-{cluster}") for cluster in clusters]
     for _cluster, suffix in items:
@@ -1855,79 +2007,33 @@ def fanout_diagnosis(
 
     def work(item: object) -> object:
         cluster, suffix = item
-        queue_wait_ms = record_queue(
+        return _diagnose_scope(
             workspace,
-            "diagnosis-queue",
-            suffix,
-            ready_us,
-            {"workers": workers, "pool_items": len(items)},
+            str(cluster),
+            str(suffix),
+            clustered=clustered,
+            unit_kind=unit_kind,
+            workers=workers,
+            pool_items=len(items),
+            ready_us=ready_us,
+            auth=auth,
+            model=model,
+            install_agent=install_agent,
         )
-        private = copy_worker(workspace, stage, suffix)
-        diagnosis = private / "run/diagnosis.json"
-        diagnosis.unlink(missing_ok=True)
-        source = scope_source(cluster, clustered, unit_kind)
-        try:
-            run_session(
-                stage,
-                private,
-                instruction(
-                    stage,
-                    f"This isolated session is cluster <{cluster}> at {source}. "
-                    "Read finding.json and use its slice as the trace. "
-                    "In legacy cluster mode read slice in cut.jsonl when it "
-                    "exists. Do not open canonical turns, manifest turn paths, "
-                    "or tool sidecars. The cwd's workspace entry already points "
-                    "at the worker root; do not create a nested workspace "
-                    f"directory. Write only this cluster's records exactly to "
-                    f"{diagnosis}.",
-                ),
-                auth,
-                model,
-                install_agent,
-                suffix,
-                {
-                    "workers": workers,
-                    "pool_items": len(items),
-                    "queue_wait_ms": queue_wait_ms,
-                    **diagnosis_slice_metadata(workspace, str(cluster), unit_kind),
-                    **_finding_audit(workspace, str(cluster)),
-                },
-            )
-            pipeline_contracts.validate_diagnosis(
-                diagnosis, {cluster} if clustered else None
-            )
-            return cluster, suffix, private
-        except BaseException as error:
-            write_status(workspace, stage, suffix, "failed", error=str(error))
-            remove_worker_workspace(private)
-            raise
 
     try:
         results = run_pool(items, workers, work)
     except BaseException:
         remove_worker_stage(workspace, stage)
         raise
-    known: list[object] = []
-    ood: list[object] = []
-    feedback: dict[str, object] = {}
     try:
-        for cluster, suffix, private in results:
-            source = private / "run/diagnosis.json"
-            data = json.loads(source.read_text())
-            known.extend(data.get("skill_capabilities_missing") or [])
-            ood.extend(data.get("newly_detected_skill_capabilites_missing") or [])
-            if "feedback" in data:
-                feedback[cluster] = data["feedback"]
-            scoped = workspace / "run" / cluster / "diagnosis.json"
-            replace_path(source, scoped)
-            merge_worker_log(private, workspace)
-            complete_session(workspace, stage, suffix, [scoped])
-        document: dict[str, object] = {
-            "skill_capabilities_missing": known,
-            "newly_detected_skill_capabilites_missing": ood,
+        published = {
+            str(cluster): _publish_diagnosis(
+                workspace, str(cluster), str(suffix), private
+            )
+            for cluster, suffix, private in results
         }
-        if feedback:
-            document["feedback_by_cluster"] = feedback
+        document = _diagnosis_document(clusters, published)
         atomic_write_json(aggregate, document)
         pipeline_contracts.validate_diagnosis(
             aggregate, set(clusters) if clustered else None
@@ -1936,6 +2042,223 @@ def fanout_diagnosis(
     finally:
         for _cluster, _suffix, private in results:
             remove_worker_workspace(private)
+
+
+def _goal_scope(
+    workspace: Path,
+    cluster: str,
+    suffix: str,
+    *,
+    clustered: bool,
+    unit_kind: str,
+    workers: int,
+    pool_items: int,
+    ready_us: int,
+    auth: dict[str, str],
+    model: str | None,
+    install_agent: bool,
+) -> tuple[str, str, Path]:
+    stage = "goal"
+    queue_wait_ms = record_queue(
+        workspace,
+        "goal-queue",
+        suffix,
+        ready_us,
+        {"workers": workers, "pool_items": pool_items},
+    )
+    private = copy_worker(workspace, stage, suffix)
+    private_cluster = private / "run" / cluster
+    scoped_diagnosis = private_cluster / "diagnosis.json"
+    scoped_diagnosis_bytes = (
+        scoped_diagnosis.read_bytes() if scoped_diagnosis.is_file() else None
+    )
+    if private_cluster.exists():
+        shutil.rmtree(private_cluster)
+    if scoped_diagnosis_bytes is not None:
+        diagnosis_path = private / "run/diagnosis.json"
+        diagnosis_path.parent.mkdir(parents=True, exist_ok=True)
+        diagnosis_path.write_bytes(scoped_diagnosis_bytes)
+    source = scope_source(cluster, clustered, unit_kind)
+    try:
+        matching = private_cluster / "label-matching.json"
+        goal = private_cluster / "evolve-goal.json"
+        cluster_source = (
+            private / "traces/derived/findings"
+            if unit_kind == "finding"
+            else private / "traces/derived/cluster"
+        )
+        taxonomy_path = ROOT / "skill_capabilites/skill_capabilites.json"
+        recall_config_path = ROOT / "common/recall-config.json"
+        preflight_available = (
+            taxonomy_path.is_file()
+            and recall_config_path.is_file()
+            and (private / "run/diagnosis.json").is_file()
+            and (
+                private
+                / "target/to_be_improved_skills_metadata/metadata.json"
+            ).is_file()
+        )
+        recalled: list[dict] | None = None
+        if preflight_available:
+            diagnosis = json.loads(
+                (private / "run/diagnosis.json").read_text()
+            )
+            metadata = json.loads(
+                (
+                    private
+                    / "target/to_be_improved_skills_metadata/metadata.json"
+                ).read_text()
+            )
+            skill_dirs = recall_skills_mod.skill_dirs(
+                private / "target/to_be_improved_skills"
+            )
+            cluster_dirs = recall_skills_mod.skill_dirs(cluster_source)
+            leaves = recall_skills_mod.skill_type_checker.leaf_paths(
+                taxonomy_path
+            )
+            recall_config = recall_skills_mod.load_config(recall_config_path)
+            matching_data = recall_skills_mod.recall(
+                diagnosis,
+                metadata,
+                skill_dirs,
+                cluster_dirs,
+                leaves,
+                recall_config,
+            )
+            scoped_matches = [
+                row
+                for row in matching_data["clusters"]
+                if row.get("cluster") == cluster
+                or (cluster == "cut" and "cluster" not in row)
+            ]
+            if not scoped_matches:
+                scoped_matches = [
+                    {"cluster": cluster, "labels": [], "skills": []}
+                ]
+            matching_data = {
+                "matching": matching_data["matching"],
+                "clusters": scoped_matches,
+            }
+            atomic_write_json(matching, matching_data)
+            matching_data = pipeline_contracts.validate_label_matching(
+                matching, cluster
+            )
+            recalled = matching_data["clusters"][0]["skills"]
+        creation_error: str | None = None
+        if recalled == []:
+            try:
+                enforce_creation_policy(
+                    workspace, cluster, {}, {"op": "create", "skills": []}
+                )
+            except pipeline_contracts.ContractError as error:
+                creation_error = str(error)
+        if creation_error is not None:
+            atomic_write_json(
+                goal,
+                {
+                    "goal": {
+                        "improve_harness": {"scope": "out_of_scope"},
+                        "improve_skills": [],
+                        "avoid": (
+                            "Do not create or edit a skill without "
+                            "policy-qualified evidence."
+                        ),
+                    },
+                    "reasoning": creation_error,
+                    "plan": "Leave skills unchanged.",
+                    "feedback_to": "diagnosis",
+                    "action": {
+                        "disposition": "no_change",
+                        "reason": creation_error,
+                        "ops": [],
+                    },
+                },
+            )
+            with pipeline_metrics.span(
+                workspace,
+                stage,
+                suffix,
+                "deterministic",
+                metadata={"policy_no_change": True},
+            ):
+                pass
+        else:
+            if matching.is_file():
+                diagnosis_text = (private / "run/diagnosis.json").read_text()
+                matching_text = matching.read_text()
+                finding_path = private / source / "finding.json"
+                finding_text = (
+                    finding_path.read_text() if finding_path.is_file() else ""
+                )
+                session_context = (
+                    "Select is already complete. The complete inputs are "
+                    "embedded below; do not read them from disk, glob for "
+                    "copies, or run recall again.\n"
+                    f"<diagnosis-json>\n{diagnosis_text}</diagnosis-json>\n"
+                    f"<label-matching-json>\n{matching_text}"
+                    "</label-matching-json>\n"
+                    f"<finding-json>\n{finding_text}</finding-json>\n"
+                    f"Write {goal}."
+                )
+            else:
+                clusters_argument = (
+                    " --clusters workspace/traces/derived/findings"
+                    if unit_kind == "finding"
+                    else ""
+                )
+                session_context = (
+                    f"Run select with `--cluster '{cluster}'"
+                    f"{clusters_argument} --out {matching}`, then write {goal}."
+                )
+            run_session(
+                stage,
+                private,
+                instruction(
+                    stage,
+                    f"This isolated session is cluster <{cluster}> at {source}. "
+                    f"{session_context} The cwd's workspace entry already "
+                    "points at the worker root; do not create a nested "
+                    "workspace directory. Then run exactly `python3 "
+                    "03_goal_agent/goal-generator/one_action.py "
+                    f"{goal}` once. Do not search for the validator.",
+                    skill_paths=(
+                        ["03_goal_agent/goal-generator/skill.md"]
+                        if matching.is_file()
+                        else None
+                    ),
+                ),
+                auth,
+                model,
+                install_agent,
+                suffix,
+                {
+                    "workers": workers,
+                    "pool_items": pool_items,
+                    "queue_wait_ms": queue_wait_ms,
+                },
+            )
+        pipeline_contracts.validate_label_matching(matching, cluster)
+        pipeline_contracts.validate_goal(goal)
+        _emit_goal_decision(workspace, str(cluster), goal)
+        return cluster, suffix, private
+    except BaseException as error:
+        write_status(workspace, stage, suffix, "failed", error=str(error))
+        remove_worker_workspace(private)
+        raise
+
+
+def _publish_goal(
+    workspace: Path, cluster: str, suffix: str, private: Path
+) -> None:
+    source = private / "run" / cluster
+    target = workspace / "run" / cluster
+    target.mkdir(parents=True, exist_ok=True)
+    matching = target / "label-matching.json"
+    goal = target / "evolve-goal.json"
+    replace_path(source / "label-matching.json", matching)
+    replace_path(source / "evolve-goal.json", goal)
+    merge_worker_log(private, workspace)
+    complete_session(workspace, "goal", suffix, [matching, goal])
 
 
 def fanout_goals(
@@ -1956,171 +2279,23 @@ def fanout_goals(
     items = [(cluster, f"{run_id}-{cluster}") for cluster in clusters]
     for _cluster, suffix in items:
         write_status(workspace, stage, suffix, "started")
-
     ready_us = time.time_ns() // 1000
 
     def work(item: object) -> object:
         cluster, suffix = item
-        queue_wait_ms = record_queue(
+        return _goal_scope(
             workspace,
-            "goal-queue",
-            suffix,
-            ready_us,
-            {"workers": workers, "pool_items": len(items)},
+            str(cluster),
+            str(suffix),
+            clustered=clustered,
+            unit_kind=unit_kind,
+            workers=workers,
+            pool_items=len(items),
+            ready_us=ready_us,
+            auth=auth,
+            model=model,
+            install_agent=install_agent,
         )
-        private = copy_worker(workspace, stage, suffix)
-        private_cluster = private / "run" / cluster
-        if private_cluster.exists():
-            shutil.rmtree(private_cluster)
-        source = scope_source(cluster, clustered, unit_kind)
-        try:
-            matching = private_cluster / "label-matching.json"
-            goal = private_cluster / "evolve-goal.json"
-            cluster_source = (
-                private / "traces/derived/findings"
-                if unit_kind == "finding"
-                else private / "traces/derived/cluster"
-            )
-            taxonomy_path = ROOT / "skill_capabilites/skill_capabilites.json"
-            recall_config_path = ROOT / "common/recall-config.json"
-            preflight_available = (
-                taxonomy_path.is_file()
-                and recall_config_path.is_file()
-                and (private / "run/diagnosis.json").is_file()
-                and (
-                    private
-                    / "target/to_be_improved_skills_metadata/metadata.json"
-                ).is_file()
-            )
-            recalled: list[dict] | None = None
-            if preflight_available:
-                diagnosis = json.loads(
-                    (private / "run/diagnosis.json").read_text()
-                )
-                metadata = json.loads(
-                    (
-                        private
-                        / "target/to_be_improved_skills_metadata/metadata.json"
-                    ).read_text()
-                )
-                skill_dirs = recall_skills_mod.skill_dirs(
-                    private / "target/to_be_improved_skills"
-                )
-                cluster_dirs = recall_skills_mod.skill_dirs(cluster_source)
-                leaves = recall_skills_mod.skill_type_checker.leaf_paths(
-                    taxonomy_path
-                )
-                recall_config = recall_skills_mod.load_config(recall_config_path)
-                matching_data = recall_skills_mod.recall(
-                    diagnosis,
-                    metadata,
-                    skill_dirs,
-                    cluster_dirs,
-                    leaves,
-                    recall_config,
-                )
-                scoped_matches = [
-                    row
-                    for row in matching_data["clusters"]
-                    if row.get("cluster") == cluster
-                    or (cluster == "cut" and "cluster" not in row)
-                ]
-                if not scoped_matches:
-                    scoped_matches = [
-                        {"cluster": cluster, "labels": [], "skills": []}
-                    ]
-                matching_data = {
-                    "matching": matching_data["matching"],
-                    "clusters": scoped_matches,
-                }
-                atomic_write_json(matching, matching_data)
-                matching_data = pipeline_contracts.validate_label_matching(
-                    matching, cluster
-                )
-                recalled = matching_data["clusters"][0]["skills"]
-            creation_error: str | None = None
-            if recalled == []:
-                try:
-                    enforce_creation_policy(
-                        workspace, cluster, {}, {"op": "create", "skills": []}
-                    )
-                except pipeline_contracts.ContractError as error:
-                    creation_error = str(error)
-            if creation_error is not None:
-                atomic_write_json(
-                    goal,
-                    {
-                        "goal": {
-                            "improve_harness": {"scope": "out_of_scope"},
-                            "improve_skills": [],
-                            "avoid": (
-                                "Do not create or edit a skill without "
-                                "policy-qualified evidence."
-                            ),
-                        },
-                        "reasoning": creation_error,
-                        "plan": "Leave skills unchanged.",
-                        "feedback_to": "diagnosis",
-                        "action": {
-                            "disposition": "no_change",
-                            "reason": creation_error,
-                            "ops": [],
-                        },
-                    },
-                )
-                with pipeline_metrics.span(
-                    workspace,
-                    stage,
-                    suffix,
-                    "deterministic",
-                    metadata={"policy_no_change": True},
-                ):
-                    pass
-            else:
-                if matching.is_file():
-                    session_context = (
-                        f"Select is already complete at {matching}; do not run it "
-                        f"again. Write {goal}."
-                    )
-                else:
-                    clusters_argument = (
-                        " --clusters workspace/traces/derived/findings"
-                        if unit_kind == "finding"
-                        else ""
-                    )
-                    session_context = (
-                        f"Run select with `--cluster '{cluster}'"
-                        f"{clusters_argument} --out {matching}`, then write {goal}."
-                    )
-                run_session(
-                    stage,
-                    private,
-                    instruction(
-                        stage,
-                        f"This isolated session is cluster <{cluster}> at {source}. "
-                        f"{session_context} The cwd's workspace entry already "
-                        "points at the worker root; do not create a nested "
-                        "workspace directory. Pass that exact evolve-goal path "
-                        "to one_action.py.",
-                    ),
-                    auth,
-                    model,
-                    install_agent,
-                    suffix,
-                    {
-                        "workers": workers,
-                        "pool_items": len(items),
-                        "queue_wait_ms": queue_wait_ms,
-                    },
-                )
-            pipeline_contracts.validate_label_matching(matching, cluster)
-            pipeline_contracts.validate_goal(goal)
-            _emit_goal_decision(workspace, str(cluster), goal)
-            return cluster, suffix, private
-        except BaseException as error:
-            write_status(workspace, stage, suffix, "failed", error=str(error))
-            remove_worker_workspace(private)
-            raise
 
     try:
         results = run_pool(items, workers, work)
@@ -2129,18 +2304,126 @@ def fanout_goals(
         raise
     try:
         for cluster, suffix, private in results:
-            source = private / "run" / cluster
-            target = workspace / "run" / cluster
-            target.mkdir(parents=True, exist_ok=True)
-            matching = target / "label-matching.json"
-            goal = target / "evolve-goal.json"
-            replace_path(source / "label-matching.json", matching)
-            replace_path(source / "evolve-goal.json", goal)
-            merge_worker_log(private, workspace)
-            complete_session(workspace, stage, suffix, [matching, goal])
+            _publish_goal(workspace, str(cluster), str(suffix), private)
     finally:
         for _cluster, _suffix, private in results:
             remove_worker_workspace(private)
+
+
+def pipeline_diagnosis_and_goals(
+    workspace: Path,
+    run_id: str,
+    clusters: list[str],
+    clustered: bool,
+    workers: int,
+    auth: dict[str, str],
+    model: str | None,
+    install_agent: bool,
+    unit_kind: str = "cluster",
+) -> Path:
+    """Run each goal as soon as its diagnosis is published.
+
+    Diagnosis and goal share one worker cap. Operation scheduling still waits
+    for every goal so same-skill edits can be reduced together.
+    """
+    clusters = agent_scopes(workspace, clusters)
+    aggregate = workspace / "run/diagnosis.json"
+    if not clusters:
+        atomic_write_json(aggregate, _empty_diagnosis())
+        return aggregate
+    if workers < 1:
+        raise SystemExit("worker count must be at least 1")
+    items = [(cluster, f"{run_id}-{cluster}") for cluster in clusters]
+    for _cluster, suffix in items:
+        write_status(workspace, "label-traces-cluster", suffix, "started")
+    diagnosis_ready_us = time.time_ns() // 1000
+    published: dict[str, dict[str, object]] = {}
+    goal_futures: dict[Future, tuple[str, str]] = {}
+    try:
+        with ThreadPoolExecutor(
+            max_workers=min(workers, len(items))
+        ) as pool:
+            diagnosis_futures = {
+                pool.submit(
+                    _diagnose_scope,
+                    workspace,
+                    cluster,
+                    suffix,
+                    clustered=clustered,
+                    unit_kind=unit_kind,
+                    workers=workers,
+                    pool_items=len(items),
+                    ready_us=diagnosis_ready_us,
+                    auth=auth,
+                    model=model,
+                    install_agent=install_agent,
+                ): (cluster, suffix)
+                for cluster, suffix in items
+            }
+            try:
+                for future in as_completed(diagnosis_futures):
+                    cluster, suffix, private = future.result()
+                    try:
+                        published[str(cluster)] = _publish_diagnosis(
+                            workspace, str(cluster), str(suffix), private
+                        )
+                    finally:
+                        remove_worker_workspace(private)
+                    write_status(workspace, "goal", suffix, "started")
+                    goal_futures[
+                        pool.submit(
+                            _goal_scope,
+                            workspace,
+                            str(cluster),
+                            str(suffix),
+                            clustered=clustered,
+                            unit_kind=unit_kind,
+                            workers=workers,
+                            pool_items=len(items),
+                            ready_us=time.time_ns() // 1000,
+                            auth=auth,
+                            model=model,
+                            install_agent=install_agent,
+                        )
+                    ] = (str(cluster), str(suffix))
+                document = _diagnosis_document(clusters, published)
+                with tempfile.NamedTemporaryFile(
+                    suffix=".json", delete=False
+                ) as handle:
+                    temporary = Path(handle.name)
+                try:
+                    atomic_write_json(temporary, document)
+                    pipeline_contracts.validate_diagnosis(
+                        temporary, set(clusters) if clustered else None
+                    )
+                finally:
+                    temporary.unlink(missing_ok=True)
+                for future in as_completed(list(goal_futures)):
+                    cluster, suffix, private = future.result()
+                    try:
+                        _publish_goal(workspace, cluster, suffix, private)
+                    finally:
+                        remove_worker_workspace(private)
+                atomic_write_json(aggregate, document)
+                pipeline_contracts.validate_diagnosis(
+                    aggregate, set(clusters) if clustered else None
+                )
+            except BaseException:
+                for future in (*diagnosis_futures, *goal_futures):
+                    future.cancel()
+                raise
+    finally:
+        remove_worker_stage(workspace, "label-traces-cluster")
+        remove_worker_stage(workspace, "goal")
+        for parent in (
+            ROOT / ".pipeline-workers" / workspace.name,
+            ROOT / ".pipeline-workers",
+        ):
+            try:
+                parent.rmdir()
+            except OSError:
+                break
+    return aggregate
 
 
 def configured_max_ops_per_skill(explicit: int | None = None) -> int:
@@ -3644,6 +3927,95 @@ def write_judge_record(
     return path
 
 
+def finalize_no_change_scope(
+    workspace: Path,
+    run_id: str,
+    finding_id: str,
+    goal_path: Path,
+) -> Path:
+    """Publish and validate the terminal bundle for a no-change scope."""
+    goal = pipeline_contracts.validate_goal(goal_path)
+    action = goal["action"]
+    if action.get("disposition") != "no_change" or action.get("ops"):
+        raise SystemExit(f"scope is not no_change: {goal_path}")
+    reason = str(action["reason"])
+    directory = goal_path.parent
+    now = datetime.now(UTC)
+    date_value = now.date().isoformat()
+    markers = [
+        _phase_marker("goal", "completed"),
+        *[
+            _phase_marker(phase, "skipped", reason)
+            for phase in OPERATION_PHASES[1:]
+        ],
+    ]
+    changelog = {
+        "schema_version": 1,
+        "date": date_value,
+        "run_id": run_id,
+        "finding_id": finding_id,
+        "disposition": "no_change",
+        "reason": reason,
+        "changes": [],
+        "phase_markers": markers,
+        "phase_events": copy.deepcopy(markers),
+    }
+    changelog_path = directory / "changelog.json"
+    atomic_write_json(changelog_path, changelog)
+    verification_input = {
+        "schema_version": 1,
+        "date": date_value,
+        "run_id": run_id,
+        "finding_id": finding_id,
+        "op_index": 0,
+        "operation": "no_change",
+        "status": "skipped",
+        "reason": reason,
+        "skills": [],
+    }
+    input_path = directory / "verification-input.json"
+    atomic_write_json(input_path, verification_input)
+    verification = {
+        "schema_version": 1,
+        "date": date_value,
+        "run_id": run_id,
+        "finding_id": finding_id,
+        "op_index": 0,
+        "operation": "no_change",
+        "status": "skipped",
+        "phase": "verification",
+        "reason": reason,
+        "skills": [],
+        "verification_input": _artifact_reference(input_path),
+        "changelog": [],
+    }
+    verification_path = directory / "verification.json"
+    atomic_write_json(verification_path, verification)
+    judge = {
+        "schema_version": 1,
+        "date": date_value,
+        "run_id": run_id,
+        "finding_id": finding_id,
+        "op_index": 0,
+        "skills": [],
+        "status": "skipped",
+        "action": None,
+        "reason": reason,
+        "artifacts": {
+            name: _artifact_reference(directory / filename)
+            for name, filename in {
+                "goal": "evolve-goal.json",
+                "verification_input": "verification-input.json",
+                "verification": "verification.json",
+                "changelog": "changelog.json",
+            }.items()
+        },
+    }
+    atomic_write_json(directory / "judge.json", judge)
+    pipeline_contracts.validate_no_change_artifacts(directory)
+    return directory
+
+
 def finalize_unexecuted_operation(
     workspace: Path,
     finding_id: str,
@@ -4146,7 +4518,13 @@ def fanout_operations(
         )
         cluster_goal = workspace / "run" / cluster / "evolve-goal.json"
         goal = pipeline_contracts.validate_goal(cluster_goal)
-        for op_index, op in enumerate(goal_ops(cluster_goal), start=1):
+        operations = goal_ops(cluster_goal)
+        if not operations:
+            finalize_no_change_scope(
+                workspace, run_id, cluster, cluster_goal
+            )
+            continue
+        for op_index, op in enumerate(operations, start=1):
             op_goal = materialize_op_goal(
                 workspace,
                 cluster,
@@ -4410,17 +4788,25 @@ def fanout_operations(
                     "running",
                 )
                 write_status(workspace, current_stage, suffix, "started")
-                run_session(
-                    current_stage,
-                    private,
-                    instruction(current_stage, context),
-                    auth,
-                    model,
-                    install_agent,
-                    suffix,
-                    {**op_metadata, "attempt": attempt},
-                )
-                action = judge_action(verification)
+                append_execution_event(private, current_stage, "started")
+                try:
+                    with pipeline_metrics.span(
+                        metrics_workspace(private),
+                        current_stage,
+                        suffix,
+                        "deterministic",
+                        metadata={
+                            **op_metadata,
+                            "attempt": attempt,
+                            "formula": "overall_status",
+                        },
+                    ):
+                        action = apply_judge_formula(verification)
+                except BaseException:
+                    append_execution_event(private, current_stage, "failed")
+                    raise
+                else:
+                    append_execution_event(private, current_stage, "done")
                 mark_operation_phase(
                     private,
                     cluster,
@@ -4809,18 +5195,7 @@ def execute(args: argparse.Namespace) -> None:
         scope_clustered = active_clustered or unit_kind == "finding"
         cluster_workers = getattr(args, "cluster_workers", DEFAULT_CLUSTER_WORKERS)
         op_workers = getattr(args, "op_workers", DEFAULT_OP_WORKERS)
-        fanout_diagnosis(
-            workspace,
-            args.run_id,
-            clusters,
-            scope_clustered,
-            cluster_workers,
-            auth,
-            args.model,
-            not args.agent_installed,
-            unit_kind,
-        )
-        fanout_goals(
+        pipeline_diagnosis_and_goals(
             workspace,
             args.run_id,
             clusters,
@@ -4895,7 +5270,10 @@ def parse_args() -> argparse.Namespace:
         "--cluster-workers",
         type=int,
         default=DEFAULT_CLUSTER_WORKERS,
-        help="maximum isolated diagnosis and goal workers",
+        help=(
+            "maximum combined diagnosis and goal workers; a finding's goal "
+            "starts when its diagnosis finishes"
+        ),
     )
     parser.add_argument(
         "--op-workers",

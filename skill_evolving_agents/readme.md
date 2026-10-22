@@ -83,10 +83,11 @@ stateDiagram-v2
   Judge --> [*]: fail
 ```
 
-The judge agent reads that file and sets `action`. `pass` and `fail` both end
-the op. Skill-edit retries are disabled (`retry_budget: 0`), so Judge cannot
-return `back`. The verifier runner may separately repeat a prompt when—and
-only when—the response is malformed JSON or fails the output contract.
+The host validates that file and deterministically sets `action` from
+`feedback.overall_status`. `pass` and `fail` both end the op. Skill-edit
+retries are disabled (`retry_budget: 0`), so Judge cannot return `back`. The
+verifier runner may separately repeat a prompt when—and only when—the response
+is malformed JSON or fails the output contract.
 
 | Agent | State | Does | Reads | Writes |
 |---|---|---|---|---|
@@ -105,7 +106,7 @@ only when—the response is malformed JSON or fails the output contract.
 | 04 | Generate | Create a skill. No Label A to Label B match | Goal, `04_optimize_agent/skill-create` | New skill under `workspace/target/` |
 | 04 | Generate | Record an out-of-distribution gap on the same create branch | Goal, `04_optimize_agent/ood-data-updater`, diagnosis | `newly_detected_skill_capabilites_missing` stays on the diagnosis |
 | 05 | Verify | Start one request per affected skill with that skill's concrete input JSON and complete output JSON embedded in the prompt. Execute all eight checks, parse and contract-validate the JSON response, retry only malformed/invalid responses, then aggregate validated skill results. Leave action null | Embedded per-skill `verification-input.json` payload and expanded output template, `05_verifiter_agent/verifiter`, check scripts including `verify_transforms.py`, one-op goal, changelog, raw and improved skills | Parsed per-skill response artifacts and aggregated input-bound step results, overall/per-skill status, feedback, `ood`, and null action in active `workspace/run/verification.json` |
-| 06 | Judge | Read this op's verifiter output and make the terminal pass/fail decision | `06_judge_agent/judge`, `workspace/run/verification.json`, the goal op | `feedback.action`; runner-owned `judge.json` hashes the goal, verification input, verification output, and changelog |
+| 06 | Judge | Deterministically apply the validated terminal pass/fail formula; no model call | `workspace/run/verification.json`, the goal op | `feedback.action`; runner-owned `judge.json` hashes the goal, verification input, verification output, and changelog |
 
 `common` is the shared section and directory list. It is not a state. Select, update, merge, and split are one branch. Create and the out-of-distribution record are the other branch. Both sit in the optimize agent. Update, merge, split, and delete have no skill folder. Cluster is optional.
 
@@ -113,7 +114,9 @@ Every goal op has `evolve-goal.json`, `verification-input.json`,
 `verification.json`, `judge.json`, and `changelog.json` under
 `run/<finding-id>/ops/<op-index>/`. Skipped and failed phases write explicit
 terminal marker artifacts instead of omitting files. `changelog.json` keeps
-both current phase markers and append-only phase events.
+both current phase markers and append-only phase events. A `no_change` scope
+has the same five terminal artifacts directly under `run/<finding-id>/`; its
+changelog marks Goal completed and Optimize, Verification, and Judge skipped.
 
 Deterministic preprocessing normalizes, detects, deduplicates, slices, and
 optionally clusters traces. The

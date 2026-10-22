@@ -41,14 +41,20 @@ or adds no information beyond the recalled skill.
 ## Constraints
 
 Do not put easy experience that the model and harness already do well into a skill. Do not turn an entire trajectory into a verbose checklist: retain only evidence-dependent, reusable methodology. Do not set `improve_harness` inside scope. Do not recall skills again. Do not ignore a skill named in `label-matching.json`. Do not copy every op, skill, section, or dir from the example. Do not add an `other` item unless the heading or directory is outside the closed list. Do not name the same skill in two actions.
+Keep the goal compact: choose the minimum sufficient operation, limit
+reasoning and plan to three sentences each, and do not inspect checker or
+contract source. Run
+`python3 03_goal_agent/goal-generator/one_action.py <evolve-goal-path>` once
+after writing the output; do not search for the validator. If it fails, use
+its error message to correct the JSON without opening the checker.
 
 ## Workflow
 
 Write `workspace/run/<finding-id>/evolve-goal.json`. Do not write another
-scope's goal. Run `one_action.py` on that file. A skill name may appear in only
-one `action.ops` item. Fill `goal`, `reasoning`, `plan`, `action`, and
-`feedback_to`. Keep only applicable ops and fields. A no-change disposition
-stops before Optimize, Verifiter, and Judge. The runner later
+scope's goal. Run the exact validator command above on that file. A skill name
+may appear in only one `action.ops` item. Fill `goal`, `reasoning`, `plan`,
+`action`, and `feedback_to`. Keep only applicable ops and fields. A no-change
+disposition stops before Optimize, Verifiter, and Judge. The runner later
 deduplicates identical operations proposed by different findings.
 
 `goal` is always an object, never a summary string. `feedback_to` is always

@@ -814,6 +814,11 @@ class ContractTests(unittest.TestCase):
                 self.assertIn("Selected findings:", live)
                 self.assertIn("Live trace", live)
                 self.assertIn("tickTraces", live)
+                self.assertIn("displayLanes", live)
+                self.assertIn("PHASE_COLORS", live)
+                self.assertIn("fanout-parent", live)
+                self.assertIn("trace-arrows", live)
+                self.assertIn("Expand", live)
             finally:
                 server.shutdown()
                 server.server_close()
@@ -1449,6 +1454,13 @@ class ContractTests(unittest.TestCase):
             "If the evidence supports no_change, pass, or fail",
             prompt,
         )
+        focused_prompt = runner.instruction(
+            "goal",
+            "Validate one preselected goal.",
+            skill_paths=["03_goal_agent/goal-generator/skill.md"],
+        )
+        self.assertIn("03_goal_agent/goal-generator/skill.md", focused_prompt)
+        self.assertNotIn("03_goal_agent/skill-select/skill.md", focused_prompt)
         self.assertNotIn(str(runner.REPO), prompt)
         command = runner.cursor_command(view, workspace, prompt, "grok-4.7-low")
         self.assertEqual(command[command.index("--workspace") + 1], str(view))
@@ -1545,7 +1557,7 @@ class ContractTests(unittest.TestCase):
     def test_agent_config_allows_one_active_backend(self) -> None:
         config = runner.load_agent_config()
         active = [row for row in config["agents"] if row["status"] == "active"]
-        self.assertEqual([row["backend"] for row in active], ["claude"])
+        self.assertEqual([row["backend"] for row in active], ["cursor"])
         self.assertEqual(runner.configured_model("cursor"), "grok-4.7-low")
         self.assertEqual(runner.configured_model("cursor", "other-model"), "other-model")
         self.assertEqual(runner.configured_model("claude"), "claude-sonnet-5-5")
@@ -1554,7 +1566,7 @@ class ContractTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "agent-config.json"
             two_active = json.loads(json.dumps(config))
-            two_active["agents"][0]["status"] = "active"
+            two_active["agents"][1]["status"] = "active"
             path.write_text(json.dumps(two_active))
             with self.assertRaisesRegex(SystemExit, "exactly one"):
                 runner.load_agent_config(path)
@@ -1564,7 +1576,7 @@ class ContractTests(unittest.TestCase):
             with self.assertRaisesRegex(SystemExit, "exactly one"):
                 runner.load_agent_config(path)
         with patch.object(runner, "authenticated", return_value=True):
-            self.assertEqual(runner.select_backend("auto", False), "claude")
+            self.assertEqual(runner.select_backend("auto", False), "cursor")
             self.assertEqual(runner.select_backend("claude", False), "claude")
 
     def test_cut_algorithms_keep_a_five_turn_repetition_window_and_long_turns(
@@ -3311,6 +3323,17 @@ class ContractTests(unittest.TestCase):
             with self.assertRaises(contracts.ContractError):
                 contracts.validate_verification(path, judged=False)
 
+    def test_host_judge_applies_validated_overall_status(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "verification.json"
+            write_json(path, valid_verification("seed"))
+            self.assertEqual(runner.apply_judge_formula(path), "pass")
+            judged = contracts.validate_verification(path, judged=True)
+            self.assertEqual(
+                judged["feedback"]["action"],
+                {"op": "pass", "to": None},
+            )
+
     def test_verification_replay_contract_is_explicit(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "verification.json"
@@ -3557,6 +3580,22 @@ class ContractTests(unittest.TestCase):
             run_session.assert_not_called()
             self.assertFalse((workspace / "run/evolve-goal.json").exists())
             self.assertFalse((workspace / "run/verification.json").exists())
+            bundle = contracts.validate_no_change_artifacts(
+                workspace / "run/scope-a"
+            )
+            self.assertEqual(bundle["judge"]["status"], "skipped")
+            self.assertEqual(
+                {
+                    marker["phase"]: marker["status"]
+                    for marker in bundle["changelog"]["phase_markers"]
+                },
+                {
+                    "goal": "completed",
+                    "optimize": "skipped",
+                    "verification": "skipped",
+                    "judge": "skipped",
+                },
+            )
             first = runner.write_pipeline_summary(workspace, ["scope-a"]).read_text()
             second = runner.write_pipeline_summary(workspace, ["scope-a"]).read_text()
             self.assertEqual(first, second)
@@ -3801,6 +3840,82 @@ class ContractTests(unittest.TestCase):
                 len(json.loads(aggregate.read_text())["skill_capabilities_missing"]),
                 2,
             )
+            self.assertFalse((root / ".pipeline-workers").exists())
+
+    def test_goal_starts_while_another_diagnosis_is_running(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "skill_evolving_agents"
+            workspace = root / "workspace/runs/run"
+            (workspace / "logs").mkdir(parents=True)
+            (workspace / "run").mkdir()
+            goal_started = threading.Event()
+
+            def fake_session(
+                stage, worker, prompt, auth, model, install, suffix,
+                metadata=None, **kwargs
+            ):
+                cluster = suffix.rsplit("-", 1)[-1]
+                if stage == "label-traces-cluster":
+                    if cluster == "slow":
+                        self.assertTrue(goal_started.wait(timeout=3))
+                    write_json(
+                        worker / "run/diagnosis.json",
+                        {
+                            "skill_capabilities_missing": [
+                                {
+                                    "type": "job/methodology",
+                                    "cluster": cluster,
+                                    "description": "missing process",
+                                    "confidence": 0.8,
+                                    "reasoning": "trace evidence",
+                                    "evidence_list": ["missing steps"],
+                                }
+                            ],
+                            "newly_detected_skill_capabilites_missing": [],
+                        },
+                    )
+                    return
+                self.assertEqual(stage, "goal")
+                goal_started.set()
+                write_json(
+                    worker / f"run/{cluster}/label-matching.json",
+                    {
+                        "matching": {
+                            "strategy": "weighted_path_similarity",
+                            "config_version": 1,
+                            "config_sha256": "0" * 64,
+                        },
+                        "clusters": [
+                            {"cluster": cluster, "labels": [], "skills": []}
+                        ],
+                    },
+                )
+                write_json(worker / f"run/{cluster}/evolve-goal.json", valid_goal())
+
+            with (
+                patch.object(runner, "ROOT", root),
+                patch.object(runner, "run_session", side_effect=fake_session),
+            ):
+                aggregate = runner.pipeline_diagnosis_and_goals(
+                    workspace,
+                    "run",
+                    ["fast", "slow"],
+                    True,
+                    2,
+                    {},
+                    None,
+                    True,
+                    "finding",
+                )
+            self.assertEqual(
+                len(json.loads(aggregate.read_text())["skill_capabilities_missing"]),
+                2,
+            )
+            for cluster in ("fast", "slow"):
+                self.assertTrue((workspace / f"run/{cluster}/diagnosis.json").is_file())
+                self.assertTrue(
+                    (workspace / f"run/{cluster}/evolve-goal.json").is_file()
+                )
             self.assertFalse((root / ".pipeline-workers").exists())
 
     def test_operation_batches_serialize_overlapping_skills(self) -> None:
@@ -4622,7 +4737,7 @@ class ContractTests(unittest.TestCase):
             write_json(workspace / "run/cut/evolve-goal.json", goal)
             barriers = {
                 stage: threading.Barrier(2)
-                for stage in ("optimize", "verifiter", "judge")
+                for stage in ("optimize", "verifiter")
             }
             calls = {stage: 0 for stage in barriers}
 
@@ -4668,26 +4783,6 @@ class ContractTests(unittest.TestCase):
                         + "\n"
                     )
                     return log_path
-                elif stage == "judge":
-                    verification_input = json.loads(
-                        (worker / "run/verification-input.json").read_text()
-                    )
-                    verification = valid_verification(
-                        skill,
-                        {"op": "pass", "to": ""},
-                        verification_input=verification_input,
-                    )
-                    verification["changelog"] = json.loads(
-                        (worker / "run/changelog.json").read_text()
-                    )["changes"]
-                    verification["verification_input"]["sha256"] = hashlib.sha256(
-                        (worker / "run/verification-input.json").read_bytes()
-                    ).hexdigest()
-                    write_json(
-                        worker / "run/verification.json",
-                        verification,
-                    )
-
             with (
                 patch.object(runner, "ROOT", root),
                 patch.object(runner, "run_session", side_effect=fake_session),
@@ -4701,9 +4796,7 @@ class ContractTests(unittest.TestCase):
                     None,
                     True,
                 )
-            self.assertEqual(
-                calls, {"optimize": 2, "verifiter": 2, "judge": 2}
-            )
+            self.assertEqual(calls, {"optimize": 2, "verifiter": 2})
             for index in (1, 2):
                 self.assertTrue(
                     (
@@ -5012,6 +5105,36 @@ class MockedPipelineTest(unittest.TestCase):
             )
             self.assertEqual(selection["turns"], 2)
             self.assertEqual(selection["copied_to"], "traces/raw/codex/short.jsonl")
+
+    def test_candidate_run_copies_candidate_skills_by_default(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            pool = root / "candidate_traces"
+            runs = root / "runs"
+            skill = root / "candidate_skills/example/SKILL.md"
+            pool.mkdir()
+            skill.parent.mkdir(parents=True)
+            skill.write_text("# Example\n")
+            (pool / "trace.jsonl").write_text(
+                json.dumps(
+                    {
+                        "type": "session_meta",
+                        "payload": {"session_id": "abc123"},
+                    }
+                )
+                + "\n"
+            )
+
+            workspace = candidates.create_run("trace.jsonl", pool, runs)
+
+            copied = (
+                workspace / "target/to_be_improved_skills/example/SKILL.md"
+            )
+            self.assertEqual(copied.read_text(), "# Example\n")
+            selection = json.loads(
+                (workspace / "run/trace-selection.json").read_text()
+            )
+            self.assertEqual(selection["candidate_skills"], ["example"])
 
     def test_candidate_run_can_inherit_seed_skills(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

@@ -14,18 +14,21 @@ labels, goals, edits, and `verification.json` are the validated handoffs.
 
 ## Real run
 
-Keep the trace pool in `workspace/candidate_traces`, beside `workspace/runs`.
-Start a run from one trace. The script names it
+Keep the trace pool in `workspace/candidate_traces` and source skill inventory
+in `workspace/candidate_skills`, beside `workspace/runs`. Start a run from one
+trace. The script names it
 `run-<source>-<session hex>-<turns>turns` and copies that single JSONL into
-`workspace/runs/<run-id>/traces/raw/<source>/`:
+`workspace/runs/<run-id>/traces/raw/<source>/`. It also copies each candidate
+skill directory containing `SKILL.md` into that run:
 
 ```bash
 python3 skill_evolving_agents/candidate_traces.py
 python3 skill_evolving_agents/candidate_traces.py new run-codex-01a135-73turns
 ```
 
-The legacy `raw/target_agent` location remains accepted for Codex. Put existing
-skills in `workspace/runs/<run-id>/target/to_be_improved_skills`.
+The legacy `raw/target_agent` location remains accepted for Codex. Use
+`--seed-run` only when a run should inherit another run's skill inventory
+instead of `workspace/candidate_skills`.
 
 ## Automated runner
 
@@ -47,14 +50,11 @@ tells the model to read the named skill files and the named input paths, write
 the decision, and stop.
 
 Create a one-trace run from the pool. The command creates the run directory
-and copies that trace:
+and copies that trace plus the stable candidate skill inventory:
 
 ```bash
 python3 skill_evolving_agents/candidate_traces.py new run-codex-01a135-73turns
 ```
-
-Put the existing skills in
-`skill_evolving_agents/workspace/runs/<run-id>/target/to_be_improved_skills`.
 
 Run without clustering:
 
@@ -110,14 +110,18 @@ python3 skill_evolving_agents/run_pipeline.py run-001 --cluster \
   --cluster-workers 16 --op-workers 16
 ```
 
-Each worker writes only its private copy. After validation, a single reducer
-publishes scoped diagnosis and goal artifacts. Identical proposed operations
-are reduced once in `run/goal-reduction.json`. Remaining operations are batched
+Each worker writes only its private copy. A finding's goal starts as soon as
+its diagnosis is validated and published; diagnosis and goal share the cluster
+worker cap. Operation scheduling still waits until every goal exists. Identical
+proposed operations are reduced once in `run/goal-reduction.json`. Remaining
+operations are batched
 by affected skill names: disjoint operations run in parallel; update, delete,
 merge, split, or create operations that overlap a source or target name run in
 later batches. Each operation keeps its Optimize → Verifiter → Judge pass
-inside one worker; retries are disabled. Temporary copies under
-`.pipeline-workers` are removed after reduction.
+inside one worker; retries are disabled. Judge is a deterministic host step:
+after Verifiter output passes its contract, it maps `overall_status` directly
+to terminal `pass` or `fail` without another model call. Temporary copies
+under `.pipeline-workers` are removed after reduction.
 
 Each proposed op also owns a durable directory at
 `run/<finding-id>/ops/<op-index>/`. It always contains the sliced goal,
@@ -126,6 +130,11 @@ judge record, and changelog. The judge record hashes the other four artifacts.
 The changelog keeps current phase state plus append-only phase events. Gates,
 deduplication, bundling, and worker failures produce complete terminal bundles
 instead of leaving missing files.
+
+A `no_change` scope writes the same five files directly under
+`run/<finding-id>/`. Its dated changelog records Goal as completed and
+Optimize, Verification, and Judge as skipped, so an early terminal decision
+does not leave later phases unaudited.
 
 `signals.selection.include_infrastructure_failures` decides whether an
 infrastructure-only finding or cluster can evolve a skill. While it is false,
@@ -172,10 +181,12 @@ built, not during every worker session. Pass
 specific CLI version is required.
 
 The runner executes deterministic preprocessing once and label-skills once. It
-fans diagnosis and goal out by selected finding, with a barrier and deterministic
-reducer after each stage. It then runs conflict-free operation batches. A
-single Optimize, Verifiter, and Judge pass runs inside each operation's
-isolated worker. Retries are disabled.
+fans diagnosis out by selected finding and starts that finding's goal as soon
+as its diagnosis is published. Diagnosis and goal share the cluster worker cap.
+A deterministic reducer publishes each artifact, and operation scheduling waits
+until every goal exists so same-skill edits can be reduced together. It then
+runs conflict-free operation batches. A single Optimize, Verifiter, and Judge
+pass runs inside each operation's isolated worker. Retries are disabled.
 
 This stateful pipeline is intentionally not Docker Compose or one Harbor
 dataset run. Harbor is suited to independent trials; these sessions discover
@@ -289,8 +300,9 @@ Use that file to check a timing claim:
 - `wall_seconds` is the clock time from the first span to the last.
 - Each phase has `sum_seconds` (worker time added together), `wall_seconds`
   (first start to last end), and `peak_concurrency` (how many of that phase
-  overlapped). Diagnosis and goals are parallel when peak is greater than 1
-  and wall is close to the slowest span rather than the sum.
+  overlapped). Diagnosis workers are parallel when peak is greater than 1
+  and wall is close to the slowest span rather than the sum. A goal span may
+  overlap a later finding's diagnosis.
 - Each span row has `queue_wait_ms`, `workers`, `batch_index`, and
   `conflicts`. An operation in a later batch records its wait from the moment
   operations were scheduled, so a same-skill edit shows a long

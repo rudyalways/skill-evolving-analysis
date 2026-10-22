@@ -40,17 +40,15 @@ def percentile(values: list[float], fraction: float) -> float:
 
 def load_rows(database: Path) -> list[dict[str, Any]]:
     if not database.is_file():
-        raise SystemExit(f"metrics database does not exist: {database}")
+        return []
     with sqlite3.connect(database) as connection:
         connection.row_factory = sqlite3.Row
         try:
             rows = connection.execute(
                 "SELECT * FROM pipeline_spans ORDER BY started_at_us"
             ).fetchall()
-        except sqlite3.OperationalError as error:
-            raise SystemExit(
-                f"{database} has no pipeline timing spans; run the pipeline again"
-            ) from error
+        except sqlite3.OperationalError:
+            return []
     return [dict(row) for row in rows]
 
 
@@ -483,28 +481,49 @@ gap:7px 16px; align-items:center }}
 .state {{ font-weight:700 }} .state.done {{ color:#62d8a8 }}
 .state.running {{ color:#f4c15d }} .state.failed {{ color:#ff8080 }}
 .state.pending,.state.skipped {{ color:#8f9ab0 }}
+.trace-tools {{ position:relative; z-index:31; display:flex; justify-content:space-between; align-items:center; gap:12px }}
+.trace-expand {{ border:1px solid #36415f; background:#151c30; color:#cbd3e5;
+padding:7px 12px; border-radius:8px; cursor:pointer }}
 .trace-shell {{ margin:18px 0; border:1px solid #29334d; border-radius:10px;
-overflow:auto; max-height:440px; background:#0c1222 }}
-.trace-view {{ min-width:1050px; padding:10px 0 }}
-.trace-ruler,.trace-row {{ display:grid; grid-template-columns:220px minmax(800px,1fr);
-align-items:center }}
-.trace-label {{ overflow:hidden; padding:5px 10px; color:#aeb8cc;
-font:12px ui-monospace,monospace; white-space:nowrap; text-overflow:ellipsis }}
-.trace-track {{ position:relative; height:25px;
-background:repeating-linear-gradient(90deg,#202943 0,#202943 1px,transparent 1px,transparent 25%) }}
+overflow:auto; max-height:640px; background:#0c1222 }}
+.trace-shell.expanded {{ position:fixed; inset:20px; z-index:30; max-height:none;
+margin:0; box-shadow:0 0 0 100vmax #070b16cc }}
+.trace-view {{ position:relative; min-width:1100px; padding:8px 0 12px }}
+.trace-ruler,.trace-row {{ display:grid; grid-template-columns:128px minmax(860px,1fr);
+align-items:stretch }}
+.trace-label {{ position:sticky; left:0; z-index:4; overflow:hidden; padding:6px 10px;
+background:#0c1222; color:#aeb8cc; font:12px ui-monospace,monospace;
+white-space:nowrap; text-overflow:ellipsis }}
+.trace-group {{ padding:8px 10px 2px; color:#d7deef; font-size:12px; font-weight:700 }}
+.trace-track {{ position:relative; min-height:54px;
+background:repeating-linear-gradient(90deg,#243049 0,#243049 1px,transparent 1px,transparent 20%) }}
+.trace-time {{ position:absolute; top:1px; color:#9eb0cc; font:10px ui-monospace,monospace;
+white-space:nowrap; pointer-events:none; z-index:3 }}
 .trace-ticks {{ position:relative; height:22px; color:#8390aa;
 font:11px ui-monospace,monospace }}
 .trace-tick {{ position:absolute; transform:translateX(-50%); white-space:nowrap }}
 .trace-tick:first-child {{ transform:none }}
 .trace-tick:last-child {{ transform:translateX(-100%) }}
-.trace-block {{ position:absolute; top:3px; height:19px; min-width:2px;
-border-radius:3px; overflow:hidden; padding:2px 5px; box-sizing:border-box;
-color:white; font:11px ui-monospace,monospace; white-space:nowrap }}
+.trace-block {{ position:absolute; height:22px; min-width:2px; border-radius:5px;
+overflow:hidden; padding:1px 5px; box-sizing:border-box; color:white;
+font:11px ui-monospace,monospace; white-space:nowrap; z-index:1;
+box-shadow:0 0 0 1px #ffffff18 }}
 .trace-block.llm_agent {{ background:#7055de }} .trace-block.deterministic {{ background:#15855c }}
 .trace-block.orchestration {{ background:#bb7900 }} .trace-block.audit {{ background:#3f8db8 }}
+.trace-block.fanout-parent {{ box-shadow:0 0 0 2px #ff8a3d,0 0 10px #ff8a3d66 }}
+.trace-block.fanout-parent::after {{ content:''; position:absolute; right:1px; top:8px;
+width:6px; height:6px; border-radius:50%; background:#ffd0ad }}
+.trace-block.instant {{ width:9px; min-width:9px; height:9px; padding:0; border-radius:1px;
+transform:rotate(45deg); transform-origin:center }}
 .trace-block.live {{ background:#d39422; box-shadow:0 0 8px #f4c15d;
 background-image:linear-gradient(110deg,transparent 25%,#f4c15d88 45%,transparent 65%);
 background-size:200% 100%; animation:trace-pulse 1.4s linear infinite }}
+.trace-arrows {{ position:absolute; inset:0; width:100%; height:100%;
+pointer-events:none; z-index:2; overflow:visible }}
+.trace-legend {{ display:flex; gap:16px; color:#9aa4b8; font-size:12px; margin:0 0 8px }}
+.trace-legend i {{ display:inline-block; width:28px; height:4px; margin-right:6px; vertical-align:middle; border-radius:2px }}
+.trace-legend .chain {{ background:#f4f7ff }} .trace-legend .fanout {{ background:#ff8a3d }}
+.trace-legend .merge {{ background:#3dffa8 }}
 @keyframes trace-pulse {{ to {{ background-position:-200% 0 }} }}
 @media (max-width:700px) {{ .progress-grid {{ grid-template-columns:1fr 90px }} }}
 </style></head><body><main>
@@ -517,12 +536,28 @@ const esc = value => String(value).replace(/[&<>"']/g, c =>
   ({{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}})[c]);
 const sec = value => `${{Number(value).toFixed(3)}}s`;
 let selectedTab = 'total';
+let expandedRun = '';
+const applyExpandedTrace = () => {{
+  document.querySelectorAll('.trace-shell').forEach(shell =>
+    shell.classList.toggle('expanded', shell.dataset.run === expandedRun));
+  document.querySelectorAll('[data-trace-expand]').forEach(button => {{
+    button.textContent = button.dataset.traceExpand === expandedRun ? 'Close' : 'Expand';
+  }});
+}};
+document.addEventListener('click', event => {{
+  const button = event.target.closest('[data-trace-expand]');
+  if (!button) return;
+  expandedRun = expandedRun === button.dataset.traceExpand ? '' : button.dataset.traceExpand;
+  applyExpandedTrace();
+  tickTraces();
+}});
 const selectTab = id => {{
   selectedTab = id;
   document.querySelectorAll('.tab').forEach(node =>
     node.classList.toggle('active', node.dataset.tab === id));
   document.querySelectorAll('.panel').forEach(node =>
     node.classList.toggle('active', node.dataset.panel === id));
+  if (typeof tickTraces === 'function') tickTraces();
 }};
 const phaseTable = rows =>
   `<table><thead><tr><th>Phase</th><th>Category</th><th>Count</th>`+
@@ -532,34 +567,165 @@ const phaseTable = rows =>
     `<td>${{sec(row.average_seconds)}}</td><td>${{sec(row.p50_seconds)}}</td>`+
     `<td>${{sec(row.p95_seconds)}}</td><td>${{sec(row.maximum_seconds)}}</td></tr>`
   ).join('')+`</tbody></table>`;
+const TRUNK = ['normalize-traces','detect-signals','deduplicate-and-cluster',
+  'validate-preprocessing','label-skills','validate-skill-labels'];
+const GRAPH = new Set([...TRUNK, 'label-traces-cluster','goal','reduce-goals',
+  'optimize','verifiter','judge']);
+const PHASE_COLORS = {{
+  'normalize-traces':'#167d68', 'detect-signals':'#198b72',
+  'deduplicate-and-cluster':'#1d997e', 'validate-preprocessing':'#25a889',
+  'label-skills':'#377bd6', 'validate-skill-labels':'#4c8de0',
+  'label-traces-cluster':'#7055de', 'goal':'#9b5de5',
+  'reduce-goals':'#c58a18', 'optimize':'#df6f32',
+  'verifiter':'#d84f8b', 'judge':'#2ca56f'
+}};
+const phaseColor = phase => PHASE_COLORS[phase] || '';
+const traceLane = (phase, item, runId) => {{
+  if (TRUNK.includes(phase) || phase === 'reduce-goals' || item === runId ||
+      phase === 'preprocessing' || phase === 'label-skills')
+    return {{id:'pipeline', kind:'pipeline', title:'pipeline', sortKey:'0'}};
+  const rest = item.startsWith(`${{runId}}-`) ? item.slice(runId.length + 1) : item;
+  const match = rest.match(/(sig-[0-9a-f]+)(?:-op-(\\d+))?/);
+  if (!match) return {{id:'pipeline', kind:'pipeline', title:'pipeline', sortKey:'0'}};
+  const short = match[1].slice(4, 12);
+  const opPhases = ['edit-decision','operation-queue','optimize','verifiter',
+    'judge','judge-decision','merge-operation'];
+  if (match[2] || opPhases.includes(phase)) {{
+    const op = match[2] || '1';
+    return {{id:`op:${{match[1]}}:${{op}}`, kind:'op', title:`${{short}}/op-${{op}}`,
+      sortKey:`1/${{match[1]}}/op-${{op.padStart(4, '0')}}`}};
+  }}
+  return {{id:`finding:${{match[1]}}`, kind:'finding', title:short,
+    sortKey:`1/${{match[1]}}`}};
+}};
 const tracePanel = run => {{
-  const completed = (run.spans || []).map((row, index) => {{
+  const markerId = `trace-arrow-${{run.run_id.replace(/[^A-Za-z0-9_-]/g, '')}}`;
+  const seen = new Set();
+  const slices = [];
+  (run.spans || []).forEach(row => {{
     const start = Date.parse(row.started_at);
-    return {{label:`${{row.phase}} · ${{row.item}}`, category:row.category,
-      start, end:start + Number(row.duration_ms), live:false, key:`done-${{index}}`}};
-  }}).filter(row => Number.isFinite(row.start));
-  const active = (run.active || []).map((row, index) => ({{
-    label:`${{row.stage}} · ${{row.item}}`, category:'live',
-    start:Date.parse(row.started_at), end:null, live:true, key:`live-${{index}}`
-  }})).filter(row => Number.isFinite(row.start));
-  const rows = [...completed, ...active].sort((a,b) => a.start-b.start);
-  if (!rows.length) return '';
-  const origin = Math.min(...rows.map(row => row.start));
-  const staticEnd = Math.max(origin + 1, ...completed.map(row => row.end));
-  const blocks = rows.map(row =>
-    `<div class="trace-row"><div class="trace-label" title="${{esc(row.label)}}">`+
-    `${{esc(row.label)}}</div><div class="trace-track"><div `+
-    `class="trace-block ${{esc(row.category)}}${{row.live ? ' live' : ''}}" `+
-    `data-start="${{row.start}}" data-end="${{row.end == null ? '' : row.end}}" `+
-    `title="${{esc(row.label)}}">${{esc(row.live ? 'running' : row.category)}}</div>`+
-    `</div></div>`).join('');
-  return `<h3>Live trace</h3><div class="trace-shell"><div class="trace-view" `+
-    `data-trace-origin="${{origin}}" data-trace-static-end="${{staticEnd}}" `+
-    `data-trace-active="${{active.length ? '1' : '0'}}">`+
-    `<div class="trace-ruler"><div class="trace-label">time from run start</div>`+
-    `<div class="trace-ticks">${{[0,25,50,75,100].map(value =>
+    if (!Number.isFinite(start)) return;
+    const lane = traceLane(row.phase, String(row.item), run.run_id);
+    const instant = row.category === 'audit' || Number(row.duration_ms) === 0;
+    const slice = {{id:`${{markerId}}-${{slices.length}}`, phase:row.phase, item:String(row.item),
+      category:row.category, start, end:start + Number(row.duration_ms),
+      live:false, instant, lane}};
+    seen.add(`${{slice.phase}}|${{slice.item}}`);
+    slices.push(slice);
+  }});
+  (run.active || []).forEach(row => {{
+    const start = Date.parse(row.started_at);
+    const phase = String(row.stage);
+    const item = String(row.item);
+    if (!Number.isFinite(start) || seen.has(`${{phase}}|${{item}}`)) return;
+    slices.push({{id:`${{markerId}}-${{slices.length}}`, phase, item, category:'live', start,
+      end:null, live:true, instant:false, lane:traceLane(phase, item, run.run_id)}});
+  }});
+  if (!slices.length) return '';
+  const lanes = new Map();
+  slices.forEach(slice => {{
+    if (!lanes.has(slice.lane.id)) lanes.set(slice.lane.id, {{...slice.lane, slices:[]}});
+    lanes.get(slice.lane.id).slices.push(slice);
+  }});
+  const ordered = [...lanes.values()];
+  const byKind = kind => ordered.filter(lane => lane.kind === kind);
+  const edges = [];
+  const link = (source, target, kind) => {{
+    if (source && target && source.id !== target.id)
+      edges.push({{from:source.id, to:target.id, kind}});
+  }};
+  const graphNodes = rows => rows.filter(slice => GRAPH.has(slice.phase) || slice.live);
+  const durationOf = slice => (slice.end ?? slice.start) - slice.start;
+  const shown = rows => graphNodes(rows).filter(slice =>
+    slice.live || durationOf(slice) >= 800);
+  const chain = rows => {{
+    const nodes = shown(rows);
+    nodes.forEach((row, index) => link(row, nodes[index + 1], 'depends'));
+  }};
+  const pipeline = byKind('pipeline')[0];
+  const trunk = (pipeline?.slices || []).filter(slice => TRUNK.includes(slice.phase))
+    .sort((a, b) => a.start - b.start);
+  const reduce = (pipeline?.slices || []).find(slice => slice.phase === 'reduce-goals');
+  ordered.forEach(lane => lane.slices.sort((a, b) =>
+    a.start - b.start || String(a.item).localeCompare(String(b.item))));
+  chain(trunk);
+  const displayLanes = [...ordered].sort((a, b) =>
+    (a.sortKey || a.id).localeCompare(b.sortKey || b.id) || a.id.localeCompare(b.id));
+  const findings = displayLanes.filter(lane => lane.kind === 'finding');
+  const ops = displayLanes.filter(lane => lane.kind === 'op');
+  displayLanes.forEach((lane, row) =>
+    lane.slices.forEach(slice => {{ slice.row = row; }}));
+  findings.forEach(lane => chain(lane.slices));
+  ops.forEach(lane => chain(lane.slices));
+  const fork = shown(trunk).at(-1);
+  const firstShown = lane => shown(lane.slices)[0];
+  const lastShown = lane => shown(lane.slices).at(-1);
+  const reduceShown = reduce && durationOf(reduce) >= 800 ? reduce : null;
+  findings.forEach(lane =>
+    link(fork, firstShown(lane), findings.length > 1 ? 'fanout' : 'depends'));
+  if (reduceShown) {{
+    findings.forEach(lane =>
+      link(lastShown(lane), reduceShown, findings.length > 1 ? 'merge' : 'depends'));
+    ops.forEach(lane =>
+      link(reduceShown, firstShown(lane), ops.length > 1 ? 'fanout' : 'depends'));
+  }} else {{
+    findings.forEach(lane => {{
+      const sig = lane.id.replace(/^finding:/, '');
+      ops.filter(op => op.id.startsWith(`op:${{sig}}:`)).forEach(op =>
+        link(lastShown(lane), firstShown(op), 'merge'));
+    }});
+  }}
+  const fanoutSources = new Set(
+    edges.filter(edge => edge.kind === 'fanout').map(edge => edge.from)
+  );
+  const origin = Math.min(...slices.map(slice => slice.start));
+  const completedEnds = slices.filter(slice => slice.end != null).map(slice => slice.end);
+  const staticEnd = Math.max(origin + 1, ...completedEnds);
+  const renderRow = (lane, row) => {{
+    const rowSlices = lane.slices;
+    const title = lane.kind === 'pipeline' ? 'pipeline' : lane.title;
+    const blocks = rowSlices.map(slice =>
+      `<div id="${{slice.id}}" class="trace-block ${{esc(slice.category)}}${{slice.live ? ' live' : ''}}${{slice.instant ? ' instant' : ''}}${{fanoutSources.has(slice.id) ? ' fanout-parent' : ''}}" `+
+      `data-start="${{slice.start}}" data-end="${{slice.end == null ? '' : slice.end}}" `+
+      `data-phase="${{esc(slice.phase)}}" data-item="${{esc(slice.item)}}" `+
+      `data-sub="0" data-instant="${{slice.instant ? '1' : '0'}}" `+
+      `data-graph="${{GRAPH.has(slice.phase) || slice.live ? '1' : '0'}}" `+
+      `${{!slice.live && phaseColor(slice.phase) ? `style="background:${{phaseColor(slice.phase)}}"` : ''}} `+
+      `title="${{esc(slice.phase)}}">${{esc(slice.phase)}}</div>`
+    ).join('');
+    const times = rowSlices.filter(slice =>
+      (GRAPH.has(slice.phase) || slice.live) && !slice.instant).map(slice =>
+      `<div class="trace-time" data-for="${{slice.id}}"></div>`).join('');
+    return `<div class="trace-row"><div class="trace-label" title="${{esc(title)}}">`+
+      `${{esc(title)}}</div><div class="trace-track">${{times}}${{blocks}}</div></div>`;
+  }};
+  const arrowColor = kind => kind === 'merge' ? '#3dffa8' : kind === 'fanout' ? '#ff8a3d' : '#f4f7ff';
+  const arrowWidth = kind => kind === 'depends' ? 2.6 : 3.25;
+  const arrows = edges.map(edge =>
+    `<path data-from="${{edge.from}}" data-to="${{edge.to}}" data-kind="${{edge.kind}}" `+
+    `fill="none" stroke="${{arrowColor(edge.kind)}}" stroke-width="${{arrowWidth(edge.kind)}}" `+
+    `stroke-linecap="round" stroke-linejoin="round" `+
+    `marker-end="url(#${{markerId}}-${{edge.kind}})"/>`
+  ).join('');
+  const markers = ['depends', 'fanout', 'merge'].map(kind =>
+    `<marker id="${{markerId}}-${{kind}}" viewBox="0 0 10 10" refX="10" refY="5" `+
+    `markerUnits="userSpaceOnUse" markerWidth="9" markerHeight="9" orient="auto">`+
+    `<path d="M 0 1 L 10 5 L 0 9 z" fill="${{arrowColor(kind)}}"/></marker>`
+  ).join('');
+  return `<div class="trace-tools"><h3>Live trace</h3><div class="trace-legend">`+
+    `<span><i class="chain"></i>depends</span><span><i class="fanout"></i>fanout</span>`+
+    `<span><i class="merge"></i>merge</span>`+
+    `<button type="button" class="trace-expand" data-trace-expand="${{esc(run.run_id)}}">Expand</button>`+
+    `</div></div>`+
+    `<div class="trace-shell" data-run="${{esc(run.run_id)}}"><div class="trace-view" data-trace-origin="${{origin}}" `+
+    `data-trace-static-end="${{staticEnd}}" data-trace-active="${{slices.some(slice => slice.live) ? '1' : '0'}}">`+
+    `<div class="trace-ruler"><div class="trace-label">start →</div><div class="trace-ticks">`+
+    `${{[0,20,40,60,80,100].map(value =>
       `<span class="trace-tick" data-fraction="${{value/100}}" style="left:${{value}}%"></span>`
-    ).join('')}}</div></div>${{blocks}}</div></div>`;
+    ).join('')}}</div></div>`+
+    `${{displayLanes.map((lane, row) => renderRow(lane, row)).join('')}}`+
+    `<svg class="trace-arrows"><defs>${{markers}}</defs>${{arrows}}</svg>`+
+    `</div></div>`;
 }};
 const tickTraces = () => {{
   const now = Date.now();
@@ -581,11 +747,73 @@ const tickTraces = () => {{
     view.querySelectorAll('.trace-block').forEach(block => {{
       const start = Number(block.dataset.start);
       const blockEnd = block.dataset.end ? Number(block.dataset.end) : now;
-      block.style.left = `${{Math.max(0, (start-origin)/range*100)}}%`;
-      block.style.width = `${{Math.max(0.2, (blockEnd-start)/range*100)}}%`;
-      if (!block.dataset.end) {{
-        block.textContent = `running ${{sec((now-start)/1000)}}`;
+      const track = block.parentElement.getBoundingClientRect().width || 1;
+      const graph = block.dataset.graph !== '0';
+      block.style.top = graph ? '16px' : '4px';
+      const rawLeft = Math.max(0, (start - origin) / range) * track;
+      const started = Math.max(0, (start - origin) / 1000);
+      const duration = Math.max(0, (blockEnd - start) / 1000);
+      const phase = block.dataset.phase || '';
+      const clock = new Date(start).toLocaleTimeString([], {{
+        hour:'2-digit', minute:'2-digit', second:'2-digit'}});
+      block.title = `${{phase}} · start +${{sec(started)}} (${{clock}}) · ${{sec(duration)}}`+
+        (block.dataset.item ? ` · ${{block.dataset.item}}` : '');
+      if (block.dataset.instant === '1') {{
+        block.style.left = `${{rawLeft}}px`;
+        block.style.width = '9px';
+      }} else {{
+        const rawWidth = Math.max(2, (blockEnd - start) / range * track);
+        const trim = graph && rawWidth >= 36 ? 8 : 0;
+        block.style.left = `${{rawLeft}}px`;
+        block.style.width = `${{Math.max(2, rawWidth - trim)}}px`;
+        if (!block.dataset.end) block.textContent =
+          `${{phase}} +${{started.toFixed(1)}}s · ${{sec(duration)}}`;
       }}
+    }});
+    view.querySelectorAll('.trace-time').forEach(label => {{
+      const block = view.querySelector(`#${{label.dataset.for}}`);
+      if (!block) return;
+      const start = Number(block.dataset.start);
+      label.style.left = block.style.left;
+      label.textContent = `+${{Math.max(0, (start - origin) / 1000).toFixed(1)}}s`;
+    }});
+    view.querySelectorAll('.trace-track').forEach(track => {{
+      let last = -Infinity;
+      [...track.querySelectorAll('.trace-time')]
+        .sort((a, b) => parseFloat(a.style.left) - parseFloat(b.style.left))
+        .forEach(label => {{
+          const x = parseFloat(label.style.left);
+          const hide = x < last + 46;
+          label.style.visibility = hide ? 'hidden' : 'visible';
+          if (!hide) last = x;
+        }});
+    }});
+    const root = view.getBoundingClientRect();
+    if (!root.width) return;
+    view.querySelectorAll('.trace-arrows path').forEach(path => {{
+      const source = view.querySelector(`#${{path.dataset.from}}`);
+      const target = view.querySelector(`#${{path.dataset.to}}`);
+      if (!source || !target) return;
+      const from = source.getBoundingClientRect();
+      const to = target.getBoundingClientRect();
+      const x1 = from.right - root.left + 2;
+      const y1 = from.top + from.height / 2 - root.top;
+      const x2 = to.left - root.left - 3;
+      const y2 = to.top + to.height / 2 - root.top;
+      const room = x2 - x1;
+      if (room < 10 && Math.abs(y1 - y2) < 8) {{
+        path.setAttribute('d', '');
+        return;
+      }}
+      if (room < 10) {{
+        const knee = x1 + Math.max(4, Math.min(room, 8));
+        path.setAttribute('d', `M ${{x1}} ${{y1}} H ${{knee}} V ${{y2}} H ${{Math.max(x2, knee)}}`);
+        return;
+      }}
+      const rail = x1 + Math.min(room * 0.5, 36);
+      path.setAttribute('d', Math.abs(y1 - y2) < 8
+        ? `M ${{x1}} ${{y1}} H ${{x2}}`
+        : `M ${{x1}} ${{y1}} H ${{rail}} V ${{y2}} H ${{x2}}`);
     }});
   }});
 }};
@@ -656,9 +884,10 @@ async function refresh() {{
       data.runs.map((run,index) =>
         `<button class="tab" data-tab="run-${{index + 1}}" title="${{esc(run.run_id)}}">`+
         `${{esc(run.run_id)}}</button>`).join('');
+    const empty = data.run_count ? '' : `<p class="muted">No runs recorded.</p>`;
     document.getElementById('panels').innerHTML =
       `<section class="panel" data-panel="total"><section class="card">`+
-      `<h2>Total across runs</h2><div class="stats"><span>runs <b>${{data.run_count}}</b></span>`+
+      `<h2>Total across runs</h2>${{empty}}<div class="stats"><span>runs <b>${{data.run_count}}</b></span>`+
       `<span>completed spans <b>${{data.span_count}}</b></span></div>`+
       `<h3>Cross-run phase statistics</h3>${{phaseTable(data.phases)}}</section></section>`+
       data.runs.map((run,index) =>
@@ -667,6 +896,7 @@ async function refresh() {{
     document.querySelectorAll('.tab').forEach(node =>
       node.addEventListener('click', () => selectTab(node.dataset.tab)));
     selectTab(selectedTab);
+    applyExpandedTrace();
     tickTraces();
   }} catch (error) {{
     document.getElementById('status').className = 'error';

@@ -4,12 +4,12 @@
     {
       "backend": "cursor",
       "model": "grok-4.7-low",
-      "status": "inactive"
+      "status": "active"
     },
     {
       "backend": "claude",
       "model": "claude-sonnet-5-5",
-      "status": "active"
+      "status": "inactive"
     },
     {
       "backend": "codex",
