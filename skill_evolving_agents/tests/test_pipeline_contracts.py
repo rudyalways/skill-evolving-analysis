@@ -1428,6 +1428,15 @@ class ContractTests(unittest.TestCase):
         self.assertAlmostEqual(skill["score"], 0.504)
         self.assertEqual(skill["matches"][0]["similarity"], 0.7)
 
+    def test_label_skills_prompt_names_the_validated_metadata_shape(self) -> None:
+        prompt = (
+            AGENTS
+            / "02.1_label_skills_agent/existing_skills_labeler/skill.md"
+        ).read_text()
+        self.assertIn('"skills_metadata": [', prompt)
+        self.assertIn('"skill": "<skill-directory-name>"', prompt)
+        self.assertIn("The key is `skills_metadata`, not `skills`", prompt)
+
     def test_skill_format_names_and_aliases(self) -> None:
         format_path = AGENTS / "common/skill_format.json"
         document = json.loads(format_path.read_text())

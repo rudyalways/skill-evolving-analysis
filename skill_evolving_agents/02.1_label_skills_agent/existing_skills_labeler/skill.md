@@ -14,6 +14,27 @@ Do not stop a skill at one or two labels. Do not omit the weight. Do not invent 
 
 List the existing skills. For each skill, write or extend its metadata record. Set `skill` to that skill's directory name. Write `skill_types` until it has at least 3 items. Each item is `type` and `weight`. `type` is a path defined in `skill_capabilites/skill_capabilites.json`. An undefined name goes in `unmatched_skill_types` as `type` and `weight`, the same shape as the example. If no defined path fits, leave `skill_types` empty and keep the unmatched names there.
 
+Write `workspace/target/to_be_improved_skills_metadata/metadata.json` with this exact top-level shape. The key is `skills_metadata`, not `skills`. Include one record for every skill directory:
+
+```json
+{
+  "skills_metadata": [
+    {
+      "skill": "<skill-directory-name>",
+      "description": "<how the labels cover this skill>",
+      "skill_types": [
+        {"type": "job/verification/audit", "weight": 0.9},
+        {"type": "domain/frontend", "weight": 0.8},
+        {"type": "form/technique/checklist", "weight": 0.7}
+      ],
+      "unmatched_skill_types": []
+    }
+  ]
+}
+```
+
+The label values above only illustrate the JSON shape. Select labels from the taxonomy that actually describe each skill.
+
 ## Applies when
 
 Existing skills are under `workspace/target/to_be_improved_skills`. This agent runs once. This is the skills agent.
