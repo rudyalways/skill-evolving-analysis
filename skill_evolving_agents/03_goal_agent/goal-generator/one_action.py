@@ -22,6 +22,12 @@ _spec = importlib.util.spec_from_file_location("skill_names", _NAMES)
 skill_names_mod = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(skill_names_mod)
 skill_names = skill_names_mod.skill_names
+_CONTRACTS = AGENT / "common" / "pipeline_contracts.py"
+_contract_spec = importlib.util.spec_from_file_location(
+    "pipeline_contracts", _CONTRACTS
+)
+pipeline_contracts = importlib.util.module_from_spec(_contract_spec)
+_contract_spec.loader.exec_module(pipeline_contracts)
 
 
 def check(goal: dict) -> list[str]:
@@ -43,11 +49,15 @@ def check(goal: dict) -> list[str]:
     return problems
 
 
+def validate(path: Path) -> list[str]:
+    return check(pipeline_contracts.validate_goal(path))
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("goal", nargs="?", type=Path, default=DEFAULT_GOAL)
     args = parser.parse_args()
-    problems = check(json.loads(args.goal.read_text()))
+    problems = validate(args.goal)
     if problems:
         print("one action: fail")
         for line in problems:

@@ -1,0 +1,99 @@
+{
+  "schema_version": 1,
+  "run_id": "<run-id>",
+  "finding_id": "<finding-id>",
+  "op_index": 1,
+  "operation": "<create|update|delete|merge|split>",
+  "scoring": {
+    "scale": {
+      "min": 0.0,
+      "max": 1.0
+    },
+    "pass_threshold": 0.7,
+    "step_weights": {
+      "step1": 0.2,
+      "step2": 0.25,
+      "step3": 0.15,
+      "step4": 0.15,
+      "step5": 0.25
+    }
+  },
+  "skills": [
+    {
+      "skill": "<skill>",
+      "requirements": {
+        "sections": [
+          {
+            "section": "<section>",
+            "expectation": "<observable section goal>"
+          }
+        ],
+        "directories": [
+          {
+            "directory": "<directory>",
+            "expectation": "<observable directory goal>"
+          }
+        ],
+        "avoid": ["<behavior or outcome that must not appear>"]
+      }
+    }
+  ],
+  "checks": {
+    "step1": {
+      "check": "changelog reverse check",
+      "inputs": {
+        "changelog": "run/changelog.json",
+        "baseline_root": "target/raw_skills",
+        "candidate_root": "target/to_be_improved_skills"
+      },
+      "assertions": [
+        "The before and after hashes match the baseline and candidate skill trees.",
+        "Every changed section and directory is claimed by the active operation."
+      ]
+    },
+    "step2": {
+      "check": "goal align",
+      "inputs": {
+        "goal": "run/evolve-goal.json"
+      },
+      "assertions": [
+        "Each candidate satisfies every section and directory expectation for its skill.",
+        "No unclaimed section or directory changed."
+      ]
+    },
+    "step3": {
+      "check": "difficulty level check",
+      "evidence": {
+        "finding": "traces/derived/findings/<finding-id>/finding.json",
+        "candidate_source": "<candidate-source>",
+        "confidence": 0.0,
+        "evidence_records": 0,
+        "distinct_windows": 0,
+        "lesson": null
+      },
+      "assertions": [
+        "The skill captures an evidence-dependent reusable procedure rather than baseline model knowledge.",
+        "The requested behavior is sufficiently non-trivial to justify skill instructions."
+      ]
+    },
+    "step4": {
+      "check": "not too complicated, not overfitting",
+      "thresholds": {
+        "min_methodology_value": 0.0,
+        "novelty_max_similarity": 0.0
+      },
+      "assertions": [
+        "The candidate is the smallest procedure that satisfies the requirements.",
+        "The candidate does not copy incidental details from one trace or duplicate another skill."
+      ]
+    },
+    "step5": {
+      "check": "checklist",
+      "from": "skills[].requirements",
+      "assertions": [
+        "Evaluate every section, directory, and avoid item; do not infer a pass from names or keyword presence.",
+        "Record concrete evidence for each failed expectation."
+      ]
+    }
+  }
+}

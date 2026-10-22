@@ -464,6 +464,470 @@ def _read_json(path: Path) -> Any:
         return None
 
 
+def _read_jsonl(path: Path) -> list[dict[str, Any]]:
+    try:
+        lines = path.read_text().splitlines()
+    except OSError:
+        return []
+    rows: list[dict[str, Any]] = []
+    for line in lines:
+        try:
+            value = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(value, dict):
+            rows.append(value)
+    return rows
+
+
+def _rate(numerator: int, denominator: int) -> float | None:
+    return round(numerator / denominator, 6) if denominator else None
+
+
+def collect_phase_metrics(
+    workspace: Path, spans: list[dict[str, Any]] | None = None
+) -> dict[str, Any]:
+    """Build an honest per-phase funnel from deterministic run artifacts.
+
+    Coverage and outcomes are measured. Precision/correctness remain null unless
+    human relevance labels or held-out behavioral replay are present.
+    """
+    workspace = workspace.resolve()
+    spans = spans or []
+    signal_root = workspace / "traces/derived/signals"
+    findings = _read_jsonl(signal_root / "findings.jsonl")
+    decisions = _read_jsonl(signal_root / "selection-decisions.jsonl")
+    selected = sum(row.get("disposition") == "selected" for row in decisions)
+    dispositions: dict[str, int] = defaultdict(int)
+    for row in decisions:
+        dispositions[str(row.get("disposition") or "unknown")] += 1
+    manifest = _read_json(
+        workspace / "traces/derived/normalized/manifest.json"
+    )
+    turn_count = (
+        int(manifest.get("turn_count") or 0)
+        if isinstance(manifest, dict)
+        else 0
+    )
+
+    diagnoses = [
+        value
+        for path in (workspace / "run").glob("*/diagnosis.json")
+        if isinstance(value := _read_json(path), dict)
+    ]
+    diagnosis_gaps = [
+        gap
+        for value in diagnoses
+        for gap in (
+            (value.get("skill_capabilities_missing") or [])
+            + (value.get("newly_detected_skill_capabilites_missing") or [])
+        )
+    ]
+    diagnosis_confidences = [
+        float(gap["confidence"])
+        for gap in diagnosis_gaps
+        if isinstance(gap, dict)
+        and isinstance(gap.get("confidence"), (int, float))
+        and not isinstance(gap.get("confidence"), bool)
+    ]
+    newly_detected_gaps = sum(
+        len(value.get("newly_detected_skill_capabilites_missing") or [])
+        for value in diagnoses
+    )
+    diagnosis_spans = [
+        row for row in spans if row.get("phase") == "label-traces-cluster"
+    ]
+    truncated_slices = sum(
+        bool(_metadata(row).get("slice_truncated"))
+        for row in diagnosis_spans
+    )
+
+    matching_files = list((workspace / "run").glob("*/label-matching.json"))
+    matched_scopes = 0
+    top_scores: list[float] = []
+    for path in matching_files:
+        document = _read_json(path)
+        clusters = document.get("clusters") if isinstance(document, dict) else []
+        scope_has_match = False
+        for cluster in clusters or []:
+            if not isinstance(cluster, dict):
+                continue
+            skills = cluster.get("skills") or []
+            if skills:
+                scope_has_match = True
+            numeric = [
+                float(skill["score"])
+                for skill in skills
+                if isinstance(skill, dict)
+                and isinstance(skill.get("score"), (int, float))
+                and not isinstance(skill.get("score"), bool)
+            ]
+            if numeric:
+                top_scores.append(max(numeric))
+        matched_scopes += scope_has_match
+
+    pipeline_summary = _read_json(workspace / "run/pipeline-summary.json")
+    scopes = (
+        pipeline_summary.get("scopes") or []
+        if isinstance(pipeline_summary, dict)
+        else []
+    )
+    operations = (
+        pipeline_summary.get("operations") or []
+        if isinstance(pipeline_summary, dict)
+        else []
+    )
+    changed_scopes = sum(
+        isinstance(scope, dict) and scope.get("disposition") != "no_change"
+        for scope in scopes
+    )
+    no_change_scopes = sum(
+        isinstance(scope, dict) and scope.get("disposition") == "no_change"
+        for scope in scopes
+    )
+    accepted = sum(
+        isinstance(operation, dict) and operation.get("accepted") is True
+        for operation in operations
+    )
+
+    reduction = _read_json(workspace / "run/goal-reduction.json")
+    reduction_decisions = (
+        reduction.get("decisions") or []
+        if isinstance(reduction, dict)
+        else []
+    )
+    reduction_counts: dict[str, int] = defaultdict(int)
+    for row in reduction_decisions:
+        if isinstance(row, dict):
+            reduction_counts[str(row.get("decision") or "unknown")] += 1
+
+    verifications = [
+        value
+        for path in (workspace / "run").glob("*/ops/*/verification.json")
+        if isinstance(value := _read_json(path), dict)
+    ]
+    verification_passes = 0
+    replay_available = 0
+    replay_passes = 0
+    for verification in verifications:
+        feedback = verification.get("feedback") or {}
+        verification_passes += feedback.get("overall_status") == "pass"
+        replay = feedback.get("replay") or {}
+        replay_available += replay.get("available") is True
+        replay_passes += (
+            replay.get("available") is True and replay.get("status") == "pass"
+        )
+
+    judge_rows = [
+        _metadata(row) for row in spans if row.get("phase") == "judge-decision"
+    ]
+    judge_actions: dict[str, int] = defaultdict(int)
+    first_attempt_passes = 0
+    first_attempts = 0
+    for metadata in judge_rows:
+        action = str(metadata.get("judge_action") or "unknown")
+        judge_actions[action] += 1
+        if metadata.get("attempt") == 1:
+            first_attempts += 1
+            first_attempt_passes += action == "pass"
+
+    optimize_rows = [row for row in spans if row.get("phase") == "optimize"]
+    optimize_first_attempts = sum(
+        _metadata(row).get("attempt") == 1 for row in optimize_rows
+    )
+    optimize_attempt_twos = sum(
+        _metadata(row).get("attempt") == 2 for row in optimize_rows
+    )
+
+    warnings: list[str] = []
+    if truncated_slices:
+        warnings.append(
+            f"{truncated_slices}/{len(diagnosis_spans)} diagnosis slices were truncated"
+        )
+    if verifications and replay_available == 0:
+        warnings.append("all verification outcomes are structural; no replay was available")
+    if isinstance(reduction, dict) and float(reduction.get("min_super_score") or 0) == 0:
+        warnings.append("min_super_score is zero, so the edit quality gate is inactive")
+    if matching_files and matched_scopes < len(matching_files):
+        warnings.append(
+            f"{len(matching_files) - matched_scopes}/{len(matching_files)} scopes had no recalled skill"
+        )
+
+    return {
+        "schema_version": 1,
+        "run_id": workspace.name,
+        "metric_semantics": {
+            "measured": (
+                "artifact coverage, deterministic validation, timing, replay "
+                "availability, retry decisions, and publication outcomes"
+            ),
+            "proxy": (
+                "match scores, structural verification, judge decisions, and "
+                "publication acceptance"
+            ),
+            "unavailable": (
+                "mining precision/recall, diagnosis correctness, recall precision, "
+                "goal correctness, and behavioral skill lift without labels or replay"
+            ),
+        },
+        "phases": {
+            "mining": {
+                "turns": turn_count,
+                "findings": len(findings),
+                "selected": selected,
+                "selection_rate": _rate(selected, len(findings)),
+                "dispositions": dict(sorted(dispositions.items())),
+                "precision": None,
+                "precision_reason": "no human finding labels",
+            },
+            "diagnosis": {
+                "expected_scopes": selected,
+                "completed_scopes": len(diagnoses),
+                "coverage": _rate(len(diagnoses), selected),
+                "capability_gaps": len(diagnosis_gaps),
+                "newly_detected_gaps": newly_detected_gaps,
+                "mean_gap_confidence": (
+                    round(
+                        sum(diagnosis_confidences)
+                        / len(diagnosis_confidences),
+                        6,
+                    )
+                    if diagnosis_confidences
+                    else None
+                ),
+                "truncated_slices": truncated_slices,
+                "correctness": None,
+                "correctness_reason": "schema validity is not diagnosis ground truth",
+            },
+            "recall": {
+                "scopes": len(matching_files),
+                "scopes_with_candidates": matched_scopes,
+                "candidate_coverage": _rate(matched_scopes, len(matching_files)),
+                "mean_top_match_score": (
+                    round(sum(top_scores) / len(top_scores), 6)
+                    if top_scores
+                    else None
+                ),
+                "precision": None,
+                "precision_reason": "no relevance judgments for retrieved skills",
+            },
+            "goal": {
+                "scopes": len(scopes),
+                "changed_scopes": changed_scopes,
+                "no_change_scopes": no_change_scopes,
+                "operations": len(operations),
+                "reduction_decisions": dict(sorted(reduction_counts.items())),
+                "min_super_score": (
+                    float(reduction.get("min_super_score") or 0)
+                    if isinstance(reduction, dict)
+                    else None
+                ),
+                "score_gate_active": (
+                    float(reduction.get("min_super_score") or 0) > 0
+                    if isinstance(reduction, dict)
+                    else None
+                ),
+                "correctness": None,
+                "correctness_reason": "no labeled optimal operation or goal",
+            },
+            "optimize": {
+                "attempts": len(optimize_rows),
+                "operations_started": optimize_first_attempts,
+                "second_attempts": optimize_attempt_twos,
+                "retry_rate": _rate(
+                    optimize_attempt_twos,
+                    optimize_first_attempts,
+                ),
+                "quality": None,
+                "quality_reason": "edit completion is not behavioral improvement",
+            },
+            "verify": {
+                "operations": len(verifications),
+                "structural_passes": verification_passes,
+                "structural_pass_rate": _rate(
+                    verification_passes, len(verifications)
+                ),
+                "replay_available": replay_available,
+                "replay_coverage": _rate(replay_available, len(verifications)),
+                "replay_passes": replay_passes,
+                "behavioral_pass_rate": (
+                    _rate(replay_passes, replay_available)
+                    if replay_available
+                    else None
+                ),
+            },
+            "judge": {
+                "decisions": len(judge_rows),
+                "actions": dict(sorted(judge_actions.items())),
+                "first_attempt_passes": first_attempt_passes,
+                "first_attempt_pass_rate": _rate(
+                    first_attempt_passes, first_attempts
+                ),
+                "proposed_operations": len(operations),
+                "accepted_proposals": accepted,
+                "proposal_acceptance_rate": _rate(accepted, len(operations)),
+                "note": (
+                    "proposals include bundled operations; judge decisions and "
+                    "verification operations count executable attempts only"
+                ),
+            },
+        },
+        "funnel": {
+            "selected_findings": selected,
+            "diagnosed_findings": len(diagnoses),
+            "recalled_scopes": len(matching_files),
+            "changed_scopes": changed_scopes,
+            "proposed_operations": len(operations),
+            "accepted_proposals": accepted,
+        },
+        "warnings": warnings,
+    }
+
+
+def write_phase_metrics(
+    workspace: Path, spans: list[dict[str, Any]] | None = None
+) -> Path:
+    document = collect_phase_metrics(workspace, spans)
+    path = workspace / "logs/phase-metrics.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(".json.tmp")
+    temporary.write_text(
+        json.dumps(document, indent=2, ensure_ascii=False, sort_keys=True) + "\n"
+    )
+    temporary.replace(path)
+    return path
+
+
+def aggregate_phase_metrics(runs_root: Path) -> dict[str, Any]:
+    reports = [
+        value
+        for path in sorted(runs_root.glob("*/logs/phase-metrics.json"))
+        if isinstance(value := _read_json(path), dict)
+    ]
+
+    def total(phase: str, key: str) -> int:
+        return sum(
+            int(
+                (((report.get("phases") or {}).get(phase) or {}).get(key))
+                or 0
+            )
+            for report in reports
+        )
+
+    mining_findings = total("mining", "findings")
+    mining_selected = total("mining", "selected")
+    diagnosis_expected = total("diagnosis", "expected_scopes")
+    diagnosis_completed = total("diagnosis", "completed_scopes")
+    recall_scopes = total("recall", "scopes")
+    recall_candidates = total("recall", "scopes_with_candidates")
+    verify_operations = total("verify", "operations")
+    replay_available = total("verify", "replay_available")
+    proposed = total("judge", "proposed_operations")
+    accepted = total("judge", "accepted_proposals")
+    return {
+        "schema_version": 1,
+        "run_count": len(reports),
+        "run_ids": [str(report.get("run_id") or "") for report in reports],
+        "phases": {
+            "mining": {
+                "findings": mining_findings,
+                "selected": mining_selected,
+                "selection_rate": _rate(mining_selected, mining_findings),
+                "precision": None,
+            },
+            "diagnosis": {
+                "expected_scopes": diagnosis_expected,
+                "completed_scopes": diagnosis_completed,
+                "coverage": _rate(diagnosis_completed, diagnosis_expected),
+                "capability_gaps": total("diagnosis", "capability_gaps"),
+                "newly_detected_gaps": total(
+                    "diagnosis", "newly_detected_gaps"
+                ),
+                "truncated_slices": total("diagnosis", "truncated_slices"),
+                "correctness": None,
+            },
+            "recall": {
+                "scopes": recall_scopes,
+                "scopes_with_candidates": recall_candidates,
+                "candidate_coverage": _rate(recall_candidates, recall_scopes),
+                "precision": None,
+            },
+            "goal": {
+                "changed_scopes": total("goal", "changed_scopes"),
+                "no_change_scopes": total("goal", "no_change_scopes"),
+                "operations": total("goal", "operations"),
+                "runs_with_active_score_gate": sum(
+                    (
+                        ((report.get("phases") or {}).get("goal") or {}).get(
+                            "score_gate_active"
+                        )
+                        is True
+                    )
+                    for report in reports
+                ),
+                "correctness": None,
+            },
+            "optimize": {
+                "operations_started": total("optimize", "operations_started"),
+                "second_attempts": total("optimize", "second_attempts"),
+                "retry_rate": _rate(
+                    total("optimize", "second_attempts"),
+                    total("optimize", "operations_started"),
+                ),
+                "quality": None,
+            },
+            "verify": {
+                "operations": verify_operations,
+                "structural_passes": total("verify", "structural_passes"),
+                "structural_pass_rate": _rate(
+                    total("verify", "structural_passes"), verify_operations
+                ),
+                "replay_available": replay_available,
+                "replay_coverage": _rate(replay_available, verify_operations),
+                "behavioral_pass_rate": (
+                    _rate(total("verify", "replay_passes"), replay_available)
+                    if replay_available
+                    else None
+                ),
+            },
+            "judge": {
+                "proposed_operations": proposed,
+                "accepted_proposals": accepted,
+                "proposal_acceptance_rate": _rate(accepted, proposed),
+                "first_attempt_passes": total(
+                    "judge", "first_attempt_passes"
+                ),
+            },
+        },
+        "warnings": sorted(
+            {
+                warning
+                for report in reports
+                for warning in report.get("warnings") or []
+                if isinstance(warning, str)
+            }
+        ),
+        "quality_note": (
+            "Null precision/correctness fields require labeled findings, recall "
+            "relevance judgments, optimal-goal labels, or held-out replay."
+        ),
+    }
+
+
+def write_phase_metrics_summary(
+    runs_root: Path, output: Path | None = None
+) -> Path:
+    document = aggregate_phase_metrics(runs_root)
+    path = output or runs_root.parent / "phase-metrics-summary.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(".json.tmp")
+    temporary.write_text(
+        json.dumps(document, indent=2, ensure_ascii=False, sort_keys=True) + "\n"
+    )
+    temporary.replace(path)
+    return path
+
+
 def collect_edits(workspace: Path) -> dict[str, Any]:
     """Join reduction, publication, and the final judge result for every edit."""
     reduction = _read_json(workspace / "run/goal-reduction.json")
@@ -547,6 +1011,7 @@ def write_run_report(workspace: Path) -> Path | None:
             except json.JSONDecodeError:
                 budget = None
         edits = collect_edits(workspace)
+        phase_metrics = collect_phase_metrics(workspace, rows)
         document = {
             "schema_version": 1,
             "run_id": workspace.name,
@@ -576,6 +1041,7 @@ def write_run_report(workspace: Path) -> Path | None:
             "edit_summary": edits["summary"],
             "edits": edits["edits"],
             "cut_budget": budget,
+            "phase_metrics": phase_metrics,
         }
         path = workspace / "logs/run-timing.json"
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -584,6 +1050,7 @@ def write_run_report(workspace: Path) -> Path | None:
             json.dumps(document, indent=2, ensure_ascii=False) + "\n"
         )
         temporary.replace(path)
+        write_phase_metrics(workspace, rows)
         print(f"timing report {path}", flush=True)
         return path
     except Exception as error:

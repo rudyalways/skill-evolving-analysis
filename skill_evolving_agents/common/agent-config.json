@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "agents": [
+    {
+      "backend": "cursor",
+      "model": "grok-4.7-low",
+      "status": "inactive"
+    },
+    {
+      "backend": "claude",
+      "model": "claude-sonnet-5-5",
+      "status": "active"
+    },
+    {
+      "backend": "codex",
+      "model": "",
+      "status": "inactive"
+    },
+    {
+      "backend": "docker-claude",
+      "model": "claude-sonnet-5-5",
+      "status": "inactive"
+    }
+  ]
+}

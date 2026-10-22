@@ -45,6 +45,18 @@ NEGATIVE = {
 }
 POSITIVE = {"correct", "done", "fixed", "good", "great", "thanks", "working"}
 SEVERITY_RANK = {"low": 1, "medium": 2, "high": 3, "critical": 4}
+CUT_CANDIDATE_QUALITY: dict[str, tuple[str, float]] = {
+    "consecutive_repetition": ("high", 0.82),
+    "long_turn_then_correction": ("high", 0.85),
+    "correction_burst": ("high", 0.82),
+    "rapid_correction": ("high", 0.8),
+    "tool_failure_streak": ("high", 0.84),
+    "keep_going_streak": ("high", 0.8),
+    "unresolved_repeat": ("high", 0.8),
+    "abandonment": ("high", 0.82),
+    "repeated_assistant": ("medium", 0.72),
+    "oscillation": ("high", 0.82),
+}
 
 
 def _cut_algorithms():
@@ -55,6 +67,21 @@ def _cut_algorithms():
         spec = importlib.util.spec_from_file_location("trace_cut_algorithms", path)
         if spec is None or spec.loader is None:
             raise ImportError(f"cannot load cut algorithms: {path}")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+    return module
+
+
+def _methodology_miner():
+    try:
+        from . import methodology as module
+    except ImportError:
+        path = Path(__file__).with_name("methodology.py")
+        spec = importlib.util.spec_from_file_location(
+            "trace_methodology_miner", path
+        )
+        if spec is None or spec.loader is None:
+            raise ImportError(f"cannot load methodology miner: {path}")
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
     return module
@@ -97,6 +124,27 @@ def _jaccard(left: str, right: str) -> float:
     a, b = _words(left), _words(right)
     union = a | b
     return len(a & b) / len(union) if union else 0.0
+
+
+def _turn_text(turn: dict[str, Any]) -> str:
+    return detector_text(
+        f"{(turn.get('user') or {}).get('text') or ''} "
+        f"{(turn.get('assistant') or {}).get('text') or ''}"
+    )
+
+
+def _representative_indexes(indexes: list[int], limit: int) -> list[int]:
+    """Sample an ordered pattern across its lifecycle instead of only its tail."""
+    values = sorted(set(indexes))
+    if len(values) <= limit:
+        return values
+    if limit <= 1:
+        return [values[-1]]
+    positions = {
+        round(position * (len(values) - 1) / (limit - 1))
+        for position in range(limit)
+    }
+    return [values[position] for position in sorted(positions)]
 
 
 def _sentiment(text: str) -> float:
@@ -367,7 +415,325 @@ def _session_findings(
                 "seconds": signals_config["rapid_correction_seconds"],
             },
         )
+    candidate_config = signals_config.get("selection") or {}
+    if candidate_config.get("include_cut_candidates", False):
+        for window in windows:
+            quality = CUT_CANDIDATE_QUALITY.get(window.algorithm)
+            if quality is None:
+                continue
+            severity, base_confidence = quality
+            similarity = window.features.get("request_similarity")
+            confidence = (
+                max(base_confidence, float(similarity))
+                if isinstance(similarity, (int, float))
+                and not isinstance(similarity, bool)
+                else base_confidence
+            )
+            chosen = list(window.indexes)
+            chosen_turns = [turns[index] for index in chosen]
+            anchor_turns = [
+                turns[index] for index in window.anchor_indexes
+            ]
+            infrastructure = all(
+                _infrastructure_failure(turn, signals_config)
+                for turn in anchor_turns
+            )
+            finding = _finding(
+                f"cut-{window.algorithm}",
+                session_id,
+                chosen_turns,
+                severity,
+                confidence,
+                -len(window.anchor_indexes),
+                {
+                    **window.features,
+                    "candidate_source": "cut_window",
+                    "cut_algorithm": window.algorithm,
+                    "cut_turns": len(chosen),
+                    "occurrence_count": len(window.anchor_indexes),
+                    "distinct_windows": 1,
+                    "infrastructure_failure": infrastructure,
+                    "infrastructure_anchor_count": sum(
+                        _infrastructure_failure(turn, signals_config)
+                        for turn in anchor_turns
+                    ),
+                },
+                routing="infrastructure"
+                if infrastructure
+                else "skill_evolution",
+                evidence_field="outcome.error"
+                if infrastructure
+                else "user.text",
+            )
+            finding["slice"] = cutter.bounded_slice(
+                chosen_turns, config
+            )
+            findings.append(finding)
+
+        long_windows = [
+            window for window in windows if window.algorithm == "long_turn"
+        ]
+        anchor_indexes = sorted(
+            {
+                index
+                for window in long_windows
+                for index in window.anchor_indexes
+            }
+        )
+        similarity_threshold = float(
+            candidate_config.get("long_turn_similarity", 0.15)
+        )
+        minimum_related = int(
+            candidate_config.get("min_related_long_turns", 3)
+        )
+        neighbors: dict[int, set[int]] = {
+            index: set() for index in anchor_indexes
+        }
+        pair_similarities: dict[tuple[int, int], float] = {}
+        for offset, left in enumerate(anchor_indexes):
+            for right in anchor_indexes[offset + 1 :]:
+                similarity = _jaccard(
+                    _turn_text(turns[left]), _turn_text(turns[right])
+                )
+                if similarity < similarity_threshold:
+                    continue
+                neighbors[left].add(right)
+                neighbors[right].add(left)
+                pair_similarities[(left, right)] = similarity
+        components: list[list[int]] = []
+        unseen = set(anchor_indexes)
+        while unseen:
+            start = min(unseen)
+            stack = [start]
+            component: set[int] = set()
+            while stack:
+                current = stack.pop()
+                if current in component:
+                    continue
+                component.add(current)
+                stack.extend(neighbors[current] - component)
+            unseen -= component
+            if len(component) >= minimum_related:
+                components.append(sorted(component))
+        evidence_limit = int(
+            candidate_config.get(
+                "max_pattern_evidence_turns",
+                (config.get("cut") or {}).get("max_user_turns", 5),
+            )
+        )
+        for component in components:
+            representatives = _representative_indexes(
+                component, max(1, evidence_limit)
+            )
+            similarities = [
+                value
+                for (left, right), value in pair_similarities.items()
+                if left in component and right in component
+            ]
+            confidence = min(0.95, 0.72 + 0.03 * len(component))
+            finding = _finding(
+                "recurring-long-workflow",
+                session_id,
+                [turns[index] for index in representatives],
+                "high",
+                confidence,
+                -len(component),
+                {
+                    "candidate_source": "cut_pattern",
+                    "cut_algorithm": "long_turn",
+                    "cut_turns": len(representatives),
+                    "occurrence_count": len(component),
+                    "distinct_windows": len(component),
+                    "similarity_method": "combined-turn-jaccard-components",
+                    "similarity_threshold": similarity_threshold,
+                    "max_pair_similarity": round(max(similarities), 6),
+                },
+            )
+            finding["slice"] = cutter.bounded_slice(
+                [turns[index] for index in representatives], config
+            )
+            findings.append(finding)
     return findings
+
+
+def _rank_key(row: dict[str, Any]) -> tuple[Any, ...]:
+    features = row.get("features") or {}
+    quality = features.get("quality") or {}
+    return (
+        -SEVERITY_RANK[row["severity"]],
+        -float(row["confidence"]),
+        -float(quality.get("value") or 0),
+        -int(features.get("distinct_sessions") or 1),
+        -int(features.get("occurrence_count") or 1),
+        row["signal_id"],
+    )
+
+
+def _select_findings(
+    findings: list[dict[str, Any]], detector_config: dict[str, Any]
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    config = detector_config["selection"]
+    minimum_rank = SEVERITY_RANK[config["min_severity"]]
+    minimum_confidence = float(config["min_confidence"])
+    candidate_confidence = float(
+        config.get("cut_candidate_min_confidence", minimum_confidence)
+    )
+    methodology_config = detector_config.get("_methodology") or {}
+    methodology_confidence = float(
+        methodology_config.get("min_confidence", minimum_confidence)
+    )
+    decisions: dict[str, dict[str, Any]] = {}
+    eligible: list[dict[str, Any]] = []
+    for row in findings:
+        signal_id = row["signal_id"]
+        source = (row.get("features") or {}).get("candidate_source")
+        is_methodology = source in {"methodology", "methodology_consolidated"}
+        is_cut_candidate = source in {"cut_window", "cut_pattern"}
+        decision = {
+            "schema_version": 1,
+            "finding_id": signal_id,
+            "detector": row["detector"],
+            "severity": row["severity"],
+            "confidence": row["confidence"],
+            "candidate_source": source or "signal_detector",
+        }
+        if row["routing"] == "infrastructure" and not config.get(
+            "include_infrastructure_failures", False
+        ):
+            decision.update(
+                {"disposition": "rejected", "reason": "infrastructure-routing"}
+            )
+        elif is_cut_candidate and not config.get("include_cut_candidates", False):
+            decision.update(
+                {"disposition": "rejected", "reason": "cut-candidates-disabled"}
+            )
+        elif is_methodology and not methodology_config.get("enabled", False):
+            decision.update(
+                {"disposition": "rejected", "reason": "methodology-disabled"}
+            )
+        elif not source and SEVERITY_RANK[row["severity"]] < minimum_rank:
+            decision.update(
+                {"disposition": "rejected", "reason": "below-min-severity"}
+            )
+        elif float(row["confidence"]) < (
+            methodology_confidence
+            if is_methodology
+            else candidate_confidence
+            if is_cut_candidate
+            else minimum_confidence
+        ):
+            decision.update(
+                {"disposition": "rejected", "reason": "below-min-confidence"}
+            )
+        else:
+            decision.update({"disposition": "eligible", "reason": "qualified"})
+            eligible.append(row)
+        decisions[signal_id] = decision
+
+    overlap_threshold = float(
+        config.get("deduplicate_overlap_threshold", 0.8)
+    )
+    deduplicated: list[dict[str, Any]] = []
+    for row in sorted(eligible, key=_rank_key):
+        trace_ids = set(row["trace_ids"])
+        row_features = row.get("features") or {}
+        row_events = set(row_features.get("event_sequences") or [])
+        duplicate = next(
+            (
+                kept
+                for kept in deduplicated
+                if row["session_id"] == kept["session_id"]
+                and (
+                    (
+                        row_events
+                        and set((kept.get("features") or {}).get("event_sequences") or [])
+                        and len(
+                            row_events
+                            & set(
+                                (kept.get("features") or {}).get(
+                                    "event_sequences"
+                                )
+                                or []
+                            )
+                        )
+                        / min(
+                            len(row_events),
+                            len(
+                                set(
+                                    (kept.get("features") or {}).get(
+                                        "event_sequences"
+                                    )
+                                    or []
+                                )
+                            ),
+                        )
+                        >= float(
+                            methodology_config.get(
+                                "event_overlap_threshold", overlap_threshold
+                            )
+                        )
+                    )
+                    if row_features.get("candidate_source")
+                    in {"methodology", "methodology_consolidated"}
+                    else len(trace_ids & set(kept["trace_ids"]))
+                    / min(len(trace_ids), len(kept["trace_ids"]))
+                    >= overlap_threshold
+                )
+            ),
+            None,
+        )
+        if duplicate is not None:
+            decisions[row["signal_id"]].update(
+                {
+                    "disposition": "deduplicated",
+                    "reason": "overlapping-evidence",
+                    "selected_representative": duplicate["signal_id"],
+                }
+            )
+            continue
+        deduplicated.append(row)
+
+    limit = max(1, int(config.get("max_candidate_findings_per_run", 12)))
+    methodology_limit = max(
+        1, int(methodology_config.get("max_findings_per_run", limit))
+    )
+    per_trace_limit = max(
+        1, int(methodology_config.get("max_findings_per_trace", 2))
+    )
+    selected: list[dict[str, Any]] = []
+    methodology_count = 0
+    methodology_per_trace: Counter[str] = Counter()
+    for row in deduplicated:
+        if len(selected) >= limit:
+            break
+        source = (row.get("features") or {}).get("candidate_source")
+        if source in {"methodology", "methodology_consolidated"}:
+            trace_id = row["trace_ids"][0]
+            if (
+                methodology_count >= methodology_limit
+                or methodology_per_trace[trace_id] >= per_trace_limit
+            ):
+                continue
+            methodology_count += 1
+            methodology_per_trace[trace_id] += 1
+        selected.append(row)
+    selected_ids = {row["signal_id"] for row in selected}
+    for rank, row in enumerate(selected, start=1):
+        decisions[row["signal_id"]].update(
+            {"disposition": "selected", "reason": "ranked", "rank": rank}
+        )
+    for row in deduplicated:
+        if row["signal_id"] not in selected_ids:
+            decisions[row["signal_id"]].update(
+                {
+                    "disposition": "deferred",
+                    "reason": "source-or-run-selection-cap",
+                }
+            )
+    return selected, [
+        decisions[row["signal_id"]]
+        for row in sorted(findings, key=lambda item: item["signal_id"])
+    ]
 
 
 def _patterns(findings: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -427,26 +793,18 @@ def run(
             )
         )
     detector_config = config["signals"]
+    detector_config["_methodology"] = config.get("methodology") or {}
     findings = [
         finding
         for session_id, rows in sorted(sessions.items())
         for finding in _session_findings(session_id, rows, config)
     ]
+    findings.extend(_methodology_miner().run(workspace, output_root, config))
     findings.sort(key=lambda row: (row["detector"], row["signal_id"]))
     patterns = _patterns(findings)
-    selected = [
-        row
-        for row in findings
-        if SEVERITY_RANK[row["severity"]]
-        >= SEVERITY_RANK[detector_config["selection"]["min_severity"]]
-        and row["confidence"] >= detector_config["selection"]["min_confidence"]
-        and (
-            row["routing"] != "infrastructure"
-            or detector_config["selection"].get(
-                "include_infrastructure_failures", False
-            )
-        )
-    ]
+    selected, selection_decisions = _select_findings(
+        findings, detector_config
+    )
     (root / "findings.jsonl").write_text(
         "".join(json.dumps(row, sort_keys=True) + "\n" for row in findings)
     )
@@ -469,6 +827,12 @@ def run(
             )
             + "\n"
             for row in selected
+        )
+    )
+    (root / "selection-decisions.jsonl").write_text(
+        "".join(
+            json.dumps(row, sort_keys=True) + "\n"
+            for row in selection_decisions
         )
     )
     finding_root = output_root / "findings"
@@ -527,5 +891,17 @@ def run(
         "finding_count": len(findings),
         "selected_count": len(selected),
         "pattern_count": len(patterns),
+        "eligible_count": sum(
+            row["disposition"] in {"eligible", "selected"}
+            for row in selection_decisions
+        ),
+        "deduplicated_count": sum(
+            row["disposition"] == "deduplicated"
+            for row in selection_decisions
+        ),
+        "deferred_count": sum(
+            row["disposition"] == "deferred"
+            for row in selection_decisions
+        ),
         "detectors": dict(sorted(counts.items())),
     }

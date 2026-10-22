@@ -41,6 +41,15 @@ DROP_USER_PREFIXES = (
 BASE64_DATA = re.compile(
     r"data:[a-z0-9.+/-]+;base64,[A-Za-z0-9+/=\\s]+", re.IGNORECASE
 )
+PATH_TOKEN = re.compile(
+    r"(?<![A-Za-z0-9_])(?:\.{0,2}/)?[A-Za-z0-9_.-]+"
+    r"(?:/[A-Za-z0-9_.-]+)+|[A-Za-z0-9_.-]+\.[A-Za-z0-9]{1,8}"
+)
+VERIFY_TERMS = re.compile(
+    r"\b(test|tests|pytest|unittest|build|lint|check|verify|validate|"
+    r"typecheck|tsc|cargo test|go test|npm test)\b",
+    re.IGNORECASE,
+)
 
 
 def load_config(path: Path | dict[str, Any]) -> dict[str, Any]:
@@ -178,6 +187,7 @@ def new_turn(turn_id: str, timestamp: str, ordinal: int | None) -> dict[str, Any
         "timestamp": timestamp,
         "user": [],
         "assistant": [],
+        "assistant_observations": [],
         "assistant_final": [],
         "last_agent_message": "",
         "status": "unknown",
@@ -359,6 +369,13 @@ def parse_source(path: Path) -> tuple[dict[str, Any], Counter[str]]:
                         counters["dropped_message_user"] += 1
                 elif role == "assistant" and text.strip():
                     turn["assistant"].append(text)
+                    turn["assistant_observations"].append(
+                        {
+                            "text": text,
+                            "after_tool_count": len(turn["tools"]),
+                            "source_ordinal": ordinal,
+                        }
+                    )
                     if payload.get("phase") == "final_answer":
                         turn["assistant_final"].append(text)
                 else:
@@ -399,6 +416,8 @@ def source_registry() -> SourceAdapterRegistry:
 def evidence_required(
     turn: dict[str, Any], user: str, config: dict[str, Any]
 ) -> bool:
+    if (config.get("methodology") or {}).get("enabled", False):
+        return bool(turn["tools"])
     policy = config["tool_evidence"].get("policy", "on_signal")
     if policy == "always":
         return bool(turn["tools"])
@@ -449,6 +468,100 @@ def write_tool_evidence(
     return len(events), error_count
 
 
+def event_phase(tool: str, arguments: str) -> str:
+    """Classify observable actions without retaining model reasoning."""
+    folded = f"{tool} {arguments}".casefold()
+    if VERIFY_TERMS.search(folded):
+        return "verify"
+    if any(term in folded for term in (
+        "apply_patch", "edit", "write", "create_file", "delete", "move", "rename",
+    )):
+        return "modify"
+    if any(term in folded for term in (
+        "read", "search", "grep", "glob", "find", "list", "fetch", "inspect",
+        "snapshot",
+    )):
+        return "inspect"
+    return "execute"
+
+
+def task_event_rows(
+    turn: dict[str, Any], trace_id: str, config: dict[str, Any]
+) -> list[dict[str, Any]]:
+    limits = config["limits"]
+    methodology = config.get("methodology") or {}
+    preview_chars = int(methodology.get("event_preview_chars", 400))
+    events: list[dict[str, Any]] = []
+    for event in turn["tools"][: limits["max_tool_events_per_turn"]]:
+        arguments = bounded(event["arguments"], preview_chars)
+        result = clean_text(event["result"])
+        targets = sorted(set(PATH_TOKEN.findall(arguments)))[:8]
+        events.append(
+            {
+                "sequence": event["sequence"],
+                "tool": event["tool"],
+                "phase": event_phase(event["tool"], arguments),
+                "status": event["status"],
+                "arguments_preview": arguments,
+                "argument_sha256": hashlib.sha256(
+                    clean_text(event["arguments"]).encode()
+                ).hexdigest(),
+                "result_preview": bounded(result, preview_chars),
+                "result_sha256": hashlib.sha256(result.encode()).hexdigest(),
+                "targets": targets,
+            }
+        )
+    return events
+
+
+def phase_rows(events: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    phases: list[dict[str, Any]] = []
+    for event in events:
+        phase = event["phase"]
+        if phases and phases[-1]["phase"] == phase:
+            phases[-1]["end_sequence"] = event["sequence"]
+            phases[-1]["event_count"] += 1
+            phases[-1]["failed_count"] += event["status"] == "failed"
+            continue
+        phases.append(
+            {
+                "phase": phase,
+                "start_sequence": event["sequence"],
+                "end_sequence": event["sequence"],
+                "event_count": 1,
+                "failed_count": int(event["status"] == "failed"),
+            }
+        )
+    return phases
+
+
+def assistant_observation_rows(
+    turn: dict[str, Any], config: dict[str, Any]
+) -> list[dict[str, Any]]:
+    methodology = config.get("methodology") or {}
+    preview_chars = int(methodology.get("reflection_preview_chars", 600))
+    maximum = int(methodology.get("max_assistant_observations", 32))
+    rows: list[dict[str, Any]] = []
+    for observation in (turn.get("assistant_observations") or [])[:maximum]:
+        text = bounded(observation.get("text") or "", preview_chars)
+        if not text:
+            continue
+        rows.append(
+            {
+                "text": text,
+                "text_sha256": hashlib.sha256(
+                    clean_text(observation.get("text") or "").encode()
+                ).hexdigest(),
+                "after_tool_count": min(
+                    max(int(observation.get("after_tool_count") or 0), 0),
+                    len(turn["tools"]),
+                ),
+                "source_ordinal": observation.get("source_ordinal"),
+            }
+        )
+    return rows
+
+
 def relative_to_workspace(path: Path, workspace: Path) -> str:
     return path.relative_to(workspace).as_posix()
 
@@ -484,8 +597,10 @@ def normalize(
         shutil.rmtree(normalized)
     turns_root = normalized / "turns"
     evidence_root = normalized / "tool_evidence"
+    trajectories_root = normalized / "task_trajectories"
     turns_root.mkdir(parents=True)
     evidence_root.mkdir(parents=True)
+    trajectories_root.mkdir(parents=True)
     limits = config["limits"]
     counters: Counter[str] = Counter()
     candidates: dict[str, tuple[dict[str, Any], Path, dict[str, Any]]] = {}
@@ -602,6 +717,34 @@ def normalize(
                 "ordinals": turn["ordinals"],
             },
         }
+        trajectory_events = task_event_rows(turn, trace_id, config)
+        trajectory = {
+            "schema_version": 1,
+            "trace_id": trace_id,
+            "session_id": candidate["session_id"],
+            "task": {"text": candidate["user"]},
+            "outcome": document["outcome"],
+            "events": trajectory_events,
+            "phases": phase_rows(trajectory_events),
+            "assistant_observations": assistant_observation_rows(turn, config),
+            "final_response_sha256": hashlib.sha256(
+                candidate["assistant"].encode()
+            ).hexdigest(),
+            "provenance": {
+                "turn_path": relative_to_workspace(
+                    turns_root / filename, workspace
+                ),
+                "tool_evidence_path": evidence_relative,
+            },
+        }
+        trajectory_target = trajectories_root / filename
+        trajectory_target.write_text(
+            json.dumps(trajectory, indent=2, ensure_ascii=False, sort_keys=True)
+            + "\n"
+        )
+        document["task_trajectory_path"] = relative_to_workspace(
+            trajectory_target, workspace
+        )
         target = turns_root / filename
         target.write_text(
             json.dumps(document, indent=2, ensure_ascii=False, sort_keys=True)

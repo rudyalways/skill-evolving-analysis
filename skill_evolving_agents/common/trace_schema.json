@@ -39,6 +39,7 @@
         "error_count": "non-negative integer",
         "evidence_path": "relative sidecar path or null"
       },
+      "task_trajectory_path": "relative bounded task-trajectory JSON path",
       "provenance": {
         "raw_file": "relative raw source path",
         "raw_bytes": "non-negative integer",
@@ -64,6 +65,43 @@
       "result_bytes",
       "result_sha256"
     ]
+  },
+  "task_trajectory": {
+    "required": [
+      "schema_version",
+      "trace_id",
+      "session_id",
+      "task",
+      "outcome",
+      "events",
+      "phases",
+      "assistant_observations",
+      "provenance"
+    ],
+    "event_fields": {
+      "sequence": "positive integer",
+      "tool": "non-empty string",
+      "phase": "inspect, modify, execute, or verify",
+      "status": "completed, failed, or unknown",
+      "arguments_preview": "bounded observable arguments",
+      "argument_sha256": "content digest",
+      "result_preview": "bounded observable result",
+      "result_sha256": "content digest",
+      "targets": "bounded artifact paths"
+    },
+    "phase_fields": {
+      "phase": "inspect, modify, execute, or verify",
+      "start_sequence": "positive integer",
+      "end_sequence": "positive integer",
+      "event_count": "positive integer",
+      "failed_count": "non-negative integer"
+    },
+    "assistant_observation_fields": {
+      "text": "bounded user-visible assistant progress text",
+      "text_sha256": "content digest",
+      "after_tool_count": "number of tool events preceding the observation",
+      "source_ordinal": "source record ordinal or null"
+    }
   },
   "cluster_manifest_record": {
     "required": [

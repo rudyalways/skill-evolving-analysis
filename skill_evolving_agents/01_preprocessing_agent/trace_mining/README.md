@@ -13,6 +13,114 @@ default pipeline is deterministic Python. It does not call an LLM:
 6. Exact/MinHash-deduplicate text before TF-IDF or external-embedding
    clustering; expand pointer manifests back to every canonical turn.
 
+For single-prompt task benchmarks, normalization also writes
+`normalized/task_trajectories/*.json`. These records retain only observable,
+bounded action metadata: the task, tool/action sequence, result fingerprints,
+artifact targets, phases, and outcome. Hidden reasoning is never retained.
+Methodology mining uses this intra-task event stream because one benchmark task
+usually produces only one canonical user turn.
+
+## Single-task methodology signals
+
+The methodology miner runs nine complementary strategies:
+
+1. outcome-aware phase segmentation
+2. failure-to-recovery contrast
+3. retry and oscillation detection
+4. functionally validated reflection decision points
+5. deep knowledge-acquisition detection
+6. successful critical-path compression
+7. evidence-backed direction pivots
+8. non-generic completion contracts
+9. cross-task methodology consolidation by method fingerprint
+
+Every methodology finding carries a structured lesson and quality components
+for success dependency, surprise, reusability, evidence quality, obviousness,
+task specificity, redundancy, and final value. Selection has methodology
+quotas and event-overlap deduplication. Low-value candidates are rejected
+before skill generation; accepted single-task creates remain provisional until
+supported by distinct tasks or a policy-qualified high-value exception.
+Methodology evidence includes its bounded serialized excerpt as well as the
+SHA-256 digest; contract validation recomputes the digest so diagnosis cannot
+silently drift away from the mined events.
+
+Each strategy is independently controlled by
+`methodology.enabled_detectors`, allowing leave-one-detector-out ablations
+without changing code.
+
+### Functional reflection
+
+Observable assistant progress such as `wait`, `actually`, `reconsider`, or
+`let me verify` is a high-recall anchor, not proof of useful reasoning.
+Normalization retains a bounded list of user-visible assistant observations;
+it does not retain hidden chain-of-thought. A reflection finding is emitted
+only when:
+
+- at least one tool action precedes and follows the observation
+- the following action materially differs from the preceding action
+- the revised path contains a completed action
+- the bounded evidence preserves both the observation and action transition
+
+Preceding failures, new evidence acquisition, and a later successful verifier
+increase the functional score. Reflection wording with no behavioral change,
+or wording appearing only in the final answer, is ignored.
+
+### Necessary versus unnecessary retries
+
+A repeated tool name is not itself a failure signal. Search refinement,
+pagination, post-edit verification, and bounded retries after transient
+transport failures are normal agent behavior. The retry detector compares
+effective arguments, relevant state changes, result novelty, error class, and
+oscillation:
+
+```text
+unnecessary retry =
+  equivalent action
+  + equivalent pre-state
+  + equivalent result or error
+  + no new evidence
+  + no valid retry policy
+```
+
+The classifier records every compared pair with its reason and waste score.
+It exempts:
+
+- searches whose query, scope, source, filter, or page changes
+- repeated searches that return materially new results
+- reads, tests, builds, or verification after a relevant modification
+- one bounded retry after a timeout, connection failure, 429, or retryable 5xx
+- repeated actions that produce a materially different result
+
+It flags unchanged deterministic retries and A→B→A oscillation only when
+there is no intervening relevant mutation or result change. Configuration
+under `methodology` controls result similarity, search novelty, transient
+retry count, and the minimum waste score. These are bootstrap thresholds and
+must be calibrated against labeled traces before production use.
+
+Examples:
+
+| Sequence | Classification |
+| --- | --- |
+| same failing test, no edit, same error | unnecessary |
+| edit relevant file, rerun same test | necessary verification |
+| same search, same result set | unnecessary |
+| refined query or next page | necessary exploration |
+| timeout, bounded retry, success | necessary transient retry |
+| deterministic 4xx repeated unchanged | unnecessary |
+
+### Current methodology limitations
+
+- Reflection markers are language- and model-style-dependent. They only locate
+  candidate windows and never establish causality.
+- Result novelty is lexical over bounded previews; structured result-set and
+  environment-state comparison are not yet available.
+- Relevant state change is approximated from observable modification events
+  and targets, not a replayable environment snapshot.
+- Confidence and quality thresholds are bootstrap heuristics pending
+  calibration on labeled detector fixtures.
+- No detector may claim counterfactual success dependency until checkpoint
+  replay and controlled interventions are available.
+
 An agent is used only when `--review-clusters` requests semantic review. The
 `embedding` profile consumes precomputed vectors from
 `traces/inputs/embeddings.jsonl`; it does not download or start an embedding
@@ -82,6 +190,30 @@ may have left. A stronger inefficiency signal is long agent duration plus a
 rapid corrective response, a semantically repeated request, or an unresolved
 goal. Follow OpenTelemetry GenAI span conventions where source traces expose
 enough timestamps.
+
+## Phase quality metrics
+
+Every completed run writes `logs/phase-metrics.json`; the same report is
+embedded in `logs/run-timing.json`. The cross-run dashboard API returns both
+per-run reports and an aggregate report. It excludes database rows whose run
+workspace is absent, preventing test and fixture spans from contaminating
+workspace-level summaries.
+
+The report intentionally distinguishes three kinds of evidence:
+
+- **Measured:** artifact coverage, deterministic funnel counts, retry actions,
+  replay availability, and publication outcomes.
+- **Proxy:** match scores, structural verification, judge decisions, and
+  publication acceptance. These are useful diagnostics, not semantic accuracy.
+- **Unavailable:** finding precision/recall, diagnosis correctness, retrieval
+  precision/recall, goal correctness, and behavioral skill lift when no labels
+  or held-out replay exist. These fields remain `null` with an explicit reason.
+
+Do not rename candidate coverage as recall or a schema-valid diagnosis as an
+accurate diagnosis. To make the null metrics measurable, add sampled human
+relevance judgments for findings and recalled skills, plus held-out task replay
+that compares the baseline and evolved skill under repeated trials. Keep those
+labels outside detector thresholds so evaluation does not tune on its test set.
 
 ## Suggested execution tiers
 

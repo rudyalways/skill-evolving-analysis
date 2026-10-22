@@ -1,6 +1,8 @@
 # Evolver workflow
 
 How a container runs one session is `run-guide.md`.
+Public skill-system sources, adopted mechanisms, and remaining implementation
+work are tracked in `public-skill-adoption.md`.
 
 Seven agents share one optional Docker runtime image. Deterministic scripts
 normalize Codex, Claude Code, and Cursor telemetry, detect feedback signals,
@@ -96,7 +98,7 @@ The judge agent reads that file and sets `action`. `pass` ends the op. `fail` en
 | 04 | Delete | Delete the skill named by the goal. No Label A to Label B match | Goal | `workspace/target/to_be_improved_skills` |
 | 04 | Generate | Create a skill. No Label A to Label B match | Goal, `04_optimize_agent/skill-create` | New skill under `workspace/target/` |
 | 04 | Generate | Record an out-of-distribution gap on the same create branch | Goal, `04_optimize_agent/ood-data-updater`, diagnosis | `newly_detected_skill_capabilites_missing` stays on the diagnosis |
-| 05 | Verify | Checklist and goal alignment. Compare each raw skill with the improved skill. Check merge/split filesystem effects. Write status and feedback. Leave action null | `05_verifiter_agent/verifiter`, its check scripts including `verify_transforms.py`, one-op `workspace/run/evolve-goal.json`, `target/raw_skills`, `target/to_be_improved_skills` | overall and per-skill status, feedback, `ood`, and null action in active `workspace/run/verification.json` |
+| 05 | Verify | Execute the explicit five-step verification input. Compare each raw skill with the improved skill, evaluate every goal-derived requirement, reverse-check the changelog, and check merge/split filesystem effects. Write status and evidence per step. Leave action null | `05_verifiter_agent/verifiter`, `workspace/run/verification-input.json`, its check scripts including `verify_transforms.py`, one-op `workspace/run/evolve-goal.json`, `workspace/run/changelog.json`, `target/raw_skills`, `target/to_be_improved_skills` | input-bound step results, content-hashed changelog, overall and per-skill status, feedback, `ood`, and null action in active `workspace/run/verification.json` |
 | 06 | Judge | Read this op's verifiter output. Stop, or send this op back to Edit once | `06_judge_agent/judge`, `workspace/run/verification.json`, the goal op | `feedback.action`. `pass` and `fail` end the op. `back` re-enters Edit |
 
 `common` is the shared section and directory list. It is not a state. Select, update, merge, and split are one branch. Create and the out-of-distribution record are the other branch. Both sit in the optimize agent. Update, merge, split, and delete have no skill folder. Cluster is optional.

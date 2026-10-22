@@ -17,13 +17,30 @@ non-empty.
 
 Before proposing `create`, read `common/preprocessing-config.json` section
 `evolution_policy`. A finding must meet its confidence, evidence-record, and
-distinct-session thresholds. Single-session creation is allowed only by the
-configured general switch or the configured OOD exception. Otherwise choose
-an evidence-backed update or a no-change disposition.
+recurrence thresholds. When the general single-session switch is enabled, an
+evidence-rich finding may create an initial provisional skill without meeting
+the distinct-session threshold. The runner records that provisional lifecycle
+and its evidence provenance in metadata so later seeded runs can improve it.
+Single-session creation may also be allowed by the OOD or repeated cut-pattern
+exception.
+For the repeated-pattern exception, verify `finding.json` identifies
+`features.candidate_source` as `cut_pattern` and meets the configured
+confidence and distinct-window thresholds. Otherwise choose an evidence-backed
+update or a no-change disposition.
+
+For methodology findings, preserve only the generalized method in
+`features.lesson`: prerequisites, decision rule, failure guard, minimal
+successful sequence, and non-generic completion contract. Check
+`features.quality.value` and the configured methodology thresholds. A
+single-task methodology create must meet the explicit methodology exception
+and remains provisional; cross-task consolidated evidence may be stable.
+Prefer updating a recalled skill. Use `no_change` when the candidate restates
+the prompt, says only to inspect/edit/test, embeds one-off paths or constants,
+or adds no information beyond the recalled skill.
 
 ## Constraints
 
-Do not put easy experience that the model and harness already do well into a skill. Do not set `improve_harness` inside scope. Do not recall skills again. Do not ignore a skill named in `label-matching.json`. Do not copy every op, skill, section, or dir from the example. Do not add an `other` item unless the heading or directory is outside the closed list. Do not name the same skill in two actions.
+Do not put easy experience that the model and harness already do well into a skill. Do not turn an entire trajectory into a verbose checklist: retain only evidence-dependent, reusable methodology. Do not set `improve_harness` inside scope. Do not recall skills again. Do not ignore a skill named in `label-matching.json`. Do not copy every op, skill, section, or dir from the example. Do not add an `other` item unless the heading or directory is outside the closed list. Do not name the same skill in two actions.
 
 ## Workflow
 
@@ -56,7 +73,18 @@ one non-empty string, never an object copied from diagnosis feedback. For
 }
 ```
 
-Each item in `action.ops` is an object. The five op names are fixed: `create`, `update`, `delete`, `merge`, `split`. Use `other` only when the action is not one of those. Each op has its own parameters. `create` is a list of new skills, each with a description, its sections, its dirs, and at least 3 labels. A label is a path in `skill_capabilites/skill_capabilites.json` and a weight. The core sections are overview, when_to_use, do_not_use, workflow, constraints, verification, output_format, and limitations. Workflow includes methodology, instructions, procedure, and process. State_machine is optional and is used only when states, transitions, retries, or terminal conditions add value. `update` is a list of existing skills, each with a goal, a facet, `sections`, and `dirs`. Each section is `section` and `goal`. Each dir is `dir` and `goal`. Names and backward-compatible aliases come from `common/skill_format.json`. `other` and `ood` name a heading or directory that is not one of those closed names. An other section also has `heading`. An other dir also has `name`. `delete` is a list of skills, each with a reason. `merge` names the skills to combine and `into`, the resulting skill, what it covers, and its dirs. `split` names one skill and `into`, the parts, what each part keeps, and the dirs that part keeps. `other` has a description, the skills it touches, and its dirs. The example uses angle brackets only to mark fields that must be replaced. Write concrete values without angle brackets, and never copy placeholder text into any output field. Name the skills on every op from the label matching. Put the recalled skills on `improve_skills`. A cluster with an empty `skills` list can be a create. A cluster with recalled skills can be an update, merge, split, or delete.
+Each item in `action.ops` is an object. The five op names are fixed: `create`, `update`, `delete`, `merge`, `split`. Use `other` only when the action is not one of those. Each op has its own parameters. For `create`, `update`, and `delete`, the records are always under the key `skills`; never use a key named `create`, `update`, or `delete` as the record list. A create skill has a description, its sections, its dirs, and at least 3 labels. A label is a path in `skill_capabilites/skill_capabilites.json` and a weight. The core sections are overview, when_to_use, do_not_use, workflow, constraints, verification, output_format, and limitations. Workflow includes methodology, instructions, procedure, and process. State_machine is optional and is used only when states, transitions, retries, or terminal conditions add value. An update skill has a goal, a facet, `sections`, and `dirs`. Each section is `section` and `goal`. Each dir is `dir` and `goal`. Names and backward-compatible aliases come from `common/skill_format.json`. `other` and `ood` name a heading or directory that is not one of those closed names. An other section also has `heading`. An other dir also has `name`. A delete skill has a reason. `merge` names the skills to combine and `into`, the resulting skill, what it covers, and its dirs. `split` names one skill and `into`, the parts, what each part keeps, and the dirs that part keeps. `other` has a description, the skills it touches, and its dirs. The example uses angle brackets only to mark fields that must be replaced. Write concrete values without angle brackets, and never copy placeholder text into any output field. Name the skills on every op from the label matching. Put the recalled skills on `improve_skills`. A cluster with no recalled skills can be a create. A cluster with recalled skills can be an update, merge, split, or delete.
+
+For an objectively verifiable create, include the canonical `evals` directory
+with a goal to capture evidence-backed positive and near-miss behavioral cases.
+Do not request evals for purely subjective output unless the finding supplies
+observable acceptance criteria.
+
+When the new skill composes existing skills, list their exact names in optional
+`dependencies`; do not duplicate their instructions. When creation requires
+external knowledge, request a source ledger with URL, pinned revision,
+retrieval timestamp, and SHA-256 digest. Trace-derived skills use finding and
+session provenance supplied deterministically by the runner.
 
 ## Applies when
 

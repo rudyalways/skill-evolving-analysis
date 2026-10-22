@@ -24,6 +24,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parent
 CONFIG_PATH = ROOT / "common/preprocessing-config.json"
+AGENT_CONFIG_PATH = ROOT / "common/agent-config.json"
+KNOWN_BACKENDS = ("cursor", "codex", "claude", "docker-claude")
 CONTAINER_WORKSPACE = "/opt/skill-evolver/skill_evolving_agents/workspace"
 SESSION_ROOT = Path(
     os.environ.get("SKILL_EVOLVER_SESSION_ROOT", "")
@@ -34,18 +36,6 @@ DEFAULT_OP_WORKERS = 16
 RETRY_BUDGET = 1
 ACTIVE_BACKEND = "docker-claude"
 
-
-def env_enabled(name: str) -> bool:
-    return os.environ.get(name, "").strip().lower() in {"1", "true", "yes", "on"}
-
-
-BACKEND_FEATURE_FLAGS = {
-    "cursor": True,
-    "codex": env_enabled("SKILL_EVOLVER_ENABLE_CODEX"),
-    "claude": env_enabled("SKILL_EVOLVER_ENABLE_CLAUDE"),
-    "ollama": env_enabled("SKILL_EVOLVER_ENABLE_OLLAMA"),
-    "docker-claude": True,
-}
 
 _CONTRACTS_PATH = ROOT / "common/pipeline_contracts.py"
 _CONTRACTS_SPEC = importlib.util.spec_from_file_location(
@@ -66,6 +56,20 @@ _NAMES_SPEC = importlib.util.spec_from_file_location("skill_names", _NAMES_PATH)
 skill_names_mod = importlib.util.module_from_spec(_NAMES_SPEC)
 assert _NAMES_SPEC.loader is not None
 _NAMES_SPEC.loader.exec_module(skill_names_mod)
+_FORMAT_PATH = ROOT / "common/skill_format_checker.py"
+_FORMAT_SPEC = importlib.util.spec_from_file_location(
+    "skill_format_checker", _FORMAT_PATH
+)
+skill_format_checker = importlib.util.module_from_spec(_FORMAT_SPEC)
+assert _FORMAT_SPEC.loader is not None
+_FORMAT_SPEC.loader.exec_module(skill_format_checker)
+_EVALUATION_PATH = ROOT / "common/skill_evaluation.py"
+_EVALUATION_SPEC = importlib.util.spec_from_file_location(
+    "skill_evaluation", _EVALUATION_PATH
+)
+skill_evaluation = importlib.util.module_from_spec(_EVALUATION_SPEC)
+assert _EVALUATION_SPEC.loader is not None
+_EVALUATION_SPEC.loader.exec_module(skill_evaluation)
 _NORMALIZER_PATH = ROOT / "01_preprocessing_agent/scripts/normalize_codex.py"
 _NORMALIZER_SPEC = importlib.util.spec_from_file_location(
     "normalize_codex", _NORMALIZER_PATH
@@ -101,6 +105,7 @@ SKILLS = {
     ],
     "optimize": [
         "04_optimize_agent/skill-create/skill.md",
+        "04_optimize_agent/skill-edit/skill.md",
         "04_optimize_agent/ood-data-updater/skill.md",
     ],
     "verifiter": ["05_verifiter_agent/verifiter/skill.md"],
@@ -379,41 +384,89 @@ def authenticated(command: list[str]) -> bool:
     return result.returncode == 0
 
 
+def load_agent_config(path: Path | None = None) -> dict:
+    """Load agent backends. Exactly one entry has status active."""
+    source = AGENT_CONFIG_PATH if path is None else path
+    try:
+        data = json.loads(source.read_text())
+    except (OSError, json.JSONDecodeError) as error:
+        raise SystemExit(f"invalid agent config {source}: {error}") from error
+    if data.get("schema_version") != 1:
+        raise SystemExit(f"unsupported agent config: {source}")
+    agents = data.get("agents")
+    if not isinstance(agents, list) or not agents:
+        raise SystemExit("agent config agents must be a non-empty list")
+    seen: set[str] = set()
+    active = 0
+    for index, row in enumerate(agents):
+        where = f"agents[{index}]"
+        if not isinstance(row, dict):
+            raise SystemExit(f"{where} must be an object")
+        backend = row.get("backend")
+        status = row.get("status")
+        model = row.get("model")
+        if backend not in KNOWN_BACKENDS:
+            raise SystemExit(f"{where}.backend is unknown: {backend}")
+        if not isinstance(backend, str) or backend in seen:
+            raise SystemExit(f"{where}.backend duplicates {backend}")
+        seen.add(backend)
+        if status not in {"active", "inactive"}:
+            raise SystemExit(f"{where}.status must be active or inactive")
+        if not isinstance(model, str):
+            raise SystemExit(f"{where}.model must be a string")
+        if status == "active":
+            active += 1
+            if not model.strip():
+                raise SystemExit(f"active agent {backend} needs a model")
+    if active != 1:
+        raise SystemExit(
+            f"agent config must mark exactly one agent active, found {active}"
+        )
+    return data
+
+
+def active_agent(config: dict | None = None) -> dict:
+    data = load_agent_config() if config is None else config
+    return next(row for row in data["agents"] if row["status"] == "active")
+
+
+def configured_model(
+    backend: str, override: str | None = None, config: dict | None = None
+) -> str:
+    if isinstance(override, str) and override.strip():
+        return override.strip()
+    data = load_agent_config() if config is None else config
+    for row in data["agents"]:
+        if row["backend"] == backend:
+            model = str(row["model"]).strip()
+            if not model:
+                raise SystemExit(f"{backend} has no model in agent config")
+            return model
+    raise SystemExit(f"{backend} is not in agent config")
+
+
 def select_backend(requested: str, allow_local: bool) -> str:
+    del allow_local
+    config = load_agent_config()
+    if requested == "auto":
+        backend = str(active_agent(config)["backend"])
+    else:
+        known = {str(row["backend"]) for row in config["agents"]}
+        if requested not in known:
+            raise SystemExit(f"{requested} is not in agent config")
+        backend = requested
+    if backend == "docker-claude":
+        print(f"selected agent backend: {backend}")
+        return backend
     checks = {
         "cursor": ["agent", "models"],
         "codex": ["codex", "login", "status"],
         "claude": ["claude", "auth", "status"],
-        "ollama": ["ollama", "list"],
     }
-    if requested != "auto":
-        if not BACKEND_FEATURE_FLAGS[requested]:
-            flag = f"SKILL_EVOLVER_ENABLE_{requested.upper().replace('-', '_')}"
-            raise SystemExit(
-                f"{requested} is disabled. Set {flag}=1 to enable it."
-            )
-        if requested == "docker-claude":
-            return requested
-        if requested == "ollama" and not allow_local:
-            raise SystemExit("Ollama requires --allow-local-fallback")
-        if not authenticated(checks[requested]):
-            raise SystemExit(f"{requested} is not installed or authenticated")
-        return requested
-    for backend in ("cursor", "codex", "claude"):
-        if BACKEND_FEATURE_FLAGS[backend] and authenticated(checks[backend]):
-            print(f"selected agent backend: {backend}")
-            return backend
-    if (
-        allow_local
-        and BACKEND_FEATURE_FLAGS["ollama"]
-        and authenticated(checks["ollama"])
-    ):
-        print("selected local fallback: ollama")
-        return "ollama"
-    raise SystemExit(
-        "Cursor is not authenticated. Run `agent login`. Codex, Claude, and "
-        "Ollama are disabled by feature flags."
-    )
+    if not authenticated(checks[backend]):
+        raise SystemExit(f"{backend} is not installed or authenticated")
+    print(f"selected agent backend: {backend}")
+    return backend
 
 
 def make_session_view(stage: str, workspace: Path, suffix: str) -> Path:
@@ -481,8 +534,6 @@ def run_host_session(
     log_path: Path | None = None,
     details: dict[str, object] | None = None,
 ) -> None:
-    if not BACKEND_FEATURE_FLAGS[backend]:
-        raise SystemExit(f"{backend} is disabled by its feature flag")
     view = make_session_view(stage, workspace, suffix)
     allowed = [str(workspace)]
     if details is not None:
@@ -1151,6 +1202,11 @@ def validate_preprocessing(workspace: Path, clustered: bool) -> list[Path]:
         if trace_id in turn_ids:
             raise SystemExit(f"duplicate canonical trace ID: {trace_id}")
         turn_ids.add(trace_id)
+        trajectory_relative = data.get("task_trajectory_path")
+        if not isinstance(trajectory_relative, str) or not trajectory_relative:
+            raise SystemExit(f"canonical turn has no task trajectory: {path}")
+        trajectory_path = workspace / trajectory_relative
+        pipeline_contracts.validate_task_trajectory(trajectory_path, trace_id)
     if turn_ids != expected:
         raise SystemExit("canonical turns do not match normalization manifest")
     cut = workspace / "traces/derived/cut"
@@ -1173,6 +1229,9 @@ def validate_preprocessing(workspace: Path, clustered: bool) -> list[Path]:
     )
     selected_ids = pipeline_contracts.validate_selected_findings(
         signals / "selected-manifest.jsonl", signal_ids, expected
+    )
+    pipeline_contracts.validate_selection_decisions(
+        signals / "selection-decisions.jsonl", signal_ids, selected_ids
     )
     findings = workspace / "traces/derived/findings"
     require_path(findings, "selected finding directory")
@@ -1220,11 +1279,45 @@ def goal_ops(goal: Path) -> list[dict]:
     return ops
 
 
+QUALITY_TOKEN = re.compile(r"[A-Za-z0-9_]+")
+
+
+def _quality_words(value: object) -> set[str]:
+    if isinstance(value, str):
+        return {token.casefold() for token in QUALITY_TOKEN.findall(value)}
+    if isinstance(value, dict):
+        return set().union(
+            *(_quality_words(item) for item in value.values()),
+            set(),
+        )
+    if isinstance(value, list):
+        return set().union(*(_quality_words(item) for item in value), set())
+    return set()
+
+
+def _maximum_existing_skill_similarity(workspace: Path, op: dict) -> float:
+    proposed = _quality_words(op)
+    if len(proposed) < 8:
+        return 0.0
+    maximum = 0.0
+    roots = (
+        workspace / "target/raw_skills",
+        workspace / "target/to_be_improved_skills",
+    )
+    for root in roots:
+        if not root.is_dir():
+            continue
+        for path in root.glob("*/SKILL.md"):
+            existing = _quality_words(path.read_text(errors="replace"))
+            union = proposed | existing
+            if union:
+                maximum = max(maximum, len(proposed & existing) / len(union))
+    return maximum
+
+
 def enforce_creation_policy(
     workspace: Path, cluster: str, goal: dict, op: dict
 ) -> None:
-    if op.get("op") != "create":
-        return
     finding_path = (
         workspace / "traces" / "derived" / "findings" / cluster / "finding.json"
     )
@@ -1233,12 +1326,52 @@ def enforce_creation_policy(
     config = json.loads((ROOT / "common/preprocessing-config.json").read_text())
     policy = config.get("evolution_policy") or {}
     finding = json.loads(finding_path.read_text())
+    features = finding.get("features") or {}
+    source = features.get("candidate_source")
+    if source in {"methodology", "methodology_consolidated"}:
+        quality = features.get("quality") or {}
+        value = float(quality.get("value") or 0)
+        minimum_value = float(policy.get("min_methodology_value", 0.08))
+        if value < minimum_value:
+            raise pipeline_contracts.ContractError(
+                f"{cluster} proposes methodology below the utility gate: "
+                f"value={value}, minimum={minimum_value}"
+            )
+        methodology_policy = config.get("methodology") or {}
+        obviousness = float(quality.get("obviousness") or 0)
+        task_specificity = float(quality.get("task_specificity") or 0)
+        if obviousness > float(
+            methodology_policy.get("max_obviousness", 0.55)
+        ):
+            raise pipeline_contracts.ContractError(
+                f"{cluster} proposes obvious methodology: "
+                f"obviousness={obviousness}"
+            )
+        if task_specificity > float(
+            methodology_policy.get("max_task_specificity", 0.65)
+        ):
+            raise pipeline_contracts.ContractError(
+                f"{cluster} proposes task-specific methodology: "
+                f"task_specificity={task_specificity}"
+            )
+        similarity = _maximum_existing_skill_similarity(workspace, op)
+        maximum_similarity = float(
+            policy.get("novelty_max_similarity", 0.82)
+        )
+        if similarity > maximum_similarity:
+            raise pipeline_contracts.ContractError(
+                f"{cluster} proposes methodology already covered by a skill: "
+                f"similarity={similarity:.3f}, maximum={maximum_similarity}"
+            )
+    if op.get("op") != "create":
+        return
     evidence = finding.get("evidence") or []
+    distinct_session_count = int(features.get("distinct_sessions") or 0)
     sessions = {
-        value
-        for value in [finding.get("session_id")]
+        value for value in [finding.get("session_id")]
         if isinstance(value, str) and value
     }
+    distinct_session_count = max(distinct_session_count, len(sessions))
     diagnosis_path = workspace / "run" / cluster / "diagnosis.json"
     diagnosis = json.loads(diagnosis_path.read_text())
     is_ood = bool(diagnosis.get("newly_detected_skill_capabilites_missing"))
@@ -1249,22 +1382,51 @@ def enforce_creation_policy(
     enough_confidence = confidence >= float(
         policy.get("create_min_confidence", 0.75)
     )
-    enough_sessions = len(sessions) >= int(
+    enough_sessions = distinct_session_count >= int(
         policy.get("create_min_distinct_sessions", 2)
     )
     single_session_allowed = bool(policy.get("allow_single_session_create"))
+    pattern_confidence = float(
+        policy.get(
+            "single_session_pattern_min_confidence",
+            policy.get("create_min_confidence", 0.75),
+        )
+    )
+    pattern_windows = int(features.get("distinct_windows") or 0)
+    repeated_pattern_allowed = (
+        bool(policy.get("allow_single_session_repeated_pattern_create"))
+        and features.get("candidate_source") == "cut_pattern"
+        and confidence >= pattern_confidence
+        and pattern_windows
+        >= int(policy.get("single_session_pattern_min_distinct_windows", 3))
+    )
     ood_override = (
         is_ood and bool(policy.get("allow_single_session_ood_create", True))
     )
-    if enough_evidence and enough_confidence and (
-        enough_sessions or single_session_allowed or ood_override
+    methodology_allowed = (
+        source in {"methodology", "methodology_consolidated"}
+        and bool(policy.get("allow_single_session_methodology_create", False))
+        and confidence
+        >= float(policy.get("single_session_methodology_min_confidence", 0.82))
+        and float((features.get("quality") or {}).get("value") or 0)
+        >= float(policy.get("single_session_methodology_min_value", 0.18))
+    )
+    if (enough_evidence or methodology_allowed) and enough_confidence and (
+        enough_sessions
+        or single_session_allowed
+        or repeated_pattern_allowed
+        or ood_override
+        or methodology_allowed
     ):
         return
     raise pipeline_contracts.ContractError(
         f"{cluster} proposes create without sufficient recurrence: "
         f"confidence={confidence}, evidence_records={len(evidence)}, "
-        f"distinct_sessions={len(sessions)}, ood={is_ood}. Goal should use "
-        "no_change or update an existing skill."
+        f"distinct_sessions={distinct_session_count}, "
+        f"distinct_windows={pattern_windows}, "
+        f"repeated_pattern={repeated_pattern_allowed}, "
+        f"methodology={methodology_allowed}, ood={is_ood}. Goal "
+        "should use no_change or update an existing skill."
     )
 
 
@@ -1286,6 +1448,134 @@ def materialize_op_goal(
     if activate:
         shutil.copy2(path, workspace / "run/evolve-goal.json")
     return path
+
+
+def materialize_created_skill_metadata(
+    workspace: Path, op: dict, cluster: str | None = None
+) -> None:
+    """Merge create labels into the canonical metadata shape deterministically."""
+    if op.get("op") != "create":
+        return
+    path = workspace / "target/to_be_improved_skills_metadata/metadata.json"
+    try:
+        document = json.loads(path.read_text())
+    except (FileNotFoundError, json.JSONDecodeError):
+        document = {"skills_metadata": []}
+    rows = document.get("skills_metadata")
+    if not isinstance(rows, list):
+        rows = []
+    by_name = {
+        row.get("skill"): row
+        for row in rows
+        if isinstance(row, dict)
+        and isinstance(row.get("skill"), str)
+        and row["skill"]
+    }
+    lifecycle: dict[str, object] | None = None
+    if cluster:
+        finding_path = (
+            workspace
+            / "traces"
+            / "derived"
+            / "findings"
+            / cluster
+            / "finding.json"
+        )
+        if finding_path.is_file():
+            finding = json.loads(finding_path.read_text())
+            features = finding.get("features") or {}
+            session_ids = {
+                value
+                for value in [finding.get("session_id")]
+                if isinstance(value, str) and value
+            }
+            distinct_sessions = max(
+                len(session_ids),
+                int(features.get("distinct_sessions") or 0),
+            )
+            policy = preprocessing_config().get("evolution_policy") or {}
+            minimum_sessions = int(
+                policy.get("create_min_distinct_sessions", 2)
+            )
+            selection_path = workspace / "run/trace-selection.json"
+            selection = (
+                json.loads(selection_path.read_text())
+                if selection_path.is_file()
+                else {}
+            )
+            lifecycle = {
+                "status": (
+                    str(
+                        policy.get(
+                            "single_session_create_lifecycle",
+                            "provisional",
+                        )
+                    )
+                    if distinct_sessions < minimum_sessions
+                    else "stable"
+                ),
+                "origin_run_id": selection.get("run_id") or workspace.name,
+                "origin_finding_id": cluster,
+                "origin_session_ids": sorted(session_ids),
+                "distinct_sessions": distinct_sessions,
+                "confidence": float(finding.get("confidence") or 0),
+                "evidence_records": len(finding.get("evidence") or []),
+                "distinct_windows": int(
+                    features.get("distinct_windows") or 0
+                ),
+            }
+            if features.get("candidate_source") in {
+                "methodology",
+                "methodology_consolidated",
+            }:
+                lifecycle["method_fingerprint"] = features.get(
+                    "method_fingerprint"
+                )
+                lifecycle["methodology_value"] = float(
+                    (features.get("quality") or {}).get("value") or 0
+                )
+            if selection.get("seeded_from"):
+                lifecycle["seeded_from"] = selection["seeded_from"]
+    for skill in op.get("skills") or []:
+        if not isinstance(skill, dict):
+            continue
+        name = skill.get("skill")
+        if not isinstance(name, str) or not name:
+            continue
+        labels = [
+            dict(label)
+            for label in skill.get("labels") or []
+            if isinstance(label, dict)
+        ]
+        existing = by_name.get(name)
+        row = {
+            "skill": name,
+            "description": str(skill.get("description") or ""),
+            "skill_types": labels,
+            "unmatched_skill_types": [],
+            "changelog": copy.deepcopy(
+                existing.get("changelog") or []
+                if isinstance(existing, dict)
+                else []
+            ),
+        }
+        for field in ("dependencies", "sources"):
+            value = skill.get(field)
+            if value is None and isinstance(existing, dict):
+                value = existing.get(field)
+            if isinstance(value, list):
+                row[field] = copy.deepcopy(value)
+        if lifecycle is not None:
+            row["lifecycle"] = lifecycle
+        by_name[name] = row
+    atomic_write_json(
+        path,
+        {
+            "skills_metadata": [
+                by_name[name] for name in sorted(by_name)
+            ]
+        },
+    )
 
 
 def validate_optimized_op(workspace: Path, op: dict) -> list[Path]:
@@ -1330,6 +1620,24 @@ def validate_optimized_op(workspace: Path, op: dict) -> list[Path]:
     for skill in expected:
         if not (improved / skill).is_dir():
             raise SystemExit(f"optimized skill was not produced: {skill}")
+        if name == "create":
+            problems = skill_format_checker.validate_authored_skill(
+                improved / skill
+            )
+            if problems:
+                raise SystemExit(
+                    f"invalid created skill {skill}: " + "; ".join(problems)
+                )
+            evals = improved / skill / "evals/evals.json"
+            if evals.is_file():
+                eval_problems = skill_evaluation.validate_evals_file(
+                    evals, skill
+                )
+                if eval_problems:
+                    raise SystemExit(
+                        f"invalid evals for {skill}: "
+                        + "; ".join(eval_problems)
+                    )
     for skill in removed:
         if (improved / skill).exists():
             raise SystemExit(f"removed skill still exists after {name}: {skill}")
@@ -1350,12 +1658,115 @@ def judge_action(verification: Path) -> str:
     return action
 
 
+def validate_replay_artifacts(
+    workspace: Path, verification: dict
+) -> list[Path]:
+    replay = ((verification.get("feedback") or {}).get("replay") or {})
+    if replay.get("available") is not True:
+        return []
+    root = workspace / "run/replay"
+    manifest = root / "manifest.json"
+    benchmark = root / "benchmark.json"
+    held_out = root / "held-out-evals.json"
+    require_path(manifest, "behavioral replay manifest")
+    require_path(benchmark, "behavioral replay benchmark")
+    require_path(held_out, "behavioral replay held-out evals")
+    manifest_data = json.loads(manifest.read_text())
+    manifest_problems = skill_evaluation.validate_replay_manifest_data(
+        manifest_data
+    )
+    if manifest_problems:
+        raise SystemExit(
+            "invalid behavioral replay manifest: "
+            + "; ".join(manifest_problems)
+        )
+    skill_name = str(manifest_data.get("skill") or "")
+    development = (
+        workspace
+        / "target/to_be_improved_skills"
+        / skill_name
+        / "evals/evals.json"
+    )
+    require_path(development, "development evals")
+    development_data = json.loads(development.read_text())
+    held_out_data = json.loads(held_out.read_text())
+    held_out_problems = skill_evaluation.validate_held_out_evals_data(
+        held_out_data,
+        skill_name,
+        development_data,
+    )
+    held_out_digest = hashlib.sha256(held_out.read_bytes()).hexdigest()
+    if manifest_data.get("held_out_sha256") != held_out_digest:
+        held_out_problems.append(
+            "manifest held_out_sha256 does not match held-out-evals.json"
+        )
+    held_out_ids = [
+        row.get("id")
+        for row in held_out_data.get("evals") or []
+        if isinstance(row, dict)
+    ]
+    if manifest_data.get("held_out_eval_ids") != held_out_ids:
+        held_out_problems.append(
+            "manifest held_out_eval_ids do not match held-out-evals.json"
+        )
+    if held_out_problems:
+        raise SystemExit(
+            "invalid held-out behavioral evals: "
+            + "; ".join(held_out_problems)
+        )
+    benchmark_problems = skill_evaluation.validate_benchmark_data(
+        json.loads(benchmark.read_text())
+    )
+    if benchmark_problems:
+        raise SystemExit(
+            "invalid behavioral replay benchmark: "
+            + "; ".join(benchmark_problems)
+        )
+    if (
+        replay.get("kind") == "paired_skill_eval"
+        and replay.get("status") == "pass"
+        and not replay_meets_promotion_gate(replay)
+    ):
+        raise SystemExit(
+            "paired replay claimed pass without meeting anti-overfit "
+            "held-out and activation thresholds"
+        )
+    return [manifest, benchmark, held_out]
+
+
+def replay_meets_promotion_gate(replay: dict) -> bool:
+    if (
+        replay.get("available") is not True
+        or replay.get("status") != "pass"
+        or replay.get("kind") != "paired_skill_eval"
+    ):
+        return False
+    after = replay.get("after") or {}
+    policy = preprocessing_config().get("evolution_policy") or {}
+    return (
+        int(after.get("held_out_cases") or 0)
+        >= int(policy.get("promotion_min_held_out_cases", 2))
+        and float(after.get("held_out_pass_rate", 0))
+        >= float(policy.get("promotion_min_held_out_pass_rate", 0.8))
+        and float(after.get("activation_false_positive_rate", 1))
+        <= float(
+            policy.get(
+                "promotion_max_activation_false_positive_rate",
+                0.2,
+            )
+        )
+    )
+
+
 def archive_verification(workspace: Path, cluster: str, op_index: int) -> None:
     source = workspace / "run/verification.json"
     require_path(source, "verification")
     target = workspace / "run" / cluster / "ops" / str(op_index)
     target.mkdir(parents=True, exist_ok=True)
     shutil.copy2(source, target / "verification.json")
+    verification_input = workspace / "run/verification-input.json"
+    require_path(verification_input, "verification input")
+    shutil.copy2(verification_input, target / "verification-input.json")
 
 
 def fanout_diagnosis(
@@ -1410,8 +1821,10 @@ def fanout_diagnosis(
                     "Read finding.json and use its slice as the trace. "
                     "In legacy cluster mode read slice in cut.jsonl when it "
                     "exists. Do not open canonical turns, manifest turn paths, "
-                    "or tool sidecars. Write only this cluster's records into "
-                    "workspace/run/diagnosis.json.",
+                    "or tool sidecars. The cwd's workspace entry already points "
+                    "at the worker root; do not create a nested workspace "
+                    f"directory. Write only this cluster's records exactly to "
+                    f"{diagnosis}.",
                 ),
                 auth,
                 model,
@@ -1518,8 +1931,10 @@ def fanout_goals(
                     stage,
                     f"This isolated session is cluster <{cluster}> at {source}. "
                     f"Run select with `--cluster '{cluster}'{clusters_argument} --out "
-                    f"workspace/run/{cluster}/label-matching.json`, then write "
-                    f"workspace/run/{cluster}/evolve-goal.json. Pass that exact "
+                    f"{private_cluster / 'label-matching.json'}`, then write "
+                    f"{private_cluster / 'evolve-goal.json'}. The cwd's workspace "
+                    "entry already points at the worker root; do not create a "
+                    "nested workspace directory. Pass that exact evolve-goal "
                     "path to one_action.py.",
                 ),
                 auth,
@@ -2053,6 +2468,356 @@ def merge_metadata(
     return main_path
 
 
+def skill_content_sha256(directory: Path) -> str:
+    digest = hashlib.sha256()
+    for path in sorted(
+        (value for value in directory.rglob("*") if value.is_file()),
+        key=lambda value: value.relative_to(directory).as_posix(),
+    ):
+        relative = path.relative_to(directory).as_posix().encode()
+        digest.update(len(relative).to_bytes(4, "big"))
+        digest.update(relative)
+        content = path.read_bytes()
+        digest.update(len(content).to_bytes(8, "big"))
+        digest.update(content)
+    return digest.hexdigest()
+
+
+def _operation_change_claims(op: dict, skill: str) -> tuple[list[str], list[str]]:
+    sections: set[str] = set()
+    directories: set[str] = set()
+
+    def collect(values: object, field: str, target: set[str]) -> None:
+        if not isinstance(values, list):
+            return
+        for value in values:
+            if isinstance(value, str) and value.strip():
+                target.add(value.strip())
+            elif isinstance(value, dict):
+                name = value.get(field)
+                if isinstance(name, str) and name.strip():
+                    target.add(name.strip())
+
+    def walk(value: object) -> None:
+        if isinstance(value, dict):
+            if value.get("skill") == skill:
+                collect(value.get("sections"), "section", sections)
+                collect(value.get("dirs"), "dir", directories)
+            for child in value.values():
+                walk(child)
+        elif isinstance(value, list):
+            for child in value:
+                walk(child)
+
+    walk(op)
+    return sorted(sections), sorted(directories)
+
+
+def materialize_operation_changelog(
+    workspace: Path,
+    op: dict,
+    run_id: str,
+    finding_id: str,
+    op_index: int,
+) -> Path:
+    """Record claimed changes and content hashes before verification."""
+    raw = workspace / "target/raw_skills"
+    improved = workspace / "target/to_be_improved_skills"
+    operation = str(op.get("op") or "")
+    changes: list[dict[str, object]] = []
+    for skill in skill_names_mod.skill_names(op):
+        before_dir = raw / skill
+        after_dir = improved / skill
+        sections, directories = _operation_change_claims(op, skill)
+        changes.append(
+            {
+                "id": f"{run_id}:{finding_id}:{op_index}:{skill}",
+                "skill": skill,
+                "operation": operation,
+                "run_id": run_id,
+                "finding_id": finding_id,
+                "op_index": op_index,
+                "sections": sections,
+                "directories": directories,
+                "before_sha256": (
+                    skill_content_sha256(before_dir)
+                    if before_dir.is_dir()
+                    else None
+                ),
+                "after_sha256": (
+                    skill_content_sha256(after_dir)
+                    if after_dir.is_dir()
+                    else None
+                ),
+                "status": "pending",
+            }
+        )
+
+    path = workspace / "run/changelog.json"
+    atomic_write_json(path, {"schema_version": 1, "changes": changes})
+
+    metadata_path = (
+        workspace / "target/to_be_improved_skills_metadata/metadata.json"
+    )
+    document = json.loads(metadata_path.read_text())
+    by_skill = {
+        str(change["skill"]): change
+        for change in changes
+        if change.get("after_sha256") is not None
+    }
+    for row in document.get("skills_metadata") or []:
+        if not isinstance(row, dict) or row.get("skill") not in by_skill:
+            continue
+        history = row.get("changelog")
+        if not isinstance(history, list):
+            history = []
+        change = by_skill[str(row["skill"])]
+        history = [
+            item
+            for item in history
+            if not isinstance(item, dict) or item.get("id") != change["id"]
+        ]
+        history.append(copy.deepcopy(change))
+        row["changelog"] = history
+    atomic_write_json(metadata_path, document)
+    return path
+
+
+def _verification_requirements(op: dict, skill: str, avoid: object) -> dict:
+    sections: list[dict[str, str]] = []
+    directories: list[dict[str, str]] = []
+
+    def collect(values: object, name_key: str, output_key: str) -> None:
+        if not isinstance(values, list):
+            return
+        for value in values:
+            if not isinstance(value, dict):
+                continue
+            name = value.get(name_key)
+            goal = value.get("goal")
+            if isinstance(name, str) and name and isinstance(goal, str) and goal:
+                target = sections if output_key == "section" else directories
+                target.append({output_key: name, "expectation": goal})
+
+    def walk(value: object) -> None:
+        if isinstance(value, dict):
+            if value.get("skill") == skill:
+                collect(value.get("sections"), "section", "section")
+                collect(value.get("dirs"), "dir", "directory")
+            for child in value.values():
+                walk(child)
+        elif isinstance(value, list):
+            for child in value:
+                walk(child)
+
+    walk(op)
+    avoid_items = (
+        [avoid]
+        if isinstance(avoid, str) and avoid
+        else [item for item in avoid if isinstance(item, str) and item]
+        if isinstance(avoid, list)
+        else []
+    )
+    return {
+        "sections": sections,
+        "directories": directories,
+        "avoid": avoid_items,
+    }
+
+
+def materialize_verification_input(
+    workspace: Path,
+    goal: dict,
+    op: dict,
+    run_id: str,
+    finding_id: str,
+    op_index: int,
+) -> Path:
+    """Build explicit, operation-scoped expectations for every verifier step."""
+    finding_path = (
+        workspace
+        / "traces"
+        / "derived"
+        / "findings"
+        / finding_id
+        / "finding.json"
+    )
+    finding = (
+        json.loads(finding_path.read_text())
+        if finding_path.is_file()
+        else {}
+    )
+    features = finding.get("features") or {}
+    quality = features.get("quality") or {}
+    policy = preprocessing_config().get("evolution_policy") or {}
+    avoid = (goal.get("goal") or {}).get("avoid")
+    skills = [
+        {
+            "skill": skill,
+            "requirements": _verification_requirements(op, skill, avoid),
+        }
+        for skill in skill_names_mod.skill_names(op)
+    ]
+    document = {
+        "schema_version": 1,
+        "run_id": run_id,
+        "finding_id": finding_id,
+        "op_index": op_index,
+        "operation": str(op.get("op") or ""),
+        "scoring": {
+            "scale": {"min": 0.0, "max": 1.0},
+            "pass_threshold": 0.7,
+            "step_weights": {
+                "step1": 0.2,
+                "step2": 0.25,
+                "step3": 0.15,
+                "step4": 0.15,
+                "step5": 0.25,
+            },
+        },
+        "skills": skills,
+        "checks": {
+            "step1": {
+                "check": "changelog reverse check",
+                "inputs": {
+                    "changelog": "run/changelog.json",
+                    "baseline_root": "target/raw_skills",
+                    "candidate_root": "target/to_be_improved_skills",
+                },
+                "assertions": [
+                    "The before and after hashes match the baseline and candidate skill trees.",
+                    "Every changed section and directory is claimed by the active operation.",
+                ],
+            },
+            "step2": {
+                "check": "goal align",
+                "inputs": {"goal": "run/evolve-goal.json"},
+                "assertions": [
+                    "Each candidate satisfies every section and directory expectation for its skill.",
+                    "No unclaimed section or directory changed.",
+                ],
+            },
+            "step3": {
+                "check": "difficulty level check",
+                "evidence": {
+                    "finding": (
+                        f"traces/derived/findings/{finding_id}/finding.json"
+                        if finding_path.is_file()
+                        else None
+                    ),
+                    "candidate_source": features.get("candidate_source"),
+                    "confidence": finding.get("confidence"),
+                    "evidence_records": len(finding.get("evidence") or []),
+                    "distinct_windows": features.get("distinct_windows"),
+                    "lesson": features.get("lesson"),
+                },
+                "assertions": [
+                    "The skill captures an evidence-dependent reusable procedure rather than baseline model knowledge.",
+                    "The requested behavior is sufficiently non-trivial to justify skill instructions.",
+                ],
+            },
+            "step4": {
+                "check": "not too complicated, not overfitting",
+                "thresholds": {
+                    "min_methodology_value": policy.get(
+                        "min_methodology_value", 0.08
+                    ),
+                    "novelty_max_similarity": policy.get(
+                        "novelty_max_similarity", 0.82
+                    ),
+                    "methodology_value": quality.get("value"),
+                },
+                "assertions": [
+                    "The candidate is the smallest procedure that satisfies the requirements.",
+                    "The candidate does not copy incidental details from one trace or duplicate another skill.",
+                ],
+            },
+            "step5": {
+                "check": "checklist",
+                "from": "skills[].requirements",
+                "assertions": [
+                    "Evaluate every section, directory, and avoid item; do not infer a pass from names or keyword presence.",
+                    "Record concrete evidence for each failed expectation.",
+                ],
+            },
+        },
+    }
+    path = workspace / "run/verification-input.json"
+    atomic_write_json(path, document)
+    return path
+
+
+def transition_worker_lifecycle(
+    worker: Path,
+    cluster: str,
+    op_index: int,
+    affected: set[str],
+) -> None:
+    metadata_path = (
+        worker / "target/to_be_improved_skills_metadata/metadata.json"
+    )
+    if not metadata_path.is_file():
+        return
+    verification_path = (
+        worker
+        / "run"
+        / cluster
+        / "ops"
+        / str(op_index)
+        / "verification.json"
+    )
+    verification = (
+        json.loads(verification_path.read_text())
+        if verification_path.is_file()
+        else {}
+    )
+    replay = ((verification.get("feedback") or {}).get("replay") or {})
+    behavioral = replay_meets_promotion_gate(replay)
+    document = json.loads(metadata_path.read_text())
+    changed = False
+    now = datetime.now(UTC).isoformat()
+    skill_root = worker / "target/to_be_improved_skills"
+    policy = preprocessing_config().get("evolution_policy") or {}
+    minimum_sessions = int(policy.get("create_min_distinct_sessions", 2))
+    for row in document.get("skills_metadata") or []:
+        if not isinstance(row, dict) or row.get("skill") not in affected:
+            continue
+        for change in row.get("changelog") or []:
+            if (
+                isinstance(change, dict)
+                and change.get("finding_id") == cluster
+                and change.get("op_index") == op_index
+            ):
+                change["status"] = "accepted"
+                changed = True
+        lifecycle = row.get("lifecycle")
+        if not isinstance(lifecycle, dict):
+            continue
+        enough_sessions = (
+            int(lifecycle.get("distinct_sessions") or 0)
+            >= minimum_sessions
+        )
+        lifecycle["status"] = (
+            "promoted"
+            if enough_sessions and behavioral
+            else "evaluated"
+        )
+        lifecycle["evaluated_at"] = now
+        lifecycle["evaluation_kind"] = (
+            "behavioral_replay" if behavioral else "structural"
+        )
+        if lifecycle["status"] == "promoted":
+            lifecycle["promoted_at"] = now
+        else:
+            lifecycle.pop("promoted_at", None)
+        directory = skill_root / str(row["skill"])
+        if directory.is_dir():
+            lifecycle["content_sha256"] = skill_content_sha256(directory)
+        changed = True
+    if changed:
+        atomic_write_json(metadata_path, document)
+
+
 def merge_worker_statuses(worker: Path, workspace: Path, suffix: str) -> None:
     safe = safe_name(suffix)
     for stage in ("optimize", "verifiter", "judge"):
@@ -2066,6 +2831,27 @@ def publish_operation_result(
 ) -> None:
     cluster = str(result["cluster"])
     op_index = int(result["op_index"])
+    final_judge_action = str(result.get("judge_action", "pass"))
+    if final_judge_action != "pass":
+        _archive_operation_records(workspace, result)
+        write_publication(
+            workspace,
+            cluster,
+            op_index,
+            accepted=False,
+            reason=f"judge-{final_judge_action}",
+        )
+        for source in result.get("bundled_sources") or []:
+            if not isinstance(source, dict):
+                continue
+            write_publication(
+                workspace,
+                str(source.get("cluster")),
+                int(source.get("op_index")),
+                accepted=False,
+                reason=f"judge-{final_judge_action}",
+            )
+        return
     if infrastructure_evolution_blocked(workspace, cluster):
         drop_created_skills(
             workspace, created_skill_names(result["op"])
@@ -2107,11 +2893,18 @@ def _archive_operation_records(
     op_index = int(result["op_index"])
     for relative in (
         Path("run") / cluster / "ops" / str(op_index) / "verification.json",
+        Path("run") / cluster / "ops" / str(op_index) / "verification-input.json",
         Path("run") / cluster / "ops" / str(op_index) / "evolve-goal.json",
     ):
         source = worker / relative
         if source.is_file():
             replace_path(source, workspace / relative)
+    replay_source = worker / "run/replay"
+    if replay_source.is_dir():
+        replay_target = (
+            workspace / "run" / cluster / "ops" / str(op_index) / "replay"
+        )
+        replace_path(replay_source, replay_target)
     for suffix in result["suffixes"]:
         merge_worker_statuses(worker, workspace, str(suffix))
     merge_worker_log(worker, workspace)
@@ -2136,6 +2929,7 @@ def _merge_operation_result(
     cluster = str(result["cluster"])
     op_index = int(result["op_index"])
     affected = set(result["affected"])
+    transition_worker_lifecycle(worker, cluster, op_index, affected)
     improved_rel = Path("target/to_be_improved_skills")
     raw_rel = Path("target/raw_skills")
     for skill in sorted(affected):
@@ -2157,8 +2951,22 @@ def _merge_operation_result(
     pipeline_contracts.validate_metadata(metadata, current)
     archived_rel = Path("run") / cluster / "ops" / str(op_index) / "verification.json"
     replace_path(worker / archived_rel, workspace / archived_rel)
+    input_rel = (
+        Path("run")
+        / cluster
+        / "ops"
+        / str(op_index)
+        / "verification-input.json"
+    )
+    replace_path(worker / input_rel, workspace / input_rel)
     op_goal_rel = Path("run") / cluster / "ops" / str(op_index) / "evolve-goal.json"
     replace_path(worker / op_goal_rel, workspace / op_goal_rel)
+    replay_source = worker / "run/replay"
+    if replay_source.is_dir():
+        replay_target = (
+            workspace / "run" / cluster / "ops" / str(op_index) / "replay"
+        )
+        replace_path(replay_source, replay_target)
     for suffix in result["suffixes"]:
         merge_worker_statuses(worker, workspace, str(suffix))
     merge_worker_log(worker, workspace)
@@ -2452,12 +3260,33 @@ def fanout_operations(
                     suffix,
                     {**op_metadata, "attempt": attempt},
                 )
+                materialize_created_skill_metadata(private, op, cluster)
                 optimized_outputs = validate_optimized_op(private, op)
+                changelog = materialize_operation_changelog(
+                    private,
+                    op,
+                    run_id,
+                    cluster,
+                    op_index,
+                )
+                verification_input = materialize_verification_input(
+                    private,
+                    json.loads(private_op_goal.read_text()),
+                    op,
+                    run_id,
+                    cluster,
+                    op_index,
+                )
                 complete_session(
                     private,
                     current_stage,
                     suffix,
-                    [private_op_goal, *optimized_outputs],
+                    [
+                        private_op_goal,
+                        *optimized_outputs,
+                        changelog,
+                        verification_input,
+                    ],
                 )
                 current_stage = "verifiter"
                 write_status(workspace, current_stage, suffix, "started")
@@ -2477,12 +3306,20 @@ def fanout_operations(
                     {**op_metadata, "attempt": attempt},
                 )
                 verification = private / "run/verification.json"
-                pipeline_contracts.validate_verification(
+                verification_data = pipeline_contracts.validate_verification(
                     verification,
                     judged=False,
                     expected_skills=set(skill_names_mod.skill_names(op)),
                 )
-                complete_session(private, current_stage, suffix, [verification])
+                replay_outputs = validate_replay_artifacts(
+                    private, verification_data
+                )
+                complete_session(
+                    private,
+                    current_stage,
+                    suffix,
+                    [verification, *replay_outputs],
+                )
                 current_stage = "judge"
                 write_status(workspace, current_stage, suffix, "started")
                 run_session(
@@ -2518,6 +3355,7 @@ def fanout_operations(
                 **task,
                 "worker": private,
                 "suffixes": suffixes,
+                "judge_action": action,
             }
         except BaseException as error:
             write_status(
@@ -2652,6 +3490,8 @@ def execute(args: argparse.Namespace) -> None:
     )
     require_seed_inputs(workspace)
     ACTIVE_BACKEND = select_backend(args.agent, args.allow_local_fallback)
+    args.model = configured_model(ACTIVE_BACKEND, args.model)
+    print(f"selected model: {args.model}")
     auth = require_auth() if ACTIVE_BACKEND == "docker-claude" else {}
     if args.build:
         build_images()
@@ -2785,6 +3625,14 @@ def execute(args: argparse.Namespace) -> None:
 
     finally:
         pipeline_metrics.write_run_report(workspace)
+        try:
+            pipeline_metrics.write_phase_metrics_summary(workspace.parent)
+        except Exception as error:
+            print(
+                f"phase metrics summary failed: {error}",
+                file=sys.stderr,
+                flush=True,
+            )
 
 
 def parse_args() -> argparse.Namespace:
@@ -2849,17 +3697,20 @@ def parse_args() -> argparse.Namespace:
             "(default: evolution_policy.min_super_score, or 0)"
         ),
     )
-    parser.add_argument("--model", help="model identifier for the selected backend")
+    parser.add_argument(
+        "--model",
+        help="override the model of the selected agent config entry",
+    )
     parser.add_argument(
         "--agent",
-        choices=("auto", "cursor", "codex", "claude", "ollama", "docker-claude"),
+        choices=("auto", "cursor", "codex", "claude", "docker-claude"),
         default="auto",
-        help="agent backend; auto prefers Cursor, Codex, then Claude",
+        help="agent backend; auto uses the single active entry in agent-config.json",
     )
     parser.add_argument(
         "--allow-local-fallback",
         action="store_true",
-        help="allow Ollama only when no hosted CLI is authenticated",
+        help=argparse.SUPPRESS,
     )
     parser.add_argument(
         "--agent-installed",

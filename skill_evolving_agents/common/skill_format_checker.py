@@ -39,6 +39,19 @@ DEFAULT_IMPROVED = TARGET / "to_be_improved_skills"
 
 FRONT = re.compile(r"^---\s*\n.*?\n---\s*\n?", re.S)
 H2 = re.compile(r"^##[ \t]+(.+?)\s*#*\s*$", re.M)
+SKILL_NAME = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+MAX_SKILL_NAME_LENGTH = 64
+MAX_DESCRIPTION_LENGTH = 1024
+MAX_RESOURCE_BYTES = 10 * 1024 * 1024
+ALLOWED_FRONTMATTER = {
+    "name",
+    "description",
+    "license",
+    "compatibility",
+    "allowed-tools",
+    "metadata",
+}
+PLACEHOLDER = re.compile(r"\[TODO|TODO:|EXAMPLE_(?:SCRIPT|REFERENCE|ASSET)")
 
 
 def bare(value: str) -> str:
@@ -165,6 +178,92 @@ def skill_file(directory: Path) -> Path | None:
         if path.is_file():
             return path
     return None
+
+
+def validate_authored_skill(directory: Path) -> list[str]:
+    """Validate deterministic authoring rules for a newly created skill."""
+    problems: list[str] = []
+    for path in directory.rglob("*"):
+        relative = path.relative_to(directory).as_posix()
+        if path.is_symlink():
+            problems.append(f"symbolic links are not allowed: {relative}")
+            continue
+        if path.is_file():
+            try:
+                size = path.stat().st_size
+            except OSError as error:
+                problems.append(f"cannot inspect resource {relative}: {error}")
+                continue
+            if size > MAX_RESOURCE_BYTES:
+                problems.append(
+                    f"resource exceeds {MAX_RESOURCE_BYTES} bytes: {relative}"
+                )
+    document = skill_file(directory)
+    if document is None:
+        return ["SKILL.md is missing"]
+    text = document.read_text()
+    if len(text.splitlines()) > 500:
+        problems.append("SKILL.md exceeds 500 lines")
+    match = FRONT.match(text)
+    if match is None:
+        problems.append("SKILL.md frontmatter is missing")
+        return problems
+    fields: dict[str, str] = {}
+    for line in match.group(0).splitlines()[1:-1]:
+        if line.startswith((" ", "\t")):
+            continue
+        key, separator, value = line.partition(":")
+        if separator:
+            fields[key.strip()] = value.strip().strip("\"'")
+    unexpected = sorted(set(fields) - ALLOWED_FRONTMATTER)
+    if unexpected:
+        problems.append(
+            "unexpected frontmatter fields: " + ", ".join(unexpected)
+        )
+    name = fields.get("name", "")
+    if not SKILL_NAME.fullmatch(name):
+        problems.append("frontmatter name must be lowercase hyphen-case")
+    elif name != directory.name:
+        problems.append("frontmatter name must match the skill directory")
+    if len(name) > MAX_SKILL_NAME_LENGTH:
+        problems.append(
+            f"frontmatter name exceeds {MAX_SKILL_NAME_LENGTH} characters"
+        )
+    description = fields.get("description", "")
+    if not description:
+        problems.append("frontmatter description is missing")
+    elif len(description) > MAX_DESCRIPTION_LENGTH:
+        problems.append(
+            f"frontmatter description exceeds {MAX_DESCRIPTION_LENGTH} characters"
+        )
+    elif "<" in description or ">" in description:
+        problems.append("frontmatter description contains angle brackets")
+    if PLACEHOLDER.search(text):
+        problems.append("SKILL.md contains an unfinished placeholder")
+    references = directory / "references"
+    if references.is_dir():
+        nested = [
+            path.relative_to(references).as_posix()
+            for path in references.rglob("*")
+            if path.is_file() and len(path.relative_to(references).parts) > 1
+        ]
+        if nested:
+            problems.append(
+                "references must be one level deep: " + ", ".join(sorted(nested))
+            )
+    scripts = directory / "scripts"
+    if scripts.is_dir():
+        for path in scripts.rglob("*.py"):
+            try:
+                compile(path.read_text(), str(path), "exec")
+            except (OSError, SyntaxError) as error:
+                problems.append(
+                    f"script does not compile: {path.relative_to(directory)}: {error}"
+                )
+    evals = directory / "evals"
+    if evals.is_dir() and not (evals / "evals.json").is_file():
+        problems.append("evals/evals.json is missing")
+    return problems
 
 
 def updates(goal: dict) -> list[dict[str, object]]:

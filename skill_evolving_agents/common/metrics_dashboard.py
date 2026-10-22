@@ -195,6 +195,19 @@ def run_progress(
 
 def metrics_payload(database: Path) -> dict[str, Any]:
     rows = load_rows(database)
+    runs_root = database.parent / "runs"
+    excluded_run_ids = sorted(
+        {
+            str(row["run_id"])
+            for row in rows
+            if not (runs_root / str(row["run_id"])).is_dir()
+        }
+    )
+    rows = [
+        row
+        for row in rows
+        if (runs_root / str(row["run_id"])).is_dir()
+    ]
     runs: dict[str, list[dict[str, Any]]] = defaultdict(list)
     phases: dict[tuple[str, str], list[float]] = defaultdict(list)
     for row in rows:
@@ -229,6 +242,9 @@ def metrics_payload(database: Path) -> dict[str, Any]:
                 "spans": timing["spans"],
                 "active": active,
                 "progress": run_progress(database, run_id, spans),
+                "phase_metrics": _METRICS._read_json(
+                    runs_root / run_id / "logs/phase-metrics.json"
+                ),
             }
         )
     phase_summaries = [
@@ -250,11 +266,19 @@ def metrics_payload(database: Path) -> dict[str, Any]:
         "span_count": len(rows),
         "runs": run_summaries,
         "phases": phase_summaries,
+        "phase_metrics": _METRICS.aggregate_phase_metrics(runs_root),
+        "excluded_database_run_ids": excluded_run_ids,
     }
 
 
 def render(database: Path, output: Path) -> Path:
     rows = load_rows(database)
+    runs_root = database.parent / "runs"
+    rows = [
+        row
+        for row in rows
+        if (runs_root / str(row["run_id"])).is_dir()
+    ]
     runs: dict[str, list[dict[str, Any]]] = defaultdict(list)
     phases: dict[tuple[str, str], list[float]] = defaultdict(list)
     for row in rows:

@@ -22,6 +22,7 @@ def _turn(turn_id: str, timestamp: str, ordinal: int | None) -> dict[str, Any]:
         "timestamp": timestamp,
         "user": [],
         "assistant": [],
+        "assistant_observations": [],
         "assistant_final": [],
         "last_agent_message": "",
         "status": "unknown",
@@ -170,6 +171,13 @@ def parse_claude(path: Path) -> tuple[dict[str, Any], Counter[str]]:
                 text = _text(content)
                 if text.strip():
                     current["assistant"].append(text)
+                    current["assistant_observations"].append(
+                        {
+                            "text": text,
+                            "after_tool_count": len(current["tools"]),
+                            "source_ordinal": line_number,
+                        }
+                    )
                     current["assistant_final"].append(text)
                     _record_timing(current, timestamp, first_output=True)
                 if isinstance(content, list):
@@ -261,6 +269,13 @@ def parse_cursor(path: Path) -> tuple[dict[str, Any], Counter[str]]:
                 text = _text(content)
                 if text.strip():
                     current["assistant"].append(text)
+                    current["assistant_observations"].append(
+                        {
+                            "text": text,
+                            "after_tool_count": len(current["tools"]),
+                            "source_ordinal": line_number,
+                        }
+                    )
                     current["assistant_final"].append(text)
                     _record_timing(current, timestamp, first_output=True)
                 current["status"] = "completed"

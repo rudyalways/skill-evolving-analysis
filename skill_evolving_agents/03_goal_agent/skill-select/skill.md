@@ -57,6 +57,10 @@ One scope is one pointer manifest. By default it is under
 details in `finding.json`. Its labels are the `type` paths and confidence
 values in `workspace/run/diagnosis.json` whose `cluster` equals that finding
 ID. Each existing skill's labels are `skill_types` in `metadata.json`.
+For methodology findings, diagnosis must label the reusable method capability,
+not the task's surface topic. Read `features.lesson.kind` and
+`method_fingerprint` only to disambiguate equally scored taxonomy matches; do
+not match one-off paths, commands, or constants from trajectory excerpts.
 `common/recall-config.json` selects the scoring strategy.
 `weighted_path_similarity` scores confidence × weight × path similarity,
 supports controlled parent/specialization matches, penalizes fallbacks,
@@ -68,6 +72,8 @@ baseline.
 Do not choose an operation or write `evolve-goal.json`. Keep recall scoped to
 the assigned finding. Leave traces, skills, metadata, and the harness
 unchanged. Select only taxonomy-backed skill types and evidence-backed matches.
+Prefer an existing skill when its capability path covers the methodology;
+creation is reserved for a genuinely unmatched method capability.
 
 ## Workflow
 

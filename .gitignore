@@ -13,3 +13,4 @@ skill_evolving_agents/workspace/runs/*
 !skill_evolving_agents/workspace/runs/.gitkeep
 skill_evolving_agents/workspace/metrics.sqlite
 skill_evolving_agents/workspace/metrics-dashboard.html
+skill_evolving_agents/workspace/phase-metrics-summary.json

@@ -32,7 +32,9 @@ workspace/traces/derived/
 │   └── dedup-manifest.jsonl
 ├── signals/
 │   ├── findings.jsonl
-│   └── patterns.jsonl
+│   ├── patterns.jsonl
+│   ├── selected-manifest.jsonl
+│   └── selection-decisions.jsonl
 ├── findings/
 │   └── <signal-id>/
 │       ├── finding.json

@@ -85,6 +85,11 @@ tool-evidence hydration and TF-IDF threshold clustering; the `embedding`
 profile consumes vectors from `traces/inputs/embeddings.jsonl`.
 Canonical turns are pretty JSON under `traces/derived/normalized/turns`.
 `signals/findings.jsonl` contains all deterministic findings and
+`signals/selection-decisions.jsonl` records why every finding was selected,
+rejected, deduplicated, or deferred. Repeated semantically related long-turn
+windows can form a bounded `recurring-long-workflow` candidate; a long turn by
+itself is never promoted. Selection ranks qualified findings, deduplicates
+overlapping evidence, and applies the configured per-run cap.
 `findings/<signal-id>` contains pointer-only selected scopes. Exact and MinHash
 near-duplicate aliases are in `features/dedup-manifest.jsonl`; semantic
 clusters contain representative and outlier pointers. Size and token estimates
@@ -129,23 +134,13 @@ agent status
 agent models
 ```
 
-Cursor is currently the only enabled host backend. Codex, Claude Code, and
-Ollama remain implemented but are disabled by default:
+The agent and its model come from `common/agent-config.json`. Each entry has
+`backend`, `model`, and `status`. Exactly one status is `active`. The runner
+uses that entry. Change which one runs by marking it `active` and the others
+`inactive`.
 
-```bash
-export SKILL_EVOLVER_ENABLE_CODEX=1
-export SKILL_EVOLVER_ENABLE_CLAUDE=1
-export SKILL_EVOLVER_ENABLE_OLLAMA=1
-```
-
-Use `--agent cursor|codex|claude|ollama` to require one enabled backend instead
-of automatic selection. Use `--model <model>` with the identifier accepted by
-that backend. For Cursor, choose a Claude identifier shown by `agent models`.
-The Claude backend defaults to the explicit first-party
-`claude-sonnet-5-5` identifier rather than a locally configured model alias.
-
-Ollama is never installed or pulled automatically. After enabling it, pass
-`--allow-local-fallback`; its default model is `qwen2.5-coder:1.5b`.
+`--agent` overrides the active backend for one invocation and still uses that
+backend's configured model. `--model` overrides only the model.
 
 `--agent docker-claude` retains the container-installed Claude Code mode. It
 requires `ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN`, or

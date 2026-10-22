@@ -154,7 +154,11 @@ def _select(rows: list[dict[str, object]], selector: str) -> dict[str, object]:
 
 
 def create_run(
-    selector: str, pool: Path = POOL, runs: Path = RUNS
+    selector: str,
+    pool: Path = POOL,
+    runs: Path = RUNS,
+    seed_run: str | None = None,
+    replace: bool = False,
 ) -> Path:
     """Copy one candidate into a new run named from its metadata."""
     rows = index_traces(pool)
@@ -171,7 +175,24 @@ def create_run(
     import run_pipeline
 
     workspace = runs / run_id
+    if replace and workspace.is_dir():
+        shutil.rmtree(workspace)
     run_pipeline.initialize_workspace(workspace)
+    if seed_run:
+        seed = runs / seed_run
+        if not seed.is_dir():
+            raise SystemExit(f"seed run does not exist: {seed}")
+        for relative in (
+            "target/to_be_improved_skills",
+            "target/to_be_improved_skills_metadata",
+        ):
+            source_dir = seed / relative
+            if source_dir.is_dir():
+                shutil.copytree(
+                    source_dir,
+                    workspace / relative,
+                    dirs_exist_ok=True,
+                )
     destination = workspace / "traces/raw" / source / str(row["file"])
     shutil.copy2(pool / str(row["file"]), destination)
     selection = {
@@ -183,6 +204,8 @@ def create_run(
         "candidate": f"workspace/candidate_traces/{row['file']}",
         "copied_to": destination.relative_to(workspace).as_posix(),
     }
+    if seed_run:
+        selection["seeded_from"] = seed_run
     (workspace / "run/trace-selection.json").write_text(
         json.dumps(selection, indent=2, ensure_ascii=False) + "\n"
     )
@@ -202,9 +225,22 @@ def main() -> None:
         "selector",
         help="candidate filename, session id, or generated run id",
     )
+    create.add_argument(
+        "--seed-run",
+        help="copy the existing skill inventory from this run",
+    )
+    create.add_argument(
+        "--replace",
+        action="store_true",
+        help="replace an existing generated run workspace",
+    )
     args = parser.parse_args()
     if args.command == "new":
-        create_run(args.selector)
+        create_run(
+            args.selector,
+            seed_run=args.seed_run,
+            replace=args.replace,
+        )
         return
     rows = index_traces()
     if not rows:

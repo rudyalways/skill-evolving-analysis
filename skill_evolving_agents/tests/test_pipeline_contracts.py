@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import json
 import sqlite3
@@ -36,9 +37,16 @@ signals = load(
     "trace_signals_test",
     AGENTS / "01_preprocessing_agent/trace_mining/signals.py",
 )
+methodology = load(
+    "trace_methodology_test",
+    AGENTS / "01_preprocessing_agent/trace_mining/methodology.py",
+)
 type_checker = load("skill_type_checker_test", AGENTS / "common/skill_type_checker.py")
 format_checker = load(
     "skill_format_checker_test", AGENTS / "common/skill_format_checker.py"
+)
+skill_evaluation = load(
+    "skill_evaluation_test", AGENTS / "common/skill_evaluation.py"
 )
 VERIFIER = AGENTS / "05_verifiter_agent/verifiter"
 sys.path.insert(0, str(VERIFIER))
@@ -46,8 +54,17 @@ transforms = load("verify_transforms_test", VERIFIER / "verify_transforms.py")
 verification_builder = load(
     "verification_from_goal_test", VERIFIER / "verification_from_goal.py"
 )
+quality_verifier = load("verify_quality_test", VERIFIER / "verify_quality.py")
+skillsbench_eval = load(
+    "skillsbench_methodology_eval_test",
+    AGENTS / "evaluation/skillsbench_methodology_eval.py",
+)
 RECALL = AGENTS / "03_goal_agent/skill-select"
 recall_module = load("recall_skills_test", RECALL / "recall_skills.py")
+one_action = load(
+    "one_action_test",
+    AGENTS / "03_goal_agent/goal-generator/one_action.py",
+)
 
 
 def write_json(path: Path, value: dict) -> None:
@@ -206,11 +223,32 @@ def valid_goal(op: dict | None = None) -> dict:
 def valid_verification(skill: str, action=None) -> dict:
     return {
         "diagnosis": None,
-        "verification_steps": [{"skill": skill, "steps": []}],
+        "verification_input": {
+            "path": "verification-input.json",
+            "sha256": "c" * 64,
+        },
+        "verification_steps": [
+            {
+                "skill": skill,
+                "steps": [
+                    {
+                        "id": f"step{index}",
+                        "check": f"check {index}",
+                        "input_ref": f"#/checks/step{index}",
+                        "status": "pass",
+                        "score": 1.0,
+                        "reasoning": "All assertions were satisfied.",
+                        "evidence": ["verified"],
+                    }
+                    for index in range(1, 6)
+                ],
+            }
+        ],
         "nod": None,
         "result": None,
         "feedback": {
             "overall_status": "pass",
+            "overall_score": 1.0,
             "overall_feedback": "all checks pass",
             "retry_budget": 1,
             "replay": {
@@ -225,6 +263,7 @@ def valid_verification(skill: str, action=None) -> dict:
                 {
                     "skill": skill,
                     "status": "pass",
+                    "score": 1.0,
                     "feedback": "pass",
                     "retries_used": 0,
                     "action": None,
@@ -232,7 +271,21 @@ def valid_verification(skill: str, action=None) -> dict:
             ],
             "ood": [],
         },
-        "changelog": None,
+        "changelog": [
+            {
+                "id": f"run:finding:1:{skill}",
+                "skill": skill,
+                "operation": "update",
+                "run_id": "run",
+                "finding_id": "finding",
+                "op_index": 1,
+                "sections": ["workflow"],
+                "directories": [],
+                "before_sha256": "a" * 64,
+                "after_sha256": "b" * 64,
+                "status": "pending",
+            }
+        ],
     }
 
 
@@ -254,6 +307,110 @@ class ContractTests(unittest.TestCase):
             self.assertFalse((target / "bad-link").exists())
             self.assertFalse(
                 (target / "target/to_be_improved_skills_metadata/metadata.json").exists()
+            )
+
+    def test_phase_metrics_separate_measured_proxies_from_unknown_quality(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory) / "workspace/runs/phase-run"
+            (workspace / "traces/derived/signals").mkdir(parents=True)
+            (workspace / "traces/derived/normalized").mkdir(parents=True)
+            (workspace / "run/sig-a/ops/op-a").mkdir(parents=True)
+            (workspace / "traces/derived/normalized/manifest.json").write_text(
+                json.dumps({"turn_count": 4})
+            )
+            (workspace / "traces/derived/signals/findings.jsonl").write_text(
+                json.dumps({"finding_id": "sig-a"}) + "\n"
+            )
+            (
+                workspace
+                / "traces/derived/signals/selection-decisions.jsonl"
+            ).write_text(
+                json.dumps(
+                    {"finding_id": "sig-a", "disposition": "selected"}
+                )
+                + "\n"
+            )
+            (workspace / "run/sig-a/diagnosis.json").write_text(
+                json.dumps({"skill_capabilities_missing": ["recovery method"]})
+            )
+            (workspace / "run/sig-a/label-matching.json").write_text(
+                json.dumps(
+                    {"clusters": [{"skills": [{"name": "skill", "score": 0.8}]}]}
+                )
+            )
+            (workspace / "run/pipeline-summary.json").write_text(
+                json.dumps(
+                    {
+                        "scopes": [
+                            {"scope_id": "sig-a", "disposition": "change"}
+                        ],
+                        "operations": [{"operation_id": "op-a", "accepted": True}],
+                    }
+                )
+            )
+            (workspace / "run/goal-reduction.json").write_text(
+                json.dumps(
+                    {
+                        "min_super_score": 0,
+                        "decisions": [{"decision": "selected"}],
+                    }
+                )
+            )
+            (workspace / "run/sig-a/ops/op-a/verification.json").write_text(
+                json.dumps(
+                    {
+                        "feedback": {
+                            "overall_status": "pass",
+                            "replay": {"available": False, "status": "not_run"},
+                        }
+                    }
+                )
+            )
+            spans = [
+                {
+                    "phase": "label-traces-cluster",
+                    "metadata_json": json.dumps({"slice_truncated": True}),
+                },
+                {
+                    "phase": "optimize",
+                    "metadata_json": json.dumps({"attempt": 1}),
+                },
+                {
+                    "phase": "judge-decision",
+                    "metadata_json": json.dumps(
+                        {"attempt": 1, "judge_action": "pass"}
+                    ),
+                },
+            ]
+            metrics = runner.pipeline_metrics.collect_phase_metrics(
+                workspace, spans
+            )
+            self.assertEqual(metrics["phases"]["mining"]["turns"], 4)
+            self.assertEqual(metrics["phases"]["diagnosis"]["coverage"], 1.0)
+            self.assertEqual(metrics["phases"]["diagnosis"]["truncated_slices"], 1)
+            self.assertEqual(
+                metrics["phases"]["recall"]["candidate_coverage"], 1.0
+            )
+            self.assertIsNone(metrics["phases"]["recall"]["precision"])
+            self.assertIsNone(metrics["phases"]["diagnosis"]["correctness"])
+            self.assertEqual(metrics["phases"]["verify"]["replay_coverage"], 0.0)
+            self.assertEqual(
+                metrics["phases"]["judge"]["proposal_acceptance_rate"], 1.0
+            )
+            path = runner.pipeline_metrics.write_phase_metrics(
+                workspace, spans
+            )
+            self.assertEqual(
+                json.loads(path.read_text())["funnel"]["accepted_proposals"], 1
+            )
+            aggregate = runner.pipeline_metrics.aggregate_phase_metrics(
+                workspace.parent
+            )
+            self.assertEqual(aggregate["run_count"], 1)
+            self.assertEqual(
+                aggregate["phases"]["recall"]["candidate_coverage"], 1.0
             )
 
     def test_pipeline_timings_write_local_global_and_chrome_outputs(self) -> None:
@@ -330,6 +487,14 @@ class ContractTests(unittest.TestCase):
                     }
                 )
             )
+            with sqlite3.connect(shared) as connection:
+                connection.execute(
+                    "INSERT INTO pipeline_spans SELECT ?, ?, phase, item, "
+                    "category, started_at, started_at_us, duration_us, status, "
+                    "backend, model, thread_id, metadata_json "
+                    "FROM pipeline_spans WHERE run_id = ? LIMIT 1",
+                    ("fixture-span", "multi-round-fixture", "timed-run"),
+                )
             server = metrics_dashboard.make_server(
                 shared, "127.0.0.1", 0, 0.25
             )
@@ -342,6 +507,10 @@ class ContractTests(unittest.TestCase):
                 ) as response:
                     payload = json.load(response)
                 self.assertEqual(payload["run_count"], 1)
+                self.assertEqual(
+                    payload["excluded_database_run_ids"],
+                    ["multi-round-fixture"],
+                )
                 self.assertEqual(payload["runs"][0]["run_id"], "timed-run")
                 self.assertEqual(payload["runs"][0]["phases"][0]["phase"], "goal")
                 self.assertIn("spans", payload["runs"][0])
@@ -982,6 +1151,31 @@ class ContractTests(unittest.TestCase):
             Path(runner.SESSION_ROOT).resolve().is_relative_to(runner.REPO.resolve())
         )
 
+    def test_agent_config_allows_one_active_backend(self) -> None:
+        config = runner.load_agent_config()
+        active = [row for row in config["agents"] if row["status"] == "active"]
+        self.assertEqual([row["backend"] for row in active], ["claude"])
+        self.assertEqual(runner.configured_model("cursor"), "grok-4.7-low")
+        self.assertEqual(runner.configured_model("cursor", "other-model"), "other-model")
+        self.assertEqual(runner.configured_model("claude"), "claude-sonnet-5-5")
+        with self.assertRaises(SystemExit):
+            runner.configured_model("codex")
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "agent-config.json"
+            two_active = json.loads(json.dumps(config))
+            two_active["agents"][0]["status"] = "active"
+            path.write_text(json.dumps(two_active))
+            with self.assertRaisesRegex(SystemExit, "exactly one"):
+                runner.load_agent_config(path)
+            for row in two_active["agents"]:
+                row["status"] = "inactive"
+            path.write_text(json.dumps(two_active))
+            with self.assertRaisesRegex(SystemExit, "exactly one"):
+                runner.load_agent_config(path)
+        with patch.object(runner, "authenticated", return_value=True):
+            self.assertEqual(runner.select_backend("auto", False), "claude")
+            self.assertEqual(runner.select_backend("claude", False), "claude")
+
     def test_cut_algorithms_keep_a_five_turn_repetition_window_and_long_turns(
         self,
     ) -> None:
@@ -1164,6 +1358,393 @@ class ContractTests(unittest.TestCase):
                     "SELECT selected_count FROM trace_signal_runs"
                 ).fetchone()[0]
             self.assertEqual(count, len(selected))
+
+    def test_single_task_trajectory_preserves_observable_actions(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory) / "workspace/runs/run"
+            rows = codex_trace_rows(
+                user="Implement the requested behavior",
+                assistant="Implemented and verified.",
+            )
+            rows[3:3] = [
+                {
+                    "timestamp": "2026-01-01T00:00:02Z",
+                    "ordinal": 4,
+                    "type": "response_item",
+                    "payload": {
+                        "type": "function_call",
+                        "call_id": "call-1",
+                        "name": "shell",
+                        "arguments": {"command": "pytest tests/test_app.py"},
+                    },
+                },
+                {
+                    "timestamp": "2026-01-01T00:00:03Z",
+                    "ordinal": 5,
+                    "type": "response_item",
+                    "payload": {
+                        "type": "function_call_output",
+                        "call_id": "call-1",
+                        "output": "1 passed",
+                    },
+                },
+            ]
+            write_jsonl(workspace / "traces/raw/codex/a.jsonl", rows)
+            config = json.loads(
+                (AGENTS / "common/preprocessing-config.json").read_text()
+            )
+            runner.normalizer.normalize(workspace, config)
+            turn_path = next(
+                (workspace / "traces/derived/normalized/turns").glob("*.json")
+            )
+            turn = contracts.validate_canonical_turn(turn_path)
+            trajectory = contracts.validate_task_trajectory(
+                workspace / turn["task_trajectory_path"], turn["trace_id"]
+            )
+            self.assertEqual(len(trajectory["events"]), 1)
+            self.assertEqual(trajectory["events"][0]["phase"], "verify")
+            self.assertEqual(len(trajectory["assistant_observations"]), 1)
+            self.assertEqual(
+                trajectory["assistant_observations"][0]["after_tool_count"], 1
+            )
+            self.assertIsNotNone(turn["tool_summary"]["evidence_path"])
+
+    def test_single_task_methodology_algorithms_and_consolidation(self) -> None:
+        def event(
+            sequence: int,
+            phase: str,
+            status: str,
+            arguments: str,
+            target: str,
+            tool: str = "shell",
+        ) -> dict:
+            return {
+                "sequence": sequence,
+                "tool": tool,
+                "phase": phase,
+                "status": status,
+                "arguments_preview": arguments,
+                "argument_sha256": str(sequence) * 64,
+                "result_preview": "failed" if status == "failed" else "ok",
+                "result_sha256": str(sequence + 1) * 64,
+                "targets": [target],
+            }
+
+        events = [
+            event(1, "inspect", "completed", "read config", "src/config.py", "read"),
+            event(2, "inspect", "completed", "search setting", "src/app.py", "search"),
+            event(3, "inspect", "completed", "read tests", "tests/test_app.py", "read"),
+            event(4, "inspect", "completed", "read docs", "docs/setup.md", "read"),
+            event(5, "execute", "failed", "run legacy", "src/app.py"),
+            event(6, "execute", "failed", "run legacy", "src/app.py"),
+            event(7, "modify", "completed", "edit handler", "src/app.py", "edit"),
+            event(8, "verify", "failed", "pytest tests/test_app.py", "src/app.py"),
+            event(9, "modify", "completed", "edit fallback", "src/app.py", "edit"),
+            event(10, "verify", "completed", "pytest tests/test_app.py", "src/app.py"),
+        ]
+        trajectory = {
+            "trace_id": "codex:session-a:turn-a",
+            "session_id": "session-a",
+            "task": {"text": "Implement fallback handling"},
+            "outcome": {"status": "completed", "error": None},
+            "events": events,
+            "phases": runner.normalizer.phase_rows(events),
+            "assistant_observations": [
+                {
+                    "text": (
+                        "Wait, the unchanged command is not working. "
+                        "I should use a different approach."
+                    ),
+                    "text_sha256": "a" * 64,
+                    "after_tool_count": 6,
+                    "source_ordinal": 20,
+                }
+            ],
+        }
+        full_config = json.loads(
+            (AGENTS / "common/preprocessing-config.json").read_text()
+        )
+        config = full_config["methodology"]
+        findings = methodology.mine_trajectory(
+            trajectory, "traces/derived/normalized/turns/a.json", config
+        )
+        detectors = {finding["detector"] for finding in findings}
+        self.assertTrue(
+            {
+                "method-phase-workflow",
+                "method-failure-recovery",
+                "method-retry-oscillation",
+                "method-functional-reflection",
+                "method-knowledge-acquisition",
+                "method-critical-path",
+                "method-direction-pivot",
+                "method-completion-contract",
+            }.issubset(detectors)
+        )
+        second = json.loads(json.dumps(trajectory))
+        second["trace_id"] = "codex:session-b:turn-b"
+        second["session_id"] = "session-b"
+        second["task"]["text"] = "Repair alternate fallback behavior"
+        second_findings = methodology.mine_trajectory(
+            second, "traces/derived/normalized/turns/b.json", config
+        )
+        consolidated = methodology.consolidate_cross_task(
+            findings + second_findings, config
+        )
+        self.assertTrue(consolidated)
+        self.assertTrue(
+            all(
+                row["features"]["candidate_source"]
+                == "methodology_consolidated"
+                for row in consolidated
+            )
+        )
+        detector_config = full_config["signals"]
+        detector_config["_methodology"] = config
+        selected, decisions = signals._select_findings(
+            findings, detector_config
+        )
+        self.assertLessEqual(len(selected), config["max_findings_per_trace"])
+        self.assertTrue(
+            any(row["disposition"] == "deduplicated" for row in decisions)
+        )
+        reflection = next(
+            row for row in findings
+            if row["detector"] == "method-functional-reflection"
+        )
+        quote = reflection["evidence"][0]["quote"]
+        self.assertEqual(
+            reflection["evidence"][0]["quote_sha256"],
+            hashlib.sha256(quote.encode()).hexdigest(),
+        )
+        self.assertIn("Wait, the unchanged command", quote)
+        with tempfile.TemporaryDirectory() as directory:
+            findings_path = Path(directory) / "findings.jsonl"
+            write_jsonl(findings_path, [reflection])
+            contracts.validate_signal_findings(
+                findings_path, {trajectory["trace_id"]}
+            )
+            corrupted = json.loads(json.dumps(reflection))
+            corrupted["evidence"][0]["quote_sha256"] = "0" * 64
+            write_jsonl(findings_path, [corrupted])
+            with self.assertRaises(contracts.ContractError):
+                contracts.validate_signal_findings(
+                    findings_path, {trajectory["trace_id"]}
+                )
+
+        ablation_config = dict(config)
+        ablation_config["enabled_detectors"] = ["method-phase-workflow"]
+        ablated = methodology.mine_trajectory(
+            trajectory,
+            "traces/derived/normalized/turns/a.json",
+            ablation_config,
+        )
+        self.assertEqual(
+            {row["detector"] for row in ablated},
+            {"method-phase-workflow"},
+        )
+
+    def test_skillsbench_paired_multitrial_and_ablation_summary(self) -> None:
+        rows = []
+        for task in ("task-a", "task-b"):
+            for trial in range(3):
+                for ablation in ("full", "without_failure_recovery"):
+                    rows.extend(
+                        [
+                            {
+                                "task_id": task,
+                                "trial": trial,
+                                "ablation": ablation,
+                                "condition": "no-skill",
+                                "passed": trial == 0,
+                                "tokens": 1000,
+                                "tool_calls": 10,
+                                "repeated_errors": 2,
+                                "skill_context_tokens": 0,
+                            },
+                            {
+                                "task_id": task,
+                                "trial": trial,
+                                "ablation": ablation,
+                                "condition": "with-skill",
+                                "passed": (
+                                    True
+                                    if ablation == "full"
+                                    else trial < 2
+                                ),
+                                "tokens": 800,
+                                "tool_calls": 8,
+                                "repeated_errors": 1,
+                                "skill_context_tokens": 120,
+                                "candidate_count": 1,
+                                "candidate_correct": 1,
+                                "false_positive_creations": 0,
+                                "candidate_novelty": 0.8,
+                            },
+                        ]
+                    )
+        report = skillsbench_eval.summarize(rows)
+        self.assertEqual(report["conditions"]["full"]["paired_trials"], 6)
+        self.assertGreater(
+            report["conditions"]["full"]["pass_rate_lift"], 0
+        )
+        self.assertGreater(
+            report["ablation_pass_rate_loss_vs_full"][
+                "without_failure_recovery"
+            ],
+            0,
+        )
+        self.assertEqual(
+            report["conditions"]["full"]["mean_tokens_delta"], -200
+        )
+        self.assertEqual(report["mining"]["candidate_precision"], 1.0)
+
+    def test_retry_classifier_separates_exploration_recovery_and_waste(
+        self,
+    ) -> None:
+        def event(
+            sequence: int,
+            tool: str,
+            phase: str,
+            status: str,
+            arguments: str,
+            result: str,
+            target: str = "",
+        ) -> dict:
+            return {
+                "sequence": sequence,
+                "tool": tool,
+                "phase": phase,
+                "status": status,
+                "arguments_preview": arguments,
+                "result_preview": result,
+                "targets": [target] if target else [],
+            }
+
+        config = json.loads(
+            (AGENTS / "common/preprocessing-config.json").read_text()
+        )["methodology"]
+
+        unchanged = [
+            event(1, "shell", "verify", "failed", "pytest tests/a.py", "schema mismatch", "src/a.py"),
+            event(2, "shell", "verify", "failed", "pytest tests/a.py", "schema mismatch", "src/a.py"),
+        ]
+        rows = methodology._analyze_retries(unchanged, config)
+        self.assertEqual(rows[0]["necessary"], False)
+        self.assertGreaterEqual(
+            rows[0]["waste_score"], config["retry_waste_threshold"]
+        )
+
+        refined_search = [
+            event(1, "search", "inspect", "completed", "query alpha", "a b"),
+            event(2, "search", "inspect", "completed", "query beta", "c d"),
+        ]
+        rows = methodology._analyze_retries(refined_search, config)
+        self.assertEqual(rows[0]["necessary"], True)
+        self.assertEqual(
+            rows[0]["reason"], "search-query-or-scope-refinement"
+        )
+
+        repeated_search = [
+            event(1, "search", "inspect", "completed", "query alpha", "a b"),
+            event(2, "search", "inspect", "completed", "query alpha", "a b"),
+        ]
+        rows = methodology._analyze_retries(repeated_search, config)
+        self.assertEqual(rows[0]["necessary"], False)
+
+        transient = [
+            event(1, "web", "execute", "failed", "fetch endpoint", "503 service unavailable"),
+            event(2, "web", "execute", "completed", "fetch endpoint", "ok"),
+        ]
+        rows = methodology._analyze_retries(transient, config)
+        self.assertEqual(rows[0]["necessary"], True)
+        self.assertEqual(rows[0]["reason"], "bounded-transient-retry")
+
+        post_edit_verify = [
+            event(1, "shell", "verify", "failed", "pytest tests/a.py", "failed", "src/a.py"),
+            event(2, "edit", "modify", "completed", "edit src/a.py", "updated", "src/a.py"),
+            event(3, "shell", "verify", "completed", "pytest tests/a.py", "passed", "src/a.py"),
+        ]
+        rows = methodology._analyze_retries(post_edit_verify, config)
+        retry = next(row for row in rows if row["retry_sequence"] == 3)
+        self.assertEqual(retry["necessary"], True)
+        self.assertEqual(
+            retry["reason"], "revalidation-after-relevant-state-change"
+        )
+
+    def test_cut_patterns_are_promoted_ranked_and_auditable(self) -> None:
+        config = json.loads(
+            (AGENTS / "common/preprocessing-config.json").read_text()
+        )
+
+        def turn(index: int, user: str) -> dict:
+            return {
+                "trace_id": f"trace-{index}",
+                "session_id": "session",
+                "_path": f"traces/derived/normalized/turns/{index}.json",
+                "timestamp": f"2026-01-01T00:00:{index:02d}Z",
+                "user": {"text": user},
+                "assistant": {
+                    "text": (
+                        "Configure the production Supabase Railway Stripe "
+                        "deployment, verify backups, and preserve rollback evidence."
+                    )
+                },
+                "outcome": {"status": "completed", "error": ""},
+                "tool_summary": {"error_count": 0},
+                "timing": {"duration_ms": 600_000},
+            }
+
+        turns = [
+            turn(0, "prepare the hosted release"),
+            turn(1, "continue the production setup"),
+            turn(2, "finish the provider configuration"),
+            turn(3, "verify launch readiness"),
+        ]
+        findings = signals._session_findings("session", turns, config)
+        recurring = next(
+            row
+            for row in findings
+            if row["detector"] == "recurring-long-workflow"
+        )
+        self.assertEqual(
+            recurring["features"]["candidate_source"], "cut_pattern"
+        )
+        self.assertEqual(recurring["features"]["distinct_windows"], 4)
+        self.assertGreaterEqual(recurring["confidence"], 0.8)
+        selected, decisions = signals._select_findings(
+            findings, config["signals"]
+        )
+        self.assertIn(recurring["signal_id"], {
+            row["signal_id"] for row in selected
+        })
+        decision = next(
+            row
+            for row in decisions
+            if row["finding_id"] == recurring["signal_id"]
+        )
+        self.assertEqual(decision["disposition"], "selected")
+        self.assertEqual(decision["reason"], "ranked")
+
+        duplicate = dict(recurring)
+        duplicate["signal_id"] = "sig-lower-ranked-duplicate"
+        duplicate["confidence"] = recurring["confidence"] - 0.1
+        selected, decisions = signals._select_findings(
+            [recurring, duplicate], config["signals"]
+        )
+        self.assertEqual([row["signal_id"] for row in selected], [
+            recurring["signal_id"]
+        ])
+        duplicate_decision = next(
+            row
+            for row in decisions
+            if row["finding_id"] == duplicate["signal_id"]
+        )
+        self.assertEqual(duplicate_decision["disposition"], "deduplicated")
+        self.assertEqual(
+            duplicate_decision["selected_representative"],
+            recurring["signal_id"],
+        )
 
     def test_trace_features_and_pointer_clusters_validate(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -1499,6 +2080,225 @@ class ContractTests(unittest.TestCase):
         self.assertIn('"feedback_to": "diagnosis"', prompt)
         self.assertIn('"disposition": "no_change"', prompt)
         self.assertIn("Write concrete values without angle brackets", prompt)
+        self.assertIn(
+            "the records are always under the key `skills`", prompt
+        )
+
+    def test_goal_stage_checker_rejects_wrong_update_record_key(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "goal.json"
+            goal = valid_goal()
+            goal["action"]["ops"][0] = {
+                "op": "update",
+                "update": [{"skill": "seed"}],
+            }
+            write_json(path, goal)
+            with self.assertRaises(one_action.pipeline_contracts.ContractError):
+                one_action.validate(path)
+
+    def test_single_session_create_is_allowed_as_provisional(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            cluster = "finding"
+            write_json(
+                workspace
+                / f"traces/derived/findings/{cluster}/finding.json",
+                {
+                    "confidence": 0.84,
+                    "session_id": "session-1",
+                    "evidence": [{"trace_id": "a"}, {"trace_id": "b"}],
+                    "features": {"candidate_source": "signal_detector"},
+                },
+            )
+            write_json(
+                workspace / f"run/{cluster}/diagnosis.json",
+                {
+                    "skill_capabilities_missing": [
+                        {"type": "form/pattern/constraint"}
+                    ],
+                    "newly_detected_skill_capabilites_missing": [],
+                },
+            )
+            runner.enforce_creation_policy(
+                workspace,
+                cluster,
+                {},
+                {
+                    "op": "create",
+                    "skills": [{"skill": "commit-push-boundary"}],
+                },
+            )
+
+    def test_optimize_stage_has_existing_skill_operation_guidance(self) -> None:
+        self.assertIn(
+            "04_optimize_agent/skill-edit/skill.md",
+            runner.SKILLS["optimize"],
+        )
+        prompt = (
+            AGENTS / "04_optimize_agent/skill-edit/skill.md"
+        ).read_text()
+        for operation in ("`update`", "`delete`", "`merge`", "`split`"):
+            self.assertIn(operation, prompt)
+        self.assertIn("target/raw_skills/<skill>", prompt)
+
+    def test_create_metadata_is_merged_in_canonical_shape(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            metadata = workspace / (
+                "target/to_be_improved_skills_metadata/metadata.json"
+            )
+            write_json(
+                metadata,
+                {
+                    "skills_metadata": [
+                        {
+                            "skill": "seed",
+                            "description": "Existing skill",
+                            "skill_types": [
+                                {"type": "job/verification", "weight": 0.8}
+                            ],
+                            "unmatched_skill_types": [],
+                        }
+                    ]
+                },
+            )
+            write_json(
+                workspace / "run/trace-selection.json",
+                {
+                    "run_id": "run-codex-example-50turns",
+                    "seeded_from": "run-codex-example-40turns",
+                },
+            )
+            write_json(
+                workspace
+                / "traces/derived/findings/finding/finding.json",
+                {
+                    "confidence": 0.9,
+                    "session_id": "session-1",
+                    "evidence": [{"trace_id": "a"}, {"trace_id": "b"}],
+                    "features": {"distinct_windows": 2},
+                },
+            )
+            runner.materialize_created_skill_metadata(
+                workspace,
+                {
+                    "op": "create",
+                    "skills": [
+                        {
+                            "skill": "new-skill",
+                            "description": "New workflow",
+                            "labels": [
+                                {
+                                    "type": "job/methodology/workflow",
+                                    "weight": 0.9,
+                                }
+                            ],
+                        }
+                    ],
+                },
+                "finding",
+            )
+            rows = json.loads(metadata.read_text())["skills_metadata"]
+            self.assertEqual(
+                [row["skill"] for row in rows], ["new-skill", "seed"]
+            )
+            self.assertEqual(
+                rows[0]["skill_types"],
+                [{"type": "job/methodology/workflow", "weight": 0.9}],
+            )
+            self.assertEqual(rows[0]["lifecycle"]["status"], "provisional")
+            self.assertEqual(
+                rows[0]["lifecycle"]["origin_run_id"],
+                "run-codex-example-50turns",
+            )
+            self.assertEqual(
+                rows[0]["lifecycle"]["seeded_from"],
+                "run-codex-example-40turns",
+            )
+            self.assertEqual(rows[0]["changelog"], [])
+
+    def test_operation_changelog_is_hashed_and_added_to_metadata(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            raw = workspace / "target/raw_skills/example"
+            improved = workspace / "target/to_be_improved_skills/example"
+            raw.mkdir(parents=True)
+            improved.mkdir(parents=True)
+            (raw / "SKILL.md").write_text("# Before\n")
+            (improved / "SKILL.md").write_text("# After\n")
+            metadata = (
+                workspace
+                / "target/to_be_improved_skills_metadata/metadata.json"
+            )
+            write_json(
+                metadata,
+                {
+                    "skills_metadata": [
+                        {
+                            "skill": "example",
+                            "skill_types": [],
+                            "changelog": [],
+                        }
+                    ]
+                },
+            )
+            path = runner.materialize_operation_changelog(
+                workspace,
+                {
+                    "op": "update",
+                    "skills": [
+                        {
+                            "skill": "example",
+                            "sections": [{"section": "workflow", "goal": "Improve"}],
+                            "dirs": [],
+                        }
+                    ],
+                },
+                "run-1",
+                "finding-1",
+                1,
+            )
+            change = json.loads(path.read_text())["changes"][0]
+            self.assertEqual(change["sections"], ["workflow"])
+            self.assertNotEqual(
+                change["before_sha256"], change["after_sha256"]
+            )
+            row = json.loads(metadata.read_text())["skills_metadata"][0]
+            self.assertEqual(row["changelog"], [change])
+            contracts.validate_metadata(metadata, {"example"})
+            verification_input = runner.materialize_verification_input(
+                workspace,
+                {"goal": {"avoid": "Do not regress existing behavior."}},
+                {
+                    "op": "update",
+                    "skills": [
+                        {
+                            "skill": "example",
+                            "sections": [
+                                {
+                                    "section": "workflow",
+                                    "goal": "Require an observable result.",
+                                }
+                            ],
+                            "dirs": [],
+                        }
+                    ],
+                },
+                "run-1",
+                "finding-1",
+                1,
+            )
+            input_data = contracts.validate_verification_input(
+                verification_input
+            )
+            requirements = input_data["skills"][0]["requirements"]
+            self.assertEqual(
+                requirements["sections"][0]["expectation"],
+                "Require an observable result.",
+            )
+            self.assertEqual(
+                requirements["avoid"], ["Do not regress existing behavior."]
+            )
 
     def test_skill_format_names_and_aliases(self) -> None:
         format_path = AGENTS / "common/skill_format.json"
@@ -1557,6 +2357,381 @@ class ContractTests(unittest.TestCase):
                 [],
             )
 
+    def test_metadata_dependencies_sources_and_lifecycle_states(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "metadata.json"
+            document = {
+                "skills_metadata": [
+                    {"skill": "base", "skill_types": []},
+                    {
+                        "skill": "derived",
+                        "skill_types": [],
+                        "dependencies": ["base"],
+                        "sources": [
+                            {
+                                "url": "https://example.com/spec",
+                                "revision": "v1",
+                                "retrieved_at": "2026-10-22T00:00:00Z",
+                                "sha256": "a" * 64,
+                            }
+                        ],
+                    },
+                ]
+            }
+            write_json(path, document)
+            contracts.validate_metadata(path, {"base", "derived"})
+            document["skills_metadata"][1]["dependencies"] = ["missing"]
+            write_json(path, document)
+            with self.assertRaises(contracts.ContractError):
+                contracts.validate_metadata(path, {"base", "derived"})
+
+    def test_publication_transitions_evaluated_and_promoted_lifecycle(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            worker = Path(directory) / "worker"
+            config = Path(directory) / "preprocessing-config.json"
+            write_json(
+                config,
+                {"evolution_policy": {"create_min_distinct_sessions": 2}},
+            )
+            skill = worker / "target/to_be_improved_skills/created"
+            skill.mkdir(parents=True)
+            (skill / "SKILL.md").write_text(
+                "---\nname: created\ndescription: Use when creating a result.\n---\n"
+            )
+            metadata = (
+                worker
+                / "target/to_be_improved_skills_metadata/metadata.json"
+            )
+            lifecycle = {
+                "status": "stable",
+                "origin_run_id": "run",
+                "origin_finding_id": "finding",
+                "origin_session_ids": ["one", "two"],
+                "distinct_sessions": 2,
+                "confidence": 0.9,
+                "evidence_records": 2,
+                "distinct_windows": 2,
+            }
+            write_json(
+                metadata,
+                {
+                    "skills_metadata": [
+                        {
+                            "skill": "created",
+                            "skill_types": [],
+                            "lifecycle": lifecycle,
+                        }
+                    ]
+                },
+            )
+            verification = valid_verification("created")
+            verification["feedback"]["replay"] = {
+                "available": True,
+                "status": "pass",
+                "kind": "paired_skill_eval",
+                "reason": "Paired replay",
+                "before": {"pass_rate": 0.5},
+                "after": {
+                    "pass_rate": 1.0,
+                    "held_out_cases": 2,
+                    "held_out_pass_rate": 1.0,
+                    "activation_false_positive_rate": 0.0,
+                },
+            }
+            write_json(
+                worker / "run/finding/ops/1/verification.json",
+                verification,
+            )
+            with patch.object(runner, "CONFIG_PATH", config):
+                self.assertTrue(
+                    runner.replay_meets_promotion_gate(
+                        verification["feedback"]["replay"]
+                    )
+                )
+                runner.transition_worker_lifecycle(
+                    worker, "finding", 1, {"created"}
+                )
+            row = json.loads(metadata.read_text())["skills_metadata"][0]
+            self.assertEqual(row["lifecycle"]["status"], "promoted")
+            self.assertEqual(
+                row["lifecycle"]["evaluation_kind"], "behavioral_replay"
+            )
+            self.assertEqual(len(row["lifecycle"]["content_sha256"]), 64)
+
+            row["lifecycle"]["distinct_sessions"] = 1
+            write_json(metadata, {"skills_metadata": [row]})
+            verification["feedback"]["replay"] = {
+                "available": False,
+                "status": "not_run",
+                "reason": "No execution backend",
+                "before": None,
+                "after": None,
+            }
+            write_json(
+                worker / "run/finding/ops/1/verification.json",
+                verification,
+            )
+            with patch.object(runner, "CONFIG_PATH", config):
+                runner.transition_worker_lifecycle(
+                    worker, "finding", 1, {"created"}
+                )
+            row = json.loads(metadata.read_text())["skills_metadata"][0]
+            self.assertEqual(row["lifecycle"]["status"], "evaluated")
+            self.assertEqual(row["lifecycle"]["evaluation_kind"], "structural")
+
+    def test_created_skill_authoring_contract(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            skill = Path(directory) / "evidence-backed-skill"
+            skill.mkdir()
+            (skill / "SKILL.md").write_text(
+                "---\n"
+                "name: evidence-backed-skill\n"
+                "description: Perform the workflow when evidence requires it.\n"
+                "---\n\n"
+                "## Overview\n\n"
+                "A concise workflow.\n"
+            )
+            self.assertEqual(format_checker.validate_authored_skill(skill), [])
+
+            nested = skill / "references/nested"
+            nested.mkdir(parents=True)
+            (nested / "detail.md").write_text("detail\n")
+            problems = format_checker.validate_authored_skill(skill)
+            self.assertTrue(
+                any("references must be one level deep" in row for row in problems)
+            )
+
+            (skill / "SKILL.md").write_text(
+                "---\n"
+                "name: evidence-backed-skill\n"
+                "description: <TODO>\n"
+                "---\n\n"
+                "## Overview\n\n"
+                "[TODO: replace]\n"
+            )
+            problems = format_checker.validate_authored_skill(skill)
+            self.assertIn(
+                "frontmatter description contains angle brackets", problems
+            )
+            self.assertIn("SKILL.md contains an unfinished placeholder", problems)
+
+            (skill / "SKILL.md").write_text(
+                "---\n"
+                "name: evidence-backed-skill\n"
+                "description: Perform the workflow when evidence requires it.\n"
+                "---\n\n"
+                "## Overview\n\n"
+                "A concise workflow.\n"
+            )
+            large = skill / "assets/large.bin"
+            large.parent.mkdir()
+            with large.open("wb") as output:
+                output.seek(format_checker.MAX_RESOURCE_BYTES)
+                output.write(b"\0")
+            problems = format_checker.validate_authored_skill(skill)
+            self.assertTrue(
+                any("resource exceeds" in problem for problem in problems)
+            )
+
+    def test_skill_eval_contract_and_benchmark_aggregation(self) -> None:
+        fixture = {
+            "skill_name": "evidence-backed-skill",
+            "evals": [
+                {
+                    "id": 1,
+                    "kind": "should_apply",
+                    "prompt": "Run the audited workflow",
+                    "expected_output": "A verified result",
+                    "expectations": ["Result contains completion evidence"],
+                },
+                {
+                    "id": 2,
+                    "kind": "should_not_apply",
+                    "prompt": "Perform an unrelated task",
+                    "expected_output": "The skill is not selected",
+                    "expectations": ["No audited workflow is invoked"],
+                },
+            ],
+        }
+        self.assertEqual(
+            skill_evaluation.validate_evals_data(
+                fixture, "evidence-backed-skill"
+            ),
+            [],
+        )
+        held_out = {
+            "skill_name": "evidence-backed-skill",
+            "evals": [
+                {
+                    "id": 101,
+                    "kind": "should_apply",
+                    "prompt": "Complete a different audited workflow",
+                    "expected_output": "A verified result",
+                    "source_trace_ids": ["held-out:one"],
+                },
+                {
+                    "id": 102,
+                    "kind": "should_not_apply",
+                    "prompt": "Answer a nearby but excluded request",
+                    "expected_output": "The skill is not selected",
+                    "source_trace_ids": ["held-out:two"],
+                },
+            ],
+        }
+        self.assertEqual(
+            skill_evaluation.validate_held_out_evals_data(
+                held_out,
+                "evidence-backed-skill",
+                fixture,
+            ),
+            [],
+        )
+        fixture["evals"][1]["id"] = 1
+        self.assertTrue(
+            any(
+                "duplicated" in problem
+                for problem in skill_evaluation.validate_evals_data(
+                    fixture, "evidence-backed-skill"
+                )
+            )
+        )
+        summary = skill_evaluation.aggregate_benchmark(
+            [
+                {
+                    "configuration": "with_skill",
+                    "result": {
+                        "pass_rate": 1.0,
+                        "time_seconds": 12,
+                        "tokens": 120,
+                        "tool_calls": 4,
+                        "errors": 0,
+                    },
+                },
+                {
+                    "configuration": "without_skill",
+                    "result": {
+                        "pass_rate": 0.5,
+                        "time_seconds": 10,
+                        "tokens": 100,
+                        "tool_calls": 3,
+                        "errors": 1,
+                    },
+                },
+            ]
+        )
+        self.assertEqual(summary["delta"]["pass_rate"], 0.5)
+        self.assertEqual(summary["with_skill"]["runs"], 1)
+        self.assertEqual(summary["without_skill"]["errors"], 1)
+        benchmark_runs = [
+            {
+                "configuration": "with_skill",
+                "split": "held_out",
+                "run_number": 1,
+                "result": {
+                    "pass_rate": 1.0,
+                    "time_seconds": 12,
+                    "tokens": 120,
+                    "tool_calls": 4,
+                    "errors": 0,
+                },
+            },
+            {
+                "configuration": "without_skill",
+                "split": "held_out",
+                "run_number": 1,
+                "result": {
+                    "pass_rate": 0.5,
+                    "time_seconds": 10,
+                    "tokens": 100,
+                    "tool_calls": 3,
+                    "errors": 1,
+                },
+            },
+        ]
+        benchmark = {
+            "runs": benchmark_runs,
+            "run_summary": skill_evaluation.aggregate_benchmark(
+                benchmark_runs
+            ),
+        }
+        self.assertEqual(
+            skill_evaluation.validate_benchmark_data(benchmark), []
+        )
+        activation_rows = [
+            {"kind": "should_apply", "activated": True},
+            {"kind": "should_apply", "activated": False},
+            {"kind": "should_not_apply", "activated": True},
+            {"kind": "should_not_apply", "activated": False},
+        ]
+        activation = skill_evaluation.aggregate_activation(activation_rows)
+        self.assertEqual(activation["recall"], 0.5)
+        self.assertEqual(activation["false_positive_rate"], 0.5)
+        activation_data = {
+            "results": [
+                {"eval_id": index, **row}
+                for index, row in enumerate(activation_rows, start=1)
+            ],
+            "summary": activation,
+        }
+        self.assertEqual(
+            skill_evaluation.validate_activation_data(activation_data), []
+        )
+        manifest = {
+            "run_id": "run-example",
+            "skill": "evidence-backed-skill",
+            "backend": "codex",
+            "model": "model",
+            "generated_at": "2026-10-22T00:00:00Z",
+            "executed": True,
+            "candidate_sha256": "a" * 64,
+            "baseline_sha256": "b" * 64,
+            "held_out_sha256": "c" * 64,
+            "configurations": ["without_skill", "with_skill"],
+            "trials_per_configuration": 1,
+            "eval_ids": [1],
+            "held_out_eval_ids": [101, 102],
+        }
+        self.assertEqual(
+            skill_evaluation.validate_replay_manifest_data(manifest), []
+        )
+        manifest["executed"] = False
+        self.assertIn(
+            "executed must be true; do not write manifests for planned runs",
+            skill_evaluation.validate_replay_manifest_data(manifest),
+        )
+
+    def test_skill_creator_uses_canonical_public_guidance(self) -> None:
+        creator = (
+            AGENTS / "04_optimize_agent/skill-create/skill.md"
+        ).read_text()
+        for heading in (
+            "Overview",
+            "When to Use",
+            "Do Not Use",
+            "Workflow",
+            "Constraints",
+            "Verification",
+            "Output Format",
+            "Limitations",
+        ):
+            self.assertIn(f"## {heading}", creator)
+        self.assertIn("references/public-skill-authoring.md", creator)
+        self.assertIn("references/eval-schema.md", creator)
+        self.assertIn("references/evaluation-loop.md", creator)
+        self.assertIn("references/evaluation-artifacts.md", creator)
+        provenance = (
+            AGENTS
+            / "04_optimize_agent/skill-create/references/public-skill-authoring.md"
+        ).read_text()
+        self.assertIn("anthropics/skills", provenance)
+        self.assertIn("openai/skills", provenance)
+        eval_schema = (
+            AGENTS
+            / "04_optimize_agent/skill-create/references/eval-schema.md"
+        ).read_text()
+        self.assertIn('"should_apply"', eval_schema)
+        self.assertIn('"should_not_apply"', eval_schema)
+
     def test_verification_action_belongs_to_judge(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "verification.json"
@@ -1591,16 +2766,33 @@ class ContractTests(unittest.TestCase):
             }
             write_json(path, value)
             contracts.validate_verification(path, judged=False)
+            value["feedback"]["replay"]["status"] = "fail"
+            write_json(path, value)
+            with self.assertRaises(contracts.ContractError):
+                contracts.validate_verification(path, judged=False)
+            value["feedback"]["overall_status"] = "fail"
+            write_json(path, value)
+            contracts.validate_verification(path, judged=False)
 
     def test_verification_builder_clears_actions(self) -> None:
         example = json.loads(
             (VERIFIER / "verification-output.example.json").read_text()
         )
-        out = verification_builder.build(valid_goal(), example, {}, None)
+        change = valid_verification("seed")["changelog"][0]
+        out = verification_builder.build(
+            valid_goal(),
+            example,
+            {},
+            None,
+            {"changes": [change]},
+            "d" * 64,
+        )
         self.assertIsNone(out["feedback"]["action"])
         self.assertTrue(
             all(row["action"] is None for row in out["feedback"]["per_skill"])
         )
+        self.assertEqual(out["changelog"], [change])
+        self.assertEqual(out["verification_input"]["sha256"], "d" * 64)
 
     def test_materialized_goal_contains_one_op(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -1645,13 +2837,13 @@ class ContractTests(unittest.TestCase):
             self.assertEqual(summary["no_change_scopes"], ["scope-a"])
             self.assertEqual(summary["operations"], [])
 
-    def test_creation_policy_requires_recurrence_or_ood(self) -> None:
+    def test_creation_policy_requires_evidence_for_single_session(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             workspace = Path(directory)
             finding = {
                 "confidence": 0.9,
                 "session_id": "one-session",
-                "evidence": [{"trace_id": "a"}, {"trace_id": "b"}],
+                "evidence": [{"trace_id": "a"}],
             }
             write_json(
                 workspace / "traces/derived/findings/scope-a/finding.json",
@@ -1679,6 +2871,21 @@ class ContractTests(unittest.TestCase):
             }
             with self.assertRaises(runner.pipeline_contracts.ContractError):
                 runner.enforce_creation_policy(workspace, "scope-a", {}, create)
+            finding["evidence"].append({"trace_id": "b"})
+            write_json(
+                workspace / "traces/derived/findings/scope-a/finding.json",
+                finding,
+            )
+            runner.enforce_creation_policy(workspace, "scope-a", {}, create)
+            finding["features"] = {
+                "candidate_source": "cut_pattern",
+                "distinct_windows": 3,
+            }
+            write_json(
+                workspace / "traces/derived/findings/scope-a/finding.json",
+                finding,
+            )
+            runner.enforce_creation_policy(workspace, "scope-a", {}, create)
             write_json(
                 diagnosis_path,
                 {
@@ -1689,6 +2896,99 @@ class ContractTests(unittest.TestCase):
                 },
             )
             runner.enforce_creation_policy(workspace, "scope-a", {}, create)
+
+    def test_methodology_quality_policy_and_verifier(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            cluster = "method-finding"
+            finding = {
+                "confidence": 0.9,
+                "session_id": "one-session",
+                "evidence": [{"trace_id": "a"}],
+                "features": {
+                    "candidate_source": "methodology",
+                    "method_fingerprint": "method-v1:test",
+                    "quality": {
+                        "value": 0.5,
+                        "obviousness": 0.0,
+                        "task_specificity": 0.0,
+                    },
+                    "lesson": {
+                        "kind": "failure_recovery",
+                        "rule": (
+                            "After schema validation fails, inspect the generated "
+                            "contract before changing the serializer."
+                        ),
+                    },
+                },
+            }
+            finding_path = (
+                workspace
+                / f"traces/derived/findings/{cluster}/finding.json"
+            )
+            write_json(finding_path, finding)
+            write_json(
+                workspace / f"run/{cluster}/diagnosis.json",
+                {
+                    "skill_capabilities_missing": [
+                        {"type": "job/methodology/workflow"}
+                    ],
+                    "newly_detected_skill_capabilites_missing": [],
+                },
+            )
+            create = {
+                "op": "create",
+                "skills": [
+                    {
+                        "skill": "schema-recovery",
+                        "description": (
+                            "Recover serializers from schema contract failures."
+                        ),
+                        "sections": [
+                            {
+                                "section": "workflow",
+                                "goal": (
+                                    "Inspect the generated contract and change "
+                                    "serialization only after locating the mismatch."
+                                ),
+                            }
+                        ],
+                    }
+                ],
+            }
+            runner.enforce_creation_policy(workspace, cluster, {}, create)
+            finding["features"]["quality"]["task_specificity"] = 0.95
+            write_json(finding_path, finding)
+            with self.assertRaises(runner.pipeline_contracts.ContractError):
+                runner.enforce_creation_policy(workspace, cluster, {}, create)
+            finding["features"]["quality"]["task_specificity"] = 0.0
+            write_json(finding_path, finding)
+
+            skills = workspace / "target/to_be_improved_skills"
+            raw = workspace / "target/raw_skills"
+            (skills / "schema-recovery").mkdir(parents=True)
+            raw.mkdir(parents=True)
+            (skills / "schema-recovery/SKILL.md").write_text(
+                "# Workflow\n\nAnalyze the task. Read relevant files. "
+                "Make the changes. Run tests. Fix errors. Verify the result.\n"
+            )
+            (skills / "existing-recovery").mkdir()
+            (skills / "existing-recovery/SKILL.md").write_text(
+                (skills / "schema-recovery/SKILL.md").read_text()
+            )
+            problems = quality_verifier.check(
+                {"action": {"ops": [create]}},
+                finding,
+                skills,
+                raw,
+                json.loads(
+                    (AGENTS / "common/preprocessing-config.json").read_text()
+                ),
+            )
+            self.assertTrue(
+                any("generic" in problem or "does not preserve" in problem for problem in problems)
+            )
+            self.assertTrue(any("duplicates" in problem for problem in problems))
 
     def test_parallel_finding_diagnosis_uses_isolated_workers_and_reducer(
         self,
@@ -2186,9 +3486,20 @@ class ContractTests(unittest.TestCase):
                 worker / "run/push/ops/1/evolve-goal.json",
                 {"action": {"ops": [{"op": "create", "skills": [{"skill": created}]}]}},
             )
+            verification_input = worker / "run/push/ops/1/verification-input.json"
+            write_json(
+                verification_input,
+                json.loads(
+                    (VERIFIER / "verification-input.example.json").read_text()
+                ),
+            )
+            verification = valid_verification(created, {"op": "pass"})
+            verification["verification_input"]["sha256"] = hashlib.sha256(
+                verification_input.read_bytes()
+            ).hexdigest()
             write_json(
                 worker / "run/push/ops/1/verification.json",
-                valid_verification(created, {"op": "pass"}),
+                verification,
             )
             op = {
                 "op": "create",
@@ -2231,6 +3542,46 @@ class ContractTests(unittest.TestCase):
                 (workspace / "run/push/ops/1/publication.json").read_text()
             )
             self.assertTrue(publication["accepted"])
+
+    def test_failed_judge_is_not_published(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            skill = "finish-delivery-workflow"
+            current = workspace / "target/to_be_improved_skills" / skill
+            current.mkdir(parents=True)
+            (current / "SKILL.md").write_text("accepted version\n")
+            worker = workspace / "worker"
+            changed = worker / "target/to_be_improved_skills" / skill
+            changed.mkdir(parents=True)
+            (changed / "SKILL.md").write_text("failed version\n")
+            write_json(
+                worker / "run/finding/ops/1/evolve-goal.json",
+                {"action": {"ops": [{"op": "update", "skills": [{"skill": skill}]}]}},
+            )
+            write_json(
+                worker / "run/finding/ops/1/verification.json",
+                valid_verification(skill, {"op": "fail", "to": ""}),
+            )
+
+            runner.publish_operation_result(
+                workspace,
+                {
+                    "cluster": "finding",
+                    "op_index": 1,
+                    "op": {"op": "update", "skills": [{"skill": skill}]},
+                    "worker": worker,
+                    "affected": {skill},
+                    "suffixes": [],
+                    "judge_action": "fail",
+                },
+            )
+
+            self.assertEqual((current / "SKILL.md").read_text(), "accepted version\n")
+            publication = json.loads(
+                (workspace / "run/finding/ops/1/publication.json").read_text()
+            )
+            self.assertFalse(publication["accepted"])
+            self.assertEqual(publication["reason"], "judge-fail")
 
     def test_shared_docker_runtime_uses_allowlisted_stage_mounts(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -2406,16 +3757,24 @@ class ContractTests(unittest.TestCase):
                     raw.mkdir(parents=True, exist_ok=True)
                     (raw / "SKILL.md").write_text(f"# {skill}\n")
                 elif stage == "verifiter":
+                    verification = valid_verification(skill)
+                    verification["verification_input"]["sha256"] = hashlib.sha256(
+                        (worker / "run/verification-input.json").read_bytes()
+                    ).hexdigest()
                     write_json(
                         worker / "run/verification.json",
-                        valid_verification(skill),
+                        verification,
                     )
                 elif stage == "judge":
+                    verification = valid_verification(
+                        skill, {"op": "pass", "to": ""}
+                    )
+                    verification["verification_input"]["sha256"] = hashlib.sha256(
+                        (worker / "run/verification-input.json").read_bytes()
+                    ).hexdigest()
                     write_json(
                         worker / "run/verification.json",
-                        valid_verification(
-                            skill, {"op": "pass", "to": ""}
-                        ),
+                        verification,
                     )
 
             with (
@@ -2564,7 +3923,14 @@ class MockedPipelineTest(unittest.TestCase):
                 elif stage == "optimize":
                     created = ws / "target/to_be_improved_skills/created"
                     created.mkdir(parents=True, exist_ok=True)
-                    (created / "SKILL.md").write_text("# Created\n")
+                    (created / "SKILL.md").write_text(
+                        "---\n"
+                        "name: created\n"
+                        "description: Create a result when deployment handling fails.\n"
+                        "---\n\n"
+                        "## Overview\n\n"
+                        "Create the missing deployment result.\n"
+                    )
                     write_json(
                         ws / "target/to_be_improved_skills_metadata/metadata.json",
                         {
@@ -2583,16 +3949,24 @@ class MockedPipelineTest(unittest.TestCase):
                         },
                     )
                 elif stage == "verifiter":
+                    verification = valid_verification("created")
+                    verification["verification_input"]["sha256"] = hashlib.sha256(
+                        (ws / "run/verification-input.json").read_bytes()
+                    ).hexdigest()
                     write_json(
                         ws / "run/verification.json",
-                        valid_verification("created"),
+                        verification,
                     )
                 elif stage == "judge":
+                    verification = valid_verification(
+                        "created", {"op": "pass", "to": ""}
+                    )
+                    verification["verification_input"]["sha256"] = hashlib.sha256(
+                        (ws / "run/verification-input.json").read_bytes()
+                    ).hexdigest()
                     write_json(
                         ws / "run/verification.json",
-                        valid_verification(
-                            "created", {"op": "pass", "to": ""}
-                        ),
+                        verification,
                     )
 
             args = SimpleNamespace(
@@ -2668,6 +4042,59 @@ class MockedPipelineTest(unittest.TestCase):
             )
             self.assertEqual(selection["turns"], 2)
             self.assertEqual(selection["copied_to"], "traces/raw/codex/short.jsonl")
+
+    def test_candidate_run_can_inherit_seed_skills(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            pool = root / "candidate_traces"
+            runs = root / "runs"
+            pool.mkdir()
+            (pool / "trace.jsonl").write_text(
+                json.dumps(
+                    {
+                        "type": "session_meta",
+                        "payload": {"session_id": "abc123"},
+                    }
+                )
+                + "\n"
+                + json.dumps(
+                    {
+                        "type": "event_msg",
+                        "payload": {"type": "task_started", "turn_id": "turn-1"},
+                    }
+                )
+                + "\n"
+            )
+            skill = runs / "seed/target/to_be_improved_skills/example/SKILL.md"
+            skill.parent.mkdir(parents=True)
+            skill.write_text("# Example\n")
+            metadata = (
+                runs / "seed/target/to_be_improved_skills_metadata/metadata.json"
+            )
+            metadata.parent.mkdir(parents=True)
+            metadata.write_text('{"skills_metadata": []}\n')
+
+            workspace = candidates.create_run(
+                "trace.jsonl", pool, runs, seed_run="seed"
+            )
+
+            self.assertEqual(
+                (
+                    workspace
+                    / "target/to_be_improved_skills/example/SKILL.md"
+                ).read_text(),
+                "# Example\n",
+            )
+            self.assertTrue(
+                (
+                    workspace
+                    / "target/to_be_improved_skills_metadata/metadata.json"
+                ).is_file()
+            )
+            selection = json.loads(
+                (workspace / "run/trace-selection.json").read_text()
+            )
+            self.assertEqual(selection["seeded_from"], "seed")
 
 
 class TransformVerificationTest(unittest.TestCase):

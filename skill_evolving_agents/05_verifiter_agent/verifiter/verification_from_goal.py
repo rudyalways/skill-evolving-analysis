@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import copy
+import hashlib
 import importlib.util
 import json
 import sys
@@ -24,6 +25,8 @@ AGENT = ROOT.parents[1]
 EXAMPLE = ROOT / "verification-output.example.json"
 DEFAULT_GOAL = AGENT / "workspace" / "run" / "evolve-goal.json"
 DEFAULT_OUT = AGENT / "workspace" / "run" / "verification.json"
+DEFAULT_CHANGELOG = AGENT / "workspace" / "run" / "changelog.json"
+DEFAULT_INPUT = AGENT / "workspace" / "run" / "verification-input.json"
 _NAMES = AGENT / "common" / "skill_names.py"
 _spec = importlib.util.spec_from_file_location("skill_names", _NAMES)
 skill_names_mod = importlib.util.module_from_spec(_spec)
@@ -77,7 +80,14 @@ def prior_retries(path: Path) -> tuple[dict[str, int], int | None]:
     return found, kept_budget
 
 
-def build(goal: dict, example: dict, earlier: dict[str, int], budget: int | None) -> dict:
+def build(
+    goal: dict,
+    example: dict,
+    earlier: dict[str, int],
+    budget: int | None,
+    changelog: dict | None = None,
+    input_sha256: str | None = None,
+) -> dict:
     skills = skills_in_ops(goal)
     if not skills:
         fail(
@@ -101,6 +111,12 @@ def build(goal: dict, example: dict, earlier: dict[str, int], budget: int | None
     out["feedback"]["per_skill"] = []
     out["feedback"]["ood"] = []
     out["feedback"]["action"] = None
+    out["changelog"] = copy.deepcopy((changelog or {}).get("changes") or [])
+    if input_sha256 is not None:
+        out["verification_input"] = {
+            "path": "verification-input.json",
+            "sha256": input_sha256,
+        }
     if budget is not None:
         out["feedback"]["retry_budget"] = budget
     for name in skills:
@@ -119,12 +135,46 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("goal", nargs="?", type=Path, default=DEFAULT_GOAL)
     parser.add_argument("--out", type=Path, default=DEFAULT_OUT)
+    parser.add_argument("--changelog", type=Path, default=DEFAULT_CHANGELOG)
+    parser.add_argument("--input", type=Path, default=DEFAULT_INPUT)
     parser.add_argument("--stdout", action="store_true")
     parser.add_argument("--op", type=int, help="1-based action.ops index for this loop")
     args = parser.parse_args()
     goal = slice_goal(json.loads(args.goal.read_text()), args.op)
     earlier, budget = prior_retries(args.out)
-    out = build(goal, json.loads(EXAMPLE.read_text()), earlier, budget)
+    try:
+        changelog = json.loads(args.changelog.read_text())
+    except FileNotFoundError:
+        fail(
+            "operation changelog was not produced",
+            "Run the optimize stage through the pipeline so workspace/run/changelog.json is materialized.",
+        )
+    except json.JSONDecodeError:
+        fail(
+            "operation changelog is invalid JSON",
+            "Rebuild workspace/run/changelog.json from the active operation.",
+        )
+    try:
+        input_bytes = args.input.read_bytes()
+        json.loads(input_bytes)
+    except FileNotFoundError:
+        fail(
+            "verification input was not produced",
+            "Run the optimize stage through the pipeline so workspace/run/verification-input.json is materialized.",
+        )
+    except json.JSONDecodeError:
+        fail(
+            "verification input is invalid JSON",
+            "Rebuild workspace/run/verification-input.json from the active goal.",
+        )
+    out = build(
+        goal,
+        json.loads(EXAMPLE.read_text()),
+        earlier,
+        budget,
+        changelog,
+        hashlib.sha256(input_bytes).hexdigest(),
+    )
     text = json.dumps(out, indent=2, ensure_ascii=False) + "\n"
     if args.stdout:
         sys.stdout.write(text)

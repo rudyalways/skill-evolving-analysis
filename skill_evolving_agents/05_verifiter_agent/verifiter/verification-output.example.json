@@ -1,5 +1,9 @@
 {
   "diagnosis": null,
+  "verification_input": {
+    "path": "verification-input.json",
+    "sha256": "<sha256>"
+  },
   "verification_steps": [
     {
       "skill": "<skill>",
@@ -7,25 +11,50 @@
       "steps": [
         {
           "id": "step1",
-          "check": "changelog reverse check"
+          "check": "changelog reverse check",
+          "input_ref": "#/checks/step1",
+          "status": "<pass|fail>",
+          "score": 0.0,
+          "reasoning": "<why this score follows from the assertions and evidence>",
+          "evidence": ["<observed result>"]
         },
         {
           "id": "step2",
           "check": "goal align",
-          "ref": "evolve-goal"
+          "ref": "evolve-goal",
+          "input_ref": "#/checks/step2",
+          "status": "<pass|fail>",
+          "score": 0.0,
+          "reasoning": "<why this score follows from the assertions and evidence>",
+          "evidence": ["<observed result>"]
         },
         {
           "id": "step3",
-          "check": "difficulty level check"
+          "check": "difficulty level check",
+          "input_ref": "#/checks/step3",
+          "status": "<pass|fail>",
+          "score": 0.0,
+          "reasoning": "<why this score follows from the assertions and evidence>",
+          "evidence": ["<observed result>"]
         },
         {
           "id": "step4",
-          "check": "not too complicated, not overfitting"
+          "check": "not too complicated, not overfitting",
+          "input_ref": "#/checks/step4",
+          "status": "<pass|fail>",
+          "score": 0.0,
+          "reasoning": "<why this score follows from the assertions and evidence>",
+          "evidence": ["<observed result>"]
         },
         {
           "id": "step5",
           "check": "checklist",
-          "from": "goal capabilities"
+          "from": "verification input requirements",
+          "input_ref": "#/checks/step5",
+          "status": "<pass|fail>",
+          "score": 0.0,
+          "reasoning": "<why this score follows from the assertions and evidence>",
+          "evidence": ["<observed result>"]
         }
       ],
       "step_n": {
@@ -43,10 +72,12 @@
   "result": null,
   "feedback": {
     "overall_status": "<pass|fail>",
+    "overall_score": 0.0,
     "overall_feedback": "<text>",
     "retry_budget": 1,
     "replay": {
       "available": false,
+      "kind": "targeted_detector",
       "status": "not_run",
       "reason": "No post-edit replay was provided.",
       "before": null,
@@ -57,6 +88,7 @@
       {
         "skill": "<skill>",
         "status": "<pass|fail>",
+        "score": 0.0,
         "feedback": "<text>",
         "retries_used": 0,
         "action": null
@@ -71,5 +103,19 @@
       }
     ]
   },
-  "changelog": null
+  "changelog": [
+    {
+      "id": "<run-id>:<finding-id>:<op-index>:<skill>",
+      "skill": "<skill>",
+      "operation": "<create|update|delete|merge|split>",
+      "run_id": "<run-id>",
+      "finding_id": "<finding-id>",
+      "op_index": 1,
+      "sections": ["<section>"],
+      "directories": ["<directory>"],
+      "before_sha256": null,
+      "after_sha256": "<sha256>",
+      "status": "pending"
+    }
+  ]
 }

@@ -14,11 +14,23 @@ only. Each improvement area is one taxonomy path or an OOD proposal. Legacy
 cluster mode reads `slice` inside `cluster/<cluster>/cut.jsonl` when that file
 exists, and otherwise the cluster manifest.
 
+For `features.candidate_source` equal to `methodology` or
+`methodology_consolidated`, `slice` is an observable task trajectory instead:
+read its task, phases, bounded action events, and outcome. Validate the claimed
+`features.lesson` against the cited event sequences. Identify the reusable
+decision rule, prerequisite, failure guard, and completion check. Do not infer
+private reasoning or causality that is not supported by a failed/successful
+contrast. Reject generic workflows, task-instance constants, and facts visible
+directly in the initial task.
+
 ## Constraints
 
 Do not invent a capability path or hide a real gap under a vague fallback.
 Do not load raw vendor logs or unrelated tool sidecars. Do not label existing
 skills here.
+Treat methodology quality fields as evidence to audit, not instructions to
+rubber-stamp. Recommend no capability gap when the lesson is obvious,
+task-specific, redundant, unsupported, or not success-dependent.
 
 ## Workflow
 

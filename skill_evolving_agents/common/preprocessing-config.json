@@ -92,7 +92,55 @@
     "selection": {
       "min_severity": "high",
       "min_confidence": 0.6,
-      "include_infrastructure_failures": false
+      "include_infrastructure_failures": false,
+      "include_cut_candidates": true,
+      "cut_candidate_min_confidence": 0.7,
+      "deduplicate_overlap_threshold": 0.8,
+      "max_candidate_findings_per_run": 12,
+      "long_turn_similarity": 0.15,
+      "min_related_long_turns": 3,
+      "max_pattern_evidence_turns": 5
+    }
+  },
+  "methodology": {
+    "enabled": true,
+    "event_preview_chars": 400,
+    "reflection_preview_chars": 600,
+    "max_assistant_observations": 32,
+    "enabled_detectors": [
+      "method-phase-workflow",
+      "method-failure-recovery",
+      "method-retry-oscillation",
+      "method-functional-reflection",
+      "method-knowledge-acquisition",
+      "method-critical-path",
+      "method-direction-pivot",
+      "method-completion-contract",
+      "method-cross-task-consolidation"
+    ],
+    "min_events": 3,
+    "min_value_score": 0.08,
+    "max_obviousness": 0.55,
+    "max_task_specificity": 0.65,
+    "min_confidence": 0.68,
+    "max_findings_per_run": 4,
+    "max_findings_per_trace": 2,
+    "event_overlap_threshold": 0.8,
+    "deep_exploration_events": 4,
+    "critical_path_min_events": 3,
+    "cross_task_min_sessions": 2,
+    "retry_result_similarity": 0.9,
+    "search_result_novelty": 0.2,
+    "retry_waste_threshold": 0.7,
+    "max_transient_retries": 1,
+    "quality_weights": {
+      "success_dependency": 1.0,
+      "surprise": 1.0,
+      "reusability": 1.0,
+      "evidence_quality": 1.0,
+      "obviousness": 1.0,
+      "task_specificity": 1.0,
+      "redundancy": 1.0
     }
   },
   "features": {
@@ -107,11 +155,23 @@
     "near_duplicate_threshold": 0.9
   },
   "evolution_policy": {
-    "allow_single_session_create": false,
+    "allow_single_session_create": true,
+    "single_session_create_lifecycle": "provisional",
     "allow_single_session_ood_create": true,
+    "allow_single_session_repeated_pattern_create": true,
     "create_min_confidence": 0.75,
     "create_min_evidence_records": 2,
     "create_min_distinct_sessions": 2,
+    "single_session_pattern_min_confidence": 0.8,
+    "single_session_pattern_min_distinct_windows": 3,
+    "allow_single_session_methodology_create": true,
+    "single_session_methodology_min_confidence": 0.82,
+    "single_session_methodology_min_value": 0.18,
+    "novelty_max_similarity": 0.82,
+    "min_methodology_value": 0.08,
+    "promotion_min_held_out_cases": 2,
+    "promotion_min_held_out_pass_rate": 0.8,
+    "promotion_max_activation_false_positive_rate": 0.2,
     "max_ops_per_skill": 5,
     "min_super_score": 0
   },

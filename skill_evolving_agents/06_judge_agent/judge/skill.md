@@ -10,6 +10,15 @@ The verifiter agent writes status, feedback, and `ood` in `workspace/run/verific
 
 Do not re-run the section or directory diff. Do not mark pass when a skill status is fail. Do not send this op back to CutTraces, LabelA, LabelB, Goal, or Select. Do not send back an op that has used `retry_budget`. Do not edit `target/raw_skills`. Do not drop an `ood` item when choosing where to go back. Do not start the next goal op in this step.
 
+Do not mark pass when an available behavioral replay failed or shows a
+material regression against baseline. Do not treat `not_run` as behavioral
+proof: a structurally passing operation may proceed only with the explicit
+replay limitation preserved. Prefer a causal edit from the post-hoc analysis
+over a broad rewrite, and do not optimize repeatedly against one eval case.
+For `paired_skill_eval`, do not pass a replay that misses held-out count/pass
+thresholds, exceeds the activation false-positive limit, reuses development
+prompts or source traces, or wins only on development cases.
+
 ## Workflow
 
 Read `workspace/run/verification.json` for this op. Set `feedback.action`. `op` is `pass`, `back`, or `fail`. `pass` leaves `to` empty. `back` sets `to` to this op's edit, Update, Generate, Delete, Merge, or Split, and adds 1 to `retries_used`. `fail` leaves `to` empty when `retries_used` is already at `retry_budget`. `pass` and `fail` end this op. The loop then takes the next op.
