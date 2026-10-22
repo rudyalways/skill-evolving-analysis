@@ -601,11 +601,24 @@ def collect_phase_metrics(
         if isinstance(row, dict):
             reduction_counts[str(row.get("decision") or "unknown")] += 1
 
-    verifications = [
+    verification_artifacts = [
         value
         for path in (workspace / "run").glob("*/ops/*/verification.json")
         if isinstance(value := _read_json(path), dict)
     ]
+    verifications = [
+        value
+        for value in verification_artifacts
+        if isinstance(value.get("feedback"), dict)
+    ]
+    skipped_verifications = sum(
+        value.get("status") == "skipped"
+        for value in verification_artifacts
+    )
+    failed_verifications = sum(
+        value.get("status") == "failed"
+        for value in verification_artifacts
+    )
     verification_passes = 0
     replay_available = 0
     replay_passes = 0
@@ -743,6 +756,9 @@ def collect_phase_metrics(
             },
             "verify": {
                 "operations": len(verifications),
+                "artifact_records": len(verification_artifacts),
+                "skipped": skipped_verifications,
+                "failed_before_result": failed_verifications,
                 "structural_passes": verification_passes,
                 "structural_pass_rate": _rate(
                     verification_passes, len(verifications)
@@ -878,6 +894,11 @@ def aggregate_phase_metrics(runs_root: Path) -> dict[str, Any]:
             },
             "verify": {
                 "operations": verify_operations,
+                "artifact_records": total("verify", "artifact_records"),
+                "skipped": total("verify", "skipped"),
+                "failed_before_result": total(
+                    "verify", "failed_before_result"
+                ),
                 "structural_passes": total("verify", "structural_passes"),
                 "structural_pass_rate": _rate(
                     total("verify", "structural_passes"), verify_operations
@@ -1018,8 +1039,8 @@ def write_run_report(workspace: Path) -> Path | None:
             "policy": {
                 "max_ops_per_skill": edits["summary"].get("max_ops_per_skill"),
                 "min_super_score": edits["summary"].get("min_super_score"),
-                "retry_budget": edits["summary"].get("retry_budget", 1),
-                "max_attempts": edits["summary"].get("max_attempts", 2),
+                "retry_budget": edits["summary"].get("retry_budget", 0),
+                "max_attempts": edits["summary"].get("max_attempts", 1),
                 "super_score": (
                     "severity_weight * confidence * (1 + abs(score)) + match_score"
                 ),
@@ -1029,13 +1050,8 @@ def write_run_report(workspace: Path) -> Path | None:
                     "high": 3,
                     "critical": 4,
                 },
-                "judge_back_restarts": ["optimize", "verifiter", "judge"],
-                "judge_back_does_not_reopen": [
-                    "preprocessing",
-                    "label-skills",
-                    "label-traces-cluster",
-                    "goal",
-                ],
+                "retry_policy": "disabled",
+                "judge_actions": ["pass", "fail"],
             },
             **summarize_spans(rows),
             "edit_summary": edits["summary"],

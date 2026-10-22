@@ -38,6 +38,16 @@ Write only this finding's records into worker-local
 `workspace/run/diagnosis.json`. The runner validates, archives, and reduces all
 scoped files. The shape is `diagnosis.example.json`.
 
+For `no_change`, do not invent a separate decision schema. Write the canonical
+diagnosis shape with both required arrays present and empty:
+
+```json
+{
+  "skill_capabilities_missing": [],
+  "newly_detected_skill_capabilites_missing": []
+}
+```
+
 - The example contains placeholders delimited by `<` and `>`. Replace every
   placeholder with concrete data. Never copy or quote placeholder text
   anywhere in the output, including `reasoning`, descriptions, and

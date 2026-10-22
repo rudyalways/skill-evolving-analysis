@@ -8,7 +8,7 @@ The default host-CLI pipeline creates a temporary allowlisted session view conta
 
 ### Input
 
-The selected `workspace/runs/<run_id>` is available as `workspace`: through a temporary symlink for a host CLI or a bind mount for Docker. Input includes one authoritative op goal at `workspace/run/<cluster>/ops/<op>/evolve-goal.json`, its active compatibility copy at `workspace/run/evolve-goal.json`, and the skills that op lists under `workspace/target/to_be_improved_skills`. The active file contains exactly one `action.ops` item. When several findings update the same skill, the runner has already merged the top edits into that one item. `bundle.selected` names those source edits. Apply every section and directory goal in this pass. Do not start another session per source edit. A return session also reads `feedback.action` `back` in `workspace/run/verification.json`. The section list comes from the session package.
+The selected `workspace/runs/<run_id>` is available as `workspace`: through a temporary symlink for a host CLI or a bind mount for Docker. Input includes one authoritative op goal at `workspace/run/<cluster>/ops/<op>/evolve-goal.json`, its active compatibility copy at `workspace/run/evolve-goal.json`, and the skills that op lists under `workspace/target/to_be_improved_skills`. The active file contains exactly one `action.ops` item. When several findings update the same skill, the runner has already merged the top edits into that one item. `bundle.selected` names those source edits. Apply every section, directory, and removal goal in this pass. Do not start another session per source edit. The section list comes from the session package.
 
 ### Output
 
@@ -16,4 +16,4 @@ Output is the edited skills under worker-local `workspace/target/to_be_improved_
 
 ### Stop condition
 
-Stop when that edit is written. Do not verify the edit. Do not set `feedback.action`. A later session edits this same op again only when Judge has set `back`.
+Stop when that edit is written. Do not verify the edit. Do not set `feedback.action`. Retries are disabled, so this operation receives one edit session.

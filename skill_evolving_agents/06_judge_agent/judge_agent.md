@@ -20,7 +20,7 @@ connects the edit to the original detector evidence. When replay metrics exist,
 compare before/after severity, confidence, and occurrences. Without a replay,
 `pass` means structural pass only; preserve `replay.status: not_run` and do not
 claim that behavior improved or invent improved metrics.
-`pass` and `fail` end the op; `back` requests one more edit attempt.
+Set only `pass` or `fail`; both end the op. Retries are disabled.
 
 ### Stop condition
 

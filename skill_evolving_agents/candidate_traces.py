@@ -159,10 +159,25 @@ def create_run(
     runs: Path = RUNS,
     seed_run: str | None = None,
     replace: bool = False,
+    source_path: Path | None = None,
 ) -> Path:
     """Copy one candidate into a new run named from its metadata."""
-    rows = index_traces(pool)
-    row = _select(rows, selector)
+    if source_path is not None:
+        source_path = source_path.expanduser().resolve()
+        if not source_path.is_file() or source_path.suffix != ".jsonl":
+            raise SystemExit(f"source trace is not a JSONL file: {source_path}")
+        row = inspect_trace(source_path)
+        used = {
+            path.name
+            for path in runs.glob("run-*")
+            if path.is_dir()
+        }
+        row["run_id"] = run_id_for(row, used)
+        trace_source = source_path
+    else:
+        rows = index_traces(pool)
+        row = _select(rows, selector)
+        trace_source = pool / str(row["file"])
     run_id = str(row["run_id"])
     if not re.fullmatch(r"[A-Za-z0-9_.-]+", run_id):
         raise SystemExit(f"refusing unsafe run id: {run_id}")
@@ -194,14 +209,18 @@ def create_run(
                     dirs_exist_ok=True,
                 )
     destination = workspace / "traces/raw" / source / str(row["file"])
-    shutil.copy2(pool / str(row["file"]), destination)
+    shutil.copy2(trace_source, destination)
     selection = {
         "schema_version": 1,
         "run_id": run_id,
         "source": source,
         "session_id": row["session_id"],
         "turns": row["turns"],
-        "candidate": f"workspace/candidate_traces/{row['file']}",
+        "candidate": (
+            str(source_path)
+            if source_path is not None
+            else f"workspace/candidate_traces/{row['file']}"
+        ),
         "copied_to": destination.relative_to(workspace).as_posix(),
     }
     if seed_run:
@@ -234,12 +253,18 @@ def main() -> None:
         action="store_true",
         help="replace an existing generated run workspace",
     )
+    create.add_argument(
+        "--source",
+        type=Path,
+        help="import an explicit local JSONL trace instead of the candidate pool",
+    )
     args = parser.parse_args()
     if args.command == "new":
         create_run(
             args.selector,
             seed_run=args.seed_run,
             replace=args.replace,
+            source_path=args.source,
         )
         return
     rows = index_traces()

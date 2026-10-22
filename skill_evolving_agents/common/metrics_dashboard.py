@@ -196,6 +196,11 @@ def run_progress(
 def metrics_payload(database: Path) -> dict[str, Any]:
     rows = load_rows(database)
     runs_root = database.parent / "runs"
+    active_by_run = {
+        path.name: active
+        for path in runs_root.iterdir()
+        if path.is_dir() and (active := active_statuses(database, path.name))
+    } if runs_root.is_dir() else {}
     excluded_run_ids = sorted(
         {
             str(row["run_id"])
@@ -215,19 +220,36 @@ def metrics_payload(database: Path) -> dict[str, Any]:
         phases[(row["phase"], row["category"])].append(
             row["duration_us"] / 1_000_000
         )
+    for run_id in active_by_run:
+        runs.setdefault(run_id, [])
+
+    def run_start(item: tuple[str, list[dict[str, Any]]]) -> float:
+        run_id, spans = item
+        if spans:
+            return min(row["started_at_us"] for row in spans)
+        return datetime.fromisoformat(
+            active_by_run[run_id][0]["started_at"]
+        ).timestamp() * 1_000_000
+
     run_summaries: list[dict[str, Any]] = []
     for run_id, spans in sorted(
         runs.items(),
-        key=lambda item: min(row["started_at_us"] for row in item[1]),
+        key=run_start,
         reverse=True,
     ):
         totals: dict[str, float] = defaultdict(float)
         for row in spans:
             totals[row["category"]] += row["duration_us"] / 1_000_000
-        start = min(row["started_at_us"] for row in spans)
-        end = max(row["started_at_us"] + row["duration_us"] for row in spans)
+        active = active_by_run.get(run_id, [])
+        if spans:
+            start = min(row["started_at_us"] for row in spans)
+            end = max(row["started_at_us"] + row["duration_us"] for row in spans)
+            started_at = min(row["started_at"] for row in spans)
+        else:
+            started_at = active[0]["started_at"]
+            start = int(datetime.fromisoformat(started_at).timestamp() * 1_000_000)
+            end = start
         timing = _METRICS.summarize_spans(spans)
-        active = active_statuses(database, run_id)
         if active:
             end = max(end, int(datetime.now(UTC).timestamp() * 1_000_000))
         run_summaries.append(
@@ -237,7 +259,7 @@ def metrics_payload(database: Path) -> dict[str, Any]:
                 "category_seconds": dict(sorted(totals.items())),
                 "span_count": len(spans),
                 "error_count": sum(row["status"] != "ok" for row in spans),
-                "started_at": min(row["started_at"] for row in spans),
+                "started_at": started_at,
                 "phases": timing["phases"],
                 "spans": timing["spans"],
                 "active": active,
@@ -461,6 +483,29 @@ gap:7px 16px; align-items:center }}
 .state {{ font-weight:700 }} .state.done {{ color:#62d8a8 }}
 .state.running {{ color:#f4c15d }} .state.failed {{ color:#ff8080 }}
 .state.pending,.state.skipped {{ color:#8f9ab0 }}
+.trace-shell {{ margin:18px 0; border:1px solid #29334d; border-radius:10px;
+overflow:auto; max-height:440px; background:#0c1222 }}
+.trace-view {{ min-width:1050px; padding:10px 0 }}
+.trace-ruler,.trace-row {{ display:grid; grid-template-columns:220px minmax(800px,1fr);
+align-items:center }}
+.trace-label {{ overflow:hidden; padding:5px 10px; color:#aeb8cc;
+font:12px ui-monospace,monospace; white-space:nowrap; text-overflow:ellipsis }}
+.trace-track {{ position:relative; height:25px;
+background:repeating-linear-gradient(90deg,#202943 0,#202943 1px,transparent 1px,transparent 25%) }}
+.trace-ticks {{ position:relative; height:22px; color:#8390aa;
+font:11px ui-monospace,monospace }}
+.trace-tick {{ position:absolute; transform:translateX(-50%); white-space:nowrap }}
+.trace-tick:first-child {{ transform:none }}
+.trace-tick:last-child {{ transform:translateX(-100%) }}
+.trace-block {{ position:absolute; top:3px; height:19px; min-width:2px;
+border-radius:3px; overflow:hidden; padding:2px 5px; box-sizing:border-box;
+color:white; font:11px ui-monospace,monospace; white-space:nowrap }}
+.trace-block.llm_agent {{ background:#7055de }} .trace-block.deterministic {{ background:#15855c }}
+.trace-block.orchestration {{ background:#bb7900 }} .trace-block.audit {{ background:#3f8db8 }}
+.trace-block.live {{ background:#d39422; box-shadow:0 0 8px #f4c15d;
+background-image:linear-gradient(110deg,transparent 25%,#f4c15d88 45%,transparent 65%);
+background-size:200% 100%; animation:trace-pulse 1.4s linear infinite }}
+@keyframes trace-pulse {{ to {{ background-position:-200% 0 }} }}
 @media (max-width:700px) {{ .progress-grid {{ grid-template-columns:1fr 90px }} }}
 </style></head><body><main>
 <h1>Skill Evolver Live Metrics</h1>
@@ -487,6 +532,63 @@ const phaseTable = rows =>
     `<td>${{sec(row.average_seconds)}}</td><td>${{sec(row.p50_seconds)}}</td>`+
     `<td>${{sec(row.p95_seconds)}}</td><td>${{sec(row.maximum_seconds)}}</td></tr>`
   ).join('')+`</tbody></table>`;
+const tracePanel = run => {{
+  const completed = (run.spans || []).map((row, index) => {{
+    const start = Date.parse(row.started_at);
+    return {{label:`${{row.phase}} · ${{row.item}}`, category:row.category,
+      start, end:start + Number(row.duration_ms), live:false, key:`done-${{index}}`}};
+  }}).filter(row => Number.isFinite(row.start));
+  const active = (run.active || []).map((row, index) => ({{
+    label:`${{row.stage}} · ${{row.item}}`, category:'live',
+    start:Date.parse(row.started_at), end:null, live:true, key:`live-${{index}}`
+  }})).filter(row => Number.isFinite(row.start));
+  const rows = [...completed, ...active].sort((a,b) => a.start-b.start);
+  if (!rows.length) return '';
+  const origin = Math.min(...rows.map(row => row.start));
+  const staticEnd = Math.max(origin + 1, ...completed.map(row => row.end));
+  const blocks = rows.map(row =>
+    `<div class="trace-row"><div class="trace-label" title="${{esc(row.label)}}">`+
+    `${{esc(row.label)}}</div><div class="trace-track"><div `+
+    `class="trace-block ${{esc(row.category)}}${{row.live ? ' live' : ''}}" `+
+    `data-start="${{row.start}}" data-end="${{row.end == null ? '' : row.end}}" `+
+    `title="${{esc(row.label)}}">${{esc(row.live ? 'running' : row.category)}}</div>`+
+    `</div></div>`).join('');
+  return `<h3>Live trace</h3><div class="trace-shell"><div class="trace-view" `+
+    `data-trace-origin="${{origin}}" data-trace-static-end="${{staticEnd}}" `+
+    `data-trace-active="${{active.length ? '1' : '0'}}">`+
+    `<div class="trace-ruler"><div class="trace-label">time from run start</div>`+
+    `<div class="trace-ticks">${{[0,25,50,75,100].map(value =>
+      `<span class="trace-tick" data-fraction="${{value/100}}" style="left:${{value}}%"></span>`
+    ).join('')}}</div></div>${{blocks}}</div></div>`;
+}};
+const tickTraces = () => {{
+  const now = Date.now();
+  document.querySelectorAll('[data-live-elapsed-start]').forEach(node => {{
+    node.textContent = sec(Math.max(0, now-Number(node.dataset.liveElapsedStart))/1000);
+  }});
+  document.querySelectorAll('[data-live-wall-start]').forEach(node => {{
+    node.textContent = sec(Math.max(0, now-Number(node.dataset.liveWallStart))/1000);
+  }});
+  document.querySelectorAll('[data-trace-origin]').forEach(view => {{
+    const origin = Number(view.dataset.traceOrigin);
+    const end = view.dataset.traceActive === '1'
+      ? Math.max(now, Number(view.dataset.traceStaticEnd))
+      : Number(view.dataset.traceStaticEnd);
+    const range = Math.max(end-origin, 1);
+    view.querySelectorAll('.trace-tick').forEach(tick => {{
+      tick.textContent = sec(range * Number(tick.dataset.fraction) / 1000);
+    }});
+    view.querySelectorAll('.trace-block').forEach(block => {{
+      const start = Number(block.dataset.start);
+      const blockEnd = block.dataset.end ? Number(block.dataset.end) : now;
+      block.style.left = `${{Math.max(0, (start-origin)/range*100)}}%`;
+      block.style.width = `${{Math.max(0.2, (blockEnd-start)/range*100)}}%`;
+      if (!block.dataset.end) {{
+        block.textContent = `running ${{sec((now-start)/1000)}}`;
+      }}
+    }});
+  }});
+}};
 const runPanel = run => {{
   const total = Math.max(Object.values(run.category_seconds).reduce((a,b)=>a+b,0), .001);
   const bars = Object.entries(run.category_seconds).map(([category,value]) =>
@@ -494,7 +596,8 @@ const runPanel = run => {{
     `${{esc(category)}} ${{Number(value).toFixed(1)}}s</div>`).join('');
   const active = (run.active || []).map(row =>
     `<div class="active-run"><b>Running now:</b> ${{esc(row.stage)}} · `+
-    `${{esc(row.item)}} · <b>${{sec(row.elapsed_seconds)}}</b></div>`).join('');
+    `${{esc(row.item)}} · <b data-live-elapsed-start="${{Date.parse(row.started_at)}}">`+
+    `${{sec(row.elapsed_seconds)}}</b></div>`).join('');
   const progress = run.progress || {{selected_findings:0, stages:[]}};
   const progressRows = (progress.stages || []).map(row => {{
     const duration = row.state === 'pending' || row.state === 'skipped'
@@ -521,12 +624,14 @@ const runPanel = run => {{
     `<section class="progress"><h3>Current progress</h3>`+
     `<p>Selected findings: <b>${{progress.selected_findings}}</b></p>`+
     `<div class="progress-grid">${{progressRows}}</div></section><div class="stats">`+
-    `<span>live wall <b>${{sec(run.wall_seconds)}}</b></span>`+
+    `<span>live wall <b${{(run.active || []).length ? ` data-live-wall-start="${{Date.parse(run.started_at)}}"` : ''}}>`+
+    `${{sec(run.wall_seconds)}}</b></span>`+
     `<span>completed agent sum <b>${{sec(run.category_seconds.llm_agent || 0)}}</b></span>`+
     `<span>deterministic <b>${{sec(run.category_seconds.deterministic || 0)}}</b></span>`+
     `<span>orchestration <b>${{sec(run.category_seconds.orchestration || 0)}}</b></span>`+
     `<span>completed spans <b>${{run.span_count}}</b></span><span>errors <b>${{run.error_count}}</b></span>`+
     `</div><div class="bars">${{bars}}</div>`+
+    tracePanel(run)+
     `<h3>Completed phase spans</h3><table><thead><tr><th>Phase</th><th>Count</th><th>Sum</th>`+
     `<th>Wall</th><th>Peak</th><th>P50</th><th>Max</th></tr></thead>`+
     `<tbody>${{phaseRows}}</tbody></table>`+
@@ -562,12 +667,13 @@ async function refresh() {{
     document.querySelectorAll('.tab').forEach(node =>
       node.addEventListener('click', () => selectTab(node.dataset.tab)));
     selectTab(selectedTab);
+    tickTraces();
   }} catch (error) {{
     document.getElementById('status').className = 'error';
     document.getElementById('status').textContent = `Refresh failed: ${{error}}`;
   }}
 }}
-refresh(); setInterval(refresh, {refresh_ms});
+refresh(); setInterval(refresh, {refresh_ms}); setInterval(tickTraces, 100);
 </script></main></body></html>"""
 
 

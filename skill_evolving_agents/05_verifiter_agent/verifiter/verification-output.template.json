@@ -1,0 +1,30 @@
+{
+  "diagnosis": null,
+  "verification_input": {
+    "path": "verification-input.json",
+    "sha256": "<sha256>"
+  },
+  "verification_steps": [],
+  "nod": null,
+  "result": null,
+  "feedback": {
+    "scoring_strategy_version": 1,
+    "overall_status": "<pass|fail>",
+    "overall_score": 0.0,
+    "bottleneck_skills": ["<skill>"],
+    "overall_feedback": "<text>",
+    "retry_budget": 0,
+    "replay": {
+      "available": false,
+      "kind": "targeted_detector",
+      "status": "not_run",
+      "reason": "No post-edit replay was provided.",
+      "before": null,
+      "after": null
+    },
+    "action": null,
+    "per_skill": [],
+    "ood": []
+  },
+  "changelog": []
+}

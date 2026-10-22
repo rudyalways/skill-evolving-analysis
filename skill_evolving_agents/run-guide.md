@@ -115,9 +115,17 @@ publishes scoped diagnosis and goal artifacts. Identical proposed operations
 are reduced once in `run/goal-reduction.json`. Remaining operations are batched
 by affected skill names: disjoint operations run in parallel; update, delete,
 merge, split, or create operations that overlap a source or target name run in
-later batches. Each operation keeps its Optimize → Verifiter → Judge → optional
-retry loop inside one worker. Temporary copies under `.pipeline-workers` are
-removed after reduction.
+later batches. Each operation keeps its Optimize → Verifiter → Judge pass
+inside one worker; retries are disabled. Temporary copies under
+`.pipeline-workers` are removed after reduction.
+
+Each proposed op also owns a durable directory at
+`run/<finding-id>/ops/<op-index>/`. It always contains the sliced goal,
+verification input, verification result or terminal skip/failure marker,
+judge record, and changelog. The judge record hashes the other four artifacts.
+The changelog keeps current phase state plus append-only phase events. Gates,
+deduplication, bundling, and worker failures produce complete terminal bundles
+instead of leaving missing files.
 
 `signals.selection.include_infrastructure_failures` decides whether an
 infrastructure-only finding or cluster can evolve a skill. While it is false,
@@ -139,6 +147,19 @@ The agent and its model come from `common/agent-config.json`. Each entry has
 uses that entry. Change which one runs by marking it `active` and the others
 `inactive`.
 
+## Runtime goal
+
+End-to-end wall time, including every agent phase, should stay within:
+
+- 5 minutes for a short trace (up to 30 user turns)
+- 10 minutes for a long trace (more than 30 user turns)
+
+These are total-run ceilings, not per-agent allowances. If a run crosses its
+ceiling, stop it and treat the delay as a pipeline defect. Do not normalize a
+long-thinking or stalled provider session by extending the wait. Preserve the
+phase statuses and timing artifacts, then investigate fanout size, prompt/input
+size, provider latency, and missing process timeouts before retrying.
+
 `--agent` overrides the active backend for one invocation and still uses that
 backend's configured model. `--model` overrides only the model.
 
@@ -153,8 +174,8 @@ specific CLI version is required.
 The runner executes deterministic preprocessing once and label-skills once. It
 fans diagnosis and goal out by selected finding, with a barrier and deterministic
 reducer after each stage. It then runs conflict-free operation batches. A
-`back` decision repeats Optimize, Verifiter, and Judge once inside that
-operation's isolated worker.
+single Optimize, Verifiter, and Judge pass runs inside each operation's
+isolated worker. Retries are disabled.
 
 This stateful pipeline is intentionally not Docker Compose or one Harbor
 dataset run. Harbor is suited to independent trials; these sessions discover
@@ -252,17 +273,14 @@ What each mark answers:
 - `diagnosis-queue`, `goal-queue`, `operation-queue`: wait before that session.
   `operation-queue` for a later same-skill batch starts when operations were
   scheduled, so its duration is the wait behind the earlier edit.
-- `optimize`, `verifiter`, `judge`: one slice per attempt. `attempt`,
+- `optimize`, `verifiter`, `judge`: one slice per operation. `attempt`,
   `retry_budget`, `max_attempts`, `bundle_size`, and the rank fields are on
   the slice. `session_log` is `logs/sessions/<stage>/<item>.jsonl`. The
   sibling `.prompt.txt` is the prompt. `tool_events` counts tool-call lines
   in that stream.
-- `judge-decision`: one instant per judge result. `judge_action` is `pass`,
-  `back`, or `fail`. `judge_to` is the edit name the judge wrote. `will_retry`
-  is true only when `back` is still inside the budget. The budget is one
-  return, so the second `back` has `will_retry` false and the op stops.
-  Judge restarts optimize, verifiter, and judge. It does not reopen
-  preprocessing, labeling, or goal.
+- `judge-decision`: one instant per judge result. `judge_action` is `pass` or
+  `fail`; `judge_to` is empty and `will_retry` is false because
+  `retry_budget` is 0 and `max_attempts` is 1.
 - `worker-copy`: isolated workspace copy, separate from agent time.
 - `cut_budget`: every cut window against `max_user_turns` and `max_tokens`.
 
@@ -291,6 +309,10 @@ Use that file to check a timing claim:
   `bundled` and `over_cap`. The merged goal's `bundle.selected` lists the
   source edits. The cap is `evolution_policy.max_ops_per_skill` (default 5),
   overridable with `--max-ops-per-skill`.
+- A non-representative bundled source remains `skipped` for its own optimize,
+  verification, and judge phases because those phases run once on the merged
+  representative. Its `publication.json` uses outcome `bundled` and
+  `selected_operation` points to the authoritative verified operation.
 
 Updates of the same skill run as one optimize, one verifiter, and one judge.
 The runner ranks those updates by super score and keeps the top ones up to

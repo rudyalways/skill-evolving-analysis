@@ -2,218 +2,240 @@
   "diagnosis": null,
   "verification_input": {
     "path": "verification-input.json",
-    "sha256": "<sha256>"
+    "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
   },
   "verification_steps": [
     {
-      "skill": "<skill>",
+      "skill": "example-skill",
       "used_by": "verifier stage",
+      "steps_from": "verification-input.json#/skills/0/checks",
       "steps": [
         {
           "id": "step1",
           "check": "changelog reverse check",
-          "input_ref": "#/checks/step1",
+          "input_ref": "#/skills/0/checks/0",
           "applicable": true,
-          "status": "<pass|fail|not_applicable>",
-          "score": "<0..1|null>",
-          "reasoning": "<why this score follows from the assertions and evidence>",
-          "evidence": ["<observed result>"],
+          "status": "pass",
+          "score": 1.0,
+          "reasoning": "The recorded hashes and claimed changes match the baseline and candidate trees.",
+          "evidence": ["Recomputed baseline and candidate hashes match changelog.json."],
           "assertion_results": [
             {
               "assertion_id": "step1-hashes",
-              "status": "<pass|fail>",
-              "score": 0.0,
-              "reasoning": "<why the assertion passed or failed>",
-              "evidence": ["<observed result>"]
+              "status": "pass",
+              "score": 1.0,
+              "reasoning": "Both content hashes were independently reproduced.",
+              "evidence": ["before_sha256 and after_sha256 match the skill trees."]
             },
             {
               "assertion_id": "step1-claimed-changes",
-              "status": "<pass|fail>",
-              "score": 0.0,
-              "reasoning": "<why the assertion passed or failed>",
-              "evidence": ["<observed result>"]
+              "status": "pass",
+              "score": 1.0,
+              "reasoning": "Every observed change is named by the operation.",
+              "evidence": ["Only workflow and references changed."]
             }
           ]
         },
         {
           "id": "step2",
           "check": "goal align",
-          "input_ref": "#/checks/step2",
+          "input_ref": "#/skills/0/checks/1",
           "applicable": true,
-          "status": "<pass|fail|not_applicable>",
-          "score": "<0..1|null>",
-          "reasoning": "<why this score follows from the assertions and evidence>",
-          "evidence": ["<observed result>"],
+          "status": "pass",
+          "score": 1.0,
+          "reasoning": "The candidate satisfies every generated goal assertion without unclaimed changes.",
+          "evidence": ["Diff and candidate inspection cover the section, directory, avoid, and removal requirements."],
           "assertion_results": [
             {
-              "assertion_id": "step2-requirements",
-              "status": "<pass|fail>",
-              "score": 0.0,
-              "reasoning": "<why the assertion passed or failed>",
-              "evidence": ["<observed result>"]
+              "assertion_id": "step2-unclaimed-changes",
+              "status": "pass",
+              "score": 1.0,
+              "reasoning": "No changed path falls outside the active operation.",
+              "evidence": ["The diff contains only workflow and references changes."]
             },
             {
-              "assertion_id": "step2-unclaimed-changes",
-              "status": "<pass|fail>",
-              "score": 0.0,
-              "reasoning": "<why the assertion passed or failed>",
-              "evidence": ["<observed result>"]
+              "assertion_id": "step2-goal-example-section",
+              "status": "pass",
+              "score": 1.0,
+              "reasoning": "Workflow contains the requested deterministic validation step.",
+              "evidence": ["The workflow now requires validation before completion."]
+            },
+            {
+              "assertion_id": "step2-goal-example-directory",
+              "status": "pass",
+              "score": 1.0,
+              "reasoning": "The reusable checklist is present in references.",
+              "evidence": ["references/checklist.md contains the checklist."]
+            },
+            {
+              "assertion_id": "step2-goal-example-avoid",
+              "status": "pass",
+              "score": 1.0,
+              "reasoning": "The instructions use general terms rather than trigger-specific names.",
+              "evidence": ["No triggering project or provider name appears in the candidate."]
+            },
+            {
+              "assertion_id": "step2-goal-example-removal",
+              "status": "pass",
+              "score": 1.0,
+              "reasoning": "The duplicated legacy checklist was removed.",
+              "evidence": ["Only the canonical checklist remains."]
             }
           ]
         },
         {
           "id": "step3",
           "check": "difficulty level check",
-          "input_ref": "#/checks/step3",
+          "input_ref": "#/skills/0/checks/2",
           "applicable": true,
-          "status": "<pass|fail|not_applicable>",
-          "score": "<0..1|null>",
-          "reasoning": "<why this score follows from the assertions and evidence>",
-          "evidence": ["<observed result>"],
+          "status": "pass",
+          "score": 1.0,
+          "reasoning": "The procedure is reusable, evidence-backed, and not baseline knowledge.",
+          "evidence": ["Two evidence records across two windows show the recurring omission."],
           "assertion_results": [
             {
               "assertion_id": "step3-evidence-dependent",
-              "status": "<pass|fail>",
-              "score": 0.0,
-              "reasoning": "<why the assertion passed or failed>",
-              "evidence": ["<observed result>"]
+              "status": "pass",
+              "score": 1.0,
+              "reasoning": "The added workflow directly addresses the repeated finding.",
+              "evidence": ["finding-example links the failure to omitted validation."]
             },
             {
               "assertion_id": "step3-non-trivial",
-              "status": "<pass|fail>",
-              "score": 0.0,
-              "reasoning": "<why the assertion passed or failed>",
-              "evidence": ["<observed result>"]
+              "status": "pass",
+              "score": 1.0,
+              "reasoning": "The workflow coordinates validation, evidence, and completion gates.",
+              "evidence": ["The behavior requires a multi-step reusable procedure."]
             }
           ]
         },
         {
           "id": "step4",
           "check": "not too complicated",
-          "input_ref": "#/checks/step4",
+          "input_ref": "#/skills/0/checks/3",
           "applicable": true,
-          "status": "<pass|fail|not_applicable>",
-          "score": "<0..1|null>",
-          "reasoning": "<why this score follows from the assertions and evidence>",
-          "evidence": ["<observed result>"],
+          "status": "pass",
+          "score": 1.0,
+          "reasoning": "The candidate adds only the minimum workflow and reference needed.",
+          "evidence": ["No unrelated branches, files, or fallback systems were added."],
           "assertion_results": [
             {
               "assertion_id": "step4-minimal-procedure",
-              "status": "<pass|fail>",
-              "score": 0.0,
-              "reasoning": "<why the assertion passed or failed>",
-              "evidence": ["<observed result>"]
+              "status": "pass",
+              "score": 1.0,
+              "reasoning": "Each added instruction is required by a named expectation.",
+              "evidence": ["The diff maps directly to the generated requirements."]
             },
             {
               "assertion_id": "step4-no-unnecessary-content",
-              "status": "<pass|fail>",
-              "score": 0.0,
-              "reasoning": "<why the assertion passed or failed>",
-              "evidence": ["<observed result>"]
+              "status": "pass",
+              "score": 1.0,
+              "reasoning": "No speculative or unrelated guidance was introduced.",
+              "evidence": ["All added content supports validation or its checklist."]
             }
           ]
         },
         {
           "id": "step5",
           "check": "checklist",
-          "input_ref": "#/checks/step5",
+          "input_ref": "#/skills/0/checks/4",
           "applicable": true,
-          "status": "<pass|fail|not_applicable>",
-          "score": "<0..1|null>",
-          "reasoning": "<why this score follows from the assertions and evidence>",
-          "evidence": ["<observed result>"],
+          "status": "pass",
+          "score": 1.0,
+          "reasoning": "Every item under the skill requirements was evaluated.",
+          "evidence": ["Section, directory, avoid, and removal results are recorded in step2."],
           "assertion_results": [
             {
               "assertion_id": "step5-every-requirement",
-              "status": "<pass|fail>",
-              "score": 0.0,
-              "reasoning": "<why the assertion passed or failed>",
-              "evidence": ["<observed result>"]
+              "status": "pass",
+              "score": 1.0,
+              "reasoning": "All four requirement categories have concrete results.",
+              "evidence": ["Four goal-specific assertion results are present."]
             },
             {
               "assertion_id": "step5-failure-evidence",
-              "status": "<pass|fail>",
-              "score": 0.0,
-              "reasoning": "<why the assertion passed or failed>",
-              "evidence": ["<observed result>"]
+              "status": "pass",
+              "score": 1.0,
+              "reasoning": "No requirement failed; each passing result still includes evidence.",
+              "evidence": ["Every assertion result has non-empty evidence."]
             }
           ]
         },
         {
           "id": "step6",
           "check": "no degradation of existing capabilities or sections",
-          "input_ref": "#/checks/step6",
+          "input_ref": "#/skills/0/checks/5",
           "applicable": true,
-          "status": "<pass|fail|not_applicable>",
-          "score": "<0..1|null>",
-          "reasoning": "<why this score follows from the assertions and evidence>",
-          "evidence": ["<observed result>"],
+          "status": "pass",
+          "score": 1.0,
+          "reasoning": "Existing capabilities and still-valid constraints remain intact.",
+          "evidence": ["Baseline-to-candidate comparison found no unrelated removals."],
           "assertion_results": [
             {
               "assertion_id": "step6-capabilities-preserved",
-              "status": "<pass|fail>",
-              "score": 0.0,
-              "reasoning": "<why the assertion passed or failed>",
-              "evidence": ["<observed result>"]
+              "status": "pass",
+              "score": 1.0,
+              "reasoning": "All capabilities outside the explicit removal remain available.",
+              "evidence": ["Unchanged baseline sections remain present in the candidate."]
             },
             {
               "assertion_id": "step6-valid-guidance-preserved",
-              "status": "<pass|fail>",
-              "score": 0.0,
-              "reasoning": "<why the assertion passed or failed>",
-              "evidence": ["<observed result>"]
+              "status": "pass",
+              "score": 1.0,
+              "reasoning": "Constraints, recovery behavior, and verification guidance were preserved.",
+              "evidence": ["The candidate retains all still-valid baseline guidance."]
             }
           ]
         },
         {
           "id": "step7",
           "check": "no overfitting",
-          "input_ref": "#/checks/step7",
+          "input_ref": "#/skills/0/checks/6",
           "applicable": true,
-          "status": "<pass|fail|not_applicable>",
-          "score": "<0..1|null>",
-          "reasoning": "<why this score follows from the assertions and evidence>",
-          "evidence": ["<observed result>"],
+          "status": "pass",
+          "score": 1.0,
+          "reasoning": "The instructions generalize beyond the triggering trace and evaluation case.",
+          "evidence": ["No project, provider, filename, or incidental value is embedded."],
           "assertion_results": [
             {
               "assertion_id": "step7-generalizes",
-              "status": "<pass|fail>",
-              "score": 0.0,
-              "reasoning": "<why the assertion passed or failed>",
-              "evidence": ["<observed result>"]
+              "status": "pass",
+              "score": 1.0,
+              "reasoning": "The procedure is expressed using reusable conditions and outcomes.",
+              "evidence": ["Trigger-specific identifiers are absent."]
             },
             {
               "assertion_id": "step7-no-eval-overfit",
-              "status": "<pass|fail>",
-              "score": 0.0,
-              "reasoning": "<why the assertion passed or failed>",
-              "evidence": ["<observed result>"]
+              "status": "pass",
+              "score": 1.0,
+              "reasoning": "The candidate neither duplicates another skill nor targets one eval.",
+              "evidence": ["Similarity and content review found no duplication or eval literals."]
             }
           ]
         },
         {
           "id": "step8",
           "check": "unhelpful or redundant information removed",
-          "input_ref": "#/checks/step8",
+          "input_ref": "#/skills/0/checks/7",
           "applicable": true,
-          "status": "<pass|fail|not_applicable>",
-          "score": "<0..1|null>",
-          "reasoning": "<why this score follows from the assertions and evidence>",
-          "evidence": ["<observed result>"],
+          "status": "pass",
+          "score": 1.0,
+          "reasoning": "Duplicated legacy content is gone and the remaining guidance is actionable.",
+          "evidence": ["The candidate contains one canonical checklist and no superseded copy."],
           "assertion_results": [
             {
               "assertion_id": "step8-no-redundancy",
-              "status": "<pass|fail>",
-              "score": 0.0,
-              "reasoning": "<why the assertion passed or failed>",
-              "evidence": ["<observed result>"]
+              "status": "pass",
+              "score": 1.0,
+              "reasoning": "No duplicated, generic, or superseded instructions remain.",
+              "evidence": ["Content review found one concise checklist."]
             },
             {
-              "assertion_id": "step8-removals-applied",
-              "status": "<pass|fail>",
-              "score": 0.0,
-              "reasoning": "<why the assertion passed or failed>",
-              "evidence": ["<observed result>"]
+              "assertion_id": "step8-goal-example-removal",
+              "status": "pass",
+              "score": 1.0,
+              "reasoning": "The specifically named legacy checklist is absent.",
+              "evidence": ["Search and diff confirm removal of the legacy checklist."]
             }
           ]
         }
@@ -223,10 +245,12 @@
   "nod": null,
   "result": null,
   "feedback": {
-    "overall_status": "<pass|fail>",
-    "overall_score": 0.0,
-    "overall_feedback": "<text>",
-    "retry_budget": 1,
+    "scoring_strategy_version": 1,
+    "overall_status": "pass",
+    "overall_score": 1.0,
+    "bottleneck_skills": ["example-skill"],
+    "overall_feedback": "All applicable checks and assertions pass with concrete evidence.",
+    "retry_budget": 0,
     "replay": {
       "available": false,
       "kind": "targeted_detector",
@@ -238,35 +262,31 @@
     "action": null,
     "per_skill": [
       {
-        "skill": "<skill>",
-        "status": "<pass|fail>",
-        "score": 0.0,
-        "feedback": "<text>",
+        "skill": "example-skill",
+        "status": "pass",
+        "score": 1.0,
+        "applicable_weight": 1.0,
+        "failed_required_steps": [],
+        "feedback": "The update satisfies every shared and goal-specific assertion.",
         "retries_used": 0,
         "action": null
       }
     ],
-    "ood": [
-      {
-        "skill": "<skill>",
-        "kind": "<section|dir|check>",
-        "name": "<name outside the list>",
-        "description": "<what was seen that is not one of the checks or closed names>"
-      }
-    ]
+    "ood": []
   },
   "changelog": [
     {
-      "id": "<run-id>:<finding-id>:<op-index>:<skill>",
-      "skill": "<skill>",
-      "operation": "<create|update|delete|merge|split>",
-      "run_id": "<run-id>",
-      "finding_id": "<finding-id>",
+      "id": "run-example:finding-example:1:example-skill",
+      "skill": "example-skill",
+      "operation": "update",
+      "run_id": "run-example",
+      "finding_id": "finding-example",
       "op_index": 1,
-      "sections": ["<section>"],
-      "directories": ["<directory>"],
-      "before_sha256": null,
-      "after_sha256": "<sha256>",
+      "date": "2026-10-22",
+      "sections": ["workflow"],
+      "directories": ["references"],
+      "before_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "after_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
       "status": "pending"
     }
   ]

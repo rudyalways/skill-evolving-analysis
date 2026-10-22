@@ -9,8 +9,8 @@ guidance to this pipeline's closed section and directory vocabulary; see
 
 ## When to Use
 
-Use only when `workspace/run/evolve-goal.json` contains one `op: create`, or
-Judge sends that create operation back to Generate.
+Use only when `workspace/run/evolve-goal.json` contains one `op: create`.
+Judge ends the operation with pass or fail; retries are disabled.
 
 ## Do Not Use
 

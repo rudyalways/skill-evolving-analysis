@@ -21,6 +21,12 @@ _TYPE_CHECKER = ROOT.parents[1] / "common" / "skill_type_checker.py"
 _spec = importlib.util.spec_from_file_location("skill_type_checker", _TYPE_CHECKER)
 skill_type_checker = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(skill_type_checker)
+_CONTRACTS = ROOT.parents[1] / "common" / "pipeline_contracts.py"
+_contracts_spec = importlib.util.spec_from_file_location(
+    "pipeline_contracts", _CONTRACTS
+)
+pipeline_contracts = importlib.util.module_from_spec(_contracts_spec)
+_contracts_spec.loader.exec_module(pipeline_contracts)
 
 DEFAULT_DIAGNOSIS = (
     ROOT.parents[1] / "workspace" / "run" / "diagnosis.json"
@@ -64,6 +70,14 @@ def check(diagnosis_path: Path, tree: Path) -> list[str]:
     diagnosis[MISSING] = kept
     diagnosis[OOD] = detected
     diagnosis_path.write_text(json.dumps(diagnosis, indent=2, ensure_ascii=False) + "\n")
+    clusters = {
+        record["cluster"]
+        for record in kept + detected
+        if isinstance(record, dict)
+        and isinstance(record.get("cluster"), str)
+        and record["cluster"]
+    }
+    pipeline_contracts.validate_diagnosis(diagnosis_path, clusters)
     return moved
 
 

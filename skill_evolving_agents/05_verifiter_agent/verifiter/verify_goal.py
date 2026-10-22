@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
-"""Run the goal-align verification step.
+"""Run the goal-alignment check defined by verification input step 2.
 
-The step is the item in verification-output.example.json whose ref is evolve-goal.
-Pass the run's evolve goal. The script checks that every section and
-directory on that goal is on the closed list or named as other, then
-compares each updated skill under target/raw_skills with the copy under
-target/to_be_improved_skills.
+Pass the run's evolve goal. The script checks that every section and directory
+on that goal is on the closed list or named as other, then compares each
+updated skill under target/raw_skills with the improved copy.
 """
 
 from __future__ import annotations
@@ -22,7 +20,7 @@ from goal_slice import slice_goal
 
 ROOT = Path(__file__).resolve().parent
 AGENT = ROOT.parents[1]
-EXAMPLE = ROOT / "verification-output.example.json"
+TEMPLATE = ROOT / "verification-input.template.json"
 DEFAULT_GOAL = AGENT / "workspace" / "run" / "evolve-goal.json"
 _CHECKER = (
     AGENT / "common" / "skill_format_checker.py"
@@ -33,16 +31,10 @@ _spec.loader.exec_module(skill_format_checker)
 
 
 def goal_step(example: dict) -> dict:
-    records = example.get("verification_steps") or []
-    if isinstance(records, dict):
-        records = [records]
-    for record in records:
-        if not isinstance(record, dict):
-            continue
-        for step in record.get("steps") or []:
-            if isinstance(step, dict) and step.get("ref") == "evolve-goal":
-                return step
-    raise SystemExit("verification example has no step with ref evolve-goal")
+    step = (example.get("checks") or {}).get("step2")
+    if not isinstance(step, dict):
+        raise SystemExit("verification input template has no step2 check")
+    return {"id": "step2", **step}
 
 
 def explain(line: str) -> str:
@@ -88,7 +80,7 @@ def main() -> None:
     parser.add_argument("--op", type=int, help="1-based action.ops index for this loop")
     args = parser.parse_args()
     goal = slice_goal(json.loads(args.goal.read_text()), args.op)
-    step = goal_step(json.loads(EXAMPLE.read_text()))
+    step = goal_step(json.loads(TEMPLATE.read_text()))
     label = f"{step.get('id')} {step.get('check')}"
     sections, section_aliases, dirs, others = skill_format_checker.load_list(args.list)
     with tempfile.NamedTemporaryFile("w", suffix=".json") as handle:

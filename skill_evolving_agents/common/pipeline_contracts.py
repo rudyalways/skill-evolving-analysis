@@ -6,6 +6,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 
@@ -23,6 +24,34 @@ VERIFICATION_ROLES = {
     "split_source",
     "split_target",
 }
+ASSERTION_SCORE_ANCHORS = {0.0, 0.25, 0.5, 0.75, 1.0}
+OPERATION_PHASES = ("goal", "optimize", "verification", "judge")
+PHASE_STATUSES = {"pending", "running", "completed", "skipped", "failed"}
+
+
+def verification_status(score: float, threshold: float) -> str:
+    return "pass" if score >= threshold else "fail"
+
+
+def verification_step_score(scores: list[float]) -> float:
+    if not scores:
+        raise ContractError("cannot score a step without assertions")
+    return sum(scores) / len(scores)
+
+
+def verification_skill_score(
+    weighted_scores: list[tuple[float, float]],
+) -> float:
+    weight = sum(item_weight for _, item_weight in weighted_scores)
+    if weight <= 0:
+        raise ContractError("cannot score a skill without applicable weight")
+    return sum(score * item_weight for score, item_weight in weighted_scores) / weight
+
+
+def verification_overall_score(skill_scores: list[float]) -> float:
+    if not skill_scores:
+        raise ContractError("cannot score verification without skills")
+    return min(skill_scores)
 
 
 class ContractError(ValueError):
@@ -549,6 +578,13 @@ def _validate_changelog_entry(record: Any, path: str) -> str:
         fail(f"{path}.operation", "must be create, update, delete, merge, or split")
     required_string(record, "run_id", path)
     required_string(record, "finding_id", path)
+    changed_on = required_string(record, "date", path)
+    try:
+        parsed_date = date.fromisoformat(changed_on)
+    except ValueError:
+        fail(f"{path}.date", "must be a valid ISO date")
+    if parsed_date.isoformat() != changed_on:
+        fail(f"{path}.date", "must use YYYY-MM-DD")
     op_index = record.get("op_index")
     if not isinstance(op_index, int) or isinstance(op_index, bool) or op_index < 1:
         fail(f"{path}.op_index", "must be a positive integer")
@@ -566,6 +602,150 @@ def _validate_changelog_entry(record: Any, path: str) -> str:
     if record.get("status") not in {"pending", "accepted"}:
         fail(f"{path}.status", "must be pending or accepted")
     return skill
+
+
+def validate_changelog(
+    path: Path,
+    expected_skills: set[str] | None = None,
+) -> dict[str, Any]:
+    data = load_json_object(path)
+    if data.get("schema_version") != 1:
+        fail("$.schema_version", "must equal 1")
+    changes = required_list(data, "changes", "$")
+    if not changes:
+        fail("$.changes", "must not be empty")
+    ids: set[str] = set()
+    skills: set[str] = set()
+    dates: set[str] = set()
+    operation_identity: tuple[object, ...] | None = None
+    for index, change in enumerate(changes):
+        change_path = f"$.changes[{index}]"
+        skill = _validate_changelog_entry(change, change_path)
+        change_id = str(change["id"])
+        if change_id in ids:
+            fail(f"{change_path}.id", "duplicates another changelog entry")
+        ids.add(change_id)
+        skills.add(skill)
+        dates.add(str(change["date"]))
+        identity = (
+            change.get("run_id"),
+            change.get("finding_id"),
+            change.get("op_index"),
+            change.get("operation"),
+        )
+        if operation_identity is None:
+            operation_identity = identity
+        elif identity != operation_identity:
+            fail(
+                change_path,
+                "must use the same run, finding, op index, and operation",
+            )
+    if len(dates) != 1:
+        fail("$.changes", "all entries for one operation must use the same date")
+    if expected_skills is not None and skills != expected_skills:
+        fail("$.changes", "does not match the expected skill set")
+    markers = required_list(data, "phase_markers", "$")
+    marker_names: set[str] = set()
+    for index, marker in enumerate(markers):
+        marker_path = f"$.phase_markers[{index}]"
+        if not isinstance(marker, dict):
+            fail(marker_path, "must be an object")
+        phase = required_string(marker, "phase", marker_path)
+        if phase not in OPERATION_PHASES:
+            fail(f"{marker_path}.phase", "has an unknown operation phase")
+        if phase in marker_names:
+            fail(f"{marker_path}.phase", "duplicates another phase marker")
+        marker_names.add(phase)
+        status = required_string(marker, "status", marker_path)
+        if status not in PHASE_STATUSES:
+            fail(f"{marker_path}.status", "has an unknown phase status")
+        marker_date = required_string(marker, "date", marker_path)
+        try:
+            parsed_marker_date = date.fromisoformat(marker_date)
+        except ValueError:
+            fail(f"{marker_path}.date", "must be a valid ISO date")
+        if parsed_marker_date.isoformat() != marker_date:
+            fail(f"{marker_path}.date", "must use YYYY-MM-DD")
+        marked_at = required_string(marker, "at", marker_path)
+        try:
+            datetime.fromisoformat(marked_at)
+        except ValueError:
+            fail(f"{marker_path}.at", "must be an ISO timestamp")
+        if status in {"skipped", "failed"}:
+            required_string(marker, "reason", marker_path)
+    if marker_names != set(OPERATION_PHASES):
+        fail(
+            "$.phase_markers",
+            "must contain goal, optimize, verification, and judge exactly once",
+        )
+    goal_marker = next(
+        marker
+        for marker in markers
+        if isinstance(marker, dict) and marker.get("phase") == "goal"
+    )
+    if goal_marker.get("status") != "completed":
+        fail("$.phase_markers", "goal phase must be completed")
+    events = required_list(data, "phase_events", "$")
+    if not events:
+        fail("$.phase_events", "must not be empty")
+    event_state: dict[str, str] = {}
+    last_event: dict[str, dict[str, Any]] = {}
+    previous_at: datetime | None = None
+    allowed_transitions = {
+        None: {"pending", "completed"},
+        "pending": {"running", "skipped", "failed"},
+        "running": {"completed", "failed"},
+        "completed": {"running"},
+        "skipped": set(),
+        "failed": set(),
+    }
+    for index, event in enumerate(events):
+        event_path = f"$.phase_events[{index}]"
+        if not isinstance(event, dict):
+            fail(event_path, "must be an object")
+        phase = required_string(event, "phase", event_path)
+        status = required_string(event, "status", event_path)
+        if phase not in OPERATION_PHASES:
+            fail(f"{event_path}.phase", "has an unknown operation phase")
+        if status not in PHASE_STATUSES:
+            fail(f"{event_path}.status", "has an unknown phase status")
+        event_date = required_string(event, "date", event_path)
+        try:
+            parsed_event_date = date.fromisoformat(event_date)
+        except ValueError:
+            fail(f"{event_path}.date", "must be a valid ISO date")
+        if parsed_event_date.isoformat() != event_date:
+            fail(f"{event_path}.date", "must use YYYY-MM-DD")
+        marked_at = required_string(event, "at", event_path)
+        try:
+            parsed_at = datetime.fromisoformat(marked_at)
+        except ValueError:
+            fail(f"{event_path}.at", "must be an ISO timestamp")
+        if previous_at is not None and parsed_at < previous_at:
+            fail(f"{event_path}.at", "must not precede the prior phase event")
+        previous_at = parsed_at
+        if status in {"skipped", "failed"}:
+            required_string(event, "reason", event_path)
+        previous_status = event_state.get(phase)
+        if status not in allowed_transitions[previous_status]:
+            fail(
+                f"{event_path}.status",
+                f"cannot follow {previous_status or 'no prior status'}",
+            )
+        event_state[phase] = status
+        last_event[phase] = event
+    for marker in markers:
+        phase = str(marker["phase"])
+        latest = last_event.get(phase)
+        if latest is None:
+            fail("$.phase_events", f"has no event for phase {phase!r}")
+        for key in ("status", "date", "at", "reason"):
+            if marker.get(key) != latest.get(key):
+                fail(
+                    "$.phase_markers",
+                    f"{phase!r} marker does not match its latest event",
+                )
+    return data
 
 
 def validate_metadata(path: Path, skill_names: set[str] | None = None) -> dict[str, Any]:
@@ -963,8 +1143,15 @@ def validate_goal(path: Path, *, exactly_one_op: bool = False) -> dict[str, Any]
                 required_string(skill, "goal", skill_path)
                 required_string(skill, "facet", skill_path)
                 _validate_change_lists(skill, skill_path)
-                if not skill.get("sections") and not skill.get("dirs"):
-                    fail(skill_path, "must name at least one section or directory change")
+                if (
+                    not skill.get("sections")
+                    and not skill.get("dirs")
+                    and not skill.get("remove")
+                ):
+                    fail(
+                        skill_path,
+                        "must name at least one section, directory, or removal change",
+                    )
         elif name == "delete":
             for skill_index, skill in enumerate(op["skills"]):
                 required_string(
@@ -997,11 +1184,32 @@ def validate_verification_input(path: Path) -> dict[str, Any]:
     scoring = data.get("scoring")
     if not isinstance(scoring, dict):
         fail("$.scoring", "must be an object")
+    if scoring.get("strategy_version") != 1:
+        fail("$.scoring.strategy_version", "must equal 1")
     scale = scoring.get("scale")
     if not isinstance(scale, dict):
         fail("$.scoring.scale", "must be an object")
     if scale.get("min") != 0 or scale.get("max") != 1:
         fail("$.scoring.scale", "must use the normalized 0 to 1 scale")
+    anchors = scoring.get("assertion_score_anchors")
+    try:
+        anchor_values = (
+            {float(value) for value in anchors}
+            if isinstance(anchors, dict)
+            else set()
+        )
+    except (TypeError, ValueError):
+        anchor_values = set()
+    if anchor_values != ASSERTION_SCORE_ANCHORS:
+        fail(
+            "$.scoring.assertion_score_anchors",
+            "must define 0, 0.25, 0.5, 0.75, and 1 anchors",
+        )
+    if not all(isinstance(value, str) and value.strip() for value in anchors.values()):
+        fail(
+            "$.scoring.assertion_score_anchors",
+            "anchor descriptions must be non-empty strings",
+        )
     threshold = scoring.get("pass_threshold")
     if (
         not isinstance(threshold, (int, float))
@@ -1009,10 +1217,50 @@ def validate_verification_input(path: Path) -> dict[str, Any]:
         or not 0 < float(threshold) <= 1
     ):
         fail("$.scoring.pass_threshold", "must be a number above 0 and at most 1")
+    expected_strategy = {
+        "step_aggregation": "arithmetic_mean",
+        "skill_aggregation": "weighted_mean_applicable",
+        "overall_aggregation": "minimum",
+        "required_assertion_policy": "all_must_pass",
+        "required_step_policy": "all_applicable_must_pass",
+        "replay_policy": "hard_gate",
+    }
+    for field, expected_value in expected_strategy.items():
+        if scoring.get(field) != expected_value:
+            fail(f"$.scoring.{field}", f"must equal {expected_value!r}")
+    round_digits = scoring.get("round_digits")
+    if (
+        not isinstance(round_digits, int)
+        or isinstance(round_digits, bool)
+        or not 0 <= round_digits <= 12
+    ):
+        fail("$.scoring.round_digits", "must be an integer from 0 to 12")
+    expected_formulas = {
+        "step_score": "sum(assertion_scores) / count(assertion_scores)",
+        "skill_score": (
+            "sum(applicable_step_weight * step_score) / "
+            "sum(applicable_step_weight)"
+        ),
+        "overall_score": "min(skill_scores)",
+        "step_status": (
+            "pass iff step_score >= pass_threshold and every assertion passes"
+        ),
+        "skill_status": (
+            "pass iff skill_score >= pass_threshold and every applicable step passes"
+        ),
+        "overall_status": (
+            "pass iff every skill passes and replay is not fail"
+        ),
+    }
+    if scoring.get("formulas") != expected_formulas:
+        fail("$.scoring.formulas", "does not match scoring strategy version 1")
     weights = scoring.get("step_weights")
     expected_steps = {
         f"step{index}" for index in range(1, VERIFICATION_STEP_COUNT + 1)
     }
+    expected_step_order = [
+        f"step{index}" for index in range(1, VERIFICATION_STEP_COUNT + 1)
+    ]
     if not isinstance(weights, dict) or set(weights) != expected_steps:
         fail("$.scoring.step_weights", "must contain exactly step1 through step8")
     if any(
@@ -1069,12 +1317,15 @@ def validate_verification_input(path: Path) -> dict[str, Any]:
                 f"{item_path}.requirements.removals",
                 "must contain non-empty strings",
             )
+        required_list(skill, "checks", item_path)
     checks = data.get("checks")
     if not isinstance(checks, dict):
         fail("$.checks", "must be an object")
     expected = expected_steps
     if set(checks) != expected:
         fail("$.checks", "must contain exactly step1 through step8")
+    if list(checks) != expected_step_order:
+        fail("$.checks", "must be ordered from step1 through step8")
     for step_id, check in checks.items():
         check_path = f"$.checks.{step_id}"
         if not isinstance(check, dict):
@@ -1108,6 +1359,139 @@ def validate_verification_input(path: Path) -> dict[str, Any]:
                 fail(f"{assertion_path}.id", "duplicates another assertion")
             assertion_ids.add(assertion_id)
             required_string(assertion, "text", assertion_path)
+    evidence = checks["step3"].get("evidence")
+    if not isinstance(evidence, dict):
+        fail("$.checks.step3.evidence", "must be an object")
+    findings = required_list(evidence, "findings", "$.checks.step3.evidence")
+    if not findings:
+        fail("$.checks.step3.evidence.findings", "must not be empty")
+    finding_ids: set[str] = set()
+    for finding_index, finding in enumerate(findings):
+        finding_path = f"$.checks.step3.evidence.findings[{finding_index}]"
+        if not isinstance(finding, dict):
+            fail(finding_path, "must be an object")
+        finding_id = required_string(finding, "finding_id", finding_path)
+        if finding_id in finding_ids:
+            fail(f"{finding_path}.finding_id", "duplicates another finding")
+        finding_ids.add(finding_id)
+        source_path = finding.get("path")
+        if source_path is not None and (
+            not isinstance(source_path, str) or not source_path.strip()
+        ):
+            fail(f"{finding_path}.path", "must be a non-empty string or null")
+        confidence = finding.get("confidence")
+        if confidence is not None and (
+            not isinstance(confidence, (int, float))
+            or isinstance(confidence, bool)
+            or not 0 <= float(confidence) <= 1
+        ):
+            fail(f"{finding_path}.confidence", "must be from 0 to 1 or null")
+        records = finding.get("evidence_records")
+        if (
+            not isinstance(records, int)
+            or isinstance(records, bool)
+            or records < 0
+        ):
+            fail(f"{finding_path}.evidence_records", "must be non-negative")
+        windows = finding.get("distinct_windows")
+        if windows is not None and (
+            not isinstance(windows, int)
+            or isinstance(windows, bool)
+            or windows < 0
+        ):
+            fail(
+                f"{finding_path}.distinct_windows",
+                "must be a non-negative integer or null",
+            )
+        for field in ("candidate_source", "lesson"):
+            value = finding.get(field)
+            if value is not None and not isinstance(value, str):
+                fail(f"{finding_path}.{field}", "must be a string or null")
+    if data["finding_id"] not in finding_ids:
+        fail(
+            "$.checks.step3.evidence.findings",
+            "must include the operation finding_id",
+        )
+    goal_path = path.parent / "evolve-goal.json"
+    if goal_path.is_file():
+        goal = load_object(goal_path)
+        bundle = goal.get("bundle")
+        if isinstance(bundle, dict):
+            selected_ids = {
+                row.get("cluster")
+                for row in bundle.get("selected") or []
+                if isinstance(row, dict) and isinstance(row.get("cluster"), str)
+            }
+            expected_finding_ids = {data["finding_id"], *selected_ids}
+            if finding_ids != expected_finding_ids:
+                fail(
+                    "$.checks.step3.evidence.findings",
+                    "must match every finding selected by the operation bundle",
+                )
+    for skill_index, skill in enumerate(skills):
+        item_path = f"$.skills[{skill_index}]"
+        role = skill["role"]
+        materialized_checks = skill["checks"]
+        if len(materialized_checks) != len(expected_steps):
+            fail(
+                f"{item_path}.checks",
+                "must contain exactly one item per shared check",
+            )
+        seen_checks: set[str] = set()
+        for check_index, materialized in enumerate(materialized_checks):
+            check_path = f"{item_path}.checks[{check_index}]"
+            if not isinstance(materialized, dict):
+                fail(check_path, "must be an object")
+            step_id = required_string(materialized, "id", check_path)
+            if step_id not in checks or step_id in seen_checks:
+                fail(f"{check_path}.id", "must reference one unique shared check")
+            if step_id != expected_step_order[check_index]:
+                fail(
+                    f"{check_path}.id",
+                    f"must equal {expected_step_order[check_index]} at this position",
+                )
+            seen_checks.add(step_id)
+            if materialized.get("definition_ref") != f"#/checks/{step_id}":
+                fail(
+                    f"{check_path}.definition_ref",
+                    f"must equal #/checks/{step_id}",
+                )
+            expected_applicable = role in checks[step_id]["applies_to"]
+            if materialized.get("applicable") is not expected_applicable:
+                fail(
+                    f"{check_path}.applicable",
+                    "does not match the skill role",
+                )
+            assertions = required_list(
+                materialized, "assertions", check_path
+            )
+            assertion_ids: set[str] = set()
+            for assertion_index, assertion in enumerate(assertions):
+                assertion_path = (
+                    f"{check_path}.assertions[{assertion_index}]"
+                )
+                if not isinstance(assertion, dict):
+                    fail(assertion_path, "must be an object")
+                assertion_id = required_string(
+                    assertion, "id", assertion_path
+                )
+                if assertion_id in assertion_ids:
+                    fail(
+                        f"{assertion_path}.id",
+                        "duplicates another per-skill assertion",
+                    )
+                assertion_ids.add(assertion_id)
+                required_string(assertion, "text", assertion_path)
+                source_ref = required_string(
+                    assertion, "source_ref", assertion_path
+                )
+                if not source_ref.startswith(
+                    f"#/skills/{skill_index}/requirements/"
+                ):
+                    fail(
+                        f"{assertion_path}.source_ref",
+                        "must point into this skill's requirements",
+                    )
     return data
 
 
@@ -1143,6 +1527,7 @@ def validate_verification(
             )
     scoring = (input_data or {}).get("scoring") or {}
     pass_threshold = float(scoring.get("pass_threshold", 0.7))
+    round_digits = int(scoring.get("round_digits", 6))
     step_weights = scoring.get("step_weights") or {
         f"step{index}": 1 / VERIFICATION_STEP_COUNT
         for index in range(1, VERIFICATION_STEP_COUNT + 1)
@@ -1155,9 +1540,17 @@ def validate_verification(
         for row in (input_data or {}).get("skills") or []
         if isinstance(row, dict) and isinstance(row.get("skill"), str)
     }
+    input_skill_positions = {
+        row["skill"]: index
+        for index, row in enumerate((input_data or {}).get("skills") or [])
+        if isinstance(row, dict) and isinstance(row.get("skill"), str)
+    }
     input_checks = (input_data or {}).get("checks") or {}
     step_skills: set[str] = set()
     skill_scores: dict[str, float] = {}
+    skill_required_steps_pass: dict[str, bool] = {}
+    skill_applicable_weights: dict[str, float] = {}
+    skill_failed_steps: dict[str, list[str]] = {}
     for group_index, group in enumerate(step_groups):
         group_path = f"$.verification_steps[{group_index}]"
         if not isinstance(group, dict):
@@ -1165,15 +1558,50 @@ def validate_verification(
         group_skill = required_string(group, "skill", group_path)
         if group_skill in step_skills:
             fail(f"{group_path}.skill", "duplicates another output skill")
+        if input_data is not None:
+            ordered_input_skills = [
+                row.get("skill")
+                for row in input_data.get("skills") or []
+                if isinstance(row, dict)
+            ]
+            if (
+                group_index >= len(ordered_input_skills)
+                or group_skill != ordered_input_skills[group_index]
+            ):
+                fail(
+                    f"{group_path}.skill",
+                    "must follow verification input skill order",
+                )
+            expected_steps_from = (
+                f"verification-input.json#/skills/{group_index}/checks"
+            )
+            if group.get("steps_from") != expected_steps_from:
+                fail(
+                    f"{group_path}.steps_from",
+                    f"must equal {expected_steps_from}",
+                )
+        if group.get("used_by") != "verifier stage":
+            fail(f"{group_path}.used_by", "must equal verifier stage")
         step_skills.add(group_skill)
         input_skill = input_skills.get(group_skill)
         if input_data is not None and input_skill is None:
             fail(f"{group_path}.skill", "is not present in verification input")
         role = input_skill.get("role") if input_skill else None
+        materialized_checks = {
+            check.get("id"): check
+            for check in (input_skill or {}).get("checks") or []
+            if isinstance(check, dict)
+        }
+        materialized_check_positions = {
+            check.get("id"): index
+            for index, check in enumerate((input_skill or {}).get("checks") or [])
+            if isinstance(check, dict)
+        }
         steps = required_list(group, "steps", group_path)
         step_ids: set[str] = set()
-        weighted_score = 0.0
-        applicable_weight = 0.0
+        weighted_scores: list[tuple[float, float]] = []
+        all_applicable_steps_pass = True
+        failed_steps: list[str] = []
         for step_index, step in enumerate(steps):
             step_path = f"{group_path}.steps[{step_index}]"
             if not isinstance(step, dict):
@@ -1181,19 +1609,35 @@ def validate_verification(
             step_id = required_string(step, "id", step_path)
             if step_id in step_ids:
                 fail(f"{step_path}.id", "duplicates another step")
+            if step_id != f"step{step_index + 1}":
+                fail(
+                    f"{step_path}.id",
+                    f"must equal step{step_index + 1} at this position",
+                )
             step_ids.add(step_id)
             input_check = input_checks.get(step_id)
             if input_data is not None and not isinstance(input_check, dict):
                 fail(f"{step_path}.id", "is not present in verification input")
             if input_check is not None and step.get("check") != input_check.get("check"):
                 fail(f"{step_path}.check", "does not match verification input")
-            if step.get("input_ref") != f"#/checks/{step_id}":
+            expected_input_ref = (
+                f"#/skills/{input_skill_positions[group_skill]}/checks/"
+                f"{materialized_check_positions[step_id]}"
+                if input_data is not None
+                and group_skill in input_skill_positions
+                and step_id in materialized_check_positions
+                else f"#/checks/{step_id}"
+            )
+            if step.get("input_ref") != expected_input_ref:
                 fail(
                     f"{step_path}.input_ref",
-                    f"must equal #/checks/{step_id}",
+                    f"must equal {expected_input_ref}",
                 )
+            materialized_check = materialized_checks.get(step_id)
             expected_applicable = (
-                role in (input_check.get("applies_to") or [])
+                materialized_check.get("applicable")
+                if materialized_check is not None
+                else role in (input_check.get("applies_to") or [])
                 if input_check is not None
                 else True
             )
@@ -1234,22 +1678,21 @@ def validate_verification(
                 or not 0 <= float(score) <= 1
             ):
                 fail(f"{step_path}.score", "must be a number from 0 to 1")
-            if (float(score) >= pass_threshold) != (status == "pass"):
-                fail(
-                    step_path,
-                    "status must pass exactly when score meets the input threshold",
-                )
             if not evidence or not all(
                 isinstance(value, str) and value.strip() for value in evidence
             ):
                 fail(f"{step_path}.evidence", "must contain non-empty strings")
             expected_assertions = {
                 assertion["id"]: assertion
-                for assertion in (input_check or {}).get("assertions") or []
+                for assertion in [
+                    *((input_check or {}).get("assertions") or []),
+                    *((materialized_check or {}).get("assertions") or []),
+                ]
                 if isinstance(assertion, dict)
             }
             result_ids: set[str] = set()
             assertion_scores: list[float] = []
+            all_assertions_pass = True
             for result_index, result in enumerate(assertion_results):
                 result_path = (
                     f"{step_path}.assertion_results[{result_index}]"
@@ -1278,8 +1721,16 @@ def validate_verification(
                         f"{result_path}.score",
                         "must be a number from 0 to 1",
                     )
-                if (float(assertion_score) >= pass_threshold) != (
-                    assertion_status == "pass"
+                if float(assertion_score) not in ASSERTION_SCORE_ANCHORS:
+                    fail(
+                        f"{result_path}.score",
+                        "must use a configured assertion score anchor",
+                    )
+                if (
+                    verification_status(
+                        float(assertion_score), pass_threshold
+                    )
+                    != assertion_status
                 ):
                     fail(
                         result_path,
@@ -1298,6 +1749,9 @@ def validate_verification(
                         "must contain non-empty strings",
                     )
                 assertion_scores.append(float(assertion_score))
+                all_assertions_pass = (
+                    all_assertions_pass and assertion_status == "pass"
+                )
             if input_check is not None and result_ids != set(expected_assertions):
                 fail(
                     f"{step_path}.assertion_results",
@@ -1308,23 +1762,48 @@ def validate_verification(
                     f"{step_path}.assertion_results",
                     "must not be empty for an applicable step",
                 )
-            assertion_mean = sum(assertion_scores) / len(assertion_scores)
+            assertion_mean = round(
+                verification_step_score(assertion_scores), round_digits
+            )
             if abs(float(score) - assertion_mean) > 1e-6:
                 fail(
                     f"{step_path}.score",
                     "must equal the mean assertion score",
                 )
+            expected_step_status = (
+                "pass"
+                if verification_status(float(score), pass_threshold) == "pass"
+                and all_assertions_pass
+                else "fail"
+            )
+            if status != expected_step_status:
+                fail(
+                    step_path,
+                    "status must reflect score threshold and all assertion gates",
+                )
             weight = float(step_weights[step_id])
-            weighted_score += float(score) * weight
-            applicable_weight += weight
+            weighted_scores.append((float(score), weight))
+            all_applicable_steps_pass = (
+                all_applicable_steps_pass and status == "pass"
+            )
+            if status == "fail":
+                failed_steps.append(step_id)
         if step_ids != {
             f"step{index}"
             for index in range(1, VERIFICATION_STEP_COUNT + 1)
         }:
             fail(f"{group_path}.steps", "must contain exactly step1 through step8")
-        if applicable_weight <= 0:
-            fail(group_path, "must contain at least one applicable step")
-        skill_scores[group_skill] = weighted_score / applicable_weight
+        try:
+            skill_scores[group_skill] = round(
+                verification_skill_score(weighted_scores), round_digits
+            )
+        except ContractError as error:
+            fail(group_path, str(error))
+        skill_required_steps_pass[group_skill] = all_applicable_steps_pass
+        skill_applicable_weights[group_skill] = sum(
+            weight for _, weight in weighted_scores
+        )
+        skill_failed_steps[group_skill] = sorted(failed_steps)
     if input_data is not None and step_skills != set(input_skills):
         fail("$.verification_steps", "does not match verification input skills")
     if expected_skills is not None and step_skills != expected_skills:
@@ -1347,6 +1826,8 @@ def validate_verification(
     feedback = data.get("feedback")
     if not isinstance(feedback, dict):
         fail("$.feedback", "must be an object")
+    if feedback.get("scoring_strategy_version") != 1:
+        fail("$.feedback.scoring_strategy_version", "must equal 1")
     if feedback.get("overall_status") not in {"pass", "fail"}:
         fail("$.feedback.overall_status", "must be pass or fail")
     overall_score = feedback.get("overall_score")
@@ -1356,12 +1837,31 @@ def validate_verification(
         or not 0 <= float(overall_score) <= 1
     ):
         fail("$.feedback.overall_score", "must be a number from 0 to 1")
-    expected_overall = sum(skill_scores.values()) / len(skill_scores)
+    expected_overall = verification_overall_score(
+        list(skill_scores.values())
+    )
     if abs(float(overall_score) - expected_overall) > 1e-6:
         fail(
             "$.feedback.overall_score",
-            "must equal the mean weighted per-skill step score",
+            "must equal the minimum per-skill score",
         )
+    bottlenecks = required_list(feedback, "bottleneck_skills", "$.feedback")
+    if not all(isinstance(value, str) and value for value in bottlenecks):
+        fail(
+            "$.feedback.bottleneck_skills",
+            "must contain non-empty skill names",
+        )
+    expected_bottlenecks = sorted(
+        name
+        for name, score in skill_scores.items()
+        if abs(score - expected_overall) <= 1e-6
+    )
+    if sorted(bottlenecks) != expected_bottlenecks:
+        fail(
+            "$.feedback.bottleneck_skills",
+            "must name every skill at the minimum score",
+        )
+    required_string(feedback, "overall_feedback", "$.feedback")
     replay = feedback.get("replay")
     if not isinstance(replay, dict):
         fail("$.feedback.replay", "must be an object")
@@ -1425,6 +1925,8 @@ def validate_verification(
     budget = feedback.get("retry_budget")
     if not isinstance(budget, int) or isinstance(budget, bool) or budget < 0:
         fail("$.feedback.retry_budget", "must be a non-negative integer")
+    if budget != 0:
+        fail("$.feedback.retry_budget", "must be 0 while retries are disabled")
     rows = required_list(feedback, "per_skill", "$.feedback")
     names: set[str] = set()
     for index, row in enumerate(rows):
@@ -1448,27 +1950,352 @@ def validate_verification(
                 f"{item_path}.score",
                 "must equal this skill's weighted step score",
             )
-        if (float(score) >= pass_threshold) != (row.get("status") == "pass"):
+        applicable_weight = row.get("applicable_weight")
+        if (
+            not isinstance(applicable_weight, (int, float))
+            or isinstance(applicable_weight, bool)
+            or abs(
+                float(applicable_weight)
+                - skill_applicable_weights.get(name, -1)
+            )
+            > 1e-6
+        ):
+            fail(
+                f"{item_path}.applicable_weight",
+                "must equal the sum of applicable step weights",
+            )
+        failed_required_steps = required_list(
+            row, "failed_required_steps", item_path
+        )
+        if not all(
+            isinstance(value, str) and value for value in failed_required_steps
+        ):
+            fail(
+                f"{item_path}.failed_required_steps",
+                "must contain step IDs",
+            )
+        if sorted(failed_required_steps) != skill_failed_steps.get(name):
+            fail(
+                f"{item_path}.failed_required_steps",
+                "must list every failed applicable step",
+            )
+        expected_status = (
+            "pass"
+            if verification_status(float(score), pass_threshold) == "pass"
+            and skill_required_steps_pass.get(name) is True
+            else "fail"
+        )
+        if row.get("status") != expected_status:
             fail(
                 item_path,
-                "status must pass exactly when score meets the input threshold",
+                "status must reflect score threshold and all applicable step gates",
             )
+        required_string(row, "feedback", item_path)
+        if row.get("action") is not None:
+            fail(f"{item_path}.action", "must remain null")
         retries = row.get("retries_used")
         if not isinstance(retries, int) or isinstance(retries, bool) or retries < 0:
             fail(f"{item_path}.retries_used", "must be a non-negative integer")
+        if retries != 0:
+            fail(f"{item_path}.retries_used", "must be 0 while retries are disabled")
     if contract_skills is not None and names != contract_skills:
         fail("$.feedback.per_skill", "does not match the verification skill set")
+    expected_overall_status = (
+        "pass"
+        if all(row.get("status") == "pass" for row in rows)
+        and replay_status != "fail"
+        else "fail"
+    )
+    if feedback.get("overall_status") != expected_overall_status:
+        fail(
+            "$.feedback.overall_status",
+            "must reflect every per-skill gate and the replay hard gate",
+        )
+    ood = required_list(feedback, "ood", "$.feedback")
+    for index, item in enumerate(ood):
+        item_path = f"$.feedback.ood[{index}]"
+        if not isinstance(item, dict):
+            fail(item_path, "must be an object")
+        skill = required_string(item, "skill", item_path)
+        if contract_skills is not None and skill not in contract_skills:
+            fail(f"{item_path}.skill", "must name a verified skill")
+        if item.get("kind") not in {"section", "dir", "check"}:
+            fail(f"{item_path}.kind", "must be section, dir, or check")
+        required_string(item, "name", item_path)
+        required_string(item, "description", item_path)
     action = feedback.get("action")
     if not judged:
         if action is not None:
             fail("$.feedback.action", "must be null before Judge")
         return data
-    if not isinstance(action, dict) or action.get("op") not in {"pass", "back", "fail"}:
-        fail("$.feedback.action.op", "must be pass, back, or fail")
+    if not isinstance(action, dict) or action.get("op") not in {"pass", "fail"}:
+        fail("$.feedback.action.op", "must be pass or fail while retries are disabled")
+    if action.get("to") not in {None, ""}:
+        fail("$.feedback.action.to", "must be empty while retries are disabled")
     if action["op"] == "pass":
         if feedback["overall_status"] != "pass":
             fail("$.feedback.action.op", "cannot pass a failed overall status")
         failed = [row["skill"] for row in rows if row.get("status") != "pass"]
         if failed:
             fail("$.feedback.action.op", f"cannot pass failed skills: {', '.join(failed)}")
+    elif feedback["overall_status"] != "fail":
+        fail("$.feedback.action.op", "cannot fail a passing overall status")
     return data
+
+
+def _operation_skill_names(operation: dict[str, Any]) -> set[str]:
+    name = operation.get("op")
+    if name in {"create", "update", "delete"}:
+        return {
+            str(row["skill"])
+            for row in operation.get("skills") or []
+            if isinstance(row, dict) and row.get("skill")
+        }
+    if name == "merge":
+        sources = {
+            str(skill)
+            for skill in operation.get("skills") or []
+            if isinstance(skill, str) and skill
+        }
+        target = operation.get("into")
+        if isinstance(target, dict) and target.get("skill"):
+            sources.add(str(target["skill"]))
+        return sources
+    if name == "split":
+        names = (
+            {str(operation["skill"])}
+            if isinstance(operation.get("skill"), str)
+            else set()
+        )
+        names.update(
+            str(row["skill"])
+            for row in operation.get("into") or []
+            if isinstance(row, dict) and row.get("skill")
+        )
+        return names
+    return set()
+
+
+def validate_operation_artifacts(directory: Path) -> dict[str, Any]:
+    """Require one dated goal, verification, judge, and changelog bundle."""
+    paths = {
+        name: directory / filename
+        for name, filename in {
+            "goal": "evolve-goal.json",
+            "verification_input": "verification-input.json",
+            "verification": "verification.json",
+            "judge": "judge.json",
+            "changelog": "changelog.json",
+        }.items()
+    }
+    for name, path in paths.items():
+        if not path.is_file():
+            fail(str(path), f"{name} artifact was not produced")
+
+    goal = validate_goal(paths["goal"], exactly_one_op=True)
+    verification_input = validate_verification_input(
+        paths["verification_input"]
+    )
+    changelog = validate_changelog(paths["changelog"])
+    unfinished = [
+        str(marker.get("phase"))
+        for marker in changelog["phase_markers"]
+        if isinstance(marker, dict)
+        and marker.get("status") in {"pending", "running"}
+    ]
+    if unfinished:
+        fail(
+            str(paths["changelog"]),
+            "operation bundle has unfinished phases: "
+            + ", ".join(unfinished),
+        )
+    skills = {
+        str(change["skill"])
+        for change in changelog["changes"]
+        if isinstance(change, dict)
+    }
+    operation = goal["action"]["ops"][0]
+    first_change = changelog["changes"][0]
+    if _operation_skill_names(operation) != skills:
+        fail(str(paths["goal"]), "skill set does not match changelog.json")
+    if operation.get("op") != first_change.get("operation"):
+        fail(str(paths["goal"]), "operation does not match changelog.json")
+    for key in ("run_id", "finding_id", "op_index", "operation"):
+        if verification_input.get(key) != first_change.get(key):
+            fail(
+                f"{paths['verification_input']}:{key}",
+                "does not match changelog.json",
+            )
+    input_skills = {
+        str(row["skill"])
+        for row in verification_input.get("skills") or []
+        if isinstance(row, dict) and row.get("skill")
+    }
+    if input_skills != skills:
+        fail(
+            str(paths["verification_input"]),
+            "skill set does not match changelog.json",
+        )
+
+    raw_verification = load_json_object(paths["verification"])
+    terminal_status = raw_verification.get("status")
+    if terminal_status in {"skipped", "failed"}:
+        verification = raw_verification
+        if verification.get("phase") != "verification":
+            fail("$.phase", "must equal verification")
+        required_string(verification, "reason", "$")
+        placeholder_skills = required_list(verification, "skills", "$")
+        if set(placeholder_skills) != skills:
+            fail("$.skills", "must match changelog.json")
+        input_ref = verification.get("verification_input")
+        if not isinstance(input_ref, dict):
+            fail("$.verification_input", "must be an object")
+        if input_ref.get("path") != "verification-input.json":
+            fail(
+                "$.verification_input.path",
+                "must equal verification-input.json",
+            )
+        actual_input_digest = hashlib.sha256(
+            paths["verification_input"].read_bytes()
+        ).hexdigest()
+        if input_ref.get("sha256") != actual_input_digest:
+            fail(
+                "$.verification_input.sha256",
+                "does not match verification-input.json",
+            )
+    else:
+        terminal_status = "completed"
+        verification = validate_verification(
+            paths["verification"],
+            judged=True,
+            expected_skills=skills,
+        )
+
+    embedded_changes = verification.get("changelog")
+    if not isinstance(embedded_changes, list):
+        fail(
+            str(paths["verification"]),
+            "embedded changelog must be a list",
+        )
+    embedded_by_id = {
+        change.get("id"): change
+        for change in embedded_changes
+        if isinstance(change, dict)
+    }
+    standalone_by_id = {
+        change.get("id"): change
+        for change in changelog["changes"]
+        if isinstance(change, dict)
+    }
+    if set(embedded_by_id) != set(standalone_by_id):
+        fail(
+            str(paths["verification"]),
+            "embedded changelog IDs must equal changelog.json",
+        )
+    for change_id, standalone in standalone_by_id.items():
+        embedded = embedded_by_id[change_id]
+        for key in (
+            "skill",
+            "operation",
+            "run_id",
+            "finding_id",
+            "op_index",
+            "date",
+            "sections",
+            "directories",
+            "before_sha256",
+            "after_sha256",
+            "status",
+        ):
+            if embedded.get(key) != standalone.get(key):
+                fail(
+                    str(paths["verification"]),
+                    f"embedded changelog {change_id!r} field {key!r} "
+                    "must equal changelog.json",
+                )
+
+    judge = load_json_object(paths["judge"])
+    if judge.get("schema_version") != 1:
+        fail("$.schema_version", "must equal 1")
+    decided_on = required_string(judge, "date", "$")
+    try:
+        parsed_date = date.fromisoformat(decided_on)
+    except ValueError:
+        fail("$.date", "must be a valid ISO date")
+    if parsed_date.isoformat() != decided_on:
+        fail("$.date", "must use YYYY-MM-DD")
+    required_string(judge, "run_id", "$")
+    required_string(judge, "finding_id", "$")
+    op_index = judge.get("op_index")
+    if not isinstance(op_index, int) or isinstance(op_index, bool) or op_index < 1:
+        fail("$.op_index", "must be a positive integer")
+    judge_skills = required_list(judge, "skills", "$")
+    if (
+        not all(isinstance(skill, str) and skill for skill in judge_skills)
+        or set(judge_skills) != skills
+        or len(judge_skills) != len(skills)
+    ):
+        fail("$.skills", "must name every changelog skill exactly once")
+    judge_status = required_string(judge, "status", "$")
+    if judge_status != terminal_status:
+        fail("$.status", "must match verification status")
+    action = judge.get("action")
+    if action != (verification.get("feedback") or {}).get("action"):
+        fail("$.action", "must equal verification feedback.action")
+    if terminal_status in {"skipped", "failed"}:
+        required_string(judge, "reason", "$")
+        if action is not None:
+            fail("$.action", "must be null for skipped or failed operations")
+
+    marker_statuses = {
+        str(marker.get("phase")): marker.get("status")
+        for marker in changelog["phase_markers"]
+        if isinstance(marker, dict)
+    }
+    if terminal_status == "completed" and any(
+        status != "completed" for status in marker_statuses.values()
+    ):
+        fail(
+            str(paths["changelog"]),
+            "completed bundle requires every phase to be completed",
+        )
+    if terminal_status == "skipped" and any(
+        marker_statuses.get(phase) != "skipped"
+        for phase in OPERATION_PHASES[1:]
+    ):
+        fail(
+            str(paths["changelog"]),
+            "skipped bundle requires every downstream phase to be skipped",
+        )
+    if terminal_status == "failed" and "failed" not in marker_statuses.values():
+        fail(
+            str(paths["changelog"]),
+            "failed bundle requires a failed phase marker",
+        )
+
+    first_change = changelog["changes"][0]
+    for key in ("run_id", "finding_id", "op_index", "date"):
+        if judge.get(key) != first_change.get(key):
+            fail(f"$.{key}", "must match changelog.json")
+
+    artifacts = judge.get("artifacts")
+    if not isinstance(artifacts, dict):
+        fail("$.artifacts", "must be an object")
+    expected_artifacts = {
+        "goal": "evolve-goal.json",
+        "verification_input": "verification-input.json",
+        "verification": "verification.json",
+        "changelog": "changelog.json",
+    }
+    for key, filename in expected_artifacts.items():
+        reference = artifacts.get(key)
+        reference_path = f"$.artifacts.{key}"
+        if not isinstance(reference, dict):
+            fail(reference_path, "must be an object")
+        if reference.get("path") != filename:
+            fail(f"{reference_path}.path", f"must equal {filename!r}")
+        digest = required_string(reference, "sha256", reference_path)
+        actual = hashlib.sha256((directory / filename).read_bytes()).hexdigest()
+        if digest != actual:
+            fail(f"{reference_path}.sha256", f"does not match {filename}")
+    return judge

@@ -45,6 +45,11 @@ type_checker = load("skill_type_checker_test", AGENTS / "common/skill_type_check
 format_checker = load(
     "skill_format_checker_test", AGENTS / "common/skill_format_checker.py"
 )
+diagnosis_checker = load(
+    "diagnosis_checker_test",
+    AGENTS
+    / "02.2_label_traces_cluster_agent/dignosis/evolve-goal-checker.py",
+)
 skill_evaluation = load(
     "skill_evaluation_test", AGENTS / "common/skill_evaluation.py"
 )
@@ -221,21 +226,63 @@ def valid_goal(op: dict | None = None) -> dict:
 
 
 def valid_verification(
-    skill: str, action=None, role: str = "updated"
+    skill: str,
+    action=None,
+    role: str = "updated",
+    verification_input: dict | None = None,
 ) -> dict:
-    template = json.loads(
-        (VERIFIER / "verification-input.example.json").read_text()
+    template = verification_input or json.loads(
+        (VERIFIER / "verification-input.template.json").read_text()
     )
+    runtime_skill = next(
+        (
+            row
+            for row in template.get("skills") or []
+            if isinstance(row, dict) and row.get("skill") == skill
+        ),
+        {},
+    )
+    runtime_checks = {
+        check.get("id"): check
+        for check in runtime_skill.get("checks") or []
+        if isinstance(check, dict)
+    }
+    runtime_skill_index = next(
+        (
+            index
+            for index, row in enumerate(template.get("skills") or [])
+            if isinstance(row, dict) and row.get("skill") == skill
+        ),
+        None,
+    )
+    runtime_check_positions = {
+        check.get("id"): index
+        for index, check in enumerate(runtime_skill.get("checks") or [])
+        if isinstance(check, dict)
+    }
     steps = []
+    applicable_weight = 0.0
     for index in range(1, 9):
         step_id = f"step{index}"
         check = template["checks"][step_id]
-        applicable = role in check["applies_to"]
+        runtime_check = runtime_checks.get(step_id) or {}
+        applicable = runtime_check.get(
+            "applicable", role in check["applies_to"]
+        )
+        if applicable:
+            applicable_weight += template["scoring"]["step_weights"][step_id]
         steps.append(
             {
                 "id": step_id,
                 "check": check["check"],
-                "input_ref": f"#/checks/{step_id}",
+                "input_ref": (
+                    f"#/skills/{runtime_skill_index}/checks/"
+                    f"{runtime_check_positions[step_id]}"
+                    if verification_input is not None
+                    and runtime_skill_index is not None
+                    and step_id in runtime_check_positions
+                    else f"#/checks/{step_id}"
+                ),
                 "applicable": applicable,
                 "status": "pass" if applicable else "not_applicable",
                 "score": 1.0 if applicable else None,
@@ -254,7 +301,10 @@ def valid_verification(
                             "reasoning": "Assertion satisfied.",
                             "evidence": ["verified"],
                         }
-                        for assertion in check["assertions"]
+                        for assertion in [
+                            *check["assertions"],
+                            *(runtime_check.get("assertions") or []),
+                        ]
                     ]
                     if applicable
                     else []
@@ -270,16 +320,24 @@ def valid_verification(
         "verification_steps": [
             {
                 "skill": skill,
+                "used_by": "verifier stage",
+                "steps_from": (
+                    f"verification-input.json#/skills/{runtime_skill_index}/checks"
+                    if runtime_skill_index is not None
+                    else "verification-input.json#/checks"
+                ),
                 "steps": steps,
             }
         ],
         "nod": None,
         "result": None,
         "feedback": {
+            "scoring_strategy_version": 1,
             "overall_status": "pass",
             "overall_score": 1.0,
+            "bottleneck_skills": [skill],
             "overall_feedback": "all checks pass",
-            "retry_budget": 1,
+            "retry_budget": 0,
             "replay": {
                 "available": False,
                 "status": "not_run",
@@ -293,6 +351,8 @@ def valid_verification(
                     "skill": skill,
                     "status": "pass",
                     "score": 1.0,
+                    "applicable_weight": applicable_weight,
+                    "failed_required_steps": [],
                     "feedback": "pass",
                     "retries_used": 0,
                     "action": None,
@@ -308,6 +368,7 @@ def valid_verification(
                 "run_id": "run",
                 "finding_id": "finding",
                 "op_index": 1,
+                "date": "2026-10-22",
                 "sections": ["workflow"],
                 "directories": [],
                 "before_sha256": "a" * 64,
@@ -318,7 +379,201 @@ def valid_verification(
     }
 
 
+def write_operation_bundle(
+    worker: Path,
+    cluster: str,
+    skill: str,
+    action: dict,
+    operation: str = "update",
+) -> None:
+    if operation == "create":
+        op = {
+            "op": "create",
+            "skills": [
+                {
+                    "skill": skill,
+                    "description": "A complete test skill.",
+                    "goal": "Create the workflow.",
+                    "facet": "workflow",
+                    "sections": [
+                        {"section": "workflow", "goal": "Add the workflow."}
+                    ],
+                    "labels": [
+                        {"type": "domain/api", "weight": 0.9},
+                        {"type": "job/workflow", "weight": 0.8},
+                        {"type": "form/procedure", "weight": 0.7},
+                    ],
+                }
+            ],
+        }
+        role = "created"
+    else:
+        op = {
+            "op": "update",
+            "skills": [
+                {
+                    "skill": skill,
+                    "goal": "Improve the workflow.",
+                    "facet": "workflow",
+                    "sections": [
+                        {"section": "workflow", "goal": "Add checks."}
+                    ],
+                }
+            ],
+        }
+        role = "updated"
+    goal = valid_goal(op)
+    goal["goal"]["improve_skills"] = [skill]
+    operation_directory = worker / "run" / cluster / "ops/1"
+    write_json(operation_directory / "evolve-goal.json", goal)
+    input_path = runner.materialize_verification_input(
+        worker, goal, op, "run", cluster, 1
+    )
+    verification_input = json.loads(input_path.read_text())
+    (operation_directory / "verification-input.json").write_bytes(
+        input_path.read_bytes()
+    )
+    verification = valid_verification(
+        skill,
+        action,
+        role=role,
+        verification_input=verification_input,
+    )
+    if (action or {}).get("op") == "fail":
+        failed_steps = []
+        for step in verification["verification_steps"][0]["steps"]:
+            if not step["applicable"]:
+                continue
+            failed_steps.append(step["id"])
+            step["status"] = "fail"
+            step["score"] = 0.0
+            for assertion in step["assertion_results"]:
+                assertion["status"] = "fail"
+                assertion["score"] = 0.0
+        verification["feedback"]["overall_status"] = "fail"
+        verification["feedback"]["overall_score"] = 0.0
+        verification["feedback"]["per_skill"][0]["status"] = "fail"
+        verification["feedback"]["per_skill"][0]["score"] = 0.0
+        verification["feedback"]["per_skill"][0][
+            "failed_required_steps"
+        ] = failed_steps
+    verification["verification_input"]["sha256"] = hashlib.sha256(
+        (operation_directory / "verification-input.json").read_bytes()
+    ).hexdigest()
+    change = verification["changelog"][0]
+    change.update(
+        {
+            "id": f"run:{cluster}:1:{skill}",
+            "skill": skill,
+            "operation": operation,
+            "run_id": "run",
+            "finding_id": cluster,
+            "op_index": 1,
+            "date": "2026-10-22",
+        }
+    )
+    write_json(operation_directory / "verification.json", verification)
+    write_json(
+        operation_directory / "changelog.json",
+        {
+            "schema_version": 1,
+            "changes": [change],
+            "phase_markers": [
+                {
+                    "phase": phase,
+                    "status": "completed",
+                    "date": "2026-10-22",
+                    "at": "2026-10-22T00:00:00+00:00",
+                }
+                for phase in contracts.OPERATION_PHASES
+            ],
+            "phase_events": [
+                {
+                    "phase": phase,
+                    "status": "completed",
+                    "date": "2026-10-22",
+                    "at": "2026-10-22T00:00:00+00:00",
+                }
+                for phase in contracts.OPERATION_PHASES
+            ],
+        },
+    )
+    artifacts = {}
+    for name, filename in {
+        "goal": "evolve-goal.json",
+        "verification_input": "verification-input.json",
+        "verification": "verification.json",
+        "changelog": "changelog.json",
+    }.items():
+        path = operation_directory / filename
+        artifacts[name] = {
+            "path": filename,
+            "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+        }
+    write_json(
+        operation_directory / "judge.json",
+        {
+            "schema_version": 1,
+            "date": "2026-10-22",
+            "run_id": "run",
+            "finding_id": cluster,
+            "op_index": 1,
+            "skills": [skill],
+            "status": "completed",
+            "action": action,
+            "artifacts": artifacts,
+        },
+    )
+
+
+def initialize_pending_operation(
+    workspace: Path,
+    cluster: str,
+    operation: dict,
+) -> Path:
+    goal = valid_goal(operation)
+    goal["goal"]["improve_skills"] = sorted(
+        runner.skill_names_mod.skill_names(operation)
+    )
+    operation_directory = workspace / "run" / cluster / "ops/1"
+    goal_path = operation_directory / "evolve-goal.json"
+    write_json(goal_path, goal)
+    runner.initialize_operation_changelog(
+        workspace, operation, "run", cluster, 1
+    )
+    runner.materialize_verification_input(
+        workspace,
+        goal,
+        operation,
+        "run",
+        cluster,
+        1,
+        out=operation_directory / "verification-input.json",
+    )
+    return goal_path
+
+
 class ContractTests(unittest.TestCase):
+    def test_diagnosis_checker_canonicalizes_no_change_output(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            diagnosis = Path(directory) / "diagnosis.json"
+            write_json(
+                diagnosis,
+                {
+                    "decision": "no_change",
+                    "reasoning": "The evidence does not support a reusable gap.",
+                },
+            )
+            self.assertEqual(
+                diagnosis_checker.check(diagnosis, diagnosis_checker.DEFAULT_TREE),
+                [],
+            )
+            checked = contracts.validate_diagnosis(diagnosis, set())
+            self.assertEqual(checked["skill_capabilities_missing"], [])
+            self.assertEqual(
+                checked["newly_detected_skill_capabilites_missing"], []
+            )
+
     def test_initialize_workspace_is_allowlisted(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -557,6 +812,8 @@ class ContractTests(unittest.TestCase):
                 self.assertIn("Running now:", live)
                 self.assertIn("Current progress", live)
                 self.assertIn("Selected findings:", live)
+                self.assertIn("Live trace", live)
+                self.assertIn("tickTraces", live)
             finally:
                 server.shutdown()
                 server.server_close()
@@ -721,13 +978,13 @@ class ContractTests(unittest.TestCase):
                     {
                         "feedback": {
                             "overall_status": "fail",
-                            "retry_budget": 1,
-                            "action": {"op": "back", "to": "Update"},
+                            "retry_budget": 0,
+                            "action": {"op": "fail", "to": None},
                             "per_skill": [
                                 {
                                     "skill": "audit-project-ui",
                                     "status": "fail",
-                                    "retries_used": 1,
+                                    "retries_used": 0,
                                 }
                             ],
                         }
@@ -754,8 +1011,8 @@ class ContractTests(unittest.TestCase):
             )
             self.assertEqual(report["policy"]["max_ops_per_skill"], 5)
             self.assertEqual(report["policy"]["min_super_score"], 0.0)
-            self.assertEqual(report["policy"]["retry_budget"], 1)
-            self.assertEqual(report["policy"]["max_attempts"], 2)
+            self.assertEqual(report["policy"]["retry_budget"], 0)
+            self.assertEqual(report["policy"]["max_attempts"], 1)
             dropped = next(
                 row for row in report["edits"] if row["decision"] == "below_gate"
             )
@@ -764,9 +1021,9 @@ class ContractTests(unittest.TestCase):
             kept = next(
                 row for row in report["edits"] if row["decision"] == "selected"
             )
-            self.assertEqual(kept["judge_action"], "back")
-            self.assertEqual(kept["judge_to"], "Update")
-            self.assertEqual(kept["retries_used"], 1)
+            self.assertEqual(kept["judge_action"], "fail")
+            self.assertIsNone(kept["judge_to"])
+            self.assertEqual(kept["retries_used"], 0)
             self.assertEqual(kept["failed_skills"], ["audit-project-ui"])
             judge_spans = sorted(
                 (
@@ -778,9 +1035,9 @@ class ContractTests(unittest.TestCase):
             )
             self.assertEqual(
                 [row["will_retry"] for row in judge_spans],
-                [True, False],
+                [False, False],
             )
-            self.assertEqual(judge_spans[0]["detail"]["judge_action"], "back")
+            self.assertEqual(judge_spans[0]["detail"]["judge_action"], "fail")
 
     def test_status_records_duration_from_started_to_done(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -822,6 +1079,25 @@ class ContractTests(unittest.TestCase):
             inline_code["reasoning"] = "Remove the duplicate `<main>` landmark."
             write_json(path, inline_code)
             contracts.validate_goal(path)
+
+    def test_goal_allows_removal_only_update(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "goal.json"
+            operation = {
+                "op": "update",
+                "skills": [
+                    {
+                        "skill": "seed",
+                        "goal": "Delete obsolete duplicated guidance.",
+                        "facet": "workflow",
+                        "sections": [],
+                        "dirs": [],
+                        "remove": ["obsolete duplicated guidance"],
+                    }
+                ],
+            }
+            write_json(path, valid_goal(operation))
+            contracts.validate_goal(path, exactly_one_op=True)
 
     def test_capability_tree_must_exist_and_not_be_empty(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -1168,6 +1444,11 @@ class ContractTests(unittest.TestCase):
         self.assertIn("Fast decision. One pass.", prompt)
         self.assertIn("03_goal_agent/skill-select/skill.md", prompt)
         self.assertIn("gate-only-run", prompt)
+        self.assertIn("Follow the output schema", prompt)
+        self.assertNotIn(
+            "If the evidence supports no_change, pass, or fail",
+            prompt,
+        )
         self.assertNotIn(str(runner.REPO), prompt)
         command = runner.cursor_command(view, workspace, prompt, "grok-4.7-low")
         self.assertEqual(command[command.index("--workspace") + 1], str(view))
@@ -1178,6 +1459,87 @@ class ContractTests(unittest.TestCase):
         self.assertNotIn(str(runner.REPO), command)
         self.assertFalse(
             Path(runner.SESSION_ROOT).resolve().is_relative_to(runner.REPO.resolve())
+        )
+
+    def test_verifier_prompt_embeds_one_skill_input_and_output_json(self) -> None:
+        root = AGENTS / "05_verifiter_agent/verifiter"
+        verification_input = json.loads(
+            (root / "verification-input.example.json").read_text()
+        )
+        output = json.loads(
+            (root / "verification-output.example.json").read_text()
+        )
+        skill_input, required_output = runner.verifier_skill_payloads(
+            verification_input,
+            output,
+            "example-skill",
+        )
+        prompt = runner.verifier_response_prompt(
+            "example-skill",
+            skill_input,
+            required_output,
+        )
+        self.assertEqual(
+            [row["skill"] for row in skill_input["skills"]],
+            ["example-skill"],
+        )
+        self.assertEqual(
+            [row["skill"] for row in required_output["verification_steps"]],
+            ["example-skill"],
+        )
+        self.assertIn("<verification-input-json>", prompt)
+        self.assertIn("<verification-output-json>", prompt)
+        self.assertIn('"skill": "example-skill"', prompt)
+        self.assertIn("Return only one JSON object", prompt)
+
+    def test_verifier_response_parser_reads_json_from_event_stream(self) -> None:
+        response = {
+            "verification_steps": [{"skill": "example-skill"}],
+            "feedback": {"per_skill": [{"skill": "example-skill"}]},
+        }
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "session.jsonl"
+            path.write_text(
+                json.dumps(
+                    {
+                        "type": "item.completed",
+                        "item": {
+                            "type": "agent_message",
+                            "text": json.dumps(response),
+                        },
+                    }
+                )
+                + "\n"
+            )
+            self.assertEqual(
+                runner.parse_verifier_response_log(path),
+                response,
+            )
+
+    def test_verifier_aggregation_restores_full_input_indexes(self) -> None:
+        root = AGENTS / "05_verifiter_agent/verifiter"
+        example = json.loads(
+            (root / "verification-output.example.json").read_text()
+        )
+        first = json.loads(json.dumps(example))
+        second = json.loads(json.dumps(example).replace("example-skill", "other-skill"))
+        skeleton = json.loads(json.dumps(example))
+        skeleton["verification_steps"].append(second["verification_steps"][0])
+        skeleton["feedback"]["per_skill"].append(
+            second["feedback"]["per_skill"][0]
+        )
+        aggregated = runner.aggregate_skill_verifications(
+            skeleton,
+            [first, second],
+        )
+        groups = aggregated["verification_steps"]
+        self.assertEqual(
+            groups[1]["steps_from"],
+            "verification-input.json#/skills/1/checks",
+        )
+        self.assertEqual(
+            groups[1]["steps"][0]["input_ref"],
+            "#/skills/1/checks/0",
         )
 
     def test_agent_config_allows_one_active_backend(self) -> None:
@@ -1417,11 +1779,33 @@ class ContractTests(unittest.TestCase):
                         "output": "1 passed",
                     },
                 },
+                {
+                    "timestamp": "2026-01-01T00:00:04Z",
+                    "ordinal": 6,
+                    "type": "response_item",
+                    "payload": {
+                        "type": "function_call",
+                        "call_id": "call-2",
+                        "name": "read",
+                        "arguments": {"path": "tests/test_app.py"},
+                    },
+                },
+                {
+                    "timestamp": "2026-01-01T00:00:05Z",
+                    "ordinal": 7,
+                    "type": "response_item",
+                    "payload": {
+                        "type": "function_call_output",
+                        "call_id": "call-2",
+                        "output": "test contents",
+                    },
+                },
             ]
             write_jsonl(workspace / "traces/raw/codex/a.jsonl", rows)
             config = json.loads(
                 (AGENTS / "common/preprocessing-config.json").read_text()
             )
+            config["limits"]["max_tool_events_per_turn"] = 1
             runner.normalizer.normalize(workspace, config)
             turn_path = next(
                 (workspace / "traces/derived/normalized/turns").glob("*.json")
@@ -2289,6 +2673,7 @@ class ContractTests(unittest.TestCase):
             )
             change = json.loads(path.read_text())["changes"][0]
             self.assertEqual(change["sections"], ["workflow"])
+            self.assertRegex(change["date"], r"^\d{4}-\d{2}-\d{2}$")
             self.assertNotEqual(
                 change["before_sha256"], change["after_sha256"]
             )
@@ -2358,6 +2743,106 @@ class ContractTests(unittest.TestCase):
                         "text": "Template-owned assertion.",
                     }
                 ],
+            )
+            goal_assertions = [
+                assertion
+                for check in input_data["skills"][0]["checks"]
+                if check["id"] == "step2"
+                for assertion in check["assertions"]
+            ]
+            self.assertEqual(len(goal_assertions), 2)
+            self.assertTrue(
+                all(
+                    assertion["source_ref"].startswith(
+                        "#/skills/0/requirements/"
+                    )
+                    for assertion in goal_assertions
+                )
+            )
+
+    def test_operation_bundle_requires_all_linked_artifacts(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            worker = Path(directory)
+            write_operation_bundle(
+                worker,
+                "finding",
+                "seed",
+                {"op": "pass", "to": ""},
+            )
+            operation_directory = worker / "run/finding/ops/1"
+            contracts.validate_operation_artifacts(operation_directory)
+            input_path = operation_directory / "verification-input.json"
+            original_input = json.loads(input_path.read_text())
+            mismatched_input = dict(original_input)
+            mismatched_input["finding_id"] = "another-finding"
+            write_json(input_path, mismatched_input)
+            with self.assertRaises(contracts.ContractError):
+                contracts.validate_operation_artifacts(operation_directory)
+            write_json(input_path, original_input)
+            (operation_directory / "judge.json").unlink()
+            with self.assertRaises(contracts.ContractError):
+                contracts.validate_operation_artifacts(operation_directory)
+
+    def test_skipped_bundle_preserves_literal_error_text(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            initialize_pending_operation(
+                workspace,
+                "finding",
+                valid_goal()["action"]["ops"][0],
+            )
+            runner.skip_operation_phases(
+                workspace,
+                "finding",
+                1,
+                ("optimize", "verification", "judge"),
+                "blocked by unresolved <placeholder>",
+            )
+            operation_directory = runner.finalize_unexecuted_operation(
+                workspace,
+                "finding",
+                1,
+                status="skipped",
+                reason="blocked by unresolved <placeholder>",
+            )
+            contracts.validate_operation_artifacts(operation_directory)
+
+    def test_failed_bundle_is_complete_and_valid(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            initialize_pending_operation(
+                workspace,
+                "finding",
+                valid_goal()["action"]["ops"][0],
+            )
+            runner.mark_operation_phase(
+                workspace,
+                "finding",
+                1,
+                "optimize",
+                "failed",
+                "agent failed",
+            )
+            runner.skip_operation_phases(
+                workspace,
+                "finding",
+                1,
+                ("verification", "judge"),
+                "blocked by failed optimize phase",
+            )
+            operation_directory = runner.finalize_unexecuted_operation(
+                workspace,
+                "finding",
+                1,
+                status="failed",
+                reason="optimize failed: agent failed",
+            )
+            contracts.validate_operation_artifacts(operation_directory)
+            self.assertEqual(
+                json.loads(
+                    (operation_directory / "judge.json").read_text()
+                )["status"],
+                "failed",
             )
 
     def test_skill_format_names_and_aliases(self) -> None:
@@ -2808,6 +3293,23 @@ class ContractTests(unittest.TestCase):
             write_json(path, value)
             with self.assertRaises(contracts.ContractError):
                 contracts.validate_verification(path, judged=True)
+            value = valid_verification("seed", {"op": "back", "to": "Update"})
+            write_json(path, value)
+            with self.assertRaises(contracts.ContractError):
+                contracts.validate_verification(path, judged=True)
+            value = valid_verification("seed", {"op": "fail", "to": None})
+            write_json(path, value)
+            with self.assertRaises(contracts.ContractError):
+                contracts.validate_verification(path, judged=True)
+            value = valid_verification("seed", {"op": "pass", "to": "Update"})
+            write_json(path, value)
+            with self.assertRaises(contracts.ContractError):
+                contracts.validate_verification(path, judged=True)
+            value = valid_verification("seed")
+            value["feedback"]["per_skill"][0]["action"] = {"op": "pass"}
+            write_json(path, value)
+            with self.assertRaises(contracts.ContractError):
+                contracts.validate_verification(path, judged=False)
 
     def test_verification_replay_contract_is_explicit(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -2834,18 +3336,89 @@ class ContractTests(unittest.TestCase):
             write_json(path, value)
             contracts.validate_verification(path, judged=False)
 
+    def test_failed_assertion_cannot_be_hidden_by_high_weighted_score(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            verification_input = runner.materialize_verification_input(
+                workspace,
+                {"goal": {"avoid": "Do not regress."}},
+                {
+                    "op": "update",
+                    "skills": [
+                        {
+                            "skill": "seed",
+                            "goal": "Improve workflow.",
+                            "facet": "workflow",
+                            "sections": [
+                                {
+                                    "section": "workflow",
+                                    "goal": "Improve workflow.",
+                                }
+                            ],
+                        }
+                    ],
+                },
+                "run",
+                "finding",
+                1,
+            )
+            value = valid_verification(
+                "seed",
+                verification_input=json.loads(
+                    verification_input.read_text()
+                ),
+            )
+            value["verification_input"]["sha256"] = hashlib.sha256(
+                verification_input.read_bytes()
+            ).hexdigest()
+            first_step = value["verification_steps"][0]["steps"][0]
+            first_step["assertion_results"][0]["score"] = 0.5
+            first_step["assertion_results"][0]["status"] = "fail"
+            first_step["score"] = 0.75
+            first_step["status"] = "fail"
+            value["feedback"]["per_skill"][0]["score"] = 0.97
+            value["feedback"]["per_skill"][0]["status"] = "fail"
+            value["feedback"]["per_skill"][0]["failed_required_steps"] = [
+                "step1"
+            ]
+            value["feedback"]["overall_score"] = 0.97
+            value["feedback"]["overall_status"] = "fail"
+            path = workspace / "run/verification.json"
+            write_json(path, value)
+            contracts.validate_verification(path, judged=False)
+            value["feedback"]["action"] = {"op": "fail", "to": None}
+            write_json(path, value)
+            contracts.validate_verification(path, judged=True)
+
     def test_verification_builder_clears_actions(self) -> None:
-        example = json.loads(
-            (VERIFIER / "verification-output.example.json").read_text()
+        template = json.loads(
+            (VERIFIER / "verification-output.template.json").read_text()
         )
         change = valid_verification("seed")["changelog"][0]
+        runtime_input = json.loads(
+            (VERIFIER / "verification-input.template.json").read_text()
+        )
+        runtime_input["skills"] = [
+            {
+                "skill": "seed",
+                "role": "updated",
+                "baseline_expected": True,
+                "candidate_expected": True,
+                "requirements": {
+                    "sections": [],
+                    "directories": [],
+                    "avoid": [],
+                    "removals": [],
+                },
+            }
+        ]
+        runner._append_goal_verification_assertions(runtime_input)
         out = verification_builder.build(
             valid_goal(),
-            example,
-            {},
-            None,
+            template,
             {"changes": [change]},
             "d" * 64,
+            runtime_input,
         )
         self.assertIsNone(out["feedback"]["action"])
         self.assertTrue(
@@ -2853,35 +3426,100 @@ class ContractTests(unittest.TestCase):
         )
         self.assertEqual(out["changelog"], [change])
         self.assertEqual(out["verification_input"]["sha256"], "d" * 64)
+        self.assertEqual(
+            [step["id"] for step in out["verification_steps"][0]["steps"]],
+            list(runtime_input["checks"]),
+        )
 
     def test_verification_input_and_output_templates_align(self) -> None:
         input_template = json.loads(
-            (VERIFIER / "verification-input.example.json").read_text()
+            (VERIFIER / "verification-input.template.json").read_text()
         )
         output_template = json.loads(
+            (VERIFIER / "verification-output.template.json").read_text()
+        )
+        self.assertEqual(output_template["verification_steps"], [])
+        self.assertEqual(output_template["feedback"]["per_skill"], [])
+        self.assertEqual(output_template["feedback"]["ood"], [])
+        self.assertEqual(output_template["changelog"], [])
+        self.assertEqual(len(input_template["checks"]), 8)
+        input_example = json.loads(
+            (VERIFIER / "verification-input.example.json").read_text()
+        )
+        output_example = json.loads(
             (VERIFIER / "verification-output.example.json").read_text()
         )
-        output_steps = output_template["verification_steps"][0]["steps"]
+        self.assertEqual(len(input_example["skills"]), 1)
+        self.assertEqual(len(input_example["skills"][0]["checks"]), 8)
+        self.assertEqual(len(output_example["verification_steps"]), 1)
         self.assertEqual(
-            [step["id"] for step in output_steps],
-            list(input_template["checks"]),
+            len(output_example["verification_steps"][0]["steps"]), 8
         )
-        for step in output_steps:
-            source = input_template["checks"][step["id"]]
-            self.assertEqual(step["check"], source["check"])
-            self.assertEqual(
-                step["input_ref"], f"#/checks/{step['id']}"
+        self.assertEqual(len(output_example["feedback"]["per_skill"]), 1)
+        with tempfile.TemporaryDirectory() as directory:
+            runtime = Path(directory)
+            input_path = runtime / "verification-input.json"
+            output_path = runtime / "verification.json"
+            write_json(input_path, input_example)
+            contracts.validate_verification_input(input_path)
+            output_example["verification_input"]["sha256"] = hashlib.sha256(
+                input_path.read_bytes()
+            ).hexdigest()
+            write_json(output_path, output_example)
+            contracts.validate_verification(output_path, judged=False)
+
+    def test_verification_input_loads_every_bundled_finding(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            for finding_id, confidence in (("finding-a", 0.8), ("finding-b", 0.6)):
+                write_json(
+                    workspace
+                    / "traces/derived/findings"
+                    / finding_id
+                    / "finding.json",
+                    {
+                        "confidence": confidence,
+                        "evidence": [{"trace_id": finding_id}],
+                        "features": {
+                            "candidate_source": "signal_detector",
+                            "distinct_windows": 1,
+                            "lesson": f"lesson-{finding_id}",
+                        },
+                    },
+                )
+            op = {
+                "op": "update",
+                "skills": [
+                    {
+                        "skill": "seed",
+                        "goal": "Improve the workflow.",
+                        "sections": [],
+                        "dirs": [],
+                    }
+                ],
+            }
+            goal = valid_goal(op)
+            goal["bundle"] = {
+                "selected": [
+                    {"cluster": "finding-a"},
+                    {"cluster": "finding-b"},
+                ]
+            }
+            write_json(workspace / "run/evolve-goal.json", goal)
+            path = runner.materialize_verification_input(
+                workspace, goal, op, "run-1", "finding-a", 1
             )
+            evidence = json.loads(path.read_text())["checks"]["step3"]["evidence"]
             self.assertEqual(
-                {
-                    result["assertion_id"]
-                    for result in step["assertion_results"]
-                },
-                {assertion["id"] for assertion in source["assertions"]},
+                [row["finding_id"] for row in evidence["findings"]],
+                ["finding-a", "finding-b"],
             )
-        self.assertNotIn(
-            "step_n", output_template["verification_steps"][0]
-        )
+            self.assertTrue(all(row["path"] for row in evidence["findings"]))
+            broken = json.loads(path.read_text())
+            broken["checks"]["step3"]["evidence"]["findings"].pop()
+            write_json(path, broken)
+            with self.assertRaises(contracts.ContractError):
+                contracts.validate_verification_input(path)
 
     def test_materialized_goal_contains_one_op(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -2925,6 +3563,33 @@ class ContractTests(unittest.TestCase):
             summary = json.loads(first)
             self.assertEqual(summary["no_change_scopes"], ["scope-a"])
             self.assertEqual(summary["operations"], [])
+
+    def test_summary_reports_accepted_operation_missing_verification(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            write_json(
+                workspace / "run/scope-a/evolve-goal.json",
+                valid_goal(),
+            )
+            runner.write_publication(
+                workspace,
+                "scope-a",
+                1,
+                accepted=True,
+                reason=None,
+            )
+            summary = json.loads(
+                runner.write_pipeline_summary(
+                    workspace, ["scope-a"]
+                ).read_text()
+            )
+            operation = summary["operations"][0]
+            self.assertTrue(operation["accepted"])
+            self.assertEqual(
+                operation["artifact_error"],
+                "accepted operation has no completed verification",
+            )
+            self.assertIsNone(operation["judge_action"])
 
     def test_creation_policy_requires_evidence_for_single_session(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -3090,7 +3755,8 @@ class ContractTests(unittest.TestCase):
             seen: list[Path] = []
 
             def fake_session(
-                stage, worker, prompt, auth, model, install, suffix, metadata=None
+                stage, worker, prompt, auth, model, install, suffix,
+                metadata=None, **kwargs
             ):
                 self.assertEqual(stage, "label-traces-cluster")
                 self.assertIn("traces/derived/findings", prompt)
@@ -3158,6 +3824,10 @@ class ContractTests(unittest.TestCase):
                 }
                 for finding in ("finding-a", "finding-b")
             ]
+            for task in tasks:
+                initialize_pending_operation(
+                    workspace, task["cluster"], task["op"]
+                )
             selected = runner.reduce_operation_tasks(workspace, tasks)
             self.assertEqual(len(selected), 1)
             reduction = json.loads(
@@ -3168,6 +3838,31 @@ class ContractTests(unittest.TestCase):
             self.assertEqual(
                 [row["decision"] for row in reduction["decisions"]],
                 ["selected", "duplicate"],
+            )
+            duplicate_log = json.loads(
+                (
+                    workspace
+                    / "run/finding-b/ops/1/changelog.json"
+                ).read_text()
+            )
+            self.assertEqual(
+                {
+                    marker["phase"]: marker["status"]
+                    for marker in duplicate_log["phase_markers"]
+                },
+                {
+                    "goal": "completed",
+                    "optimize": "skipped",
+                    "verification": "skipped",
+                    "judge": "skipped",
+                },
+            )
+            duplicate_directory = workspace / "run/finding-b/ops/1"
+            contracts.validate_operation_artifacts(duplicate_directory)
+            self.assertFalse(
+                json.loads(
+                    (duplicate_directory / "publication.json").read_text()
+                )["accepted"]
             )
 
     def test_same_skill_updates_bundle_into_one_verified_op(self) -> None:
@@ -3194,11 +3889,9 @@ class ContractTests(unittest.TestCase):
                             }
                         ],
                     }
-                goal = valid_goal(op)
-                goal["goal"]["improve_skills"] = [skill]
-                path = workspace / "run" / cluster / "ops" / "1" / "evolve-goal.json"
-                path.parent.mkdir(parents=True, exist_ok=True)
-                path.write_text(json.dumps(goal))
+                path = initialize_pending_operation(
+                    workspace, cluster, op
+                )
                 return {
                     "cluster": cluster,
                     "op_index": 1,
@@ -3237,6 +3930,21 @@ class ContractTests(unittest.TestCase):
                 [row["cluster"] for row in stored["bundle"]["selected"]],
                 ["high", "mid"],
             )
+            bundled_input = json.loads(
+                (
+                    Path(merged["op_goal"]).parent
+                    / "verification-input.json"
+                ).read_text()
+            )
+            self.assertEqual(
+                [
+                    row["finding_id"]
+                    for row in bundled_input["checks"]["step3"]["evidence"][
+                        "findings"
+                    ]
+                ],
+                ["high", "mid"],
+            )
             self.assertEqual(stored["bundle"]["dropped"][0]["reason"], "over_cap")
             batches = runner.operation_batches(bundled)
             self.assertEqual(
@@ -3258,6 +3966,69 @@ class ContractTests(unittest.TestCase):
             )
             self.assertFalse(publication["accepted"])
             self.assertEqual(publication["reason"], "over_cap")
+            skipped = json.loads(
+                (workspace / "run/low/ops/1/changelog.json").read_text()
+            )
+            self.assertTrue(
+                all(
+                    marker["status"] == "skipped"
+                    for marker in skipped["phase_markers"]
+                    if marker["phase"] != "goal"
+                )
+            )
+            contracts.validate_operation_artifacts(
+                workspace / "run/low/ops/1"
+            )
+
+    def test_same_skill_update_merge_preserves_removals(self) -> None:
+        merged = runner.merge_update_ops(
+            [
+                {
+                    "op": "update",
+                    "skills": [
+                        {
+                            "skill": "audit",
+                            "goal": "Remove stale guidance.",
+                            "facet": "workflow",
+                            "sections": [],
+                            "dirs": [],
+                            "remove": ["obsolete note"],
+                        }
+                    ],
+                },
+                {
+                    "op": "update",
+                    "skills": [
+                        {
+                            "skill": "audit",
+                            "goal": "Remove duplicate guidance.",
+                            "facet": "workflow",
+                            "sections": [],
+                            "dirs": [],
+                            "remove": ["obsolete note", "duplicate note"],
+                        }
+                    ],
+                },
+            ]
+        )
+        self.assertEqual(
+            merged["skills"][0]["remove"],
+            ["obsolete note", "duplicate note"],
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            goal = valid_goal(merged)
+            path = runner.materialize_verification_input(
+                workspace, goal, merged, "run", "finding", 1
+            )
+            verification_input = json.loads(path.read_text())
+            skill = verification_input["skills"][0]
+            self.assertEqual(
+                skill["requirements"]["removals"],
+                ["obsolete note", "duplicate note"],
+            )
+            step8 = next(check for check in skill["checks"] if check["id"] == "step8")
+            self.assertEqual(len(step8["assertions"]), 2)
 
     def test_super_score_gate_ranks_ahead_of_raw_confidence(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -3275,10 +4046,9 @@ class ContractTests(unittest.TestCase):
                         }
                     ],
                 }
-                goal = valid_goal(op)
-                path = workspace / "run" / cluster / "ops" / "1" / "evolve-goal.json"
-                path.parent.mkdir(parents=True, exist_ok=True)
-                path.write_text(json.dumps(goal))
+                path = initialize_pending_operation(
+                    workspace, cluster, op
+                )
                 return {
                     "cluster": cluster,
                     "op_index": 1,
@@ -3506,7 +4276,16 @@ class ContractTests(unittest.TestCase):
                 runner.write_pipeline_summary(workspace, ["push"]).read_text()
             )
             self.assertFalse(summary["operations"][0]["accepted"])
-            self.assertEqual(summary["operations"][0]["judge_action"], "pass")
+            self.assertIsNone(summary["operations"][0]["judge_action"])
+            self.assertEqual(
+                json.loads(
+                    (
+                        workspace
+                        / "run/push/ops/1/verification.json"
+                    ).read_text()
+                )["status"],
+                "skipped",
+            )
             metadata = json.loads(
                 (
                     workspace
@@ -3579,7 +4358,7 @@ class ContractTests(unittest.TestCase):
             write_json(
                 verification_input,
                 json.loads(
-                    (VERIFIER / "verification-input.example.json").read_text()
+                    (VERIFIER / "verification-input.template.json").read_text()
                 ),
             )
             verification = valid_verification(created, {"op": "pass"})
@@ -3590,18 +4369,33 @@ class ContractTests(unittest.TestCase):
                 worker / "run/push/ops/1/verification.json",
                 verification,
             )
+            write_json(worker / "run/push/ops/1/judge.json", {})
+            write_json(worker / "run/push/ops/1/changelog.json", {})
             op = {
                 "op": "create",
                 "skills": [{"skill": created}],
             }
+            write_operation_bundle(
+                worker,
+                "push",
+                created,
+                {"op": "pass"},
+                operation="create",
+            )
             config = json.loads(
                 (AGENTS / "common/preprocessing-config.json").read_text()
             )
             config["signals"]["selection"][
                 "include_infrastructure_failures"
             ] = True
-            with patch.object(
-                runner, "preprocessing_config", return_value=config
+            with (
+                patch.object(
+                    runner, "preprocessing_config", return_value=config
+                ),
+                patch.object(
+                    runner.pipeline_contracts,
+                    "validate_operation_artifacts",
+                ),
             ):
                 runner.publish_operation_result(
                     workspace,
@@ -3643,15 +4437,12 @@ class ContractTests(unittest.TestCase):
             changed = worker / "target/to_be_improved_skills" / skill
             changed.mkdir(parents=True)
             (changed / "SKILL.md").write_text("failed version\n")
-            write_json(
-                worker / "run/finding/ops/1/evolve-goal.json",
-                {"action": {"ops": [{"op": "update", "skills": [{"skill": skill}]}]}},
+            write_operation_bundle(
+                worker,
+                "finding",
+                skill,
+                {"op": "fail", "to": ""},
             )
-            write_json(
-                worker / "run/finding/ops/1/verification.json",
-                valid_verification(skill, {"op": "fail", "to": ""}),
-            )
-
             runner.publish_operation_result(
                 workspace,
                 {
@@ -3733,7 +4524,8 @@ class ContractTests(unittest.TestCase):
             barrier = threading.Barrier(2)
 
             def fake_session(
-                stage, worker, prompt, auth, model, install, suffix, metadata=None
+                stage, worker, prompt, auth, model, install, suffix,
+                metadata=None, **kwargs
             ):
                 self.assertEqual(stage, "goal")
                 self.assertIn("--clusters workspace/traces/derived/findings", prompt)
@@ -3835,7 +4627,8 @@ class ContractTests(unittest.TestCase):
             calls = {stage: 0 for stage in barriers}
 
             def fake_session(
-                stage, worker, prompt, auth, model, install, suffix, metadata=None
+                stage, worker, prompt, auth, model, install, suffix,
+                metadata=None, **kwargs
             ):
                 active = json.loads((worker / "run/evolve-goal.json").read_text())
                 skill = active["action"]["ops"][0]["skills"][0]["skill"]
@@ -3846,18 +4639,47 @@ class ContractTests(unittest.TestCase):
                     raw.mkdir(parents=True, exist_ok=True)
                     (raw / "SKILL.md").write_text(f"# {skill}\n")
                 elif stage == "verifiter":
-                    verification = valid_verification(skill)
+                    verification_input = json.loads(
+                        (worker / "run/verification-input.json").read_text()
+                    )
+                    verification = valid_verification(
+                        skill, verification_input=verification_input
+                    )
+                    verification["changelog"] = json.loads(
+                        (worker / "run/changelog.json").read_text()
+                    )["changes"]
                     verification["verification_input"]["sha256"] = hashlib.sha256(
                         (worker / "run/verification-input.json").read_bytes()
                     ).hexdigest()
-                    write_json(
-                        worker / "run/verification.json",
-                        verification,
+                    log_path = runner.session_log_path(
+                        worker, stage, suffix
                     )
+                    log_path.parent.mkdir(parents=True, exist_ok=True)
+                    log_path.write_text(
+                        json.dumps(
+                            {
+                                "type": "item.completed",
+                                "item": {
+                                    "type": "agent_message",
+                                    "text": json.dumps(verification),
+                                },
+                            }
+                        )
+                        + "\n"
+                    )
+                    return log_path
                 elif stage == "judge":
-                    verification = valid_verification(
-                        skill, {"op": "pass", "to": ""}
+                    verification_input = json.loads(
+                        (worker / "run/verification-input.json").read_text()
                     )
+                    verification = valid_verification(
+                        skill,
+                        {"op": "pass", "to": ""},
+                        verification_input=verification_input,
+                    )
+                    verification["changelog"] = json.loads(
+                        (worker / "run/changelog.json").read_text()
+                    )["changes"]
                     verification["verification_input"]["sha256"] = hashlib.sha256(
                         (worker / "run/verification-input.json").read_bytes()
                     ).hexdigest()
@@ -3927,7 +4749,8 @@ class MockedPipelineTest(unittest.TestCase):
             ]
 
             def fake_session(
-                stage, ws, prompt, auth, model, install, suffix, metadata=None
+                stage, ws, prompt, auth, model, install, suffix,
+                metadata=None, **kwargs
             ):
                 if stage == "preprocessing":
                     cut = ws / "traces/derived/cut"
@@ -4038,22 +4861,48 @@ class MockedPipelineTest(unittest.TestCase):
                         },
                     )
                 elif stage == "verifiter":
-                    verification = valid_verification(
-                        "created", role="created"
+                    verification_input = json.loads(
+                        (ws / "run/verification-input.json").read_text()
                     )
+                    verification = valid_verification(
+                        "created",
+                        role="created",
+                        verification_input=verification_input,
+                    )
+                    verification["changelog"] = json.loads(
+                        (ws / "run/changelog.json").read_text()
+                    )["changes"]
                     verification["verification_input"]["sha256"] = hashlib.sha256(
                         (ws / "run/verification-input.json").read_bytes()
                     ).hexdigest()
-                    write_json(
-                        ws / "run/verification.json",
-                        verification,
+                    log_path = runner.session_log_path(ws, stage, suffix)
+                    log_path.parent.mkdir(parents=True, exist_ok=True)
+                    log_path.write_text(
+                        json.dumps(
+                            {
+                                "type": "item.completed",
+                                "item": {
+                                    "type": "agent_message",
+                                    "text": json.dumps(verification),
+                                },
+                            }
+                        )
+                        + "\n"
                     )
+                    return log_path
                 elif stage == "judge":
+                    verification_input = json.loads(
+                        (ws / "run/verification-input.json").read_text()
+                    )
                     verification = valid_verification(
                         "created",
                         {"op": "pass", "to": ""},
                         role="created",
+                        verification_input=verification_input,
                     )
+                    verification["changelog"] = json.loads(
+                        (ws / "run/changelog.json").read_text()
+                    )["changes"]
                     verification["verification_input"]["sha256"] = hashlib.sha256(
                         (ws / "run/verification-input.json").read_bytes()
                     ).hexdigest()
@@ -4083,6 +4932,34 @@ class MockedPipelineTest(unittest.TestCase):
             )
             self.assertTrue(
                 (workspace / "run/cut/ops/1/verification.json").is_file()
+            )
+            final_changelog = json.loads(
+                (workspace / "run/cut/ops/1/changelog.json").read_text()
+            )
+            self.assertEqual(
+                {
+                    marker["phase"]: marker["status"]
+                    for marker in final_changelog["phase_markers"]
+                },
+                {
+                    phase: "completed"
+                    for phase in contracts.OPERATION_PHASES
+                },
+            )
+            self.assertTrue(
+                all(
+                    change["status"] == "accepted"
+                    for change in final_changelog["changes"]
+                )
+            )
+            optimize_events = [
+                event["status"]
+                for event in final_changelog["phase_events"]
+                if event["phase"] == "optimize"
+            ]
+            self.assertEqual(
+                optimize_events,
+                ["pending", "running", "completed"],
             )
             judge_status = list((workspace / "run/status/judge").glob("*.json"))
             self.assertEqual(len(judge_status), 1)

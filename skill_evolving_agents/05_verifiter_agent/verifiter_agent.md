@@ -8,19 +8,26 @@ The default host-CLI pipeline creates a temporary allowlisted session view conta
 
 ### Input
 
-The selected run is available as `workspace`. Input includes the one-op goal,
-its active copy, `workspace/run/verification-input.json`, raw skills, the
-edited skills, and—when the scope is a
-feedback finding—`workspace/traces/derived/findings/<finding-id>/finding.json`
-plus its canonical-turn pointers. Because the active goal contains one op,
+The selected run is available as `workspace`. The runner starts one verifier
+request per affected skill. Each request embeds that skill's complete concrete
+verification-input JSON directly in the prompt. Input also includes the one-op goal,
+its active copy, raw skills, the
+edited skills, and—when the scope is a feedback finding—the finding files
+listed under the embedded input's `checks.step3.evidence.findings`, plus
+their canonical-turn pointers. Because the active goal contains one op,
 checker `--op` is 1. A `bundle` on that goal means several same-skill edits
 were already merged into this op. Check the merged sections once. Do not
 start a verification per source edit.
 
 ### Output
 
-Output is active `workspace/run/verification.json` for that op: the SHA-256
-reference to the verification input, a status and evidence for all eight
+The prompt embeds a complete one-skill output JSON shape. Return only a JSON
+object in that shape; do not write `workspace/run/verification.json`.
+The runner parses and validates the response, retries the same request only for
+malformed or contract-invalid JSON, and then aggregates all validated skill
+responses into `workspace/run/verification.json`. Optimization retries remain
+disabled. The output contains the SHA-256 reference to the verification input,
+a status and evidence for all eight
 input-bound steps, normalized weighted scores and causal reasoning, the
 runner-owned changelog copied from
 `workspace/run/changelog.json`, overall and per-skill status, feedback, and
@@ -34,6 +41,12 @@ and null before/after values. A structural pass without replay does not
 demonstrate behavioral improvement. Do not claim the old immutable trace itself
 changed. `feedback.action` remains null for Judge.
 
+The runner archives this output beside the one-op goal, verification input,
+dated changelog, and terminal `judge.json`. It records verification phase
+events before and after this stage; skipped or failed stages receive explicit
+marker artifacts.
+
 ### Stop condition
 
-Stop when that file is written. Do not edit the skills. Leave the other ops for their own loop.
+Stop after returning the JSON object. Do not edit the skills. Leave the other
+skills and ops for their own requests.

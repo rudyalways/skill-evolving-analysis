@@ -40,4 +40,4 @@ the raw snapshot. Do not verify or judge the edit in this stage.
 ## Stop condition
 
 Stop after all requested edits and raw snapshots exist. A later verifier and
-judge session handles acceptance or retry.
+judge session handles pass/fail acceptance; retries are disabled.

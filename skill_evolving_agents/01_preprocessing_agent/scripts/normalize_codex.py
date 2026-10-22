@@ -536,12 +536,19 @@ def phase_rows(events: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 def assistant_observation_rows(
-    turn: dict[str, Any], config: dict[str, Any]
+    turn: dict[str, Any],
+    config: dict[str, Any],
+    max_after_tool_count: int | None = None,
 ) -> list[dict[str, Any]]:
     methodology = config.get("methodology") or {}
     preview_chars = int(methodology.get("reflection_preview_chars", 600))
     maximum = int(methodology.get("max_assistant_observations", 32))
     rows: list[dict[str, Any]] = []
+    retained_tool_count = (
+        len(turn["tools"])
+        if max_after_tool_count is None
+        else min(len(turn["tools"]), max(max_after_tool_count, 0))
+    )
     for observation in (turn.get("assistant_observations") or [])[:maximum]:
         text = bounded(observation.get("text") or "", preview_chars)
         if not text:
@@ -554,7 +561,7 @@ def assistant_observation_rows(
                 ).hexdigest(),
                 "after_tool_count": min(
                     max(int(observation.get("after_tool_count") or 0), 0),
-                    len(turn["tools"]),
+                    retained_tool_count,
                 ),
                 "source_ordinal": observation.get("source_ordinal"),
             }
@@ -726,7 +733,11 @@ def normalize(
             "outcome": document["outcome"],
             "events": trajectory_events,
             "phases": phase_rows(trajectory_events),
-            "assistant_observations": assistant_observation_rows(turn, config),
+            "assistant_observations": assistant_observation_rows(
+                turn,
+                config,
+                max_after_tool_count=len(trajectory_events),
+            ),
             "final_response_sha256": hashlib.sha256(
                 candidate["assistant"].encode()
             ).hexdigest(),

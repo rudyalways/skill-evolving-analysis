@@ -78,5 +78,5 @@ reported as `not_run`.
 - Generic interview steps when the trace already contains the requirements.
 
 The existing Optimize, Verifiter, and Judge stages own generation, validation,
-retry, and publication. Any future baseline-versus-skill evaluator should feed
+pass/fail acceptance, and publication. Any future baseline-versus-skill evaluator should feed
 those stages rather than introduce a second orchestration system.

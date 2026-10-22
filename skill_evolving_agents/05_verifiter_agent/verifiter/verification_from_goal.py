@@ -4,7 +4,9 @@
 Each item in action.ops names skills. This script collects those names,
 in op order, and writes one verification_steps item and one
 feedback.per_skill item for each. The check list is copied from
-verification-output.example.json. The agent fills status and feedback.
+the runtime verification-input.json, including goal-derived assertions.
+verification-output.template.json supplies only the output envelope. The agent
+fills status and feedback.
 """
 
 from __future__ import annotations
@@ -22,7 +24,7 @@ from goal_slice import slice_goal
 
 ROOT = Path(__file__).resolve().parent
 AGENT = ROOT.parents[1]
-EXAMPLE = ROOT / "verification-output.example.json"
+TEMPLATE = ROOT / "verification-output.template.json"
 DEFAULT_GOAL = AGENT / "workspace" / "run" / "evolve-goal.json"
 DEFAULT_OUT = AGENT / "workspace" / "run" / "verification.json"
 DEFAULT_CHANGELOG = AGENT / "workspace" / "run" / "changelog.json"
@@ -60,31 +62,9 @@ def skills_in_ops(goal: dict) -> list[str]:
     return found
 
 
-def prior_retries(path: Path) -> tuple[dict[str, int], int | None]:
-    if not path.is_file():
-        return {}, None
-    try:
-        data = json.loads(path.read_text())
-    except json.JSONDecodeError:
-        return {}, None
-    feedback = data.get("feedback") or {}
-    budget = feedback.get("retry_budget")
-    kept_budget = budget if isinstance(budget, int) else None
-    found: dict[str, int] = {}
-    for row in feedback.get("per_skill") or []:
-        if not isinstance(row, dict) or not isinstance(row.get("skill"), str):
-            continue
-        used = row.get("retries_used")
-        if isinstance(used, int):
-            found[row["skill"].casefold()] = used
-    return found, kept_budget
-
-
 def build(
     goal: dict,
     example: dict,
-    earlier: dict[str, int],
-    budget: int | None,
     changelog: dict | None = None,
     input_sha256: str | None = None,
     verification_input: dict | None = None,
@@ -94,18 +74,6 @@ def build(
         fail(
             "goal names no skills",
             "Name each skill on its action in action.ops. A skill field or a string in skills counts.",
-        )
-    steps = example.get("verification_steps") or []
-    per_skill = (example.get("feedback") or {}).get("per_skill") or []
-    if not steps or not isinstance(steps[0], dict):
-        fail(
-            "verification example needs one verification_steps item",
-            "Restore the item in 05_verifiter_agent/verifiter/verification-output.example.json.",
-        )
-    if not per_skill or not isinstance(per_skill[0], dict):
-        fail(
-            "verification example needs one per_skill item",
-            "Restore the per_skill item in 05_verifiter_agent/verifiter/verification-output.example.json.",
         )
     out = copy.deepcopy(example)
     out["verification_steps"] = []
@@ -118,48 +86,113 @@ def build(
             "path": "verification-input.json",
             "sha256": input_sha256,
         }
-    if budget is not None:
-        out["feedback"]["retry_budget"] = budget
+    out["feedback"]["retry_budget"] = 0
     input_skills = {
         row.get("skill"): row
         for row in (verification_input or {}).get("skills") or []
         if isinstance(row, dict)
     }
+    input_skill_positions = {
+        row.get("skill"): index
+        for index, row in enumerate((verification_input or {}).get("skills") or [])
+        if isinstance(row, dict)
+    }
     input_checks = (verification_input or {}).get("checks") or {}
     for name in skills:
-        step = copy.deepcopy(steps[0])
-        step["skill"] = name
+        if name not in input_skills:
+            fail(
+                f"verification input is missing skill {name}",
+                "Rebuild workspace/run/verification-input.json from the active operation.",
+            )
+        step = {
+            "skill": name,
+            "used_by": "verifier stage",
+            "steps_from": (
+                "verification-input.json#/skills/"
+                f"{input_skill_positions[name]}/checks"
+            ),
+            "steps": [],
+        }
         input_skill = input_skills.get(name) or {}
         role = input_skill.get("role")
-        for result in step.get("steps") or []:
-            step_id = result.get("id")
-            input_check = input_checks.get(step_id) or {}
-            result["check"] = input_check.get("check", result.get("check"))
-            applicable = role in (input_check.get("applies_to") or [])
-            result["applicable"] = applicable
-            if not applicable:
+        skill_checks = {
+            check.get("id"): check
+            for check in input_skill.get("checks") or []
+            if isinstance(check, dict)
+        }
+        skill_check_positions = {
+            check.get("id"): index
+            for index, check in enumerate(input_skill.get("checks") or [])
+            if isinstance(check, dict)
+        }
+        applicable_weight = 0.0
+        for step_id, input_check in input_checks.items():
+            skill_check = skill_checks.get(step_id) or {}
+            applicable = skill_check.get(
+                "applicable",
+                role in (input_check.get("applies_to") or []),
+            )
+            result = {
+                "id": step_id,
+                "check": input_check.get("check"),
+                "input_ref": (
+                    f"#/skills/{input_skill_positions[name]}/checks/"
+                    f"{skill_check_positions[step_id]}"
+                ),
+                "applicable": applicable,
+            }
+            if applicable:
+                applicable_weight += float(
+                    ((verification_input or {}).get("scoring") or {})
+                    .get("step_weights", {})
+                    .get(step_id, 0)
+                )
+            if applicable:
+                result.update(
+                    {
+                        "status": "<pass|fail>",
+                        "score": 0.0,
+                        "reasoning": (
+                            "<why this score follows from the assertions "
+                            "and evidence>"
+                        ),
+                        "evidence": ["<observed result>"],
+                        "assertion_results": [
+                            {
+                                "assertion_id": assertion.get("id"),
+                                "status": "<pass|fail>",
+                                "score": 0.0,
+                                "reasoning": (
+                                    "<why the assertion passed or failed>"
+                                ),
+                                "evidence": ["<observed result>"],
+                            }
+                            for assertion in [
+                                *(input_check.get("assertions") or []),
+                                *(skill_check.get("assertions") or []),
+                            ]
+                            if isinstance(assertion, dict)
+                        ],
+                    }
+                )
+            else:
                 result["status"] = "not_applicable"
                 result["score"] = None
                 result["reasoning"] = f"Step does not apply to skill role {role}."
                 result["evidence"] = []
                 result["assertion_results"] = []
-                continue
-            result["assertion_results"] = [
-                {
-                    "assertion_id": assertion.get("id"),
-                    "status": "<pass|fail>",
-                    "score": 0.0,
-                    "reasoning": "<why the assertion passed or failed>",
-                    "evidence": ["<observed result>"],
-                }
-                for assertion in input_check.get("assertions") or []
-                if isinstance(assertion, dict)
-            ]
+            step["steps"].append(result)
         out["verification_steps"].append(step)
-        row = copy.deepcopy(per_skill[0])
-        row["skill"] = name
-        row["retries_used"] = earlier.get(name.casefold(), 0)
-        row["action"] = None
+        row = {
+            "skill": name,
+            "status": "<pass|fail>",
+            "score": 0.0,
+            "applicable_weight": applicable_weight,
+            "failed_required_steps": [],
+            "feedback": "<text>",
+            "retries_used": 0,
+            "action": None,
+        }
         out["feedback"]["per_skill"].append(row)
     return out
 
@@ -174,7 +207,6 @@ def main() -> None:
     parser.add_argument("--op", type=int, help="1-based action.ops index for this loop")
     args = parser.parse_args()
     goal = slice_goal(json.loads(args.goal.read_text()), args.op)
-    earlier, budget = prior_retries(args.out)
     try:
         changelog = json.loads(args.changelog.read_text())
     except FileNotFoundError:
@@ -202,9 +234,7 @@ def main() -> None:
         )
     out = build(
         goal,
-        json.loads(EXAMPLE.read_text()),
-        earlier,
-        budget,
+        json.loads(TEMPLATE.read_text()),
         changelog,
         hashlib.sha256(input_bytes).hexdigest(),
         verification_input,

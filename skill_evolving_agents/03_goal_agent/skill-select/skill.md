@@ -77,6 +77,10 @@ creation is reserved for a genuinely unmatched method capability.
 
 ## Workflow
 
+The host runner may precompute and validate the scoped
+`label-matching.json`. If that exact output already exists, read it and do not
+run recall again.
+
 Run `common/skill_type_checker.py`. Undefined paths move to
 `unmatched_skill_types`. For finding scope, run `recall_skills.py --clusters
 workspace/traces/derived/findings --cluster <finding-id> --out

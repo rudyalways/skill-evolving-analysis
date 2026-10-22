@@ -1,0 +1,180 @@
+{
+  "schema_version": 1,
+  "run_id": "<run-id>",
+  "finding_id": "<finding-id>",
+  "op_index": 1,
+  "operation": "<create|update|delete|merge|split>",
+  "scoring": {
+    "strategy_version": 1,
+    "scale": {
+      "min": 0.0,
+      "max": 1.0
+    },
+    "assertion_score_anchors": {
+      "0.0": "Contradicted, missing, or unsupported.",
+      "0.25": "Major gaps; most of the assertion is unsatisfied.",
+      "0.5": "Partially satisfied with material gaps.",
+      "0.75": "Satisfied with concrete evidence.",
+      "1.0": "Fully satisfied with strong, specific evidence and no observed gap."
+    },
+    "pass_threshold": 0.75,
+    "step_aggregation": "arithmetic_mean",
+    "skill_aggregation": "weighted_mean_applicable",
+    "overall_aggregation": "minimum",
+    "required_assertion_policy": "all_must_pass",
+    "required_step_policy": "all_applicable_must_pass",
+    "replay_policy": "hard_gate",
+    "round_digits": 6,
+    "formulas": {
+      "step_score": "sum(assertion_scores) / count(assertion_scores)",
+      "skill_score": "sum(applicable_step_weight * step_score) / sum(applicable_step_weight)",
+      "overall_score": "min(skill_scores)",
+      "step_status": "pass iff step_score >= pass_threshold and every assertion passes",
+      "skill_status": "pass iff skill_score >= pass_threshold and every applicable step passes",
+      "overall_status": "pass iff every skill passes and replay is not fail"
+    },
+    "step_weights": {
+      "step1": 0.12,
+      "step2": 0.16,
+      "step3": 0.1,
+      "step4": 0.1,
+      "step5": 0.14,
+      "step6": 0.16,
+      "step7": 0.11,
+      "step8": 0.11
+    }
+  },
+  "skills": [],
+  "checks": {
+    "step1": {
+      "check": "changelog reverse check",
+      "inputs": {
+        "changelog": "run/changelog.json",
+        "baseline_root": "target/raw_skills",
+        "candidate_root": "target/to_be_improved_skills"
+      },
+      "applies_to": ["created", "updated", "deleted", "merge_source", "merge_target", "split_source", "split_target"],
+      "assertions": [
+        {
+          "id": "step1-hashes",
+          "text": "The before and after hashes match the baseline and candidate skill trees."
+        },
+        {
+          "id": "step1-claimed-changes",
+          "text": "Every changed section and directory is claimed by the active operation."
+        }
+      ]
+    },
+    "step2": {
+      "check": "goal align",
+      "inputs": {
+        "goal": "run/evolve-goal.json"
+      },
+      "applies_to": ["created", "updated", "deleted", "merge_source", "merge_target", "split_source", "split_target"],
+      "assertions": [
+        {
+          "id": "step2-unclaimed-changes",
+          "text": "No unclaimed section or directory changed."
+        }
+      ]
+    },
+    "step3": {
+      "check": "difficulty level check",
+      "evidence": {
+        "findings": []
+      },
+      "applies_to": ["created", "updated", "merge_target", "split_target"],
+      "assertions": [
+        {
+          "id": "step3-evidence-dependent",
+          "text": "The skill captures an evidence-dependent reusable procedure rather than baseline model knowledge."
+        },
+        {
+          "id": "step3-non-trivial",
+          "text": "The requested behavior is sufficiently non-trivial to justify skill instructions."
+        }
+      ]
+    },
+    "step4": {
+      "check": "not too complicated",
+      "thresholds": {
+        "min_methodology_value": 0.0
+      },
+      "applies_to": ["created", "updated", "merge_target", "split_target"],
+      "assertions": [
+        {
+          "id": "step4-minimal-procedure",
+          "text": "The candidate is the smallest procedure that satisfies the requirements."
+        },
+        {
+          "id": "step4-no-unnecessary-content",
+          "text": "The procedure does not add branches, files, or instructions that are unnecessary for the goal."
+        }
+      ]
+    },
+    "step5": {
+      "check": "checklist",
+      "from": "skills[].requirements",
+      "applies_to": ["created", "updated", "deleted", "merge_source", "merge_target", "split_source", "split_target"],
+      "assertions": [
+        {
+          "id": "step5-every-requirement",
+          "text": "Evaluate every applicable section, directory, removal, and avoid item; do not infer a pass from names or keyword presence."
+        },
+        {
+          "id": "step5-failure-evidence",
+          "text": "Record concrete evidence for each failed expectation."
+        }
+      ]
+    },
+    "step6": {
+      "check": "no degradation of existing capabilities or sections",
+      "inputs": {
+        "baseline_root": "target/raw_skills",
+        "candidate_root": "target/to_be_improved_skills"
+      },
+      "applies_to": ["updated", "merge_target", "split_target"],
+      "assertions": [
+        {
+          "id": "step6-capabilities-preserved",
+          "text": "Every pre-existing capability not explicitly replaced or removed by the goal remains available."
+        },
+        {
+          "id": "step6-valid-guidance-preserved",
+          "text": "Changed sections preserve still-valid constraints, recovery behavior, and verification guidance from the baseline."
+        }
+      ]
+    },
+    "step7": {
+      "check": "no overfitting",
+      "thresholds": {
+        "novelty_max_similarity": 0.0
+      },
+      "applies_to": ["created", "updated", "merge_target", "split_target"],
+      "assertions": [
+        {
+          "id": "step7-generalizes",
+          "text": "The candidate generalizes beyond the triggering trace, project, provider, filenames, and incidental values."
+        },
+        {
+          "id": "step7-no-eval-overfit",
+          "text": "The candidate does not duplicate another skill or optimize repeatedly against one evaluation case."
+        }
+      ]
+    },
+    "step8": {
+      "check": "unhelpful or redundant information removed",
+      "inputs": {
+        "baseline_root": "target/raw_skills",
+        "candidate_root": "target/to_be_improved_skills"
+      },
+      "applies_to": ["updated", "merge_target", "split_target"],
+      "assertions": [
+        {
+          "id": "step8-no-redundancy",
+          "text": "The candidate contains no duplicated, superseded, generic, or non-actionable instructions."
+        }
+      ]
+    }
+  }
+}
