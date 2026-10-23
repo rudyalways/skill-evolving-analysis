@@ -1,16 +1,36 @@
 # Evolver workflow
 
-Architecture references include `cost-aware-architecture.md`,
-`tuning-guide.md`, `learned-policy-architecture.md`,
-`state-machine-architecture.md`, and `policy/README.md`.
+## Local configuration
+
+Copy the repository-root `.env.example` to `.env` and put provider credentials
+only in `.env`. The pipeline loads that file without overriding variables
+already exported by the calling process. `.env` and all environment-specific
+variants are ignored by Git; `.env.example` is intentionally tracked and must
+contain names and safe defaults only, never real credentials.
+
+Product-vision documents are intentionally kept outside version control. Put
+additional private strategy material under `skill_evolving_agents/private/`.
+
+Documentation is private by default:
+
+- Put future vision, architecture, roadmap, strategy, and design-idea notes in
+  `skill_evolving_agents/private/` or `skill_evolving_agents/docs/private/`.
+- Put intentionally shareable documentation in `skill_evolving_agents/docs/public/`.
+- Keep public top-level documentation operational: README files, configuration,
+  installation, run, API, and tuning guides.
+- Before committing, use `git check-ignore -v <path>` to confirm that a private
+  document is excluded.
+
+Public operational references include `tuning-guide.md`, `run-guide.md`, and
+`policy/README.md`. Private product strategy and architecture notes are not
+part of the shared repository.
 
 How a container runs one session is `run-guide.md`.
 Public skill-system sources, adopted mechanisms, and remaining implementation
 work are tracked in `public-skill-adoption.md`.
-The proposed lower-cost, multi-profile architecture and standalone embedding
-service boundary are described in `cost-aware-architecture.md`.
-The implemented evidence gate and embedding-recall profile are documented in
-`low-cost-pipeline.md`.
+The implementation retains configurable cost tiers, deployment profiles, and
+the standalone embedding-service boundary without publishing private roadmap
+material.
 
 Seven agents share one optional Docker runtime image. Deterministic scripts
 normalize Codex, Claude Code, and Cursor telemetry, detect feedback signals,

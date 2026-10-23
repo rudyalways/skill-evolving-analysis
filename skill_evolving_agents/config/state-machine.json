@@ -12,8 +12,8 @@
     "SEMANTIC_FILTER": {"kind": "embedding-service", "implementations": ["prefilter.embedding-json-v1"]},
     "LABEL_SKILLS": {"kind": "hybrid", "implementations": ["labels.cached-v1", "labels.agent-v1"]},
     "SELECT_UNITS": {"kind": "deterministic", "implementations": ["selection.evidence-gate-v1"]},
-    "DIAGNOSE": {"kind": "hybrid", "implementations": ["diagnosis.agent-full-json-v1", "diagnosis.llm-json-no-reasoning-v1", "diagnosis.jev-v1"]},
-    "RECALL": {"kind": "hybrid", "implementations": ["recall.weighted-path-v1", "recall.embedding-v1"]},
+    "DIAGNOSE": {"kind": "hybrid", "implementations": ["diagnosis.agent-full-json-v1", "diagnosis.llm-json-no-reasoning-v1", "diagnosis.jev-v1", "diagnosis.inventory-v1"]},
+    "RECALL": {"kind": "hybrid", "implementations": ["recall.weighted-path-v1", "recall.embedding-v1", "recall.inventory-v1"]},
     "GOAL": {"kind": "hybrid", "implementations": ["goal.agent-full-json-v1", "goal.llm-json-no-reasoning-v1"]},
     "OPTIMIZE": {"kind": "hybrid", "implementations": ["optimize.agent-v1"]},
     "VERIFY": {"kind": "hybrid", "implementations": ["verify.agent-structural-v1"]},
@@ -26,6 +26,7 @@
   },
   "transitions": [
     {"from": "START", "to": "NORMALIZE", "reasons": ["run_started"]},
+    {"from": "START", "to": "LABEL_SKILLS", "reasons": ["inventory_started"]},
     {"from": "NORMALIZE", "to": "DETECT", "reasons": ["normalized"]},
     {"from": "DETECT", "to": "POLICY", "reasons": ["findings_ready"]},
     {"from": "POLICY", "to": "SEMANTIC_FILTER", "reasons": ["semantic_enabled", "semantic_observe"]},

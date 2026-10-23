@@ -43,6 +43,8 @@ SKILL_NAME = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 MAX_SKILL_NAME_LENGTH = 64
 MAX_DESCRIPTION_LENGTH = 1024
 MAX_RESOURCE_BYTES = 10 * 1024 * 1024
+MAX_RESOURCE_DEPTH = 4
+RESOURCE_DIRECTORIES = {"references", "scripts", "agents", "assets", "evals"}
 ALLOWED_FRONTMATTER = {
     "name",
     "description",
@@ -240,16 +242,20 @@ def validate_authored_skill(directory: Path) -> list[str]:
         problems.append("frontmatter description contains angle brackets")
     if PLACEHOLDER.search(text):
         problems.append("SKILL.md contains an unfinished placeholder")
-    references = directory / "references"
-    if references.is_dir():
-        nested = [
-            path.relative_to(references).as_posix()
-            for path in references.rglob("*")
-            if path.is_file() and len(path.relative_to(references).parts) > 1
+    for resource_name in sorted(RESOURCE_DIRECTORIES):
+        resource_root = directory / resource_name
+        if not resource_root.is_dir():
+            continue
+        too_deep = [
+            path.relative_to(resource_root).as_posix()
+            for path in resource_root.rglob("*")
+            if path.is_file()
+            and len(path.relative_to(resource_root).parts) > MAX_RESOURCE_DEPTH
         ]
-        if nested:
+        if too_deep:
             problems.append(
-                "references must be one level deep: " + ", ".join(sorted(nested))
+                f"{resource_name} resources exceed maximum depth "
+                f"{MAX_RESOURCE_DEPTH}: " + ", ".join(sorted(too_deep))
             )
     scripts = directory / "scripts"
     if scripts.is_dir():

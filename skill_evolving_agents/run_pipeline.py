@@ -26,6 +26,30 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 INSTALL_ROOT = ROOT
 REPO = ROOT.parent
+
+
+def load_project_env(path: Path) -> None:
+    """Load a simple dotenv file without overriding the process environment."""
+    if not path.is_file():
+        return
+    for raw_line in path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if line.startswith("export "):
+            line = line[7:].lstrip()
+        key, separator, value = line.partition("=")
+        key = key.strip()
+        if not separator or not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", key):
+            continue
+        value = value.strip()
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
+            value = value[1:-1]
+        os.environ.setdefault(key, value)
+
+
+load_project_env(REPO / ".env")
+
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 from core.phase_envelope import artifact_ref, build_envelope, write_envelope
@@ -36,6 +60,7 @@ from core.state_machine import StateMachineRuntime, TransitionDecision, load_mac
 from core.super_config import SuperConfigError, load_super_config, resolve_execution_config
 from core.service_tiers import ServiceTierError, load_service_tiers
 from core.optimization import load_spec, validate_knob_registry
+from common import skill_resources
 from policy import FixedPolicy, PolicyCompiler, PolicyStore, extract_policy_features
 from services.embedding_api.client import EmbeddingClient, EmbeddingServiceError
 from services.embedding_api.provider import EmbeddingProvider, validate_embedding_runtime
@@ -63,6 +88,10 @@ SESSION_ROOT = Path(
     or Path(tempfile.gettempdir()) / "skill-evolver-sessions"
 )
 SKILL_CHANGELOG_DIR = Path("target/skill_changelogs")
+COMPLETE_SKILL_TEMPLATE = (
+    ROOT / "04_optimize_agent/skill-create/templates/complete-skill"
+)
+OPTIMIZE_TEMPLATE_DIR = Path("_templates/complete-skill")
 POOL_CHANGELOG_DIR = Path("candidate_skills_changelog")
 CHANGELOG_SUMMARY_LIMIT = 120
 DEFAULT_CLUSTER_WORKERS = 16
@@ -694,6 +723,21 @@ def initialize_workspace(workspace: Path) -> None:
     print("add raw traces and existing skills, then run again without --init")
 
 
+def initialize_inventory_workspace(workspace: Path) -> None:
+    """Create a trace-free seed from the stable candidate inventory."""
+    initialize_workspace(workspace)
+    source_skills = ROOT / "workspace/candidate_skills"
+    destination_skills = workspace / "target/to_be_improved_skills"
+    if source_skills.is_dir():
+        shutil.rmtree(destination_skills)
+        shutil.copytree(source_skills, destination_skills)
+    source_metadata = ROOT / "workspace/candidate_skills_metadata"
+    destination_metadata = workspace / "target/to_be_improved_skills_metadata"
+    if source_metadata.is_dir():
+        shutil.rmtree(destination_metadata)
+        shutil.copytree(source_metadata, destination_metadata)
+
+
 def _contains_file(root: Path) -> bool:
     if not root.exists():
         return False
@@ -759,6 +803,19 @@ def require_seed_inputs(workspace: Path) -> None:
             "no supported trace jsonl files found under "
             f"{workspace / 'traces/raw'}"
         )
+    usable_skills = [
+        path
+        for path in skills.iterdir()
+        if path.is_dir()
+        and ((path / "SKILL.md").is_file() or (path / "skill.md").is_file())
+    ]
+    if not usable_skills:
+        raise SystemExit(f"no skill directories with SKILL.md or skill.md under {skills}")
+
+
+def require_skill_inputs(workspace: Path) -> None:
+    """Require an inventory, but deliberately permit an empty trace tree."""
+    skills = workspace / "target/to_be_improved_skills"
     usable_skills = [
         path
         for path in skills.iterdir()
@@ -1111,6 +1168,41 @@ def make_session_view(stage: str, workspace: Path, suffix: str) -> Path:
     return agent_root
 
 
+def make_dsh_session_view(stage: str, workspace: Path) -> Path:
+    """Stage agent inputs inside DSH's real writable sandbox root."""
+    shutil.copy2(ROOT / AGENT_FILES[stage], workspace / "AGENT.md")
+    for relative in (STAGE_DIRS[stage], "common", "skill_capabilites"):
+        target = workspace / relative
+        if target.exists():
+            shutil.rmtree(target)
+        shutil.copytree(
+            ROOT / relative,
+            target,
+            ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
+        )
+    link = workspace / "workspace"
+    if link.exists() or link.is_symlink():
+        link.unlink()
+    link.symlink_to(workspace, target_is_directory=True)
+    return workspace
+
+
+def remove_dsh_session_view(stage: str, workspace: Path) -> None:
+    """Remove temporary DSH inputs while preserving worker artifacts."""
+    for relative in (
+        "workspace",
+        "AGENT.md",
+        STAGE_DIRS[stage],
+        "common",
+        "skill_capabilites",
+    ):
+        path = workspace / relative
+        if path.is_symlink() or path.is_file():
+            path.unlink(missing_ok=True)
+        elif path.is_dir():
+            shutil.rmtree(path)
+
+
 def cursor_command(
     view: Path, workspace: Path, prompt: str, model: str | None
 ) -> list[str]:
@@ -1139,10 +1231,15 @@ def cursor_command(
     return command
 
 
-def dsh_command(prompt: str) -> list[str]:
+def dsh_command(prompt: str, model: str | None = None) -> list[str]:
     """Launch one official DeepSeek Harness headless task."""
     command = [resolve_dsh_binary(), "--profile", "headless"]
-    patch = os.environ.get("DSH_PATCH", "").strip()
+    patch = (
+        os.environ.get("DSH_PATCH", "").strip()
+        or os.environ.get("SKILL_EVOLVER_DSH_PATCH", "").strip()
+    )
+    if not patch and model == "flint":
+        patch = str(ROOT / "config/dsh-flint.patch.yml")
     if patch:
         command.extend(["--patch", patch])
     command.append(prompt)
@@ -1187,7 +1284,11 @@ def run_host_session(
     input_root: Path | None = None,
 ) -> None:
     data_root = input_root or workspace
-    view = make_session_view(stage, data_root, suffix)
+    view = (
+        make_dsh_session_view(stage, data_root)
+        if backend == "dsh"
+        else make_session_view(stage, data_root, suffix)
+    )
     allowed = [str(data_root)]
     if details is not None:
         details["session_cwd"] = str(view)
@@ -1239,7 +1340,7 @@ def run_host_session(
             )
         elif backend == "dsh":
             run(
-                dsh_command(prompt),
+                dsh_command(prompt, model),
                 cwd=view,
                 log_path=log_path,
                 timeout=session_timeout_seconds(stage),
@@ -1284,7 +1385,10 @@ def run_host_session(
         else:
             raise SystemExit(f"unknown agent backend: {backend}")
     finally:
-        shutil.rmtree(view.parent, ignore_errors=True)
+        if backend == "dsh":
+            remove_dsh_session_view(stage, data_root)
+        else:
+            shutil.rmtree(view.parent, ignore_errors=True)
 
 
 def metrics_workspace(workspace: Path) -> Path:
@@ -1420,6 +1524,173 @@ def session_timeout_seconds(stage: str) -> int:
     if stage == "verifiter":
         return VERIFIER_SESSION_TIMEOUT_SECONDS
     return AGENT_SESSION_TIMEOUT_SECONDS
+
+
+def inventory_merge_candidates(
+    workspace: Path,
+    metadata_path: Path,
+    *,
+    min_score: float = 0.72,
+) -> dict[str, object]:
+    """Build deterministic, auditable merge candidates for the skill inventory.
+
+    Exact methodology fingerprints are the strongest evidence. Otherwise the
+    score combines weighted capability-label overlap with bounded lexical
+    overlap. This only nominates pairs; the goal, verifier, and judge retain
+    authority to reject a merge.
+    """
+    metadata = json.loads(metadata_path.read_text())
+    rows = {
+        str(row.get("skill")): row
+        for row in metadata.get("skills_metadata") or []
+        if isinstance(row, dict) and isinstance(row.get("skill"), str)
+    }
+    skills_root = workspace / "target/to_be_improved_skills"
+
+    def labels(row: dict[str, object]) -> dict[str, float]:
+        result: dict[str, float] = {}
+        for item in row.get("skill_types") or []:
+            if not isinstance(item, dict) or not isinstance(item.get("type"), str):
+                continue
+            result[item["type"]] = max(
+                result.get(item["type"], 0.0), float(item.get("weight") or 0)
+            )
+        return result
+
+    def tokens(name: str) -> set[str]:
+        path = skills_root / name / "SKILL.md"
+        if not path.is_file():
+            return set()
+        return {
+            token
+            for token in re.findall(r"[a-z][a-z0-9_-]{2,}", path.read_text().lower())
+            if token not in {"the", "and", "for", "this", "that", "with", "when"}
+        }
+
+    candidates: list[dict[str, object]] = []
+    names = sorted(rows)
+    for index, left in enumerate(names):
+        for right in names[index + 1 :]:
+            left_row, right_row = rows[left], rows[right]
+            left_labels, right_labels = labels(left_row), labels(right_row)
+            all_labels = set(left_labels) | set(right_labels)
+            label_overlap = (
+                sum(min(left_labels.get(key, 0), right_labels.get(key, 0)) for key in all_labels)
+                / sum(max(left_labels.get(key, 0), right_labels.get(key, 0)) for key in all_labels)
+                if all_labels
+                else 0.0
+            )
+            left_tokens, right_tokens = tokens(left), tokens(right)
+            lexical_overlap = (
+                len(left_tokens & right_tokens) / len(left_tokens | right_tokens)
+                if left_tokens | right_tokens
+                else 0.0
+            )
+            left_fp = ((left_row.get("lifecycle") or {}).get("method_fingerprint"))
+            right_fp = ((right_row.get("lifecycle") or {}).get("method_fingerprint"))
+            same_method = bool(left_fp and left_fp == right_fp)
+            score = 1.0 if same_method else 0.8 * label_overlap + 0.2 * lexical_overlap
+            if score < min_score:
+                continue
+            reasons = []
+            if same_method:
+                reasons.append("same_method_fingerprint")
+            if label_overlap:
+                reasons.append("capability_overlap")
+            if lexical_overlap:
+                reasons.append("instruction_overlap")
+            candidates.append(
+                {
+                    "skills": [left, right],
+                    "score": round(score, 6),
+                    "label_overlap": round(label_overlap, 6),
+                    "lexical_overlap": round(lexical_overlap, 6),
+                    "method_fingerprint": left_fp if same_method else None,
+                    "reasons": reasons,
+                    "decision": "review",
+                }
+            )
+    document = {
+        "schema_version": 1,
+        "algorithm": "inventory-merge-candidates-v1",
+        "min_score": min_score,
+        "candidate_count": len(candidates),
+        "candidates": sorted(candidates, key=lambda row: (-float(row["score"]), row["skills"])),
+    }
+    path = workspace / "run/inventory-merge-candidates.json"
+    atomic_write_json(path, document)
+    return document
+
+
+def materialize_inventory_findings(
+    workspace: Path, candidates: dict[str, object]
+) -> list[str]:
+    """Turn inventory candidates into auditable, trace-free evolution units."""
+    scopes: list[str] = []
+    for index, candidate in enumerate(candidates.get("candidates") or [], start=1):
+        if not isinstance(candidate, dict):
+            continue
+        skills = [str(value) for value in candidate.get("skills") or [] if value]
+        if len(skills) < 2:
+            continue
+        digest = hashlib.sha256("\0".join(skills).encode()).hexdigest()[:12]
+        scope = f"inventory-merge-{index:03d}-{digest}"
+        scopes.append(scope)
+        confidence = float(candidate.get("score") or 0)
+        skill_documents: dict[str, str] = {}
+        for name in skills:
+            skill_path = workspace / "target/to_be_improved_skills" / name / "SKILL.md"
+            if not skill_path.is_file():
+                skill_path = workspace / "target/to_be_improved_skills" / name / "skill.md"
+            if skill_path.is_file():
+                skill_documents[name] = skill_path.read_text()
+        finding = {
+            "schema_version": 1,
+            "finding_id": scope,
+            "detector": "inventory-redundancy-v1",
+            "confidence": confidence,
+            "severity": "medium",
+            "summary": f"Review {', '.join(skills)} for consolidation or focused updates.",
+            "features": {
+                "candidate_source": "inventory_maintenance",
+                "candidate_skills": skills,
+                "merge_candidate": candidate,
+                "skill_documents": skill_documents,
+                "distinct_sessions": 0,
+                "trace_free": True,
+            },
+            "evidence": [{
+                "kind": "skill_inventory",
+                "skills": skills,
+                "score": confidence,
+                "reasons": candidate.get("reasons") or [],
+            }],
+            "slice": {"turns": [], "user_turns": 0, "token_estimate": 0},
+        }
+        atomic_write_json(
+            workspace / "traces/derived/findings" / scope / "finding.json", finding
+        )
+        atomic_write_json(
+            workspace / "run" / scope / "diagnosis.json",
+            {
+                "skill_capabilities_missing": [{
+                    "skill_capability": "inventory/consolidation",
+                    "confidence": confidence,
+                    "reasoning": finding["summary"],
+                    "evidence_list": [
+                        "deterministic inventory overlap and methodology fingerprint analysis"
+                    ],
+                    "cluster": scope,
+                }],
+                "newly_detected_skill_capabilites_missing": [],
+                "inventory_maintenance": candidate,
+            },
+        )
+    atomic_write_json(
+        workspace / "run/inventory-maintenance-units.json",
+        {"schema_version": 1, "unit_count": len(scopes), "units": scopes},
+    )
+    return scopes
 
 
 def append_execution_event(workspace: Path, stage: str, event: str) -> None:
@@ -1928,6 +2199,11 @@ def scope_source(cluster: str, clustered: bool, unit_kind: str) -> str:
         if clustered
         else "workspace/traces/derived/cut"
     )
+
+
+def scope_source_path(workspace: Path, source: str) -> Path:
+    """Resolve a prompt-facing ``workspace/...`` reference inside a run root."""
+    return workspace / source.removeprefix("workspace/")
 
 
 def validate_preprocessing(workspace: Path, clustered: bool) -> list[Path]:
@@ -2597,7 +2873,7 @@ def _diagnose_scope(
     source = scope_source(cluster, clustered, unit_kind)
     embedded_source = ""
     if unit_kind == "finding":
-        finding_path = private / source / "finding.json"
+        finding_path = scope_source_path(private, source) / "finding.json"
         if finding_path.is_file():
             embedded_source = (
                 "The complete finding.json input is embedded below. Do not "
@@ -2853,7 +3129,43 @@ def _goal_scope(
             ).is_file()
         )
         recalled: list[dict] | None = None
-        if preflight_available:
+        finding_path = scope_source_path(private, source) / "finding.json"
+        inventory_skills: list[str] = []
+        if finding_path.is_file():
+            finding_data = json.loads(finding_path.read_text())
+            features = finding_data.get("features") if isinstance(finding_data, dict) else {}
+            if isinstance(features, dict) and features.get("candidate_source") == "inventory_maintenance":
+                inventory_skills = [
+                    str(name) for name in features.get("candidate_skills") or [] if name
+                ]
+        if inventory_skills:
+            matching_data = {
+                "matching": {
+                    "strategy": "inventory-maintenance-v1",
+                    "config_version": 1,
+                    "config_sha256": hashlib.sha256(
+                        json.dumps(inventory_skills, sort_keys=True).encode()
+                    ).hexdigest(),
+                },
+                "clusters": [{
+                    "cluster": cluster,
+                    "labels": ["job/methodology"],
+                    "skills": [{
+                        "skill": name,
+                        "score": 1.0,
+                        "labels": [{"type": "job/methodology", "weight": 1.0}],
+                        "matches": [{
+                            "cluster_type": "job/methodology",
+                            "skill_type": "job/methodology",
+                            "similarity": 1.0,
+                            "contribution": 1.0,
+                        }],
+                    } for name in inventory_skills],
+                }],
+            }
+            atomic_write_json(matching, matching_data)
+            recalled = matching_data["clusters"][0]["skills"]
+        elif preflight_available:
             diagnosis = json.loads(
                 (private / "run/diagnosis.json").read_text()
             )
@@ -2968,10 +3280,33 @@ def _goal_scope(
             if matching.is_file():
                 diagnosis_text = (private / "run/diagnosis.json").read_text()
                 matching_text = matching.read_text()
-                finding_path = private / source / "finding.json"
+                finding_path = scope_source_path(private, source) / "finding.json"
                 finding_text = (
                     finding_path.read_text() if finding_path.is_file() else ""
                 )
+                merge_path = workspace / "run/inventory-merge-candidates.json"
+                merge_document = (
+                    json.loads(merge_path.read_text()) if merge_path.is_file() else {}
+                )
+                recalled_names = {
+                    str(row.get("skill"))
+                    for row in recalled or []
+                    if isinstance(row, dict) and row.get("skill")
+                }
+                merge_context = {
+                    "algorithm": merge_document.get("algorithm"),
+                    "candidates": [
+                        row
+                        for row in merge_document.get("candidates") or []
+                        if isinstance(row, dict)
+                        and recalled_names.intersection(row.get("skills") or [])
+                    ],
+                    "instruction": (
+                        "Consider merge only when this finding applies to both skills "
+                        "and one result preserves their non-overlapping capabilities. "
+                        "Otherwise prefer update or no_change."
+                    ),
+                }
                 session_context = (
                     "Select is already complete. The complete inputs are "
                     "embedded below; do not read them from disk, glob for "
@@ -2980,6 +3315,9 @@ def _goal_scope(
                     f"<label-matching-json>\n{matching_text}"
                     "</label-matching-json>\n"
                     f"<finding-json>\n{finding_text}</finding-json>\n"
+                    "<inventory-merge-candidates-json>\n"
+                    f"{json.dumps(merge_context, indent=2, ensure_ascii=False)}\n"
+                    "</inventory-merge-candidates-json>\n"
                     f"Write {goal}."
                 )
             else:
@@ -4569,7 +4907,13 @@ def parse_verifier_response_log(path: Path) -> dict[str, object]:
             for item in value.values():
                 collect(item)
 
-    for line in path.read_text(errors="replace").splitlines():
+    raw_log = path.read_text(errors="replace")
+    # Some backends (notably DSH) print the final object as pretty JSON across
+    # many physical lines rather than wrapping it in one JSONL event. Preserve
+    # the complete stream as a candidate so raw_decode can recover that object.
+    # Per-line/event extraction remains useful for Codex and Claude streams.
+    strings.append(raw_log)
+    for line in raw_log.splitlines():
         try:
             collect(json.loads(line))
         except json.JSONDecodeError:
@@ -5097,6 +5441,66 @@ def merge_worker_statuses(worker: Path, workspace: Path, suffix: str) -> None:
             replace_path(source, workspace / "run/status" / stage / source.name)
 
 
+def write_operation_resource_metrics(
+    workspace: Path,
+    cluster: str,
+    op_index: int,
+    skills: set[str],
+    suffixes: list[str],
+) -> dict[str, object]:
+    """Persist observed and proxy resource metrics for one accepted operation."""
+    use_evidence_paths = [
+        workspace / "run" / cluster / "ops" / str(op_index) / name
+        for name in ("verification.json", "judge.json", "changelog.json")
+    ]
+    execution_evidence_paths: list[Path] = []
+    for suffix in suffixes:
+        execution_evidence_paths.append(
+            session_log_path(workspace, "optimize", suffix)
+        )
+        use_evidence_paths.extend(
+            session_log_path(workspace, stage, suffix)
+            for stage in ("verifiter", "judge")
+        )
+    evidence = "\n".join(
+        path.read_text(errors="replace")
+        for path in execution_evidence_paths + use_evidence_paths
+        if path.is_file()
+    )
+    use_evidence = "\n".join(
+        path.read_text(errors="replace")
+        for path in use_evidence_paths
+        if path.is_file()
+    )
+    skill_root = workspace / "target/to_be_improved_skills"
+    rows = [
+        skill_resources.measure_skill_resources(
+            skill_root / name,
+            evidence,
+            use_evidence,
+        )
+        for name in sorted(skills)
+        if (skill_root / name / "SKILL.md").is_file()
+    ]
+    document: dict[str, object] = {
+        "schema_version": 1,
+        "cluster": cluster,
+        "op_index": op_index,
+        "skills": rows,
+    }
+    document["aggregate"] = skill_resources.aggregate_resource_metrics([document])
+    path = (
+        workspace
+        / "run"
+        / cluster
+        / "ops"
+        / str(op_index)
+        / "resource-metrics.json"
+    )
+    atomic_write_json(path, document)
+    return document
+
+
 def publish_operation_result(
     workspace: Path, result: dict[str, object]
 ) -> None:
@@ -5136,9 +5540,29 @@ def publish_operation_result(
             reason=INFRASTRUCTURE_REFUSAL,
         )
         return
+    affected = {str(name) for name in result.get("affected") or []}
+    skill_root = result["worker"] / "target/to_be_improved_skills"
+    for name in sorted(affected):
+        skill = skill_root / name
+        if skill.is_dir() and (skill / "SKILL.md").is_file():
+            skill_resources.generate_openai_yaml(skill)
     merge_operation_result(workspace, result)
+    resource_metrics = write_operation_resource_metrics(
+        workspace,
+        cluster,
+        op_index,
+        affected,
+        [str(suffix) for suffix in result.get("suffixes") or []],
+    )
+    for row in resource_metrics["skills"]:
+        pipeline_metrics.record_instant(
+            metrics_workspace(workspace),
+            "resource-usefulness",
+            f"{cluster}-op-{op_index}-{row['skill']}",
+            {"cluster": cluster, "op_index": op_index, **row},
+        )
     update_candidate_pool(
-        workspace, {str(name) for name in result.get("affected") or []}
+        workspace, affected
     )
     write_publication(
         workspace, cluster, op_index, accepted=True, reason=None
@@ -6981,6 +7405,12 @@ def prepare_optimize_input(workspace: Path, op: dict) -> Path:
     if root.exists():
         shutil.rmtree(root)
     root.mkdir(parents=True)
+    if op.get("op") in {"create", "merge", "split"}:
+        if not (COMPLETE_SKILL_TEMPLATE / "SKILL.md").is_file():
+            raise RuntimeError(
+                f"complete skill template is missing: {COMPLETE_SKILL_TEMPLATE}"
+            )
+        shutil.copytree(COMPLETE_SKILL_TEMPLATE, root / OPTIMIZE_TEMPLATE_DIR)
     improved = workspace / "target/to_be_improved_skills"
     logs = workspace / SKILL_CHANGELOG_DIR
     for name in skill_names_mod.skill_names(op):
@@ -7031,10 +7461,18 @@ def optimize_session_context(
 ) -> str:
     names = skill_names_mod.skill_names(op)
     listed = ", ".join(f"`{name}/` and `{name}.md`" for name in names)
+    template_note = ""
+    if op.get("op") in {"create", "merge", "split"}:
+        template_note = (
+            " A complete structural reference is available at "
+            "`_templates/complete-skill/`. Inspect it when deciding file shape, "
+            "but do not edit or publish it and do not copy resources that the "
+            "operation did not request."
+        )
     return (
         f"This isolated session is cluster <{cluster}>, action.ops item "
         f"{op_index}: {json.dumps(op, ensure_ascii=False)}. "
-        f"workspace/ contains {listed}. "
+        f"workspace/ contains {listed}.{template_note} "
         "Each `.md` file beside a skill directory is that skill's changelog, "
         "not the skill. Read it. Do not edit it. Edit only the skill directory. "
         f"Do not read or write metadata.{bundle_note}\n\n"
@@ -7048,6 +7486,8 @@ def execute(args: argparse.Namespace) -> None:
     if args.init:
         initialize_workspace(workspace)
         return
+    if getattr(args, "inventory_only", False) and not workspace.exists():
+        initialize_inventory_workspace(workspace)
     require_path(workspace, "run workspace")
     resuming = bool(getattr(args, "resume_from", None))
     if resuming:
@@ -7058,7 +7498,10 @@ def execute(args: argparse.Namespace) -> None:
             workspace / "target/to_be_improved_skills",
             "existing skills directory",
         )
-        require_seed_inputs(workspace)
+        if getattr(args, "inventory_only", False):
+            require_skill_inputs(workspace)
+        else:
+            require_seed_inputs(workspace)
         workspace = allocate_execution_workspace(workspace)
         args.run_id = workspace.name
     try:
@@ -7076,7 +7519,11 @@ def execute(args: argparse.Namespace) -> None:
     atomic_write_json(profile_snapshot, deployment_profile)
     atomic_write_json(workspace / "run/config/execution-config.json", execution_config)
     ACTIVE_EXECUTION_CONFIG = execution_config
-    embedding_runtime = deployment_profile.get("embedding_runtime")
+    embedding_runtime = (
+        None
+        if getattr(args, "inventory_only", False)
+        else deployment_profile.get("embedding_runtime")
+    )
     if isinstance(embedding_runtime, dict):
         try:
             validate_embedding_runtime(embedding_runtime)
@@ -7163,6 +7610,65 @@ def execute(args: argparse.Namespace) -> None:
             database=workspace.parents[1] / "optimization.sqlite",
             journal=workspace / "logs/state-transitions.jsonl",
         )
+        if getattr(args, "inventory_only", False):
+            move(TransitionDecision("LABEL_SKILLS", "inventory_started", "labels.cached-v1", 1.0))
+            metadata_path = workspace / "target/to_be_improved_skills_metadata/metadata.json"
+            seed_names = {
+                path.name
+                for path in (workspace / "target/to_be_improved_skills").iterdir()
+                if path.is_dir()
+            }
+            detach_skill_changelogs(workspace)
+            try:
+                pipeline_contracts.validate_metadata(metadata_path, seed_names)
+            except (FileNotFoundError, json.JSONDecodeError, pipeline_contracts.ContractError):
+                run_session(
+                    "label-skills", workspace,
+                    instruction("label-skills", "Label the complete existing skill set once."),
+                    auth, args.model, not args.agent_installed, args.run_id,
+                )
+            pipeline_contracts.validate_metadata(metadata_path, seed_names)
+            complete_session(workspace, "label-skills", args.run_id, [metadata_path])
+            candidates = inventory_merge_candidates(workspace, metadata_path)
+            scopes = materialize_inventory_findings(workspace, candidates)
+            move(TransitionDecision("SELECT_UNITS", "labels_ready", "selection.evidence-gate-v1", 1.0))
+            if not scopes:
+                move(TransitionDecision("COMPLETE", "no_units", probability=1.0))
+                write_pipeline_summary(workspace, [])
+                publish_inventory(workspace)
+                print(f"completed inventory run {args.run_id}: no maintenance candidates")
+                return
+            move(TransitionDecision("DIAGNOSE", "units_selected", "diagnosis.inventory-v1", 1.0))
+            move(TransitionDecision("RECALL", "diagnosis_complete", "recall.inventory-v1", 1.0))
+            fanout_goals(
+                workspace, args.run_id, scopes, True,
+                getattr(args, "cluster_workers", DEFAULT_CLUSTER_WORKERS),
+                auth, args.model, not args.agent_installed, "finding",
+            )
+            move(TransitionDecision("GOAL", "recall_complete", deployment_profile["phases"]["goal"]["algorithm"], 1.0))
+            has_operations = any(
+                goal_ops(workspace / "run" / scope / "evolve-goal.json")
+                for scope in scopes
+            )
+            if has_operations:
+                move(TransitionDecision("OPTIMIZE", "change_proposed", deployment_profile["phases"]["optimize"]["algorithm"], 1.0))
+            fanout_operations(
+                workspace, args.run_id, scopes,
+                getattr(args, "op_workers", DEFAULT_OP_WORKERS), auth, args.model,
+                not args.agent_installed, getattr(args, "max_ops_per_skill", None),
+                getattr(args, "min_super_score", None),
+            )
+            if has_operations:
+                move(TransitionDecision("VERIFY", "candidate_ready", deployment_profile["phases"]["verify"]["algorithm"], 1.0))
+                move(TransitionDecision("PUBLISH", "verified", deployment_profile["phases"]["publish"]["algorithm"], 1.0))
+                move(TransitionDecision("COMPLETE", "published", probability=1.0))
+            else:
+                move(TransitionDecision("COMPLETE", "no_change", probability=1.0))
+            write_pipeline_summary(workspace, scopes)
+            sync_skill_changelogs(workspace)
+            publish_inventory(workspace)
+            print(f"completed inventory run {args.run_id}: {workspace}")
+            return
         move(
             TransitionDecision(
                 "NORMALIZE", "run_started", "normalize.vendor-json-v1", 1.0
@@ -7311,6 +7817,7 @@ def execute(args: argparse.Namespace) -> None:
         ):
             detach_skill_changelogs(workspace)
             pipeline_contracts.validate_metadata(metadata_path, seed_names)
+        inventory_merge_candidates(workspace, metadata_path)
         complete_session(workspace, "label-skills", args.run_id, [metadata_path])
         move(
             TransitionDecision(
@@ -7441,11 +7948,16 @@ def execute(args: argparse.Namespace) -> None:
         report_path = pipeline_metrics.write_run_report(workspace)
         try:
             report = json.loads(report_path.read_text())
+            resource_learning_metrics = (
+                ((report.get("phase_metrics") or {}).get("phases") or {}).get(
+                    "resources", {}
+                )
+            )
             StudyStore(workspace.parents[1] / "optimization.sqlite").record_run(
                 workspace.name,
                 str(ACTIVE_EXECUTION_CONFIG.get("config_digest") or "unknown"),
                 {"overrides": {}},
-                {},
+                {"resource_usefulness": resource_learning_metrics},
                 {"runtime_report": report, "source": "pipeline-finalizer"},
             )
         except Exception as error:
@@ -7465,6 +7977,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("run_id", help="directory name under workspace/runs")
     parser.add_argument(
         "--init", action="store_true", help="create the run workspace and stop"
+    )
+    parser.add_argument(
+        "--inventory-only",
+        action="store_true",
+        help="inspect, merge, and optimize the current skill inventory without traces",
     )
     parser.add_argument(
         "--from",

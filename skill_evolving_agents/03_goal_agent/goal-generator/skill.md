@@ -86,6 +86,33 @@ with a goal to capture evidence-backed positive and near-miss behavioral cases.
 Do not request evals for purely subjective output unless the finding supplies
 observable acceptance criteria.
 
+Plan supporting resources explicitly. A directory goal is an authorization and
+an acceptance contract, not a request for an empty folder. Request only the
+resources supported by the finding:
+
+- `references` for substantial conditional knowledge, schemas, policies, or
+  source material that would distract from the main workflow. Name the subject
+  and say when the skill should read it.
+- `scripts` for deterministic, repeated, or error-prone transformations and
+  checks. State the input, output, failure behavior, and representative fixture
+  the optimizer must execute.
+- `assets` for reusable starter files that are copied or adapted into the
+  user's deliverable. Name the artifact and its intended use.
+- `agents` only for a concrete delegated prompt. Do not request
+  `agents/openai.yaml`; the runner generates that interface metadata
+  deterministically after acceptance.
+- `evals` for observable activation or outcome behavior, with positive and
+  near-miss cases.
+
+Leave a directory out when there is no concrete resource goal. Do not request
+all resource types merely to make a skill look complete. Create, merge, and
+split sessions receive a complete reference skill for file-shape guidance; its
+presence is not evidence that any resource belongs in the result.
+Resource goals may name paths up to four levels below their canonical resource
+directory, for example `references/providers/aws.md`,
+`scripts/lib/parser.py`, or `assets/templates/react-app/`. Prefer the shallowest
+structure that keeps genuinely distinct modes or components understandable.
+
 When the new skill composes existing skills, list their exact names in optional
 `dependencies`; do not duplicate their instructions. When creation requires
 external knowledge, request a source ledger with URL, pinned revision,

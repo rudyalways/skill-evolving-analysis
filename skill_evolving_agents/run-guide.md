@@ -64,6 +64,25 @@ Profiles may also set an agent-call budget. The runner reserves calls atomically
 before launching a hosted session and writes `logs/agent-call-budget.json`.
 Once `hard_agent_call_cap` is reached, no additional paid agent session starts.
 
+### Trace-free inventory maintenance
+
+Use `--inventory-only` to inspect and improve the current candidate skill
+inventory without supplying a trace. If the named seed does not exist, the
+runner creates it from `workspace/candidate_skills` and its cached metadata.
+
+```bash
+python3 skill_evolving_agents/run_pipeline.py inventory-maintenance \
+  --inventory-only --agent dsh --model deepseek-chat
+```
+
+This path skips trace normalization and detection. It deterministically scores
+skill pairs, writes `run/inventory-merge-candidates.json`, and materializes one
+auditable maintenance finding per qualified pair. Each finding contains the
+pair's score, reasons, and complete skill documents. The goal agent may choose
+merge, a focused update, or no-change; every proposed mutation still passes
+through Optimize, Verifiter, Judge, atomic publication, metrics, and database
+capture. A similarity candidate is review evidence, not an automatic merge.
+
 Embedding profiles support `in_process` library calls, a managed
 `local_process` with configurable host/port, or `remote_api`. The managed mode
 waits for service health and always terminates the child process during runner
@@ -75,6 +94,23 @@ session view: the stage brief, the stage directory, `common`,
 session's run or worker directory so the sandbox can write it. The prompt
 tells the model to read the named skill files and the named input paths, write
 the decision, and stop.
+
+Create, merge, and split Optimize sessions also receive
+`workspace/_templates/complete-skill/`, a complete structural reference with
+`SKILL.md`, `agents`, `scripts`, `references`, `assets`, and `evals`. The Goal
+stage must still authorize every output directory with a concrete resource
+contract. The optimizer must not edit or publish the reference, and the runner
+copies back only operation-named skill directories, so `_templates` cannot
+enter the candidate inventory. Update sessions do not receive the reference.
+
+Canonical resource directories allow files up to four path components deep.
+After Judge accepts an operation, the runner deterministically creates each
+surviving skill's `agents/openai.yaml` from its frontmatter and preserves
+unrelated existing policy or dependency blocks. The model does not author the
+three standard interface fields. The runner also writes per-operation
+`resource-metrics.json`, records the same measurements as a metrics audit event,
+and includes run aggregates in the online-learning database. Observed runtime
+rates remain null when logs contain no corresponding execution or use evidence.
 
 Create a one-trace run from the pool. The command creates the run directory
 and copies that trace plus the stable candidate skill inventory:
@@ -216,7 +252,10 @@ authentication check is unavailable.
 DSH resolves from `DSH_BIN`, `PATH`, the installed application, or a mounted
 DeepSeek Harness image, in that order. Set `DSH_PATCH` when the headless
 profile needs an additional provider patch. The runner invokes `dsh` directly;
-it does not depend on an example wrapper or checkout.
+it does not depend on an example wrapper or checkout. When DSH's configured
+model is `flint`, the runner automatically applies
+`config/dsh-flint.patch.yml`, which reads `FLINT_BASE_URL` and
+`FLINT_API_KEY` from the environment.
 
 The inactive Hermes and OpenClaw examples use the local Recursive Flint model.
 Load `/Users/maybewu/Documents/Projects/myexpore/recursive/.env` in the shell,
@@ -228,8 +267,8 @@ should expose model id `flint`, with OpenClaw's provider/model reference set to
 `flint-local/flint`. When the executables are not on `PATH`, the runner checks
 `../../oss/hermes-agent/.venv/bin/hermes` and `../../oss/openclaw/openclaw.mjs`;
 `HERMES_BIN`, `OPENCLAW_BIN`, and `OPENCLAW_NODE` remain explicit overrides.
-DSH defaults to its low-cost flash model. Override any configured model for one
-run with `--model`.
+DSH, Hermes, and OpenClaw are configured for the same local Flint endpoint.
+Override any configured model for one run with `--model`.
 
 ## Runtime goal
 

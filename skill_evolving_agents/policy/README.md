@@ -3,8 +3,9 @@
 This package is the stable boundary between pipeline execution and the system
 that chooses configuration.
 
-Dynamic phase routing is handled by the adjacent constrained state machine,
-documented in [`../state-machine-architecture.md`](../state-machine-architecture.md).
+Dynamic phase routing is handled by the adjacent constrained state machine.
+Its private product-roadmap document is intentionally excluded from version
+control.
 The policy produces typed transition decisions; the state machine decides
 whether they are legal and executable.
 

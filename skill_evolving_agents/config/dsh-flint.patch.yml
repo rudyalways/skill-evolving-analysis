@@ -1,0 +1,20 @@
+- id: llm-pi-ai
+  config:
+    providers:
+      flint-local:
+        displayName: Flint Local
+        api: openai-completions
+        baseURL: !!js process.env.FLINT_BASE_URL
+        apiKeyEnv: FLINT_API_KEY
+        models:
+          - id: flint
+            name: Flint
+            contextWindow: 262144
+            maxTokens: 4096
+            input:
+              - text
+
+- id: agent-default-model
+  config:
+    provider: flint-local
+    model: flint

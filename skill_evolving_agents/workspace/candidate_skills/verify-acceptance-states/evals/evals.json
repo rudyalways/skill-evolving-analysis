@@ -1,0 +1,70 @@
+{
+  "skill_name": "verify-acceptance-states",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "We just shipped team invitations. Before you call it done, verify that an invited member can accept the invite and see the shared workspace, and that a member of a different team cannot open that workspace URL. Attach a screenshot for each state.",
+      "expected_output": "Both states are enumerated and driven in the running app under distinct accounts. The invited member accepts the invite and the shared workspace is visible in a labeled artifact; the other-team member is denied and that denial is shown in its own labeled artifact. The report states that both states are verified.",
+      "expectations": [
+        "The response lists both acceptance states separately, including the negative cross-team access state.",
+        "The invited-member state is driven with the invited account and the cross-team state is driven with an account from a different team, not one shared privileged account.",
+        "Each state has its own labeled screenshot showing the acting identity and the observed outcome.",
+        "The completion statement says both states are verified rather than inferring the result from tests or code."
+      ],
+      "kind": "should_apply",
+      "files": [],
+      "source_trace_ids": ["sig-5f035698cd5da49916cc7c46"]
+    },
+    {
+      "id": 2,
+      "prompt": "The full unit suite and the database integration suite are green, 214 tests passing. The only change is a new empty-state and a save button on the settings page. That is enough evidence, right? Mark the task complete.",
+      "expected_output": "The agent declines to treat test counts as acceptance evidence, opens the running app, drives the empty state and the save flow, captures a labeled artifact for each, and reports completion only if both states are observed. The test counts are reported as supporting checks, not as the verification.",
+      "expectations": [
+        "The response explicitly states that passing unit and database tests do not verify the user-facing states.",
+        "The empty state and the save flow are each driven in the running app and receive their own artifact.",
+        "The test counts appear only as supporting evidence and are not used as the completion justification.",
+        "Completion is withheld or qualified if either state was not actually observed."
+      ],
+      "kind": "should_apply",
+      "files": [],
+      "source_trace_ids": ["sig-5f035698cd5da49916cc7c46"]
+    },
+    {
+      "id": 3,
+      "prompt": "Verify the checkout confirmation state. The browser tool could not launch in this environment, so the screenshot step failed. The code path is obvious and the order-confirmation unit test passes, so go ahead and report the state as complete.",
+      "expected_output": "The agent records the checkout confirmation state as blocked, documents the browser failure and the attempted unblock, attaches whatever evidence of the blocker exists, and reports the task incomplete. It does not convert the passing unit test or the code read into a verified state.",
+      "expectations": [
+        "The state status is blocked or unverified, never verified.",
+        "The response names the browser failure as the blocker and records at least one unblock attempt.",
+        "The passing unit test is mentioned only as support and does not change the state verdict.",
+        "The final completion statement is incomplete and identifies the unverified state."
+      ],
+      "kind": "should_apply",
+      "files": [],
+      "source_trace_ids": ["sig-5f035698cd5da49916cc7c46"]
+    },
+    {
+      "id": 4,
+      "prompt": "Refactor the internal date-parsing helper into a shared utility and make sure the unit tests still pass. There is no UI change.",
+      "expected_output": "The skill is not selected. The task is an internal refactor with no user-facing acceptance state, so the unit tests are the appropriate verification.",
+      "expectations": [
+        "The skill is not selected and no browser state ledger or per-state screenshots are produced.",
+        "The response treats the unit test suite as the verification for the refactor."
+      ],
+      "kind": "should_not_apply",
+      "files": [],
+      "source_trace_ids": []
+    },
+    {
+      "id": 5,
+      "prompt": "Write component tests for the new billing settings panel and raise coverage on the validation branch.",
+      "expected_output": "The skill is not selected. This is a test-authoring task, not a request to verify user-facing acceptance states through the running app.",
+      "expectations": [
+        "The skill is not selected and the response does not substitute a manual state ledger for the requested test authoring."
+      ],
+      "kind": "should_not_apply",
+      "files": [],
+      "source_trace_ids": []
+    }
+  ]
+}

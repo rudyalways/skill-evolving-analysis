@@ -1,8 +1,7 @@
 # Pipeline scoring and threshold guide
 
-For the planned transformer policy with typed multi-head MLP outputs, see
-[`learned-policy-architecture.md`](learned-policy-architecture.md). The search
-and online-learning system here is both the current optimizer and the
+The planned transformer policy is maintained as private product strategy. The
+search and online-learning system here is both the current optimizer and the
 data-collection and exploration layer for that learned policy.
 
 This file is the baseline policy for the cost-aware pipeline. The numbers are

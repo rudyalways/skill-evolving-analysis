@@ -23,6 +23,7 @@ Do not use this skill for open-ended exploration that has not yet named options.
 2. If one option meets the stated constraint, pick it and state the reason in the assistant text.
 3. If none is possible, state in one or two sentences why, and name what remains possible, such as an entrypoint when a local script cannot run.
 4. Stop. Do not continue into implementation design, and do not send another message that drops the decision.
+5. After coding is done and the remaining work is activation or setup the user must perform, lead with the completed-versus-user-owned split. Do not open with a single completion claim that leaves the user to ask which part is finished and which part they still own.
 
 ## Constraints
 
@@ -32,12 +33,21 @@ The choice or the impossibility note must be visible in the assistant text befor
 
 Confirm the final assistant text either selects one named option or contains a short impossibility note that states what remains possible. An empty body fails. A list of options with no choice fails.
 
+Before a completion claim, compare the stated done-state to the requested outcome. Read `verification/requested-outcome-check.md` for a partial delivery. Leave the task open when a required gate is unrun or the outcome is still a no-go. Treat work as complete only after the delivered state matches the user's requested end state.
+
 ## Output Format
 
 End with a short decision block:
 
 - Chosen option, and why it meets the stated constraint.
 - Or: impossible, plus the remaining alternative, such as an entrypoint.
+
+When implementation is finished but console, owner, or provider setup remains, the first status must contain two explicit lists before any further browser handoff:
+
+- Completed work: what is already delivered.
+- Actions the user still has to perform: the activation or setup that remains.
+
+Separate finished implementation from work the user still has to perform. Give that split before any further browser handoff.
 
 ## Limitations
 

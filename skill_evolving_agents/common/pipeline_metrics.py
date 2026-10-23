@@ -15,6 +15,11 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Iterator
 
+try:
+    from common import skill_resources
+except ImportError:
+    import skill_resources  # type: ignore[no-redef]
+
 
 _LOCK = threading.RLock()
 _INT31 = 0x7FFFFFFF
@@ -652,6 +657,14 @@ def collect_phase_metrics(
     optimize_attempt_twos = sum(
         _metadata(row).get("attempt") == 2 for row in optimize_rows
     )
+    resource_documents = [
+        value
+        for path in (workspace / "run").glob("*/ops/*/resource-metrics.json")
+        if isinstance(value := _read_json(path), dict)
+    ]
+    resource_summary = skill_resources.aggregate_resource_metrics(
+        resource_documents
+    )
 
     warnings: list[str] = []
     if truncated_slices:
@@ -673,15 +686,18 @@ def collect_phase_metrics(
         "metric_semantics": {
             "measured": (
                 "artifact coverage, deterministic validation, timing, replay "
-                "availability, retry decisions, and publication outcomes"
+                "availability, retry decisions, publication outcomes, and "
+                "resource use or execution observed in session evidence"
             ),
             "proxy": (
                 "match scores, structural verification, judge decisions, and "
-                "publication acceptance"
+                "publication acceptance; progressive-disclosure token share, "
+                "unused resources, and duplicated content are static proxies"
             ),
             "unavailable": (
                 "mining precision/recall, diagnosis correctness, recall precision, "
-                "goal correctness, and behavioral skill lift without labels or replay"
+                "goal correctness, behavioral skill lift without labels or replay, "
+                "and resource-use rates without matching runtime evidence"
             ),
         },
         "phases": {
@@ -755,6 +771,7 @@ def collect_phase_metrics(
                 "quality": None,
                 "quality_reason": "edit completion is not behavioral improvement",
             },
+            "resources": resource_summary,
             "verify": {
                 "operations": len(verifications),
                 "artifact_records": len(verification_artifacts),

@@ -56,10 +56,20 @@
         "confidence": 0.95,
         "evidence_records": 2,
         "distinct_windows": 0,
-        "evaluated_at": "2026-10-22T21:07:35.470556+00:00",
+        "evaluated_at": "2026-10-22T21:50:03.100662+00:00",
         "evaluation_kind": "structural",
-        "content_sha256": "919f7c2f3ff92e11847cf740c5caec73443fc4241c1e2e3d6a82cd0de63f77a4"
+        "content_sha256": "d12136fe08a25f6a94b69c9022803f064ddf2c62af1af3f4d1dc8d0382c21694"
       }
+    },
+    {
+      "skill": "preserve-request-after-provider-rate-limit",
+      "skill_types": [
+        {
+          "type": "job/workflow",
+          "weight": 1.0
+        }
+      ],
+      "unmatched_skill_types": []
     },
     {
       "skill": "retry-after-information-gain",
@@ -92,9 +102,45 @@
         "distinct_windows": 1,
         "method_fingerprint": "method-v1:cf7966716cbe804ed979fd1c",
         "methodology_value": 0.355668,
-        "evaluated_at": "2026-10-22T21:14:20.674617+00:00",
+        "evaluated_at": "2026-10-23T05:41:35.888924+00:00",
         "evaluation_kind": "structural",
-        "content_sha256": "079f84246aedce9b03c95ee19bd10d19abc98fecbd767cdc37b5f70d8e4235c7"
+        "content_sha256": "e4947b74242eef22fb3671503b35441726ed0f62a08f7e8f289e3b86b14ec407"
+      }
+    },
+    {
+      "skill": "retry-guard",
+      "description": "Decide whether a repeated tool action is justified. Allow a repeat only after relevant state changed, a search or scope change produced new information, or a single bounded transient failure; otherwise change the action or gather different evidence.",
+      "skill_types": [
+        {
+          "type": "job/methodology/workflow",
+          "weight": 0.9
+        },
+        {
+          "type": "form/pattern/constraint",
+          "weight": 0.85
+        },
+        {
+          "type": "form/technique/loop",
+          "weight": 0.8
+        }
+      ],
+      "unmatched_skill_types": [],
+      "lifecycle": {
+        "status": "evaluated",
+        "origin_run_id": "run-codex-retry-merge-2026-10-23T05-41-sig-625a365661e7ae0025430ca7-op-1",
+        "origin_finding_id": "sig-625a365661e7ae0025430ca7",
+        "origin_session_ids": [
+          "01a13505-8693-7372-8ff2-2acdcfd7f457"
+        ],
+        "distinct_sessions": 1,
+        "confidence": 0.9,
+        "evidence_records": 1,
+        "distinct_windows": 1,
+        "method_fingerprint": "method-v1:e25374de7772344b5a141094",
+        "methodology_value": 0.355668,
+        "evaluated_at": "2026-10-23T05:41:57.359836+00:00",
+        "evaluation_kind": "structural",
+        "content_sha256": "58877dfd6f8962a4a01eb08058e2e702f7b5702db237c680eeacf8efadc10293"
       }
     },
     {
@@ -126,9 +172,9 @@
         "confidence": 1.0,
         "evidence_records": 5,
         "distinct_windows": 0,
-        "evaluated_at": "2026-10-22T21:07:58.229443+00:00",
+        "evaluated_at": "2026-10-22T21:47:50.939942+00:00",
         "evaluation_kind": "structural",
-        "content_sha256": "305f0da934d3fab717d72bc41410dffdfae2e935e72df1d24f7a5ec5151427a4"
+        "content_sha256": "f35c2633f0c782b301560160a4a8ec55831b93f33ba0bc67b5685619f40260a4"
       }
     },
     {
@@ -165,6 +211,48 @@
         "evaluated_at": "2026-10-22T21:14:20.674617+00:00",
         "evaluation_kind": "structural",
         "content_sha256": "0d0fba3f690619160f36e63b4e7e3b93833f6101f1ad5ec2b57adf9d9eed4216"
+      }
+    },
+    {
+      "skill": "verify-acceptance-states",
+      "description": "Verify each user-facing acceptance state end to end in the running app before reporting completion. Enumerate the states the request names, drive each one with a separate account when ownership or role gates it, and attach one labeled screenshot or artifact per state. Passing unit, component, or database tests support the check but never substitute for it, and a blocked browser check leaves the state unverified rather than done.",
+      "skill_types": [
+        {
+          "type": "job/verification/browser-check",
+          "weight": 0.95
+        },
+        {
+          "type": "job/verification/evidence",
+          "weight": 0.85
+        },
+        {
+          "type": "domain/testing/qa",
+          "weight": 0.7
+        },
+        {
+          "type": "form/technique/checklist",
+          "weight": 0.6
+        },
+        {
+          "type": "artifact/code-change",
+          "weight": 0.5
+        }
+      ],
+      "unmatched_skill_types": [],
+      "lifecycle": {
+        "status": "evaluated",
+        "origin_run_id": "run-codex-01a15f-18turns-2026-10-23T14-04-sig-5f035698cd5da49916cc7c46-op-1",
+        "origin_finding_id": "sig-5f035698cd5da49916cc7c46",
+        "origin_session_ids": [
+          "01a15f0c-a159-71a2-82f4-250ac3fa262f"
+        ],
+        "distinct_sessions": 1,
+        "confidence": 0.81,
+        "evidence_records": 3,
+        "distinct_windows": 3,
+        "evaluated_at": "2026-10-23T06:19:35.317971+00:00",
+        "evaluation_kind": "structural",
+        "content_sha256": "01645d2034aeadf535ad8d29b2785d419f65f58a185e929d3aaa7a1bef373c23"
       }
     }
   ]

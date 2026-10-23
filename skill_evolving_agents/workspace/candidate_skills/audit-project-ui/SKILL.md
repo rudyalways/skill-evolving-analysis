@@ -58,6 +58,13 @@ Keep one clear owner for each concept in the content hierarchy. Preserve useful 
 - When deploying, verify the intended revision is live and is not being replaced by a queued deployment.
 - Report what changed, the historical constraints applied, verification performed, and any residual page-family risk.
 
+## Workflow
+
+Either of the following is enough to start. Do not wait for both, and do not require a later restatement before the first check.
+
+- The user says a just-deployed staging fix is still wrong. Before starting another fix, restate what the previous done claim checked and what it missed, then open the same rendered page the user showed and compare it in the browser with that capture.
+- The user asks to confirm a role-gated control on a named environment. Open that role's signed-in rendered page and check the control there before calling it ready. If the user later says the control is still absent, review that unmet visibility line against the same view before starting another change. That later report is a follow-up, not a condition the first check must already have.
+
 ## Verification
 
 Before treating the turn as done, confirm the assistant produced a non-empty final answer that addresses the user's question. A requested choice, such as a new project versus a new database, is that answer when it is stated in the final reply.
@@ -65,6 +72,27 @@ Before treating the turn as done, confirm the assistant produced a non-empty fin
 An aborted outcome with empty assistant text and no infrastructure failure means the question is unfinished. Do not treat that turn as done.
 
 When the user question is still open and the outcome is aborted with empty assistant text, read `verification/completion-check.md` and apply that recorded completion check.
+
+Treat a staging UI complaint as unverified until the rendered page is compared with the user's screenshot for the cited elements, such as footer, free-tier navigation, or checkout control. HTTP status, health checks, unit-test counts, and commit ids do not substitute for that look.
+
+A healthy deploy or deployment-status report does not complete the check. Completion requires the named role's rendered page to show the control the user asked to verify.
+
+A deployed UI fix is unverified until an end-to-end browser check of the deployed URL reproduces the affected user state. Run this check before declaring the fix complete; do not offer it as optional confirmation.
+
+1. Open the deployed URL as the affected visitor: signed out, or signed in on the Free tier when the report concerns a Free account. Do not substitute an admin, operator, or paid-account session, and do not substitute a local build for the deployed URL.
+2. Reproduce the user's cache state: load the page in a fresh private window or after clearing site data, then reload normally, so a stale cached bundle cannot hide either the bug or the fix.
+3. Inspect the rendered page for the reported element or symptom: confirm the element is visible and usable, or confirm the symptom is gone. A missing element, a placeholder, or the old behavior means the fix is not complete.
+4. Capture evidence from that check: the deployed URL, the visitor state and cache condition, a timestamp, and a screenshot or recording showing the reported element visible or the symptom absent.
+
+Passing tests, type or build checks, a green health endpoint, and a SUCCESS deployment status are supporting signals only. None of them proves the deployed UI is fixed. If the browser check cannot be run, report the fix as unverified and state which check is missing instead of declaring it complete.
+
+## Output Format
+
+A done report names the page checked, the user-visible elements compared, and, on a follow-up, the prior claim's missed check. Do not report success from deploy status alone.
+
+## Constraints
+
+Do not substitute a different role, path, or operator view for the role and page the user named. Do not mark the change done while that user still reports the control is absent.
 
 ## Avoid
 

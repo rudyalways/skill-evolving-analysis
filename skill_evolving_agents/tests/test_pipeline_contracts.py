@@ -56,6 +56,9 @@ diagnosis_checker = load(
 skill_evaluation = load(
     "skill_evaluation_test", AGENTS / "common/skill_evaluation.py"
 )
+skill_resources = load(
+    "skill_resources_test", AGENTS / "common/skill_resources.py"
+)
 VERIFIER = AGENTS / "05_verifiter_agent/verifiter"
 sys.path.insert(0, str(VERIFIER))
 transforms = load("verify_transforms_test", VERIFIER / "verify_transforms.py")
@@ -1886,6 +1889,7 @@ class ContractTests(unittest.TestCase):
             self.assertFalse((prepared / "other-skill").exists())
             self.assertFalse((prepared / "metadata.json").exists())
             self.assertFalse((prepared / "target").exists())
+            self.assertFalse((prepared / "_templates").exists())
             context = runner.optimize_session_context("sig-1", 1, op, "")
             self.assertIn("`audit-project-ui/` and `audit-project-ui.md`", context)
             self.assertIn("Do not read or write metadata.", context)
@@ -1903,6 +1907,22 @@ class ContractTests(unittest.TestCase):
             runner.collect_optimize_input(workspace, op)
             self.assertEqual((skill / "SKILL.md").read_text(), "# Edited\n")
             self.assertTrue((other / "SKILL.md").is_file())
+
+    def test_create_optimize_workspace_includes_unpublished_complete_template(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            (workspace / "target/to_be_improved_skills").mkdir(parents=True)
+            op = {"op": "create", "skill": "new-skill"}
+            prepared = runner.prepare_optimize_input(workspace, op)
+            template = prepared / "_templates/complete-skill"
+            self.assertTrue((template / "SKILL.md").is_file())
+            self.assertTrue((template / "scripts/normalize_jsonl.py").is_file())
+            context = runner.optimize_session_context("sig-1", 1, op, "")
+            self.assertIn("`_templates/complete-skill/`", context)
+            runner.collect_optimize_input(workspace, op)
+            self.assertFalse(
+                (workspace / "target/to_be_improved_skills/_templates").exists()
+            )
 
     def test_verifier_prompt_embeds_one_skill_input_and_output_json(self) -> None:
         root = AGENTS / "05_verifiter_agent/verifiter"
@@ -2068,6 +2088,17 @@ class ContractTests(unittest.TestCase):
             self.assertEqual(
                 runner.dsh_command("fix it"),
                 ["/opt/dsh", "--profile", "headless", "fix it"],
+            )
+            self.assertEqual(
+                runner.dsh_command("fix it", "flint"),
+                [
+                    "/opt/dsh",
+                    "--profile",
+                    "headless",
+                    "--patch",
+                    str(AGENTS / "config/dsh-flint.patch.yml"),
+                    "fix it",
+                ],
             )
         with patch.object(
             runner, "resolve_hermes_binary", return_value="/opt/hermes"
@@ -3571,13 +3602,17 @@ class ContractTests(unittest.TestCase):
             )
             self.assertEqual(format_checker.validate_authored_skill(skill), [])
 
-            nested = skill / "references/nested"
+            nested = skill / "references/providers"
             nested.mkdir(parents=True)
-            (nested / "detail.md").write_text("detail\n")
+            (nested / "aws.md").write_text("detail\n")
+            self.assertEqual(format_checker.validate_authored_skill(skill), [])
+
+            too_deep = skill / "assets/one/two/three/four/five.txt"
+            too_deep.parent.mkdir(parents=True)
+            too_deep.write_text("too deep\n")
             problems = format_checker.validate_authored_skill(skill)
-            self.assertTrue(
-                any("references must be one level deep" in row for row in problems)
-            )
+            self.assertTrue(any("maximum depth 4" in row for row in problems))
+            too_deep.unlink()
 
             (skill / "SKILL.md").write_text(
                 "---\n"
@@ -3602,7 +3637,7 @@ class ContractTests(unittest.TestCase):
                 "A concise workflow.\n"
             )
             large = skill / "assets/large.bin"
-            large.parent.mkdir()
+            large.parent.mkdir(exist_ok=True)
             with large.open("wb") as output:
                 output.seek(format_checker.MAX_RESOURCE_BYTES)
                 output.write(b"\0")
@@ -3610,6 +3645,62 @@ class ContractTests(unittest.TestCase):
             self.assertTrue(
                 any("resource exceeds" in problem for problem in problems)
             )
+
+    def test_deterministic_openai_yaml_and_resource_metrics(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            skill = Path(directory) / "deploy-cloud"
+            (skill / "references/providers").mkdir(parents=True)
+            (skill / "scripts/lib").mkdir(parents=True)
+            (skill / "assets/templates/react-app").mkdir(parents=True)
+            (skill / "SKILL.md").write_text(
+                "---\n"
+                "name: deploy-cloud\n"
+                "description: Deploy a cloud workload when a provider-specific release is requested.\n"
+                "---\n\n"
+                "# Deploy\n\n"
+                "Read `references/providers/aws.md`, execute "
+                "`scripts/lib/deploy.py`, and reuse "
+                "`assets/templates/react-app/index.html`.\n"
+            )
+            (skill / "references/providers/aws.md").write_text(
+                "Use the AWS provider deployment mode for this release.\n"
+            )
+            (skill / "scripts/lib/deploy.py").write_text("print('ok')\n")
+            (skill / "assets/templates/react-app/index.html").write_text(
+                "<main>starter</main>\n"
+            )
+            agents = skill / "agents"
+            agents.mkdir()
+            (agents / "openai.yaml").write_text(
+                "interface:\n"
+                "  display_name: Old\n"
+                "  icon_small: ./assets/icon.svg\n"
+                "policy:\n"
+                "  allow_implicit_invocation: false\n"
+            )
+            first = skill_resources.generate_openai_yaml(skill).read_text()
+            second = skill_resources.generate_openai_yaml(skill).read_text()
+            self.assertEqual(first, second)
+            self.assertIn('display_name: "Deploy Cloud"', first)
+            self.assertIn("icon_small: ./assets/icon.svg", first)
+            self.assertIn("allow_implicit_invocation: false", first)
+
+            evidence = (
+                '{"command":"python scripts/lib/deploy.py",'
+                '"exit_code":0}\nUsed references/providers/aws.md and copied '
+                "assets/templates/react-app/index.html"
+            )
+            metrics = skill_resources.measure_skill_resources(skill, evidence)
+            self.assertEqual(metrics["script_execution"]["success_rate"], 1.0)
+            self.assertEqual(metrics["reference_use"]["use_rate"], 1.0)
+            self.assertEqual(metrics["asset_reuse"]["reuse_rate"], 1.0)
+            self.assertGreater(
+                metrics["progressive_disclosure"][
+                    "estimated_skill_md_token_reduction"
+                ],
+                0,
+            )
+            self.assertEqual(metrics["penalties"]["unused_resources"], [])
 
     def test_skill_eval_contract_and_benchmark_aggregation(self) -> None:
         fixture = {
@@ -5686,9 +5777,8 @@ class ContractTests(unittest.TestCase):
                     raw = worker / "target/raw_skills/b"
                     raw.mkdir(parents=True, exist_ok=True)
                     (raw / "SKILL.md").write_text("# old\n")
-                    (
-                        worker / "target/to_be_improved_skills/b/SKILL.md"
-                    ).write_text("# new\n")
+                    optimize_input = kwargs["input_root"]
+                    (optimize_input / "b/SKILL.md").write_text("# new\n")
                     return
                 raise subprocess.TimeoutExpired("agent", 180)
 
@@ -5760,6 +5850,21 @@ class ContractTests(unittest.TestCase):
                 (workspace / "run/cut/ops/1/publication.json").read_text()
             )
             self.assertTrue(accepted["accepted"])
+            interface = (
+                workspace
+                / "target/to_be_improved_skills/b/agents/openai.yaml"
+            )
+            self.assertIn('display_name: "B"', interface.read_text())
+            resource_metrics = json.loads(
+                (workspace / "run/cut/ops/1/resource-metrics.json").read_text()
+            )
+            self.assertEqual(resource_metrics["skills"][0]["skill"], "b")
+            with sqlite3.connect(workspace / "logs/metrics.sqlite") as database:
+                resource_events = database.execute(
+                    "SELECT COUNT(*) FROM pipeline_spans WHERE phase = ?",
+                    ("resource-usefulness",),
+                ).fetchone()[0]
+            self.assertEqual(resource_events, 1)
             self.assertFalse((root / ".pipeline-workers").exists())
             with patch.object(
                 sys,
@@ -6049,7 +6154,7 @@ class MockedPipelineTest(unittest.TestCase):
                         ),
                     )
                 elif stage == "optimize":
-                    created = ws / "target/to_be_improved_skills/created"
+                    created = kwargs["input_root"] / "created"
                     created.mkdir(parents=True, exist_ok=True)
                     (created / "SKILL.md").write_text(
                         "---\n"
@@ -6181,6 +6286,18 @@ class MockedPipelineTest(unittest.TestCase):
             judge_status = list((workspace / "run/status/judge").glob("*.json"))
             self.assertEqual(len(judge_status), 1)
             self.assertEqual(json.loads(judge_status[0].read_text())["state"], "done")
+            report = json.loads((workspace / "logs/run-timing.json").read_text())
+            self.assertEqual(
+                report["phase_metrics"]["phases"]["resources"]["skills"],
+                1,
+            )
+            with sqlite3.connect(root / "workspace/optimization.sqlite") as database:
+                metrics_json = database.execute(
+                    "SELECT metrics_json FROM learning_runs WHERE run_id = ?",
+                    (workspace.name,),
+                ).fetchone()[0]
+            learned = json.loads(metrics_json)["resource_usefulness"]
+            self.assertEqual(learned["skills"], 1)
 
     def test_candidate_run_copies_one_trace_and_names_it_from_metadata(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -6552,6 +6669,81 @@ class TransformVerificationTest(unittest.TestCase):
             self.assertEqual(transforms.check(goal, raw, improved), [])
             (improved / "a").mkdir()
             self.assertTrue(transforms.check(goal, raw, improved))
+
+
+class DshAndInventoryRegressionTest(unittest.TestCase):
+    def test_verifier_parser_accepts_multiline_json_after_reasoning(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "session.jsonl"
+            payload = {
+                "verification_steps": [{"skill": "example", "steps": []}],
+                "feedback": {"overall_status": "pass", "per_skill": []},
+            }
+            path.write_text(
+                "dsh: reasoning:\nI will now return the object.\n"
+                + json.dumps(payload, indent=2)
+                + "\n"
+            )
+            self.assertEqual(runner.parse_verifier_response_log(path), payload)
+
+    def test_inventory_merge_candidates_detect_same_method_fingerprint(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            skills = workspace / "target/to_be_improved_skills"
+            for name in ("retry-a", "retry-b", "unrelated"):
+                (skills / name).mkdir(parents=True)
+                (skills / name / "SKILL.md").write_text(
+                    f"---\nname: {name}\ndescription: Example\n---\n# {name}\n"
+                )
+            metadata = workspace / "metadata.json"
+            metadata.write_text(
+                json.dumps(
+                    {
+                        "skills_metadata": [
+                            {
+                                "skill": "retry-a",
+                                "skill_types": [{"type": "job/workflow", "weight": 1}],
+                                "lifecycle": {"method_fingerprint": "method-v1:same"},
+                            },
+                            {
+                                "skill": "retry-b",
+                                "skill_types": [{"type": "job/workflow", "weight": 1}],
+                                "lifecycle": {"method_fingerprint": "method-v1:same"},
+                            },
+                            {"skill": "unrelated", "skill_types": []},
+                        ]
+                    }
+                )
+            )
+            result = runner.inventory_merge_candidates(workspace, metadata)
+            self.assertEqual(result["candidate_count"], 1)
+            self.assertEqual(result["candidates"][0]["skills"], ["retry-a", "retry-b"])
+            self.assertEqual(result["candidates"][0]["score"], 1.0)
+
+            scopes = runner.materialize_inventory_findings(workspace, result)
+            self.assertEqual(len(scopes), 1)
+            finding = json.loads(
+                (
+                    workspace
+                    / "traces/derived/findings"
+                    / scopes[0]
+                    / "finding.json"
+                ).read_text()
+            )
+            self.assertTrue(finding["features"]["trace_free"])
+            self.assertEqual(
+                sorted(finding["features"]["skill_documents"]),
+                ["retry-a", "retry-b"],
+            )
+
+    def test_scope_source_path_does_not_duplicate_workspace(self) -> None:
+        root = Path("/tmp/example-run")
+        resolved = runner.scope_source_path(
+            root, "workspace/traces/derived/findings/example"
+        )
+        self.assertEqual(
+            resolved, root / "traces/derived/findings/example"
+        )
 
 
 if __name__ == "__main__":

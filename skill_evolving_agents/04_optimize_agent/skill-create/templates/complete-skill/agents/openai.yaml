@@ -1,0 +1,4 @@
+interface:
+  display_name: "Complete Skill Reference"
+  short_description: "Show a complete, resourceful skill package"
+  default_prompt: "Use $complete-skill as a structural reference for a goal-authorized skill package."

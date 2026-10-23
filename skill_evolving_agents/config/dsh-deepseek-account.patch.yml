@@ -1,0 +1,16 @@
+# Reuse the desktop app's signed-in DeepSeek account in headless DSH runs.
+- id: deepseek-account
+  name: '@deepseek-ai/dsh-deepseek-account-platform'
+  disabled: false
+- id: credentials
+  name: '@deepseek-ai/dsh-credentials-local'
+  disabled: false
+- id: agent-default-model
+  name: '@deepseek-ai/dsh-agent-default-model'
+  config:
+    provider: deepseek-account
+    model: deepseek-flash
+    reasoningEffort: high
+- id: authorization
+  name: '@deepseek-ai/dsh-authorization'
+  disabled: false

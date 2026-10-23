@@ -1,0 +1,112 @@
+{
+  "skill_name": "retry-guard",
+  "evals": [
+    {
+      "id": 1,
+      "kind": "should_apply",
+      "prompt": "A status call already returned pending. The record has since moved to a state this call depends on. Decide whether to revalidate with the same status call.",
+      "expected_output": "decision repeat, gate state change, evidence the recorded state this call depends on changed.",
+      "expectations": [
+        "The decision is repeat",
+        "The gate is a relevant state change",
+        "The evidence names that state change"
+      ],
+      "files": [],
+      "source_trace_ids": []
+    },
+    {
+      "id": 2,
+      "kind": "should_apply",
+      "prompt": "A search already returned a known empty page. The next search uses a narrower scope and that scope returns items the first search did not contain. Decide whether to run the refined search.",
+      "expected_output": "decision repeat, gate new information, evidence the refined scope returned items absent from the previous result.",
+      "expectations": [
+        "The decision is repeat",
+        "The gate is new information from the search or scope change",
+        "The evidence names the novel result"
+      ],
+      "files": [],
+      "source_trace_ids": []
+    },
+    {
+      "id": 3,
+      "kind": "should_apply",
+      "prompt": "A call failed once with a bounded transient error and has not been retried. The action and the relevant state are otherwise the same. Decide whether to issue that call one more time.",
+      "expected_output": "decision repeat, gate transient failure, evidence one not-yet-retried transient error.",
+      "expectations": [
+        "The decision is repeat",
+        "The gate is one bounded transient failure",
+        "The evidence is that single transient error"
+      ],
+      "files": [],
+      "source_trace_ids": []
+    },
+    {
+      "id": 4,
+      "kind": "should_not_apply",
+      "prompt": "The same completed call is about to be issued again. The action, the state the call depends on, and the result are unchanged, and no new search or scope evidence exists.",
+      "expected_output": "decision replace, gate none, evidence none. Do not issue the same call.",
+      "expectations": [
+        "The decision is replace",
+        "The gate is none",
+        "The same action, state, and result are not repeated"
+      ],
+      "files": [],
+      "source_trace_ids": []
+    },
+    {
+      "id": 5,
+      "kind": "should_not_apply",
+      "prompt": "The previous call completed with the same result now in hand. The proposed repeat changes a parameter that does not affect the outcome. The relevant state is unchanged.",
+      "expected_output": "decision replace, gate none, evidence none. The parameter tweak is not a new attempt.",
+      "expectations": [
+        "The decision is replace",
+        "A parameter that does not change the outcome is not treated as a new attempt",
+        "The same result is not accepted as a justified repeat"
+      ],
+      "files": [],
+      "source_trace_ids": []
+    },
+    {
+      "id": 6,
+      "kind": "should_apply",
+      "prompt": "A deployment status command returns a deprecation warning that names a replacement command, then two consecutive polls return the identical non-terminal BUILDING state. Decide the next action.",
+      "expected_output": "Use the named replacement on the next call and do not invoke the deprecated command again. After the second identical non-terminal poll, stop polling and inspect the build or deploy logs instead of polling again.",
+      "expectations": [
+        "The next status call uses the named replacement",
+        "The deprecated command is not invoked again",
+        "A third unchanged poll is not issued",
+        "The agent pivots to build or deploy logs or reports the concrete blocker"
+      ],
+      "files": [],
+      "source_trace_ids": []
+    },
+    {
+      "id": 7,
+      "kind": "should_apply",
+      "prompt": "A push exits nonzero with a connection-refused signature while the local tree is verified deployable. Decide what to do before reporting the change.",
+      "expected_output": "Classify the failure as a transport error rather than a build failure, deploy directly from the verified local tree, assert the live artifact exposes the intended behavior, and retry the original push once connectivity returns.",
+      "expectations": [
+        "The failure is classified as a transport error, not a build failure",
+        "The change is not reported as failed",
+        "A direct deploy runs from the verified local tree",
+        "The live artifact is checked for the intended behavior",
+        "The original push is retried after a connectivity probe or new connectivity evidence and succeeds"
+      ],
+      "files": [],
+      "source_trace_ids": []
+    },
+    {
+      "id": 8,
+      "kind": "should_not_apply",
+      "prompt": "A deploy exits nonzero with a compile error in the local source, and the build log names the failing file. The push remote is reachable. Decide whether to deploy directly or retry the push.",
+      "expected_output": "This is a genuine build failure, not a transport failure. Do not deploy or push the broken tree; report the failing build and fix the source first.",
+      "expectations": [
+        "The failure is classified as a build failure, not a transport error",
+        "No direct deploy or push of the failing tree is attempted",
+        "The agent reports or fixes the build error before retrying the deploy"
+      ],
+      "files": [],
+      "source_trace_ids": []
+    }
+  ]
+}

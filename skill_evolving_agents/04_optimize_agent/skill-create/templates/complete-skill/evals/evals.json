@@ -1,0 +1,28 @@
+{
+  "skill_name": "complete-skill",
+  "evals": [
+    {
+      "id": 1,
+      "kind": "should_apply",
+      "prompt": "Normalize these JSONL records into a stable report with clean text and deduplicated tags.",
+      "expected_output": "A JSONL file preserving record order with normalized text and sorted unique tags.",
+      "expectations": [
+        "The deterministic normalizer is used.",
+        "Every output line follows the documented record schema."
+      ],
+      "files": ["assets/report-template.json"],
+      "source_trace_ids": []
+    },
+    {
+      "id": 2,
+      "kind": "should_not_apply",
+      "prompt": "Summarize the argument in this prose essay.",
+      "expected_output": "The JSONL normalization workflow is not selected.",
+      "expectations": [
+        "The normalizer is not used for unstructured prose."
+      ],
+      "files": [],
+      "source_trace_ids": []
+    }
+  ]
+}

@@ -39,16 +39,21 @@ If any of the three is missing, do not judge a retry. Record the missing item an
 
 1. Read the proposed attempt and the recorded prior action, observed state, and result.
 2. Compare the proposed attempt with that record. Note whether the action, the state, or the result would differ, and whether the result is novel.
-3. When the user asks to repair CI or a named verification gate until it is fully green, treat a still-failing named gate as information gain. Keep fixing the listed failures and rerun that same gate. Do not end the turn on a remaining-failure status.
-4. Allow the retry when any one of these is true:
+3. When the user reports that the earlier negative finding is wrong, or that someone did attempt the flow, treat that report as new information and record the contradiction as new evidence. Re-query the live signup or auth record and the relevant staging configuration, and re-run the smallest discriminating check against both. Include timestamp fields that could explain the discrepancy. Respond with either the concrete finding and its evidence, or the exact check that blocked verification plus the next step.
+4. Guard any status poll before repeating it: compare the latest result with the result before it. Retry only when the observable state changed or the latest output contains new diagnostic information. Otherwise stop polling and switch to a different action or evidence source.
+5. Before the first repeat, state a bounded retry budget: the maximum number of repeats and the maximum elapsed wait. Count every repeat against it, and on exhaustion report the last observed state instead of polling again.
+6. When the user asks to repair CI or a named verification gate until it is fully green, treat a still-failing named gate as information gain. Keep fixing the listed failures and rerun that same gate. Do not end the turn on a remaining-failure status.
+7. Allow the retry when any one of these is true:
    - A relevant state change has occurred since the prior attempt.
    - The search or scope is meaningfully narrower or otherwise refined.
    - New information is available that the prior attempt did not have.
    - The prior result was a transient failure, and this is still the one allowed retry after that failure.
    - A named verification gate the user asked to make fully green still reports failures.
-5. Otherwise do not repeat the attempt. Choose `change-action`: use a different method or gather new evidence.
-6. Stop the named-gate repair-and-rerun loop only when that gate passes, or a hard external blocker such as an authorization or access denial prevents another run. A remaining-failure status is not a stop.
-7. Emit the decision in the output format, naming what changed and the evidence for it.
+   - A poll observed a relevant state change or produced new diagnostic output.
+8. For a status poll, apply only the state-change or new-diagnostic-output condition from the list above. An unchanged command-plus-wait pair is not a valid retry even when the budget still has room.
+9. Otherwise do not repeat the attempt. Choose `change-action`: use a different method or gather new evidence.
+10. Stop the named-gate repair-and-rerun loop only when that gate passes, or a hard external blocker such as an authorization or access denial prevents another run. A remaining-failure status is not a stop.
+11. Emit the decision in the output format, naming what changed and the evidence for it.
 
 ## State Machine
 
@@ -66,6 +71,9 @@ One transient-failure transition may return from `ready` to `retry`. A later unc
 - Do not treat a second unchanged result after a transient failure as another allowed retry.
 - A state change, a narrower search, new information, or one bounded transient failure remains a valid reason to retry.
 - Stop a named-gate repair loop only when that gate passes or a hard external blocker, such as an authorization or access denial, prevents another run. A still-failing named gate is information gain that requires another repair and rerun of that same gate.
+- Do not repeat the earlier negative conclusion as the final answer when the user has contradicted it. Do not claim that no record exists without re-querying the live record and configuration after the contradiction.
+- Do not ask the user to reproduce the flow before inspecting the live signup or auth record and the relevant staging configuration. If that access fails, report the failed check and the blocker instead of guessing a cause.
+- Require a bounded retry budget before the first repeat, and forbid repeating an identical command-plus-wait pair whose result is unchanged. On exhaustion, report the last observed state instead of polling again.
 
 ## Verification
 
@@ -76,7 +84,16 @@ Allow the next attempt only when the record shows one of these:
 - a meaningful scope refinement
 - a transient failure that is still within the one allowed retry
 
+For a status poll, allow only a relevant state change or new diagnostic output, and confirm that the bounded retry budget has not been exhausted.
+
 An unchanged action-state-result triple must not be retried. Completion evidence is the written decision: `retry` or `change-action`, the fields that changed, and the evidence named for that choice.
+
+After a contradiction, the debug turn is complete only when the user receives a non-empty response that explicitly addresses the contradiction and cites either updated record or configuration evidence, or the exact blocker and next action. A response that repeats the earlier negative conclusion, or that asks the user to reproduce the flow before the live record was inspected, fails completion.
+
+Confirm the polling guard with two cases before treating the run as complete:
+
+- Positive: a poll returns a changed state or new diagnostic output, so one more poll within the remaining budget is permitted.
+- Near-miss: an identical command-plus-wait returns unchanged output, so the retry loop stops and switches to a different action or evidence source.
 
 ## Output Format
 

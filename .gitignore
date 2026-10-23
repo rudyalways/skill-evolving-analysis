@@ -2,9 +2,32 @@
 __pycache__/
 *.pyc
 node_modules/
+.venv/
 .env
 .env.*
+!.env.example
 public_skills/
+
+# Private product vision. Keep these files locally, but do not publish them.
+skill_evolving_agents/ideaing.md
+skill_evolving_agents/cost-aware-architecture.md
+skill_evolving_agents/low-cost-pipeline.md
+skill_evolving_agents/learned-policy-architecture.md
+skill_evolving_agents/state-machine-architecture.md
+skill_evolving_agents/private/
+skill_evolving_agents/docs/private/
+notes/private/
+
+# Future product/design documents are private by default. Public operational
+# documentation belongs in README files, run/config guides, or docs/public/.
+skill_evolving_agents/*[Vv][Ii][Ss][Ii][Oo][Nn]*.md
+skill_evolving_agents/*[Aa][Rr][Cc][Hh][Ii][Tt][Ee][Cc][Tt][Uu][Rr][Ee]*.md
+skill_evolving_agents/*[Rr][Oo][Aa][Dd][Mm][Aa][Pp]*.md
+skill_evolving_agents/*[Ss][Tt][Rr][Aa][Tt][Ee][Gg][Yy]*.md
+skill_evolving_agents/*[Ii][Dd][Ee][Aa]*.md
+skill_evolving_agents/docs/*
+!skill_evolving_agents/docs/public/
+!skill_evolving_agents/docs/public/**
 skill_evolving_agents/.pipeline-sessions/
 skill_evolving_agents/.pipeline-workers/
 skill_evolving_agents/workspace/candidate_traces/*
@@ -14,3 +37,4 @@ skill_evolving_agents/workspace/runs/*
 skill_evolving_agents/workspace/metrics.sqlite
 skill_evolving_agents/workspace/metrics-dashboard.html
 skill_evolving_agents/workspace/phase-metrics-summary.json
+skill_evolving_agents/workspace/optimization.sqlite

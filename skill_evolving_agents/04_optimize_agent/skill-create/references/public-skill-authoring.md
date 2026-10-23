@@ -69,10 +69,11 @@ runner. Structural validation is executable now. Behavioral comparison runs
 only when an operation has a runnable replay harness and must otherwise be
 reported as `not_run`.
 
-## Deliberately not copied
+## Adapted rather than copied
 
 - Claude-specific subagent protocol, browser viewer, and packaging format.
-- OpenAI-specific `agents/openai.yaml` generation.
+- OpenAI interface metadata is generated deterministically by the runner after
+  acceptance; Optimize does not spend a model call authoring standard fields.
 - Upstream heading vocabularies that conflict with
   `common/skill_format.json`.
 - Generic interview steps when the trace already contains the requirements.
