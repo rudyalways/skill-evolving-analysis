@@ -4189,7 +4189,14 @@ class ContractTests(unittest.TestCase):
                             "candidate_source": "signal_detector",
                             "distinct_windows": 1,
                             "lesson": (
-                                {"kind": "retry_guard", "rule": finding_id}
+                                {
+                                    "kind": "retry_guard",
+                                    "rule": (
+                                        "verify <value> at <path>"
+                                        if finding_id == "finding-a"
+                                        else finding_id
+                                    ),
+                                }
                                 if finding_id == "finding-a"
                                 else f"lesson-{finding_id}"
                             ),
@@ -4225,7 +4232,10 @@ class ContractTests(unittest.TestCase):
             )
             self.assertEqual(
                 evidence["findings"][0]["lesson"],
-                {"kind": "retry_guard", "rule": "finding-a"},
+                {
+                    "kind": "retry_guard",
+                    "rule": "verify ABSTRACT_VALUE at ABSTRACT_PATH",
+                },
             )
             self.assertTrue(all(row["path"] for row in evidence["findings"]))
             broken = json.loads(path.read_text())

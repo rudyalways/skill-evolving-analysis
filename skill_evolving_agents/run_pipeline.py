@@ -4611,6 +4611,25 @@ def _append_goal_verification_assertions(document: dict) -> None:
             )
 
 
+DETECTOR_ABSTRACTION = re.compile(r"<([a-z][a-z0-9_-]*)>", re.IGNORECASE)
+
+
+def encode_detector_abstractions(value: object) -> object:
+    """Keep detector-normalized tokens without leaking authoring placeholders."""
+    if isinstance(value, dict):
+        return {
+            key: encode_detector_abstractions(item)
+            for key, item in value.items()
+        }
+    if isinstance(value, list):
+        return [encode_detector_abstractions(item) for item in value]
+    if isinstance(value, str):
+        return DETECTOR_ABSTRACTION.sub(
+            lambda match: f"ABSTRACT_{match.group(1).upper()}", value
+        )
+    return value
+
+
 def materialize_verification_input(
     workspace: Path,
     goal: dict,
@@ -4693,7 +4712,9 @@ def materialize_verification_input(
                 "confidence": source.get("confidence"),
                 "evidence_records": len(source.get("evidence") or []),
                 "distinct_windows": source_features.get("distinct_windows"),
-                "lesson": source_features.get("lesson"),
+                "lesson": encode_detector_abstractions(
+                    source_features.get("lesson")
+                ),
             }
         )
     document["checks"]["step3"]["evidence"] = {
