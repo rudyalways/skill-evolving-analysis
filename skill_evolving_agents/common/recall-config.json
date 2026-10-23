@@ -4,9 +4,9 @@
   "strategies": {
     "exact_overlap": {},
     "weighted_path_similarity": {
-      "minimum_cluster_confidence": 0.4,
-      "minimum_skill_weight": 0.4,
-      "minimum_score": 0.3,
+      "minimum_cluster_confidence": 0.5,
+      "minimum_skill_weight": 0.5,
+      "minimum_score": 0.35,
       "minimum_shared_labels": 1,
       "ancestor_match_factor": 0.7,
       "fallback_path_factor": 0.25,
@@ -16,7 +16,7 @@
         "unspecified",
         "unbound"
       ],
-      "top_k": 10
+      "top_k": 5
     }
   }
 }

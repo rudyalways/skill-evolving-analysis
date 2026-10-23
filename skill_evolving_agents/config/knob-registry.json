@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "knobs": {
+    "semantic.accept_at": {"target": "profile", "path": "phases.semantic_prefilter.accept_at", "type": "float", "domain": {"min": 0.6, "max": 0.85, "step": 0.05}, "default": 0.7, "risk": "quality", "mutable": true, "requires": {"phases.semantic_prefilter.mode": ["observe", "enabled"]}},
+    "semantic.noise_accept_at": {"target": "profile", "path": "phases.semantic_prefilter.noise_accept_at", "type": "float", "domain": {"min": 0.65, "max": 0.9, "step": 0.05}, "default": 0.75, "risk": "safety", "mutable": true, "requires": {"phases.semantic_prefilter.mode": ["observe", "enabled"]}},
+    "semantic.minimum_margin": {"target": "profile", "path": "phases.semantic_prefilter.minimum_margin", "type": "float", "domain": {"values": [0.05, 0.08, 0.1, 0.15]}, "default": 0.08, "risk": "safety", "mutable": true},
+    "recall.minimum_score": {"target": "profile", "path": "phases.recall.minimum_score", "type": "float", "domain": {"min": 0.25, "max": 0.55, "step": 0.05}, "default": 0.35, "risk": "quality", "mutable": true, "requires": {"phases.recall.algorithm": ["recall.embedding-v1"]}},
+    "recall.top_k": {"target": "profile", "path": "phases.recall.top_k", "type": "integer", "domain": {"values": [3, 5, 8]}, "default": 5, "risk": "cost", "mutable": true},
+    "evolution.minimum_confidence": {"target": "profile", "path": "evolution_gate.minimum_confidence", "type": "float", "domain": {"values": [0.75, 0.8, 0.85, 0.9]}, "default": 0.8, "risk": "safety", "mutable": true},
+    "evolution.minimum_evidence_records": {"target": "profile", "path": "evolution_gate.minimum_evidence_records", "type": "integer", "domain": {"values": [2, 3, 4, 5]}, "default": 3, "risk": "safety", "mutable": true},
+    "selection.min_confidence": {"target": "preprocessing", "path": "signals.selection.min_confidence", "type": "float", "domain": {"values": [0.55, 0.6, 0.65, 0.7]}, "default": 0.6, "risk": "quality", "mutable": true},
+    "methodology.min_value_score": {"target": "preprocessing", "path": "methodology.min_value_score", "type": "float", "domain": {"values": [0.08, 0.12, 0.16, 0.2]}, "default": 0.12, "risk": "quality", "mutable": true},
+    "edit.min_priority": {"target": "preprocessing", "path": "evolution_policy.min_super_score", "type": "float", "domain": {"values": [0.55, 0.6, 0.65, 0.7, 0.75]}, "default": 0.65, "risk": "quality", "mutable": true},
+    "edit.max_ops_per_skill": {"target": "preprocessing", "path": "evolution_policy.max_ops_per_skill", "type": "integer", "domain": {"values": [1, 2, 3, 4]}, "default": 3, "risk": "cost", "mutable": true},
+    "score.severity_weight": {"target": "preprocessing", "path": "evolution_policy.priority_score.severity_weight", "type": "float", "domain": {"values": [0.3, 0.4, 0.5]}, "default": 0.4, "risk": "safety", "mutable": true},
+    "score.confidence_weight": {"target": "preprocessing", "path": "evolution_policy.priority_score.confidence_weight", "type": "float", "domain": {"values": [0.2, 0.3, 0.4]}, "default": 0.3, "risk": "quality", "mutable": true},
+    "score.detector_strength_weight": {"target": "preprocessing", "path": "evolution_policy.priority_score.detector_strength_weight", "type": "float", "domain": {"values": [0.1, 0.2, 0.3]}, "default": 0.2, "risk": "quality", "mutable": true},
+    "score.skill_match_weight": {"target": "preprocessing", "path": "evolution_policy.priority_score.skill_match_weight", "type": "float", "domain": {"values": [0.05, 0.1, 0.2]}, "default": 0.1, "risk": "quality", "mutable": true},
+    "score.detector_saturation_scale": {"target": "preprocessing", "path": "evolution_policy.priority_score.detector_saturation_scale", "type": "float", "domain": {"values": [2.0, 4.0, 8.0]}, "default": 4.0, "risk": "quality", "mutable": true},
+    "publish.atomic": {"target": "super_config", "path": "algorithms.publish.atomic-v1", "type": "locked", "default": true, "risk": "safety", "mutable": false},
+    "fail_open.embedding": {"target": "profile", "path": "phases.semantic_prefilter.on_error", "type": "locked", "default": "escalate", "risk": "safety", "mutable": false}
+  },
+  "constraints": [
+    {"kind": "less_equal", "left": "semantic.accept_at", "right": "semantic.noise_accept_at"},
+    {"kind": "sum_between", "members": ["score.severity_weight", "score.confidence_weight", "score.detector_strength_weight", "score.skill_match_weight"], "min": 0.99, "max": 1.01}
+  ]
+}

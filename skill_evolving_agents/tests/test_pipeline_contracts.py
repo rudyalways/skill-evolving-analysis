@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import importlib.util
 import json
+import os
 import shutil
 import sqlite3
 import subprocess
@@ -2025,13 +2026,24 @@ class ContractTests(unittest.TestCase):
 
     def test_agent_config_allows_one_active_backend(self) -> None:
         config = runner.load_agent_config()
+        self.assertEqual(
+            {row["backend"] for row in config["agents"]},
+            {
+                "cursor",
+                "claude",
+                "codex",
+                "dsh",
+                "hermes",
+                "openclaw",
+                "docker-claude",
+            },
+        )
         active = [row for row in config["agents"] if row["status"] == "active"]
-        self.assertEqual([row["backend"] for row in active], ["cursor"])
+        self.assertEqual([row["backend"] for row in active], ["codex"])
+        self.assertEqual(runner.configured_model("codex"), "gpt-6-luna")
         self.assertEqual(runner.configured_model("cursor"), "grok-4.7-low")
         self.assertEqual(runner.configured_model("cursor", "other-model"), "other-model")
-        self.assertEqual(runner.configured_model("claude"), "claude-sonnet-5-5")
-        with self.assertRaises(SystemExit):
-            runner.configured_model("codex")
+        self.assertEqual(runner.configured_model("claude"), "haiku")
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "agent-config.json"
             two_active = json.loads(json.dumps(config))
@@ -2045,8 +2057,44 @@ class ContractTests(unittest.TestCase):
             with self.assertRaisesRegex(SystemExit, "exactly one"):
                 runner.load_agent_config(path)
         with patch.object(runner, "authenticated", return_value=True):
-            self.assertEqual(runner.select_backend("auto", False), "cursor")
+            self.assertEqual(runner.select_backend("auto", False), "codex")
             self.assertEqual(runner.select_backend("claude", False), "claude")
+
+    def test_optional_cli_commands_are_headless_and_model_aware(self) -> None:
+        with (
+            patch.object(runner, "resolve_dsh_binary", return_value="/opt/dsh"),
+            patch.dict(os.environ, {}, clear=True),
+        ):
+            self.assertEqual(
+                runner.dsh_command("fix it"),
+                ["/opt/dsh", "--profile", "headless", "fix it"],
+            )
+        with patch.object(
+            runner, "resolve_hermes_binary", return_value="/opt/hermes"
+        ):
+            self.assertEqual(
+                runner.hermes_command("fix it", "flint"),
+                ["/opt/hermes", "--model", "flint", "--oneshot", "fix it"],
+            )
+        view = Path("/tmp/session-view")
+        with patch.object(
+            runner, "resolve_openclaw_launcher", return_value=["node", "/opt/openclaw.mjs"]
+        ):
+            self.assertEqual(
+                runner.openclaw_command(view, "openai/flint"),
+                [
+                    "node",
+                    "/opt/openclaw.mjs",
+                    "agent",
+                    "exec",
+                    "--message-file",
+                    "-",
+                    "--cwd",
+                    str(view),
+                    "--model",
+                    "openai/flint",
+                ],
+            )
 
     def test_cut_algorithms_keep_a_five_turn_repetition_window_and_long_turns(
         self,
@@ -2990,7 +3038,7 @@ class ContractTests(unittest.TestCase):
             with self.assertRaises(one_action.pipeline_contracts.ContractError):
                 one_action.validate(path)
 
-    def test_single_session_create_is_allowed_as_provisional(self) -> None:
+    def test_generic_single_session_create_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             workspace = Path(directory)
             cluster = "finding"
@@ -3013,15 +3061,16 @@ class ContractTests(unittest.TestCase):
                     "newly_detected_skill_capabilites_missing": [],
                 },
             )
-            runner.enforce_creation_policy(
-                workspace,
-                cluster,
-                {},
-                {
-                    "op": "create",
-                    "skills": [{"skill": "commit-push-boundary"}],
-                },
-            )
+            with self.assertRaises(runner.pipeline_contracts.ContractError):
+                runner.enforce_creation_policy(
+                    workspace,
+                    cluster,
+                    {},
+                    {
+                        "op": "create",
+                        "skills": [{"skill": "commit-push-boundary"}],
+                    },
+                )
 
     def test_optimize_stage_has_existing_skill_operation_guidance(self) -> None:
         self.assertIn(
@@ -4203,7 +4252,8 @@ class ContractTests(unittest.TestCase):
                 workspace / "traces/derived/findings/scope-a/finding.json",
                 finding,
             )
-            runner.enforce_creation_policy(workspace, "scope-a", {}, create)
+            with self.assertRaises(runner.pipeline_contracts.ContractError):
+                runner.enforce_creation_policy(workspace, "scope-a", {}, create)
             finding["features"] = {
                 "candidate_source": "cut_pattern",
                 "distinct_windows": 3,
@@ -4827,7 +4877,7 @@ class ContractTests(unittest.TestCase):
                     task("weak", "overview", 0.2),
                 ],
                 5,
-                0.5,
+                0.35,
             )
             self.assertEqual([item["cluster"] for item in bundled], ["critical"])
             stored = json.loads(Path(bundled[0]["op_goal"]).read_text())

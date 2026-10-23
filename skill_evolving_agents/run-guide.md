@@ -42,6 +42,33 @@ run directly. Fanout workers omit raw vendor logs and receive canonical turns,
 pointer manifests, the selected stage package, common code, and capability
 data.
 
+The deployment profile defaults to `profiles/full-agent.json`, which preserves
+the existing behavior. Select and snapshot another validated profile with:
+
+```bash
+python3 skill_evolving_agents/run_pipeline.py run-001 \
+  --pipeline-profile balanced
+```
+
+The selected profile and its digest are written under `run/config`, with a
+validated phase envelope under `run/status/control-plane`. The balanced
+profile initially places the semantic embedding phase in `observe` mode: its decisions
+must be recorded but cannot change routing until the adapters are calibrated.
+See `services/embedding_api/README.md` for the standalone service protocol.
+`config/super-config.json` registers every selectable phase algorithm and its
+canonical input/output contracts. Profile resolution rejects incompatible
+algorithm chains before execution and writes the resolved selection to
+`run/config/execution-config.json`. Phase-envelope aggregates by phase, mode,
+and algorithm are written to `logs/phase-adapter-metrics.json`.
+Profiles may also set an agent-call budget. The runner reserves calls atomically
+before launching a hosted session and writes `logs/agent-call-budget.json`.
+Once `hard_agent_call_cap` is reached, no additional paid agent session starts.
+
+Embedding profiles support `in_process` library calls, a managed
+`local_process` with configurable host/port, or `remote_api`. The managed mode
+waits for service health and always terminates the child process during runner
+cleanup. See `services/embedding_api/README.md`.
+
 A Cursor session starts outside this git repository. `--workspace` is that
 session view: the stage brief, the stage directory, `common`,
 `skill_capabilites`, and a `workspace` link. `--add-dir` adds only that
@@ -159,18 +186,50 @@ same predicate runs again before a result is recorded as accepted. A skill
 already created from that source is removed, and `run/pipeline-summary.json`
 records `accepted: false`. A Judge pass does not override the config.
 
-Authenticate the preferred CLI first:
+The checked-in configuration selects Codex with `gpt-6-luna`, the
+cost-efficient model for scoped work. Verify the CLI installation and sign-in:
 
 ```bash
-agent login
-agent status
-agent models
+codex --version
+codex login status
+codex doctor --summary
 ```
 
 The agent and its model come from `common/agent-config.json`. Each entry has
 `backend`, `model`, and `status`. Exactly one status is `active`. The runner
 uses that entry. Change which one runs by marking it `active` and the others
-`inactive`.
+`inactive`. A one-call smoke test that does not modify the repository is:
+
+```bash
+codex exec --ephemeral --sandbox read-only --model gpt-6-luna \
+  "Reply with exactly: CODEX_OK"
+```
+
+Supported host backends are Cursor (`agent`), Claude Code (`claude`), Codex
+(`codex`), DeepSeek Harness CLI (`dsh`), Hermes Agent (`hermes`), and
+OpenClaw (`openclaw`). The last three use their documented one-shot entry
+points: `dsh --profile headless`, `hermes --oneshot`, and
+`openclaw agent exec --message-file -`. They are optional installations; an
+explicitly selected backend fails before a run when its executable or
+authentication check is unavailable.
+
+DSH resolves from `DSH_BIN`, `PATH`, the installed application, or a mounted
+DeepSeek Harness image, in that order. Set `DSH_PATCH` when the headless
+profile needs an additional provider patch. The runner invokes `dsh` directly;
+it does not depend on an example wrapper or checkout.
+
+The inactive Hermes and OpenClaw examples use the local Recursive Flint model.
+Load `/Users/maybewu/Documents/Projects/myexpore/recursive/.env` in the shell,
+then configure the CLI provider with `FLINT_BASE_URL` and `FLINT_API_KEY`.
+Hermes uses its configured `HERMES_HOME`; OpenClaw uses
+`OPENCLAW_CONFIG_PATH` and `OPENCLAW_STATE_DIR`. The runner inherits those
+variables but never copies their values into run artifacts. The endpoint
+should expose model id `flint`, with OpenClaw's provider/model reference set to
+`flint-local/flint`. When the executables are not on `PATH`, the runner checks
+`../../oss/hermes-agent/.venv/bin/hermes` and `../../oss/openclaw/openclaw.mjs`;
+`HERMES_BIN`, `OPENCLAW_BIN`, and `OPENCLAW_NODE` remain explicit overrides.
+DSH defaults to its low-cost flash model. Override any configured model for one
+run with `--model`.
 
 ## Runtime goal
 
@@ -352,7 +411,7 @@ Use that file to check a timing claim:
 - `bundle_size` on an optimize, verifiter, or judge span is how many same-skill
   updates were merged into that one pass. `run/goal-reduction.json` records
   `bundled` and `over_cap`. The merged goal's `bundle.selected` lists the
-  source edits. The cap is `evolution_policy.max_ops_per_skill` (default 5),
+  source edits. The cap is `evolution_policy.max_ops_per_skill` (default 3),
   overridable with `--max-ops-per-skill`.
 - A non-representative bundled source remains `skipped` for its own optimize,
   verification, and judge phases because those phases run once on the merged
@@ -360,11 +419,13 @@ Use that file to check a timing claim:
   `selected_operation` points to the authoritative verified operation.
 
 Updates of the same skill run as one optimize, one verifiter, and one judge.
-The runner ranks those updates by super score and keeps the top ones up to
-the cap. Super score is severity weight × confidence × (1 + absolute detector
-score) + the label-matching score for that skill. Severity weights are low 1,
-medium 2, high 3, and critical 4. A missing severity uses weight 1. The best
-edit is always kept. Every other edit must reach `min_super_score` (default 0,
+The runner ranks those updates by a bounded priority score and keeps the top
+ones up to the cap. Severity maps to low .25, medium .50, high .75, and
+critical 1.00. Detector strength is `abs(score) / (abs(score) + 4)`, and skill
+match is clamped to `[0, 1]`. Priority is `.40*severity + .30*confidence +
+.20*detector_strength + .10*skill_match`. The component values are stored in
+`score_components` for audit. The best edit is always kept. Every other edit
+must reach `min_super_score` (default 0.65,
 `--min-super-score`) or it is recorded as `below_gate` and is not sent to an
 agent. Edits past the cap are `over_cap`. The surviving edits are unioned into
 one `update` op. Verification and judge still run once, with `--op 1`. Judge

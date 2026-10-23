@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "name": "balanced",
+  "embedding_runtime": {"transport": "remote_api", "endpoint": "http://embedding-service:8080", "timeout_ms": 1500},
+  "phases": {
+    "normalize": {"mode": "enabled", "kind": "deterministic", "algorithm": "normalize.vendor-json-v1"},
+    "detect": {"mode": "enabled", "kind": "deterministic", "algorithm": "detect.rules-v1"},
+    "semantic_prefilter": {"mode": "observe", "kind": "embedding-service", "algorithm": "prefilter.embedding-json-v1", "endpoint": "http://embedding-service:8080", "reject_below": 0.15, "accept_at": 0.7, "noise_accept_at": 0.75, "minimum_margin": 0.08, "top_k": 3, "timeout_ms": 1500, "on_error": "escalate", "categories": {"correction": "user correction, dissatisfaction, or repeated instruction", "execution_failure": "tool error, unchanged retry, oscillation, or failed execution", "latency": "slow execution, timeout, excessive waiting, or abandonment", "methodology": "reusable successful workflow, recovery, verification, or decision method", "noise": "incidental, infrastructure-only, non-reusable, or non-evolvable event"}},
+    "diagnosis": {"mode": "enabled", "kind": "agent", "algorithm": "diagnosis.agent-full-json-v1"},
+    "recall": {"mode": "enabled", "kind": "deterministic", "algorithm": "recall.weighted-path-v1"},
+    "goal": {"mode": "enabled", "kind": "agent", "algorithm": "goal.agent-full-json-v1"},
+    "optimize": {"mode": "enabled", "kind": "agent", "algorithm": "optimize.agent-v1"},
+    "verify": {"mode": "enabled", "kind": "agent", "algorithm": "verify.agent-structural-v1"},
+    "publish": {"mode": "enabled", "kind": "deterministic", "algorithm": "publish.atomic-v1"}
+  }
+}
+

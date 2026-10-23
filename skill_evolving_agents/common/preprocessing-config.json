@@ -119,7 +119,7 @@
       "method-cross-task-consolidation"
     ],
     "min_events": 3,
-    "min_value_score": 0.08,
+    "min_value_score": 0.12,
     "max_obviousness": 0.55,
     "max_task_specificity": 0.65,
     "min_confidence": 0.68,
@@ -155,9 +155,9 @@
     "near_duplicate_threshold": 0.9
   },
   "evolution_policy": {
-    "allow_single_session_create": true,
+    "allow_single_session_create": false,
     "single_session_create_lifecycle": "provisional",
-    "allow_single_session_ood_create": true,
+    "allow_single_session_ood_create": false,
     "allow_single_session_repeated_pattern_create": true,
     "create_min_confidence": 0.75,
     "create_min_evidence_records": 2,
@@ -168,12 +168,19 @@
     "single_session_methodology_min_confidence": 0.82,
     "single_session_methodology_min_value": 0.18,
     "novelty_max_similarity": 0.82,
-    "min_methodology_value": 0.08,
-    "promotion_min_held_out_cases": 2,
+    "min_methodology_value": 0.12,
+    "promotion_min_held_out_cases": 5,
     "promotion_min_held_out_pass_rate": 0.8,
-    "promotion_max_activation_false_positive_rate": 0.2,
-    "max_ops_per_skill": 5,
-    "min_super_score": 0
+    "promotion_max_activation_false_positive_rate": 0.1,
+    "max_ops_per_skill": 3,
+    "min_super_score": 0.65,
+    "priority_score": {
+      "severity_weight": 0.4,
+      "confidence_weight": 0.3,
+      "detector_strength_weight": 0.2,
+      "skill_match_weight": 0.1,
+      "detector_saturation_scale": 4.0
+    }
   },
   "cut": {
     "algorithms": [

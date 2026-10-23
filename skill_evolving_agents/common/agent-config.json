@@ -4,21 +4,36 @@
     {
       "backend": "cursor",
       "model": "grok-4.7-low",
-      "status": "active"
+      "status": "inactive"
     },
     {
       "backend": "claude",
-      "model": "claude-sonnet-5-5",
+      "model": "haiku",
       "status": "inactive"
     },
     {
       "backend": "codex",
-      "model": "",
+      "model": "gpt-6-luna",
+      "status": "active"
+    },
+    {
+      "backend": "dsh",
+      "model": "deepseek-flash",
+      "status": "inactive"
+    },
+    {
+      "backend": "hermes",
+      "model": "flint",
+      "status": "inactive"
+    },
+    {
+      "backend": "openclaw",
+      "model": "flint-local/flint",
       "status": "inactive"
     },
     {
       "backend": "docker-claude",
-      "model": "claude-sonnet-5-5",
+      "model": "haiku",
       "status": "inactive"
     }
   ]

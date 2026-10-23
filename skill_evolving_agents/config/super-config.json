@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "shared": {
+    "artifact_protocol": 1,
+    "reasoning_storage": "forbidden",
+    "unavailable_measurements": "null",
+    "on_contract_error": "fail_phase",
+    "taxonomy": "skill_capabilites/skill_capabilites.json"
+  },
+  "contracts": {
+    "normalize": {"input": "raw-traces/v1", "output": "canonical-turns/v1"},
+    "detect": {"input": "canonical-turns/v1", "output": "findings/v1"},
+    "semantic_prefilter": {"input": "findings/v1", "output": "filter-decisions/v1"},
+    "diagnosis": {"input": "finding-scope/v1", "output": "diagnosis/v1"},
+    "recall": {"input": "diagnosis+skill-metadata/v1", "output": "label-matching/v1"},
+    "goal": {"input": "diagnosis+label-matching/v1", "output": "evolve-goal/v1"},
+    "optimize": {"input": "operation+skill/v1", "output": "candidate-skill/v1"},
+    "verify": {"input": "verification-input+candidate/v1", "output": "verification/v1"},
+    "publish": {"input": "verified-candidate/v1", "output": "publication/v1"}
+  },
+  "algorithms": {
+    "normalize.vendor-json-v1": {"phase": "normalize", "kind": "deterministic", "default_service": "local-deterministic", "required_capabilities": ["parse"], "native_output": "vendor-normalized-json/v1", "canonical_input": "raw-traces/v1", "canonical_output": "canonical-turns/v1", "normalizer": "builtin"},
+    "detect.rules-v1": {"phase": "detect", "kind": "deterministic", "default_service": "local-deterministic", "required_capabilities": ["rules"], "native_output": "rule-findings/v1", "canonical_input": "canonical-turns/v1", "canonical_output": "findings/v1", "normalizer": "builtin"},
+    "prefilter.embedding-json-v1": {"phase": "semantic_prefilter", "kind": "embedding-service", "default_service": "shared-embedding", "required_capabilities": ["classify"], "native_output": "embedding-ranked-json/v1", "canonical_input": "findings/v1", "canonical_output": "filter-decisions/v1", "normalizer": "embedding-filter-v1"},
+    "diagnosis.agent-full-json-v1": {"phase": "diagnosis", "kind": "agent", "default_service": "large-agent", "required_capabilities": ["generate-json", "reason"], "native_output": "agent-full-json/v1", "canonical_input": "finding-scope/v1", "canonical_output": "diagnosis/v1", "normalizer": "diagnosis-agent-v1"},
+    "diagnosis.llm-json-no-reasoning-v1": {"phase": "diagnosis", "kind": "agent", "status": "planned", "default_service": "small-json-llm", "required_capabilities": ["generate-json", "extract"], "native_output": "llm-json-no-reasoning/v1", "canonical_input": "finding-scope/v1", "canonical_output": "diagnosis/v1", "normalizer": "diagnosis-compact-v1"},
+    "diagnosis.jev-v1": {"phase": "diagnosis", "kind": "deterministic", "status": "planned", "default_service": "small-json-llm", "required_capabilities": ["jev"], "native_output": "jev/v1", "canonical_input": "finding-scope/v1", "canonical_output": "diagnosis/v1", "normalizer": "diagnosis-jev-v1"},
+    "recall.weighted-path-v1": {"phase": "recall", "kind": "deterministic", "default_service": "local-deterministic", "required_capabilities": ["scoring"], "native_output": "weighted-matches/v1", "canonical_input": "diagnosis+skill-metadata/v1", "canonical_output": "label-matching/v1", "normalizer": "builtin"},
+    "recall.embedding-v1": {"phase": "recall", "kind": "embedding-service", "default_service": "shared-embedding", "required_capabilities": ["search", "rank"], "native_output": "embedding-ranked-json/v1", "canonical_input": "diagnosis+skill-metadata/v1", "canonical_output": "label-matching/v1", "normalizer": "recall-embedding-v1"},
+    "goal.agent-full-json-v1": {"phase": "goal", "kind": "agent", "default_service": "large-agent", "required_capabilities": ["generate-json", "reason"], "native_output": "agent-full-json/v1", "canonical_input": "diagnosis+label-matching/v1", "canonical_output": "evolve-goal/v1", "normalizer": "goal-agent-v1"},
+    "goal.llm-json-no-reasoning-v1": {"phase": "goal", "kind": "agent", "status": "planned", "default_service": "small-json-llm", "required_capabilities": ["generate-json"], "native_output": "llm-json-no-reasoning/v1", "canonical_input": "diagnosis+label-matching/v1", "canonical_output": "evolve-goal/v1", "normalizer": "goal-compact-v1"},
+    "optimize.agent-v1": {"phase": "optimize", "kind": "agent", "default_service": "large-agent", "required_capabilities": ["edit-files", "reason"], "native_output": "skill-directory/v1", "canonical_input": "operation+skill/v1", "canonical_output": "candidate-skill/v1", "normalizer": "skill-validator-v1"},
+    "verify.agent-structural-v1": {"phase": "verify", "kind": "agent", "default_service": "large-agent", "required_capabilities": ["verify", "use-tools"], "native_output": "verification-agent-json/v1", "canonical_input": "verification-input+candidate/v1", "canonical_output": "verification/v1", "normalizer": "verification-contract-v1"},
+    "publish.atomic-v1": {"phase": "publish", "kind": "deterministic", "default_service": "local-deterministic", "required_capabilities": ["atomic-write"], "native_output": "publication-record/v1", "canonical_input": "verified-candidate/v1", "canonical_output": "publication/v1", "normalizer": "builtin"}
+  }
+}

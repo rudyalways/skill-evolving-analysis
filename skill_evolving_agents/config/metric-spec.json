@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "metrics": {
+    "critical_finding_recall": {"direction": "maximize", "role": "hard_constraint", "minimum": 1.0, "minimum_samples": 10, "population": "reviewed critical findings", "missing": "fail"},
+    "high_finding_recall": {"direction": "maximize", "role": "hard_constraint", "minimum": 0.95, "maximum_regression": 0.01, "minimum_samples": 30, "population": "reviewed high-severity findings", "missing": "fail"},
+    "noise_rejection_precision": {"direction": "maximize", "role": "hard_constraint", "minimum": 0.98, "minimum_samples": 20, "population": "automatically rejected reviewed findings", "missing": "fail"},
+    "activation_false_positive_rate": {"direction": "minimize", "role": "hard_constraint", "maximum": 0.1, "maximum_regression": 0.01, "minimum_samples": 30, "population": "reviewed skill activations", "missing": "fail"},
+    "held_out_pass_rate": {"direction": "maximize", "role": "hard_constraint", "minimum": 0.8, "maximum_regression": 0.02, "minimum_samples": 20, "population": "held-out skill cases", "missing": "fail"},
+    "skill_recall_at_5": {"direction": "maximize", "role": "objective", "weight": 1.0, "minimum_samples": 30, "population": "labeled recall queries", "missing": "exclude"},
+    "agent_calls_per_finding": {"direction": "minimize", "role": "objective", "weight": 1.0, "minimum_samples": 30, "population": "eligible findings", "missing": "exclude"},
+    "wall_ms_per_finding": {"direction": "minimize", "role": "objective", "weight": 0.5, "minimum_samples": 30, "population": "eligible findings", "missing": "exclude"},
+    "human_review_rate": {"direction": "minimize", "role": "objective", "weight": 0.5, "minimum_samples": 30, "population": "eligible findings", "missing": "exclude"}
+  },
+  "promotion": {
+    "minimum_objective_improvements": 1,
+    "allow_objective_regression": false,
+    "required_stage": "offline",
+    "next_stage": "shadow"
+  }
+}

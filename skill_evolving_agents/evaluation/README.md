@@ -29,3 +29,18 @@ python evaluation/skillsbench_methodology_eval.py results.jsonl \
 The report uses task-macro pass rate, paired efficiency deltas, mining
 precision, false-positive creations, novelty, context size, and pass-rate loss
 for each ablation. Unpaired cells are reported but excluded from comparisons.
+
+# Configuration research
+
+`optimize_config.py` provides the bounded offline optimization control plane.
+It validates the knob and metric registries, generates reproducible constrained
+grids, and evaluates recorded results using hard safety constraints before
+Pareto-style cost and quality objectives.
+
+It does not promote production configuration. An eligible offline candidate is
+authorized only to enter shadow evaluation.
+
+Available search algorithms are bounded grid, seeded random, wide-and-deep,
+and persistent UCB/MCTS. Reviewed trial outcomes update a Beta success
+posterior and reward exponential moving average for each knob/value choice in
+`workspace/optimization.sqlite`.

@@ -1,8 +1,16 @@
 # Evolver workflow
 
+Architecture references include `cost-aware-architecture.md`,
+`tuning-guide.md`, `learned-policy-architecture.md`,
+`state-machine-architecture.md`, and `policy/README.md`.
+
 How a container runs one session is `run-guide.md`.
 Public skill-system sources, adopted mechanisms, and remaining implementation
 work are tracked in `public-skill-adoption.md`.
+The proposed lower-cost, multi-profile architecture and standalone embedding
+service boundary are described in `cost-aware-architecture.md`.
+The implemented evidence gate and embedding-recall profile are documented in
+`low-cost-pipeline.md`.
 
 Seven agents share one optional Docker runtime image. Deterministic scripts
 normalize Codex, Claude Code, and Cursor telemetry, detect feedback signals,

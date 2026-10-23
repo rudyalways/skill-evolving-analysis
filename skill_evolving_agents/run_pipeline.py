@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import copy
+import glob
 import hashlib
 import importlib.util
 import json
@@ -22,9 +23,23 @@ from concurrent.futures import Future, ThreadPoolExecutor, as_completed
 from datetime import UTC, datetime
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parent
+INSTALL_ROOT = ROOT
 REPO = ROOT.parent
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+from core.phase_envelope import artifact_ref, build_envelope, write_envelope
+from core.profile import ProfileError, resolve_profile
+from core.config_metrics import summarize_phase_envelopes
+from core.online_learning import StudyStore
+from core.state_machine import StateMachineRuntime, TransitionDecision, load_machine
+from core.super_config import SuperConfigError, load_super_config, resolve_execution_config
+from core.service_tiers import ServiceTierError, load_service_tiers
+from core.optimization import load_spec, validate_knob_registry
+from policy import FixedPolicy, PolicyCompiler, PolicyStore, extract_policy_features
+from services.embedding_api.client import EmbeddingClient, EmbeddingServiceError
+from services.embedding_api.provider import EmbeddingProvider, validate_embedding_runtime
+
 CONFIG_PATH = ROOT / "common/preprocessing-config.json"
 AGENT_CONFIG_PATH = ROOT / "common/agent-config.json"
 VERIFICATION_INPUT_TEMPLATE = (
@@ -33,7 +48,15 @@ VERIFICATION_INPUT_TEMPLATE = (
     / "verifiter"
     / "verification-input.template.json"
 )
-KNOWN_BACKENDS = ("cursor", "codex", "claude", "docker-claude")
+KNOWN_BACKENDS = (
+    "cursor",
+    "claude",
+    "codex",
+    "dsh",
+    "hermes",
+    "openclaw",
+    "docker-claude",
+)
 CONTAINER_WORKSPACE = "/opt/skill-evolver/skill_evolving_agents/workspace"
 SESSION_ROOT = Path(
     os.environ.get("SKILL_EVOLVER_SESSION_ROOT", "")
@@ -54,7 +77,96 @@ VERIFIER_SESSION_TIMEOUT_SECONDS = int(
     os.environ.get("SKILL_EVOLVER_VERIFIER_TIMEOUT_SECONDS", "360")
 )
 _EXECUTION_LOG_LOCK = threading.Lock()
+_AGENT_BUDGET_LOCK = threading.Lock()
+_AGENT_CALL_COUNTS: dict[str, int] = {}
 ACTIVE_BACKEND = "docker-claude"
+ACTIVE_EXECUTION_CONFIG: dict = {}
+ACTIVE_EMBEDDING_PROVIDER: EmbeddingProvider | None = None
+
+
+def compile_runtime_policy(
+    workspace: Path,
+    run_id: str,
+    deployment_profile: dict,
+    execution_config: dict,
+) -> tuple[dict, dict]:
+    """Route fixed config through the same boundary future policies will use."""
+    registry = validate_knob_registry(
+        load_spec(INSTALL_ROOT / "config/knob-registry.json", "knob registry")
+    )
+    base_documents = {
+        "profile": deployment_profile,
+        "preprocessing": json.loads(
+            (INSTALL_ROOT / "common/preprocessing-config.json").read_text()
+        ),
+        "recall": json.loads((INSTALL_ROOT / "common/recall-config.json").read_text()),
+        "super_config": json.loads(
+            (INSTALL_ROOT / "config/super-config.json").read_text()
+        ),
+    }
+    features = extract_policy_features(
+        workspace,
+        run_id=run_id,
+        profile=deployment_profile,
+        execution_config=execution_config,
+    )
+    decision = FixedPolicy(registry).decide(features, base_documents)
+    compiled = PolicyCompiler(registry).compile(decision, base_documents)
+    policy_root = workspace / "run/config/policy"
+    atomic_write_json(policy_root / "features.json", features)
+    atomic_write_json(policy_root / "decision.json", decision)
+    atomic_write_json(policy_root / "compiled.json", compiled)
+    store = PolicyStore(workspace.parents[1] / "optimization.sqlite")
+    store.record_features(features)
+    store.record_decision(decision)
+    if compiled["status"] != "valid":
+        raise SystemExit(
+            "runtime policy compilation failed: " + "; ".join(compiled["errors"])
+        )
+    return compiled["documents"]["profile"], compiled
+
+
+class AgentCallBudgetExceeded(RuntimeError):
+    pass
+
+
+def reserve_agent_call(workspace: Path, stage: str, suffix: str) -> None:
+    """Atomically enforce the configured hard agent-session cap."""
+    budget = ACTIVE_EXECUTION_CONFIG.get("budgets") or {}
+    cap = budget.get("hard_agent_call_cap")
+    if not isinstance(cap, int) or isinstance(cap, bool) or cap < 1:
+        return
+    authoritative = metrics_workspace(workspace).resolve()
+    key = str(authoritative)
+    with _AGENT_BUDGET_LOCK:
+        if key not in _AGENT_CALL_COUNTS:
+            previous = authoritative / "logs/agent-call-budget.json"
+            try:
+                prior = json.loads(previous.read_text()) if previous.is_file() else {}
+                _AGENT_CALL_COUNTS[key] = int(prior.get("used", 0))
+            except (OSError, ValueError, TypeError, json.JSONDecodeError):
+                _AGENT_CALL_COUNTS[key] = 0
+        used = _AGENT_CALL_COUNTS[key]
+        if used >= cap:
+            raise AgentCallBudgetExceeded(
+                f"agent call cap {cap} reached before {stage}/{suffix}; "
+                f"policy={budget.get('on_cap', 'fail')}"
+            )
+        used += 1
+        _AGENT_CALL_COUNTS[key] = used
+        atomic_write_json(
+            authoritative / "logs/agent-call-budget.json",
+            {
+                "schema_version": 1,
+                "used": used,
+                "hard_cap": cap,
+                "remaining": cap - used,
+                "target": budget.get("target_agent_calls"),
+                "on_cap": budget.get("on_cap", "fail"),
+                "last_stage": stage,
+                "last_item": suffix,
+            },
+        )
 AGENT_NUMBERS = {
     "preprocessing": "01",
     "label-skills": "02.1",
@@ -184,6 +296,290 @@ STAGE_DIRS = {
     "verifiter": "05_verifiter_agent",
     "judge": "06_judge_agent",
 }
+
+
+def run_semantic_prefilter_observer(
+    workspace: Path, run_id: str, profile: dict
+) -> None:
+    """Run the optional semantic filter without changing production routing."""
+    config = profile["phases"]["semantic_prefilter"]
+    if config["mode"] in {"disabled", "passthrough"}:
+        return
+    if config["mode"] not in {"observe", "enabled"}:
+        raise SystemExit("unsupported semantic-prefilter mode")
+    findings_root = workspace / "traces/derived/findings"
+    finding_paths = sorted(findings_root.glob("*/finding.json"))
+    if not finding_paths:
+        return
+    started = datetime.now(UTC)
+    status_path = workspace / "run/status/semantic-prefilter/all.json"
+    implementation = {
+        "kind": "embedding-service",
+        "name": str(config.get("algorithm", "semantic-prefilter")),
+        "version": "1",
+        "config_digest": profile["config_digest"],
+        "service": "shared-embedding",
+        "cost_tier": 1,
+    }
+    try:
+        findings = [json.loads(path.read_text()) for path in finding_paths]
+        texts = [json.dumps(value, ensure_ascii=False, sort_keys=True) for value in findings]
+        provider = ACTIVE_EMBEDDING_PROVIDER or EmbeddingProvider(
+            config, INSTALL_ROOT / "services/embedding_api/server.py"
+        )
+        response = provider.classify(
+            texts, dict(config["categories"]), top_k=int(config.get("top_k", 3))
+        )
+        rows = []
+        for path, result in zip(finding_paths, response["results"]):
+            matches = result.get("matches") or []
+            decision = semantic_category_decision(matches, config)
+            rows.append(
+                {
+                    "finding": path.parent.name,
+                    **decision,
+                    "matches": matches,
+                }
+            )
+        output = workspace / "traces/derived/semantic-prefilter-shadow.json"
+        atomic_write_json(
+            output,
+            {
+                "mode": config["mode"],
+                "model": response["model"],
+                "model_revision": response["model_revision"],
+                "index_revision": response.get("index_revision"),
+                "rows": rows,
+            },
+        )
+        envelope = build_envelope(
+            run_id=run_id,
+            phase="semantic-prefilter",
+            item_id="all",
+            implementation=implementation,
+            status="completed",
+            started_at=started.isoformat(),
+            input_refs=[artifact_ref(path, relative_to=workspace) for path in finding_paths],
+            output_ref=artifact_ref(output, relative_to=workspace),
+            decision={
+                "disposition": "observed" if config["mode"] == "observe" else "applied",
+                "mode": config["mode"],
+                "reason_codes": [config["mode"]],
+            },
+            measurements={
+                "input_count": len(finding_paths),
+                "service_ms": response.get("service_ms"),
+            },
+        )
+    except (KeyError, ValueError, OSError, json.JSONDecodeError, EmbeddingServiceError) as error:
+        envelope = build_envelope(
+            run_id=run_id,
+            phase="semantic-prefilter",
+            item_id="all",
+            implementation=implementation,
+            status="failed",
+            started_at=started.isoformat(),
+            input_refs=[artifact_ref(path, relative_to=workspace) for path in finding_paths],
+            decision={
+                "disposition": str(config.get("on_error", "escalate")),
+                "mode": config["mode"],
+                "reason_codes": ["service_error"],
+            },
+            error={"type": type(error).__name__, "message": str(error)},
+        )
+    write_envelope(status_path, envelope)
+
+
+def semantic_category_decision(matches: list[dict], config: dict) -> dict:
+    """Make a conservative category decision from embedding similarities.
+
+    A low similarity is uncertainty, not proof that a finding is irrelevant.
+    Rejection is allowed only when the explicit noise category wins strongly
+    and by a sufficient margin. This keeps the cheap tier fail-open.
+    """
+    if not matches:
+        return {
+            "disposition": "escalate",
+            "reason_code": "no_embedding_match",
+            "top_category": None,
+            "top_score": None,
+            "score_margin": None,
+        }
+    top = matches[0]
+    category = str(top.get("id") or "")
+    score = float(top.get("score", -1.0))
+    runner_up = float(matches[1].get("score", -1.0)) if len(matches) > 1 else -1.0
+    margin = score - runner_up
+    min_margin = float(config.get("minimum_margin", 0.08))
+    accept_at = float(config["accept_at"])
+    noise_accept_at = float(config.get("noise_accept_at", accept_at))
+    decisive = margin >= min_margin
+    if category == "noise" and score >= noise_accept_at and decisive:
+        disposition, reason = "rejected", "confident_noise"
+    elif category != "noise" and score >= accept_at and decisive:
+        disposition, reason = "selected", "confident_relevant_category"
+    else:
+        disposition, reason = "escalate", "uncertain_category"
+    return {
+        "disposition": disposition,
+        "reason_code": reason,
+        "top_category": category or None,
+        "top_score": round(score, 6),
+        "score_margin": round(margin, 6),
+    }
+
+
+def low_cost_allowed_scopes(
+    workspace: Path, scopes: list[str], profile: dict
+) -> list[str]:
+    """Defer weak single-trace findings before diagnosis fanout."""
+    gate = profile.get("evolution_gate")
+    if not isinstance(gate, dict) or not gate.get("enabled"):
+        return scopes
+    shadow_path = workspace / "traces/derived/semantic-prefilter-shadow.json"
+    shadow: dict[str, str] = {}
+    if shadow_path.is_file():
+        try:
+            shadow = {
+                str(row["finding"]): str(row["disposition"])
+                for row in json.loads(shadow_path.read_text()).get("rows", [])
+            }
+        except (KeyError, TypeError, json.JSONDecodeError):
+            shadow = {}
+    allowed: list[str] = []
+    decisions = []
+    immediate = set(gate.get("immediate_detectors") or [])
+    for scope in scopes:
+        path = workspace / "traces/derived/findings" / scope / "finding.json"
+        if not path.is_file():
+            allowed.append(scope)
+            continue
+        finding = json.loads(path.read_text())
+        sessions = {
+            str(trace).split(":")[1]
+            for trace in finding.get("trace_ids") or []
+            if isinstance(trace, str) and ":" in trace
+        }
+        evidence_count = len(finding.get("evidence") or [])
+        confidence = float(finding.get("confidence") or 0)
+        detector = str(finding.get("detector") or "")
+        severity = str(finding.get("severity") or "")
+        semantic = shadow.get(scope, "escalate")
+        reasons = []
+        keep = False
+        protected = False
+        if severity == "critical" and gate.get("immediate_critical", True):
+            keep, protected, reasons = True, True, ["critical"]
+        elif detector in immediate:
+            keep, protected, reasons = True, True, ["immediate_detector"]
+        elif len(sessions) >= int(gate.get("minimum_distinct_sessions", 2)):
+            keep, reasons = True, ["recurring_sessions"]
+        elif (
+            evidence_count >= int(gate.get("minimum_evidence_records", 3))
+            and confidence >= float(gate.get("minimum_confidence", 0.8))
+        ):
+            keep, reasons = True, ["strong_evidence"]
+        if semantic == "rejected" and not protected:
+            keep, reasons = False, ["semantic_reject"]
+        if keep:
+            allowed.append(scope)
+        decisions.append(
+            {
+                "scope": scope,
+                "disposition": "selected" if keep else "deferred",
+                "reason_codes": reasons or ["insufficient_recurrence"],
+                "distinct_sessions": len(sessions),
+                "evidence_records": evidence_count,
+                "confidence": confidence,
+                "semantic_disposition": semantic,
+            }
+        )
+    atomic_write_json(
+        workspace / "traces/derived/evolution-gate.json",
+        {"schema_version": 1, "decisions": decisions},
+    )
+    return allowed
+
+
+def embedding_recall(
+    diagnosis: dict, metadata: dict, skill_dirs: list[str], config: dict
+) -> dict:
+    """Recall skills semantically and normalize results to label-matching/v1."""
+    queries_by_cluster: dict[str, list[dict]] = {}
+    for key in (
+        "skill_capabilities_missing",
+        "newly_detected_skill_capabilites_missing",
+    ):
+        for row in diagnosis.get(key) or []:
+            if not isinstance(row, dict):
+                continue
+            cluster = str(row.get("cluster") or row.get("signal_id") or "cut")
+            queries_by_cluster.setdefault(cluster, []).append(row)
+    documents = {}
+    skills_root = Path(config["skills_root"])
+    records = (
+        metadata.get("skills_metadata")
+        if isinstance(metadata.get("skills_metadata"), list)
+        else []
+    )
+    metadata_by_name = {
+        str(row.get("skill")): row
+        for row in records
+        if isinstance(row, dict)
+    }
+    for name in skill_dirs:
+        path = skills_root / name / "SKILL.md"
+        text = path.read_text() if path.is_file() else ""
+        documents[name] = text + "\n" + json.dumps(
+            metadata_by_name.get(name, {}), ensure_ascii=False, sort_keys=True
+        )
+    names = sorted(queries_by_cluster) or ["cut"]
+    queries = [
+        json.dumps(queries_by_cluster.get(name, []), ensure_ascii=False, sort_keys=True)
+        for name in names
+    ]
+    provider = ACTIVE_EMBEDDING_PROVIDER or EmbeddingProvider(
+        config, INSTALL_ROOT / "services/embedding_api/server.py"
+    )
+    response = provider.search(
+        queries, documents, top_k=int(config.get("top_k", 10))
+    )
+    clusters = []
+    for name, result in zip(names, response["results"]):
+        matches = [
+            {
+                "skill": row["id"],
+                "score": row["score"],
+                "labels": [
+                    {"type": "embedding/semantic", "weight": row["score"]}
+                ],
+                "matches": [
+                    {
+                        "cluster_type": "embedding/query",
+                        "skill_type": "embedding/skill",
+                        "similarity": row["score"],
+                        "contribution": row["score"],
+                    }
+                ],
+            }
+            for row in result.get("matches") or []
+            if float(row.get("score", -1)) >= float(config.get("minimum_score", 0.3))
+        ]
+        clusters.append({"cluster": name, "labels": [], "skills": matches})
+    return {
+        "matching": {
+            "strategy": str(config["algorithm"]),
+            "config_version": 1,
+            "config_sha256": str(
+                ACTIVE_EXECUTION_CONFIG.get("config_digest", "")
+            ).removeprefix("sha256:"),
+            "model_revision": response.get("model_revision"),
+            "index_revision": response.get("index_revision"),
+            "service": "shared-embedding",
+            "cost_tier": 1,
+        },
+        "clusters": clusters,
+    }
 
 
 def run(
@@ -540,6 +936,66 @@ def authenticated(command: list[str]) -> bool:
     return result.returncode == 0
 
 
+def resolve_dsh_binary() -> str:
+    """Resolve the official DeepSeek Harness launcher without example wrappers."""
+    configured = os.environ.get("DSH_BIN", "").strip()
+    if configured:
+        return configured
+    installed = shutil.which("dsh")
+    if installed:
+        return installed
+    patterns = (
+        "/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh",
+        "/Volumes/DeepSeek Harness*/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh",
+    )
+    for pattern in patterns:
+        for candidate in sorted(glob.glob(pattern)):
+            if os.access(candidate, os.X_OK):
+                return candidate
+    return "dsh"
+
+
+def resolve_hermes_binary() -> str:
+    """Resolve Hermes from PATH or the sibling OSS checkout."""
+    configured = os.environ.get("HERMES_BIN", "").strip()
+    if configured:
+        return configured
+    installed = shutil.which("hermes")
+    if installed:
+        return installed
+    candidate = REPO.parent.parent / "oss/hermes-agent/.venv/bin/hermes"
+    if os.access(candidate, os.X_OK):
+        return str(candidate)
+    return "hermes"
+
+
+def resolve_openclaw_launcher() -> list[str]:
+    """Resolve OpenClaw from PATH or the sibling OSS checkout."""
+    configured = os.environ.get("OPENCLAW_BIN", "").strip()
+    if configured:
+        return [configured]
+    installed = shutil.which("openclaw")
+    if installed:
+        return [installed]
+    checkout = REPO.parent.parent / "oss/openclaw/openclaw.mjs"
+    if checkout.is_file():
+        configured_node = os.environ.get("OPENCLAW_NODE", "").strip()
+        node_candidates = [configured_node] if configured_node else []
+        node_candidates.extend(
+            sorted(
+                glob.glob(str(Path.home() / ".nvm/versions/node/*/bin/node")),
+                reverse=True,
+            )
+        )
+        path_node = shutil.which("node")
+        if path_node:
+            node_candidates.append(path_node)
+        for node in node_candidates:
+            if node and os.access(node, os.X_OK):
+                return [node, str(checkout)]
+    return ["openclaw"]
+
+
 def load_agent_config(path: Path | None = None) -> dict:
     """Load agent backends. Exactly one entry has status active."""
     source = AGENT_CONFIG_PATH if path is None else path
@@ -618,6 +1074,9 @@ def select_backend(requested: str, allow_local: bool) -> str:
         "cursor": ["agent", "models"],
         "codex": ["codex", "login", "status"],
         "claude": ["claude", "auth", "status"],
+        "dsh": [resolve_dsh_binary(), "--version"],
+        "hermes": [resolve_hermes_binary(), "--version"],
+        "openclaw": [*resolve_openclaw_launcher(), "--version"],
     }
     if not authenticated(checks[backend]):
         raise SystemExit(f"{backend} is not installed or authenticated")
@@ -680,6 +1139,41 @@ def cursor_command(
     return command
 
 
+def dsh_command(prompt: str) -> list[str]:
+    """Launch one official DeepSeek Harness headless task."""
+    command = [resolve_dsh_binary(), "--profile", "headless"]
+    patch = os.environ.get("DSH_PATCH", "").strip()
+    if patch:
+        command.extend(["--patch", patch])
+    command.append(prompt)
+    return command
+
+
+def hermes_command(prompt: str, model: str | None) -> list[str]:
+    """Launch one non-interactive Hermes agent turn."""
+    command = [resolve_hermes_binary()]
+    if model:
+        command.extend(["--model", model])
+    command.extend(["--oneshot", prompt])
+    return command
+
+
+def openclaw_command(view: Path, model: str | None) -> list[str]:
+    """Launch one isolated OpenClaw coding turn with stdin as its message."""
+    command = [
+        *resolve_openclaw_launcher(),
+        "agent",
+        "exec",
+        "--message-file",
+        "-",
+        "--cwd",
+        str(view),
+    ]
+    if model:
+        command.extend(["--model", model])
+    return command
+
+
 def run_host_session(
     backend: str,
     stage: str,
@@ -738,6 +1232,28 @@ def run_host_session(
             print(f"+ {backend} session {stage} ({suffix})", flush=True)
             run(
                 command,
+                cwd=view,
+                log_path=log_path,
+                input_text=prompt,
+                timeout=session_timeout_seconds(stage),
+            )
+        elif backend == "dsh":
+            run(
+                dsh_command(prompt),
+                cwd=view,
+                log_path=log_path,
+                timeout=session_timeout_seconds(stage),
+            )
+        elif backend == "hermes":
+            run(
+                hermes_command(prompt, model),
+                cwd=view,
+                log_path=log_path,
+                timeout=session_timeout_seconds(stage),
+            )
+        elif backend == "openclaw":
+            run(
+                openclaw_command(view, model),
                 cwd=view,
                 log_path=log_path,
                 input_text=prompt,
@@ -934,6 +1450,7 @@ def run_session(
     json_output: bool = False,
     input_root: Path | None = None,
 ) -> Path:
+    reserve_agent_call(workspace, stage, suffix)
     details: dict[str, object] = dict(metadata or {})
     log_path = session_log_path(workspace, stage, suffix)
     log_path.parent.mkdir(parents=True, exist_ok=True)
@@ -2350,18 +2867,46 @@ def _goal_scope(
                 private / "target/to_be_improved_skills"
             )
             cluster_dirs = recall_skills_mod.skill_dirs(cluster_source)
-            leaves = recall_skills_mod.skill_type_checker.leaf_paths(
-                taxonomy_path
+            recall_selection = (
+                ACTIVE_EXECUTION_CONFIG.get("phases", {}).get("recall", {})
             )
-            recall_config = recall_skills_mod.load_config(recall_config_path)
-            matching_data = recall_skills_mod.recall(
-                diagnosis,
-                metadata,
-                skill_dirs,
-                cluster_dirs,
-                leaves,
-                recall_config,
-            )
+            if recall_selection.get("kind") == "embedding-service":
+                embedding_config = {
+                    **recall_selection,
+                    "skills_root": str(
+                        private / "target/to_be_improved_skills"
+                    ),
+                }
+                try:
+                    matching_data = embedding_recall(
+                        diagnosis, metadata, skill_dirs, embedding_config
+                    )
+                except (EmbeddingServiceError, KeyError, OSError, ValueError):
+                    if recall_selection.get("on_error", "fallback") != "fallback":
+                        raise
+                    leaves = recall_skills_mod.skill_type_checker.leaf_paths(
+                        taxonomy_path
+                    )
+                    recall_config = recall_skills_mod.load_config(recall_config_path)
+                    matching_data = recall_skills_mod.recall(
+                        diagnosis, metadata, skill_dirs, cluster_dirs, leaves, recall_config
+                    )
+                    matching_data["matching"]["fallback_from"] = recall_selection.get(
+                        "algorithm"
+                    )
+            else:
+                leaves = recall_skills_mod.skill_type_checker.leaf_paths(
+                    taxonomy_path
+                )
+                recall_config = recall_skills_mod.load_config(recall_config_path)
+                matching_data = recall_skills_mod.recall(
+                    diagnosis,
+                    metadata,
+                    skill_dirs,
+                    cluster_dirs,
+                    leaves,
+                    recall_config,
+                )
             scoped_matches = [
                 row
                 for row in matching_data["clusters"]
@@ -2792,16 +3337,42 @@ def merge_update_ops(ops: list[dict[str, object]]) -> dict[str, object]:
     return {"op": "update", "skills": skills}
 
 
-SEVERITY_WEIGHT = {"low": 1.0, "medium": 2.0, "high": 3.0, "critical": 4.0}
+SEVERITY_WEIGHT = {"low": 0.25, "medium": 0.5, "high": 0.75, "critical": 1.0}
+
+
+def configured_priority_score() -> dict[str, float]:
+    defaults = {
+        "severity_weight": 0.4,
+        "confidence_weight": 0.3,
+        "detector_strength_weight": 0.2,
+        "skill_match_weight": 0.1,
+        "detector_saturation_scale": 4.0,
+    }
+    try:
+        config = json.loads((ROOT / "common/preprocessing-config.json").read_text())
+    except (OSError, json.JSONDecodeError):
+        return defaults
+    supplied = ((config.get("evolution_policy") or {}).get("priority_score") or {})
+    result = {
+        name: float(supplied.get(name, default))
+        for name, default in defaults.items()
+    }
+    weight_names = [name for name in result if name.endswith("_weight")]
+    total = sum(max(0.0, result[name]) for name in weight_names)
+    if total <= 0 or result["detector_saturation_scale"] <= 0:
+        return defaults
+    for name in weight_names:
+        result[name] = max(0.0, result[name]) / total
+    return result
 
 
 def rank_edit(workspace: Path, task: dict[str, object]) -> dict[str, object]:
     """Score one same-skill edit for the merge gate.
 
-    ``score`` is the detector score. ``match_score`` is the label-matching
-    score for a skill this edit touches. ``super_score`` is
-    severity weight × confidence × (1 + |score|) + match_score.
-    Missing severity does not inflate the score: the weight stays 1.
+    ``score`` is the detector score. The score is compressed so detector
+    implementations with different raw ranges cannot dominate the gate.
+    ``super_score`` is a bounded weighted sum of severity, confidence,
+    detector strength, and normalized skill-match strength.
     """
     cluster = str(task["cluster"])
     confidence = float(task.get("confidence") or 0)
@@ -2843,13 +3414,30 @@ def rank_edit(workspace: Path, task: dict[str, object]) -> dict[str, object]:
                     match_score = max(match_score, float(skill.get("score") or 0))
                 except (TypeError, ValueError):
                     continue
-    weight = SEVERITY_WEIGHT.get(severity, 1.0)
-    super_score = weight * confidence * (1 + abs(raw_score)) + match_score
+    severity_score = SEVERITY_WEIGHT.get(severity, 0.25)
+    confidence_score = max(0.0, min(1.0, confidence))
+    policy = configured_priority_score()
+    detector_score = abs(raw_score) / (
+        abs(raw_score) + policy["detector_saturation_scale"]
+    )
+    normalized_match_score = max(0.0, min(1.0, match_score))
+    super_score = (
+        policy["severity_weight"] * severity_score
+        + policy["confidence_weight"] * confidence_score
+        + policy["detector_strength_weight"] * detector_score
+        + policy["skill_match_weight"] * normalized_match_score
+    )
     return {
         "severity": severity or None,
         "confidence": round(confidence, 6),
         "score": round(raw_score, 6),
         "match_score": round(match_score, 6),
+        "score_components": {
+            "severity": round(severity_score, 6),
+            "confidence": round(confidence_score, 6),
+            "detector_strength": round(detector_score, 6),
+            "skill_match": round(normalized_match_score, 6),
+        },
         "super_score": round(super_score, 6),
     }
 
@@ -2863,6 +3451,7 @@ def _source_record(task: dict[str, object]) -> dict[str, object]:
         "severity": rank.get("severity"),
         "score": rank.get("score", 0),
         "match_score": rank.get("match_score", 0),
+        "score_components": rank.get("score_components", {}),
         "super_score": rank.get("super_score", 0),
         "goal": task.get("skill_goal", ""),
         "sections": [
@@ -6454,7 +7043,7 @@ def optimize_session_context(
 
 
 def execute(args: argparse.Namespace) -> None:
-    global ACTIVE_BACKEND
+    global ACTIVE_BACKEND, ACTIVE_EXECUTION_CONFIG, ACTIVE_EMBEDDING_PROVIDER
     workspace = (ROOT / "workspace/runs" / args.run_id).resolve()
     if args.init:
         initialize_workspace(workspace)
@@ -6472,6 +7061,57 @@ def execute(args: argparse.Namespace) -> None:
         require_seed_inputs(workspace)
         workspace = allocate_execution_workspace(workspace)
         args.run_id = workspace.name
+    try:
+        profile_path, deployment_profile = resolve_profile(
+            INSTALL_ROOT, getattr(args, "pipeline_profile", "full-agent")
+        )
+        super_config = load_super_config(INSTALL_ROOT / "config/super-config.json")
+        service_tiers = load_service_tiers(INSTALL_ROOT / "config/service-tiers.json")
+        execution_config = resolve_execution_config(
+            deployment_profile, super_config, service_tiers
+        )
+    except (ProfileError, SuperConfigError, ServiceTierError) as error:
+        raise SystemExit(str(error)) from error
+    profile_snapshot = workspace / "run/config/pipeline-profile.json"
+    atomic_write_json(profile_snapshot, deployment_profile)
+    atomic_write_json(workspace / "run/config/execution-config.json", execution_config)
+    ACTIVE_EXECUTION_CONFIG = execution_config
+    embedding_runtime = deployment_profile.get("embedding_runtime")
+    if isinstance(embedding_runtime, dict):
+        try:
+            validate_embedding_runtime(embedding_runtime)
+            ACTIVE_EMBEDDING_PROVIDER = EmbeddingProvider(
+                embedding_runtime,
+                INSTALL_ROOT / "services/embedding_api/server.py",
+            )
+        except (OSError, RuntimeError, ValueError) as error:
+            raise SystemExit(f"cannot start embedding runtime: {error}") from error
+    else:
+        ACTIVE_EMBEDDING_PROVIDER = None
+    write_envelope(
+        workspace / "run/status/control-plane/profile.json",
+        build_envelope(
+            run_id=args.run_id,
+            phase="control-plane",
+            item_id="profile",
+            implementation={
+                "kind": "deterministic",
+                "name": "profile-loader",
+                "version": "1",
+                "config_digest": deployment_profile["config_digest"],
+            },
+            status="completed",
+            started_at=datetime.now(UTC).isoformat(),
+            output_ref=artifact_ref(profile_snapshot, relative_to=workspace),
+            decision={
+                "disposition": "selected",
+                "mode": "enabled",
+                "reason_codes": [deployment_profile["name"]],
+            },
+            measurements={"wall_ms": 0},
+        ),
+    )
+    print(f"pipeline profile: {deployment_profile['name']} ({profile_path})")
     ACTIVE_BACKEND = select_backend(args.agent, args.allow_local_fallback)
     args.model = configured_model(ACTIVE_BACKEND, args.model)
     print(f"selected model: {args.model}")
@@ -6479,7 +7119,19 @@ def execute(args: argparse.Namespace) -> None:
     if args.build:
         build_images()
 
+    workflow: StateMachineRuntime | None = None
+
+    def move(decision: TransitionDecision) -> None:
+        if workflow is None:
+            return
+        workflow.transition(decision)
+        atomic_write_json(
+            workspace / "run/state-machine/snapshot.json", workflow.snapshot()
+        )
+
     try:
+        if ACTIVE_EMBEDDING_PROVIDER is not None:
+            ACTIVE_EMBEDDING_PROVIDER.start()
         if resuming:
             continue_operations(
                 workspace,
@@ -6504,6 +7156,18 @@ def execute(args: argparse.Namespace) -> None:
                 f"{args.resume_from}: {workspace}"
             )
             return
+        workflow = StateMachineRuntime(
+            load_machine(INSTALL_ROOT / "config/state-machine.json"),
+            run_id=args.run_id,
+            item_id="pipeline",
+            database=workspace.parents[1] / "optimization.sqlite",
+            journal=workspace / "logs/state-transitions.jsonl",
+        )
+        move(
+            TransitionDecision(
+                "NORMALIZE", "run_started", "normalize.vendor-json-v1", 1.0
+            )
+        )
         write_status(workspace, "preprocessing", args.run_id, "started")
         config_path = ROOT / "common/preprocessing-config.json"
         try:
@@ -6558,6 +7222,53 @@ def execute(args: argparse.Namespace) -> None:
         complete_session(
             workspace, "preprocessing", args.run_id, preprocessing_outputs
         )
+        move(
+            TransitionDecision(
+                "DETECT", "normalized", "detect.rules-v1", 1.0
+            )
+        )
+        move(
+            TransitionDecision(
+                "POLICY", "findings_ready", "policy.fixed-v1", 1.0
+            )
+        )
+        deployment_profile, compiled_policy = compile_runtime_policy(
+            workspace,
+            args.run_id,
+            deployment_profile,
+            execution_config,
+        )
+        execution_config = resolve_execution_config(
+            deployment_profile, super_config, service_tiers
+        )
+        ACTIVE_EXECUTION_CONFIG = execution_config
+        atomic_write_json(
+            workspace / "run/config/execution-config.json", execution_config
+        )
+        semantic_mode = deployment_profile["phases"]["semantic_prefilter"]["mode"]
+        if semantic_mode in {"observe", "enabled"}:
+            move(
+                TransitionDecision(
+                    "SEMANTIC_FILTER",
+                    "semantic_observe" if semantic_mode == "observe" else "semantic_enabled",
+                    deployment_profile["phases"]["semantic_prefilter"]["algorithm"],
+                    1.0,
+                )
+            )
+            run_semantic_prefilter_observer(
+                workspace, args.run_id, deployment_profile
+            )
+            move(
+                TransitionDecision(
+                    "LABEL_SKILLS", "filter_complete", probability=1.0
+                )
+            )
+        else:
+            move(
+                TransitionDecision(
+                    "LABEL_SKILLS", "semantic_bypassed", probability=1.0
+                )
+            )
 
         metadata_path = (
             workspace / "target/to_be_improved_skills_metadata/metadata.json"
@@ -6601,17 +7312,36 @@ def execute(args: argparse.Namespace) -> None:
             detach_skill_changelogs(workspace)
             pipeline_contracts.validate_metadata(metadata_path, seed_names)
         complete_session(workspace, "label-skills", args.run_id, [metadata_path])
+        move(
+            TransitionDecision(
+                "SELECT_UNITS", "labels_ready", "selection.evidence-gate-v1", 1.0
+            )
+        )
 
         unit_kind = getattr(args, "evolution_unit", "cluster")
         clusters = evolution_units(workspace, active_clustered, unit_kind)
+        if unit_kind == "finding":
+            clusters = low_cost_allowed_scopes(
+                workspace, clusters, deployment_profile
+            )
         refuse_blocked_scopes(workspace, active_clustered, unit_kind)
         if not clusters:
+            move(TransitionDecision("COMPLETE", "no_units", probability=1.0))
             publish_inventory(workspace)
             print(
                 f"completed run {args.run_id}: no evolution units remained after "
                 "the configured selection and infrastructure filters"
             )
             return
+        move(
+            TransitionDecision(
+                "DIAGNOSE",
+                "units_selected",
+                deployment_profile["phases"]["diagnosis"]["algorithm"],
+                1.0,
+                metadata={"unit_count": len(clusters), "unit_kind": unit_kind},
+            )
+        )
         scope_clustered = active_clustered or unit_kind == "finding"
         cluster_workers = getattr(args, "cluster_workers", DEFAULT_CLUSTER_WORKERS)
         op_workers = getattr(args, "op_workers", DEFAULT_OP_WORKERS)
@@ -6626,11 +7356,40 @@ def execute(args: argparse.Namespace) -> None:
             not args.agent_installed,
             unit_kind,
         )
+        move(
+            TransitionDecision(
+                "RECALL",
+                "diagnosis_complete",
+                deployment_profile["phases"]["recall"]["algorithm"],
+                1.0,
+            )
+        )
+        move(
+            TransitionDecision(
+                "GOAL",
+                "recall_complete",
+                deployment_profile["phases"]["goal"]["algorithm"],
+                1.0,
+            )
+        )
         successful_clusters = [
             cluster
             for cluster in clusters
             if (workspace / "run" / cluster / "evolve-goal.json").is_file()
         ]
+        has_operations = any(
+            ((json.loads((workspace / "run" / cluster / "evolve-goal.json").read_text()).get("action") or {}).get("ops") or [])
+            for cluster in successful_clusters
+        )
+        if has_operations:
+            move(
+                TransitionDecision(
+                    "OPTIMIZE",
+                    "change_proposed",
+                    deployment_profile["phases"]["optimize"]["algorithm"],
+                    1.0,
+                )
+            )
         fanout_operations(
             workspace,
             args.run_id,
@@ -6642,6 +7401,26 @@ def execute(args: argparse.Namespace) -> None:
             getattr(args, "max_ops_per_skill", None),
             getattr(args, "min_super_score", None),
         )
+        if has_operations:
+            move(
+                TransitionDecision(
+                    "VERIFY",
+                    "candidate_ready",
+                    deployment_profile["phases"]["verify"]["algorithm"],
+                    1.0,
+                )
+            )
+            move(
+                TransitionDecision(
+                    "PUBLISH",
+                    "verified",
+                    deployment_profile["phases"]["publish"]["algorithm"],
+                    1.0,
+                )
+            )
+            move(TransitionDecision("COMPLETE", "published", probability=1.0))
+        else:
+            move(TransitionDecision("COMPLETE", "no_change", probability=1.0))
         write_pipeline_summary(workspace, successful_clusters)
         sync_skill_changelogs(workspace)
         publish_inventory(workspace)
@@ -6649,7 +7428,28 @@ def execute(args: argparse.Namespace) -> None:
         print(f"completed run {args.run_id}: {workspace}")
 
     finally:
-        pipeline_metrics.write_run_report(workspace)
+        if ACTIVE_EMBEDDING_PROVIDER is not None:
+            ACTIVE_EMBEDDING_PROVIDER.stop()
+            ACTIVE_EMBEDDING_PROVIDER = None
+        try:
+            atomic_write_json(
+                workspace / "logs/phase-adapter-metrics.json",
+                summarize_phase_envelopes(workspace),
+            )
+        except Exception as error:
+            print(f"phase adapter metrics failed: {error}", file=sys.stderr)
+        report_path = pipeline_metrics.write_run_report(workspace)
+        try:
+            report = json.loads(report_path.read_text())
+            StudyStore(workspace.parents[1] / "optimization.sqlite").record_run(
+                workspace.name,
+                str(ACTIVE_EXECUTION_CONFIG.get("config_digest") or "unknown"),
+                {"overrides": {}},
+                {},
+                {"runtime_report": report, "source": "pipeline-finalizer"},
+            )
+        except Exception as error:
+            print(f"online learning run capture failed: {error}", file=sys.stderr)
         try:
             pipeline_metrics.write_phase_metrics_summary(workspace.parent)
         except Exception as error:
@@ -6691,6 +7491,14 @@ def parse_args() -> argparse.Namespace:
         help="override active_profile from preprocessing-config.json",
     )
     parser.add_argument(
+        "--pipeline-profile",
+        default="full-agent",
+        help=(
+            "deployment profile name under profiles/ or a JSON path "
+            "(default: full-agent)"
+        ),
+    )
+    parser.add_argument(
         "--experiment-profile",
         action="append",
         default=[],
@@ -6723,7 +7531,7 @@ def parse_args() -> argparse.Namespace:
         help=(
             "merge up to this many update edits of the same skill into one "
             "optimize, verify, and judge pass "
-            "(default: evolution_policy.max_ops_per_skill, or 5)"
+            "(default: evolution_policy.max_ops_per_skill, currently 3)"
         ),
     )
     parser.add_argument(
@@ -6731,7 +7539,7 @@ def parse_args() -> argparse.Namespace:
         type=float,
         help=(
             "same-skill edits below this super score do not join the bundle "
-            "(default: evolution_policy.min_super_score, or 0)"
+            "(default: evolution_policy.min_super_score, currently 0.65)"
         ),
     )
     parser.add_argument(
@@ -6740,7 +7548,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--agent",
-        choices=("auto", "cursor", "codex", "claude", "docker-claude"),
+        choices=("auto", *KNOWN_BACKENDS),
         default="auto",
         help="agent backend; auto uses the single active entry in agent-config.json",
     )

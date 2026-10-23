@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "tiers": {
+    "0": {"name": "deterministic", "description": "rules, regex, scripts, hashes, schemas"},
+    "1": {"name": "embedding", "description": "embedding or classifier model, normally at or below 1B parameters"},
+    "2": {"name": "small-generation", "description": "small local or hosted LLM such as a 4B-class model, or JEV structured generation"},
+    "3": {"name": "large-reasoning", "description": "large LLM or full agent session with tools"}
+  },
+  "services": {
+    "local-deterministic": {"cost_tier": 0, "protocol": "in-process", "capabilities": ["parse", "rules", "schema-validation", "scoring", "atomic-write"]},
+    "shared-embedding": {"cost_tier": 1, "protocol": "embedding-api/v1", "capabilities": ["embed", "classify", "rank", "search"]},
+    "small-json-llm": {"cost_tier": 2, "protocol": "generation-api/v1", "capabilities": ["generate-json", "classify", "extract", "jev"]},
+    "large-agent": {"cost_tier": 3, "protocol": "agent-cli/v1", "capabilities": ["generate-json", "reason", "edit-files", "use-tools", "verify"]}
+  }
+}
