@@ -1241,7 +1241,10 @@ def dsh_command(prompt: str, model: str | None = None) -> list[str]:
     if not patch and model == "flint":
         patch = str(ROOT / "config/dsh-flint.patch.yml")
     if patch:
-        command.extend(["--patch", patch])
+        patch_path = Path(patch).expanduser()
+        if not patch_path.is_absolute():
+            patch_path = ROOT / patch_path
+        command.extend(["--patch", str(patch_path.resolve())])
     command.append(prompt)
     return command
 

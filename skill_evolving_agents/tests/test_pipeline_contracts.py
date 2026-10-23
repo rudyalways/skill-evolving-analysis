@@ -2100,6 +2100,22 @@ class ContractTests(unittest.TestCase):
                     "fix it",
                 ],
             )
+            with patch.dict(
+                os.environ,
+                {"SKILL_EVOLVER_DSH_PATCH": "config/dsh-deepseek-account.patch.yml"},
+                clear=True,
+            ):
+                self.assertEqual(
+                    runner.dsh_command("fix it", "deepseek-flash"),
+                    [
+                        "/opt/dsh",
+                        "--profile",
+                        "headless",
+                        "--patch",
+                        str(AGENTS / "config/dsh-deepseek-account.patch.yml"),
+                        "fix it",
+                    ],
+                )
         with patch.object(
             runner, "resolve_hermes_binary", return_value="/opt/hermes"
         ):
