@@ -1,0 +1,4 @@
+interface:
+  display_name: "Verify Acceptance States"
+  short_description: "Verify every user-facing acceptance state end to end in the running app before…"
+  default_prompt: "Use $verify-acceptance-states for this request."

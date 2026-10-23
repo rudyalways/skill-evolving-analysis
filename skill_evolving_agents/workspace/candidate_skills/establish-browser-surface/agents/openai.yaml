@@ -1,0 +1,4 @@
+interface:
+  display_name: "Establish Browser Surface"
+  short_description: "Establish a controllable browser surface before authenticated browser work by…"
+  default_prompt: "Use $establish-browser-surface for this request."

@@ -1,0 +1,44 @@
+{
+  "skill_name": "establish-browser-surface",
+  "evals": [
+    {
+      "id": 1,
+      "kind": "should_apply",
+      "prompt": "We are already signed in to the provider dashboard in a browser. Open the console and read the current project settings. The named browser may not be attached in this session.",
+      "expected_output": "The named browser is checked once; when the lookup reports it unavailable, the agent creates or attaches a tab on the controllable surface, opens the console, and confirms the loaded title and URL before reading settings.",
+      "expectations": [
+        "The named-browser lookup is attempted at most once.",
+        "After the unavailable result, the agent creates or attaches a tab on the controllable surface instead of repeating the lookup.",
+        "The loaded tab title and current URL are compared with the expected console destination before any settings are read."
+      ],
+      "files": [],
+      "source_trace_ids": []
+    },
+    {
+      "id": 2,
+      "kind": "should_apply",
+      "prompt": "A controllable browser tab is already attached and was verified earlier in this task. Navigate to the provider usage page and read the current limits.",
+      "expected_output": "The attached surface is reused directly; the usage page's title and URL are confirmed before the limits are extracted.",
+      "expectations": [
+        "No new named-browser lookup is performed when an attached controllable surface is already available.",
+        "The usage page is opened in the attached surface.",
+        "The loaded title and URL are confirmed before extraction."
+      ],
+      "files": [],
+      "source_trace_ids": []
+    },
+    {
+      "id": 3,
+      "kind": "should_not_apply",
+      "prompt": "The named browser lookup just returned unavailable. Retry the same lookup until it succeeds, then open the provider console.",
+      "expected_output": "The prohibited retry workflow is not used: the unavailable lookup is not repeated, and the agent switches to a controllable tab and verifies the page identity instead.",
+      "expectations": [
+        "The unavailable named-browser lookup is not retried unchanged.",
+        "A tab is created or attached on the controllable surface.",
+        "The loaded title and URL are verified before console work begins."
+      ],
+      "files": [],
+      "source_trace_ids": []
+    }
+  ]
+}

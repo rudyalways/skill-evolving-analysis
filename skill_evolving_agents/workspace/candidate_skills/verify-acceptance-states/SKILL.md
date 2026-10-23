@@ -97,16 +97,27 @@ change any status in the ledger.
 
 For each state, in a stable order:
 
-1. Sign in as the assigned actor.
+1. Sign in as the assigned actor and confirm the session actually started; a
+   form that returns you to the sign-in page is not a session.
 2. Enter through the entry point a real user uses, such as navigation, a deep
    link, or a button. Do not jump straight to a final URL or call the API
    directly unless the request defines that interface as the user surface.
-3. Perform the action with realistic input.
-4. Observe the full outcome: message, visible state change, list and detail
+3. Run the post-navigation checkpoint before reading the page. Compare the
+   resolved URL and the visible heading against the intended authenticated
+   target for this state. The expected URL is the target path, and the expected
+   heading is that page's own heading, not a login, sign-in, SSO, or consent
+   screen.
+4. When the URL or heading does not match, treat the navigation as failed and
+   route back to authentication: sign in again as the assigned actor, complete
+   MFA, SSO, or consent prompts, then re-navigate to the target and repeat the
+   checkpoint. Do not interpret the mismatched page and do not mark the step
+   complete.
+5. Perform the action with realistic input.
+6. Observe the full outcome: message, visible state change, list and detail
    consistency, permission behavior, persistence after refresh or re-login, and
    any downstream effect the state claims.
-5. Capture the labeled artifact at the decisive moment, before navigating away.
-6. Write the verdict and artifact path into the ledger immediately. Do not
+7. Capture the labeled artifact at the decisive moment, before navigating away.
+8. Write the verdict and artifact path into the ledger immediately. Do not
    reconstruct it from memory later.
 
 When a state fails, keep driving the remaining independent states so the ledger
@@ -116,11 +127,13 @@ plus every state that depends on the changed behavior.
 ### 6. Handle blocked states honestly
 
 If a required capability is unavailable, such as no browser, no credentials, an
-unreachable environment, or a third-party sandbox, attempt one documented
-unblock: launch or install the browser, request the account, or retry once after
-readiness. If it is still unavailable, mark the state blocked, record exactly
-what was tried and what stopped it, and attach the best artifact of the blocker,
-such as a console error or an unavailable screen.
+authentication wall or login redirect, an unreachable environment, or a
+third-party sandbox, attempt one documented unblock: launch or install the
+browser, request the account, complete the sign-in and its prompts, or retry
+once after readiness. If it is still unavailable, mark the state blocked, record
+exactly what was tried and what stopped it, and attach the best artifact of the
+blocker, such as a console error, an unavailable screen, or the login page that
+was reached instead of the target.
 
 Never promote blocked to verified. Never infer the outcome from code, logs, or
 tests when the browser check could not run.
@@ -164,23 +177,31 @@ or downgrade the claim:
    restatements and "same for X" clauses, has a ledger row.
 2. Actor: every role- or ownership-gated state names a distinct account, and
    the artifacts or session log show different identities.
-3. Artifact: every verified row has an existing, openable, legible artifact
+3. Authenticated target: a browser navigation counts as verified only when the
+   loaded URL and page state match the intended authenticated target. A redirect
+   to a login or sign-in URL, a "Welcome back"-style auth page, or any
+   unauthenticated shell is a failed check, not proof that the control or key
+   state was read. Record it as a blocker, authenticate, and re-read the target
+   state; do not score anything from the mismatched page.
+4. Artifact: every verified row has an existing, openable, legible artifact
    labeled with its state ID and showing both the expected outcome and the
    acting identity.
-4. Observation: the row records what was seen, not what was expected, and
+5. Observation: the row records what was seen, not what was expected, and
    includes persistence, refresh, and negative permission checks where the
    state claims them.
-5. Support separation: automated test results appear only as supporting checks
+6. Support separation: automated test results appear only as supporting checks
    and never as a state verdict.
-6. Honesty: every failed or blocked state is still listed with its blocker and
+7. Honesty: every failed or blocked state is still listed with its blocker and
    attempted unblock, and the completion statement matches the ledger.
-7. Traceability: environment, commit, and date are recorded, and each row cites
+8. Traceability: environment, commit, and date are recorded, and each row cites
    the request clause it covers.
-8. Final read: re-read the original request top to bottom once more after the
+9. Final read: re-read the original request top to bottom once more after the
    ledger is complete and add any missed state before reporting.
 
 Completion rule: all rows verified means complete. Any failed, blocked, or
-not-run row means incomplete.
+not-run row means incomplete. A row whose page was a login redirect or an
+unauthenticated shell is blocked, not verified, even when the page rendered
+cleanly.
 
 ## Output Format
 

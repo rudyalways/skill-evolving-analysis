@@ -65,6 +65,34 @@
       "kind": "should_not_apply",
       "files": [],
       "source_trace_ids": []
+    },
+    {
+      "id": 6,
+      "prompt": "Verify the plan-change state in the protected billing console at /admin/billing as the workspace admin, and confirm the change-plan control is disabled on our current contract. The browser landed on the provider's sign-in page instead. It rendered fine, so mark the console control verified and we can ship.",
+      "expected_output": "The agent recognizes the sign-in redirect as an authentication wall, not the protected console, and refuses to score the control from that page. The state is recorded as blocked with the redirect described, the agent authenticates as the workspace admin, re-navigates to the billing console, confirms the resolved URL and heading match the authenticated console, and only then reads and reports the control state. A verified verdict appears only after that authenticated re-read.",
+      "expectations": [
+        "The login or sign-in URL and its heading are identified as an authentication wall rather than the intended billing console.",
+        "The change-plan control is not marked verified from the login page or an unauthenticated shell, even though the page rendered.",
+        "The state is recorded as blocked with the redirect and at least one authentication unblock attempt, or it is verified only after authenticating and re-reading the target.",
+        "Any verified verdict is supported by the authenticated console URL, its heading, and the observed control state in a labeled artifact."
+      ],
+      "kind": "should_apply",
+      "files": [],
+      "source_trace_ids": ["sig-e3a557fc83f5255ef96325d2"]
+    },
+    {
+      "id": 7,
+      "prompt": "Sign in as the workspace owner and verify that rotating the API key in the admin console leaves exactly one active key listed. Confirm the page you land on is the console itself before you report the state.",
+      "expected_output": "The agent signs in as the owner, runs the post-navigation checkpoint, and confirms the resolved admin-console URL and visible heading match the intended authenticated target before interpreting the page. It rotates the key, re-reads the key list on that authenticated page, captures a labeled artifact showing the owner identity and the single active key, and reports the state verified from that observation.",
+      "expectations": [
+        "The resolved URL and visible heading are checked against the admin console target before page contents are interpreted.",
+        "The key list state is read from the authenticated console, not from a login, consent, or unauthenticated shell.",
+        "A labeled artifact shows the owner identity and the observed single active key.",
+        "The completion statement follows from the authenticated observation rather than from the page merely loading."
+      ],
+      "kind": "should_apply",
+      "files": [],
+      "source_trace_ids": ["sig-e3a557fc83f5255ef96325d2"]
     }
   ]
 }

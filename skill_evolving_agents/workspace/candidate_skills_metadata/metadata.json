@@ -62,6 +62,42 @@
       }
     },
     {
+      "skill": "establish-browser-surface",
+      "description": "Establish a controllable browser surface before authenticated browser work; treat an unavailable named-browser lookup as a switch signal rather than a retry, and confirm the loaded page identity before acting.",
+      "skill_types": [
+        {
+          "weight": 0.9,
+          "type": "job/methodology/workflow"
+        },
+        {
+          "weight": 0.8,
+          "type": "job/verification/browser-check"
+        },
+        {
+          "weight": 0.6,
+          "type": "form/technique/steps"
+        }
+      ],
+      "unmatched_skill_types": [],
+      "lifecycle": {
+        "status": "evaluated",
+        "origin_run_id": "run-codex-01a15f-17turns-2026-10-23T14-55-sig-4cf9dd309e6216e3a445a73a-op-1",
+        "origin_finding_id": "sig-4cf9dd309e6216e3a445a73a",
+        "origin_session_ids": [
+          "01a15f0c-a159-71a2-82f4-250ac3fa262f"
+        ],
+        "distinct_sessions": 1,
+        "confidence": 0.91,
+        "evidence_records": 1,
+        "distinct_windows": 1,
+        "method_fingerprint": "method-v1:8362627187a46f3d598b366c",
+        "methodology_value": 0.345839,
+        "evaluated_at": "2026-10-23T07:05:34.680750+00:00",
+        "evaluation_kind": "structural",
+        "content_sha256": "ac6a08da77f7d43c5f7f20f6b7a822c0e7e8131d3140cb4227f6ccdc9d540467"
+      }
+    },
+    {
       "skill": "preserve-request-after-provider-rate-limit",
       "skill_types": [
         {
@@ -250,9 +286,9 @@
         "confidence": 0.81,
         "evidence_records": 3,
         "distinct_windows": 3,
-        "evaluated_at": "2026-10-23T06:19:35.317971+00:00",
+        "evaluated_at": "2026-10-23T07:03:18.449529+00:00",
         "evaluation_kind": "structural",
-        "content_sha256": "01645d2034aeadf535ad8d29b2785d419f65f58a185e929d3aaa7a1bef373c23"
+        "content_sha256": "91075c0bc1bb27466eae7d75c3654e9684e1f3947fb5666fe8c51bf800caa24c"
       }
     }
   ]
