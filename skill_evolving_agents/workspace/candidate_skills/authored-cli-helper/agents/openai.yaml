@@ -1,0 +1,4 @@
+interface:
+  display_name: "Authored Cli Helper"
+  short_description: "Author and validate a repository-local operational CLI helper with a stable…"
+  default_prompt: "Use $authored-cli-helper for this request."

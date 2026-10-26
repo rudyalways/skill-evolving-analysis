@@ -15,12 +15,12 @@ from typing import Any
 
 CORRECTION = re.compile(
     r"^(no(?:pe)?|wrong|wait|stop|actually|instead|that'?s not|not what i|"
-    r"i (?:said|meant|asked|wanted)|don'?t do that|why did you)\b",
+    r"i (?:said|meant|asked|wanted)|don'?t do that|why did you|why (?:did you )?stop)\b",
     re.IGNORECASE,
 )
 KEEP_GOING = re.compile(
     r"^(keep going|continue|keep at it|more|finish|go on|don'?t stop|"
-    r"you'?re not done|not done|keep iterating)\b",
+    r"you'?re not done|not done|keep iterating|why (?:did you )?stop)\b",
     re.IGNORECASE,
 )
 TOKEN = re.compile(r"[A-Za-z0-9_]+")
@@ -82,6 +82,21 @@ def _methodology_miner():
         )
         if spec is None or spec.loader is None:
             raise ImportError(f"cannot load methodology miner: {path}")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+    return module
+
+
+def _resource_opportunity_miner():
+    try:
+        from . import resource_opportunities as module
+    except ImportError:
+        path = Path(__file__).with_name("resource_opportunities.py")
+        spec = importlib.util.spec_from_file_location(
+            "trace_resource_opportunities", path
+        )
+        if spec is None or spec.loader is None:
+            raise ImportError(f"cannot load resource opportunity miner: {path}")
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
     return module
@@ -287,7 +302,11 @@ def _session_findings(
         emit(
             "keep-going-loop",
             keep_indexes,
-            "high" if len(keep_indexes) >= 4 else "medium",
+            # Reaching the configured loop threshold is already a strong
+            # unresolved-work signal. Labeling two or three occurrences as
+            # medium made the default high-severity selector silently negate
+            # min_keep_going=2.
+            "critical" if len(keep_indexes) >= 4 else "high",
             min(0.95, 0.55 + len(keep_indexes) * 0.08),
             -2 * len(keep_indexes),
             {"count": len(keep_indexes)},
@@ -560,6 +579,7 @@ def _rank_key(row: dict[str, Any]) -> tuple[Any, ...]:
     features = row.get("features") or {}
     quality = features.get("quality") or {}
     return (
+        -int(features.get("candidate_source") == "resource_opportunity"),
         -SEVERITY_RANK[row["severity"]],
         -float(row["confidence"]),
         -float(quality.get("value") or 0),
@@ -579,6 +599,7 @@ def _select_findings(
         config.get("cut_candidate_min_confidence", minimum_confidence)
     )
     methodology_config = detector_config.get("_methodology") or {}
+    resource_config = detector_config.get("_resource_opportunities") or {}
     methodology_confidence = float(
         methodology_config.get("min_confidence", minimum_confidence)
     )
@@ -589,6 +610,7 @@ def _select_findings(
         source = (row.get("features") or {}).get("candidate_source")
         is_methodology = source in {"methodology", "methodology_consolidated"}
         is_cut_candidate = source in {"cut_window", "cut_pattern"}
+        is_resource_opportunity = source == "resource_opportunity"
         decision = {
             "schema_version": 1,
             "finding_id": signal_id,
@@ -611,6 +633,10 @@ def _select_findings(
             decision.update(
                 {"disposition": "rejected", "reason": "methodology-disabled"}
             )
+        elif is_resource_opportunity and not resource_config.get("enabled", True):
+            decision.update(
+                {"disposition": "rejected", "reason": "resource-opportunities-disabled"}
+            )
         elif not source and SEVERITY_RANK[row["severity"]] < minimum_rank:
             decision.update(
                 {"disposition": "rejected", "reason": "below-min-severity"}
@@ -618,6 +644,8 @@ def _select_findings(
         elif float(row["confidence"]) < (
             methodology_confidence
             if is_methodology
+            else float(resource_config.get("min_confidence", minimum_confidence))
+            if is_resource_opportunity
             else candidate_confidence
             if is_cut_candidate
             else minimum_confidence
@@ -679,6 +707,11 @@ def _select_findings(
                     / min(len(trace_ids), len(kept["trace_ids"]))
                     >= overlap_threshold
                 )
+                and not (
+                    row_features.get("candidate_source") == "resource_opportunity"
+                    or (kept.get("features") or {}).get("candidate_source")
+                    == "resource_opportunity"
+                )
             ),
             None,
         )
@@ -703,7 +736,15 @@ def _select_findings(
     selected: list[dict[str, Any]] = []
     methodology_count = 0
     methodology_per_trace: Counter[str] = Counter()
+    reserved_resources = max(0, int(resource_config.get("reserved_selection_slots", 1)))
+    resource_rows = [
+        row for row in deduplicated
+        if (row.get("features") or {}).get("candidate_source") == "resource_opportunity"
+    ][:reserved_resources]
+    selected.extend(resource_rows)
     for row in deduplicated:
+        if row in selected:
+            continue
         if len(selected) >= limit:
             break
         source = (row.get("features") or {}).get("candidate_source")
@@ -794,12 +835,17 @@ def run(
         )
     detector_config = config["signals"]
     detector_config["_methodology"] = config.get("methodology") or {}
+    detector_config["_resource_opportunities"] = config.get("resource_opportunities") or {}
     findings = [
         finding
         for session_id, rows in sorted(sessions.items())
         for finding in _session_findings(session_id, rows, config)
     ]
     findings.extend(_methodology_miner().run(workspace, output_root, config))
+    resource_findings, resource_decisions = _resource_opportunity_miner().analyze(
+        workspace, output_root, config
+    )
+    findings.extend(resource_findings)
     findings.sort(key=lambda row: (row["detector"], row["signal_id"]))
     patterns = _patterns(findings)
     selected, selection_decisions = _select_findings(
@@ -834,6 +880,9 @@ def run(
             json.dumps(row, sort_keys=True) + "\n"
             for row in selection_decisions
         )
+    )
+    (root / "resource-opportunity-decisions.jsonl").write_text(
+        "".join(json.dumps(row, sort_keys=True) + "\n" for row in resource_decisions)
     )
     finding_root = output_root / "findings"
     if finding_root.exists():

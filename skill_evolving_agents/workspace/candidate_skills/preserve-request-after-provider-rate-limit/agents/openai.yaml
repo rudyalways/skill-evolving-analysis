@@ -1,4 +1,0 @@
-interface:
-  display_name: "Preserve Request After Provider Rate Limit"
-  short_description: "Apply the Preserve Request After Provider Rate Limit workflow when its…"
-  default_prompt: "Use $preserve-request-after-provider-rate-limit for this request."

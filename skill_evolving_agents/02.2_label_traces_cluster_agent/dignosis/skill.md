@@ -23,6 +23,14 @@ private reasoning or causality that is not supported by a failed/successful
 contrast. Reject generic workflows, task-instance constants, and facts visible
 directly in the initial task.
 
+For `features.candidate_source` equal to `resource_opportunity`, treat the
+deterministic resource evidence as part of the finding, not as incidental tool
+noise. Validate its occurrence count, boundedness, pacing, terminal condition,
+non-destructive classification, and script contract. Diagnose a reusable
+capability gap when those guards hold; reject it when the mechanic is one-off,
+unbounded, destructive, already supplied by an existing resource, or merely a
+thin wrapper around a single trivial command.
+
 ## Constraints
 
 Do not invent a capability path or hide a real gap under a vague fallback.

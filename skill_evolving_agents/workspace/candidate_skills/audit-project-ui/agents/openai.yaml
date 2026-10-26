@@ -1,0 +1,4 @@
+interface:
+  display_name: "Audit Project Ui"
+  short_description: "Review and improve Deep Prep web UI when work involves screenshots, page…"
+  default_prompt: "Use $audit-project-ui for this request."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Content Operations Delivery Plan Reference"
+  short_description: "Consult a durable navigational index for…"
+  default_prompt: "Use $content-operations-delivery-plan-reference for this request."

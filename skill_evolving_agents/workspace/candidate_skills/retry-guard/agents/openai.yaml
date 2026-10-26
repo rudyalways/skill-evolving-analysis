@@ -1,0 +1,4 @@
+interface:
+  display_name: "Retry Guard"
+  short_description: "Decide whether to repeat a tool action, poll, or wait, and bound the watching…"
+  default_prompt: "Use $retry-guard for this request."

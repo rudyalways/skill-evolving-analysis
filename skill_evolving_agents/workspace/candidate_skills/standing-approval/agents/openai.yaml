@@ -1,0 +1,4 @@
+interface:
+  display_name: "Standing Approval"
+  short_description: "After a named action is already approved, carry that approval through the…"
+  default_prompt: "Use $standing-approval for this request."

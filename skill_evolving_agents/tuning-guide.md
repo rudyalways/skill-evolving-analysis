@@ -27,7 +27,7 @@ semantic rejection. Service errors fail open to escalation.
 | Knob | Default | Reason |
 |---|---:|---|
 | detector selection confidence | 0.60 | Broad deterministic recall before later gates |
-| methodology value | 0.12 | Removes weak recipes while retaining useful observed values |
+| methodology value | 0.30 | Rejects marginal single-run recipes before a paid diagnosis call |
 | methodology confidence | 0.68 | Existing detectors are structured but still heuristic |
 | semantic relevant accept | 0.70 | Automation only on a strong category match |
 | semantic noise accept | 0.75 | Rejection requires stronger evidence than acceptance |
@@ -46,6 +46,128 @@ semantic rejection. Service errors fail open to escalation.
 Single-session generic and out-of-distribution creation are disabled. The
 explicit repeated-pattern and methodology exceptions remain available, with
 their higher confidence and evidence requirements.
+
+## Resource-discovery bias
+
+The current resource contract is intentionally evidence-gated, but that makes
+prose plus evals the path of least resistance. Goal must authorize a resource
+before Optimize may create it, and Goal normally sees one finding at a time.
+Consequently, a methodology can repeat the same mechanical steps across many
+runs without any single finding containing a finished reusable script,
+reference, asset, or delegated prompt. The complete Optimize template does not
+correct this bias because it is file-shape guidance, not authorization.
+
+This is a selection bias, not evidence that methodology skills never need
+resources. Methodologies should accumulate resources when repeated mechanics
+stabilize. Examples include:
+
+- promoting repeated parsing, polling, normalization, comparison, or validation
+  code into a tested script;
+- moving a growing provider matrix, schema, or decision table into references;
+- extracting a repeatedly regenerated starter deliverable into assets;
+- extracting a stable, bounded subtask into a delegated-agent prompt;
+- adding evals when a repeated failure and successful correction provide
+  observable cases.
+
+Do not solve the bias by creating all five directories. Empty or speculative
+resources increase maintenance cost and context noise. The planner needs
+cross-trace evidence and an explicit opportunity-search mode.
+
+The deterministic `resource-script-opportunity` detector now handles the
+highest-value evidence-only case: repeated polling mechanics. It normalizes
+supported status-command families, recognizes bounded shell loops, and emits a
+first-class `resource_opportunity` finding. One selection slot is reserved so
+an unrelated behavioral finding from the same trace cannot deduplicate or
+crowd it out.
+
+False positives are controlled before an agent call. A script opportunity must
+have at least three independent invocations, a provable finite loop bound,
+explicit pacing or backoff, an explicit terminal condition, non-destructive
+semantics, and confidence above the configured threshold. Every rejected and
+emitted candidate is written to
+`traces/derived/signals/resource-opportunity-decisions.jsonl` with reason codes
+for labeling and threshold search.
+Before emission, the detector also scans existing skill `scripts/` resources
+for the same provider/status family with pacing and termination behavior; an
+equivalent existing helper is rejected as duplication rather than proposed
+again.
+
+The initial detector deliberately covers polling/status families rather than
+all repeated shell commands. Expand command families only with labeled
+positive and near-miss fixtures; generic test, install, formatting, and one-off
+administration commands should not become wrapper scripts.
+
+### Proposed run control
+
+Add a profile-backed run parameter:
+
+```bash
+python3 run_pipeline.py RUN_ID --resource-discovery accumulate
+```
+
+Proposed values:
+
+| Mode | Behavior | Cost and risk |
+|---|---|---|
+| `evidence-only` | Current behavior. A resource requires direct support in the active finding. | Lowest cost; strongest prose-only bias. |
+| `accumulate` | Combine the finding with prior changelog observations and resource-opportunity counters for the same skill. Authorize a resource after recurrence and stability gates pass. | Recommended default after enough history exists. |
+| `prototype` | Ask a bounded planner to propose and test one high-value resource when traces show repeated mechanics but no finished file. | Highest cost; requires execution or use evidence and strict unused-resource penalties. |
+
+The selected mode must be snapshotted in `run/config`, included in each
+resource plan, and included in the learning-run configuration digest. It must
+not silently change between replay candidates.
+
+Suggested companion knobs:
+
+| Knob | Initial value | Meaning |
+|---|---:|---|
+| `resource.min_occurrences` | 3 | Repeated observations required before accumulated promotion |
+| `resource.min_distinct_sessions` | 2 | Prevent one long trace from looking like broad reuse |
+| `resource.max_prototypes_per_run` | 1 | Bound extra agent and verification cost |
+| `resource.allowed_kinds` | all five | Optional allowlist for scripts, references, assets, agents, and evals |
+| `resource.script_fixture_required` | true | A new script must run successfully on a representative fixture |
+| `resource.max_unused_rate` | 0.0 | Reject newly created resources that are neither routed nor exercised |
+
+Evidence-only polling detector knobs live under `resource_opportunities` in
+`common/preprocessing-config.json`: `min_invocations`,
+`min_loop_iterations`, `min_confidence`, `max_evidence_records`, and
+`reserved_selection_slots`.
+
+### Accumulation and promotion
+
+Each Goal decision should update a per-skill resource-opportunity record even
+when the decision is negative. Store the normalized mechanic, resource kind,
+evidence IDs, distinct sessions, confidence, stability, and the reason it was
+not yet promoted. Merge similar opportunities across runs.
+
+In `accumulate` mode, promote an opportunity only when:
+
+1. recurrence and distinct-session thresholds pass;
+2. inputs, outputs, and failure behavior are stable enough to specify;
+3. the resource reduces regeneration, instruction tokens, or observed errors;
+4. it does not duplicate an existing resource or baseline model capability;
+5. its validation contract is executable or otherwise observable.
+
+For scripts, Optimize must create a safe fixture and execute the script. For
+references, `SKILL.md` must route to the file conditionally. For assets, an
+eval must demonstrate reuse rather than mere presence. For delegated agents,
+the prompt must have a bounded responsibility and explicit handoff contract.
+Failed prototypes remain opportunity records; they do not enter the candidate
+skill inventory.
+
+Do not optimize acceptance rates against an unvalidated inventory. Seed and
+publication validation reports are first-class experiment artifacts. Count an
+excluded seed as an inventory-integrity failure, not as model recall, goal, or
+verification behavior. For run-level optimization, use the `outcome` object in
+`pipeline-summary.json`: inherited skill count is context, while accepted
+operation count and accepted changed skills are the treatment result. This
+prevents inherited directories from inflating apparent pipeline yield.
+
+Track at least these metrics by discovery mode: resource proposal rate,
+acceptance rate, execution or use rate, unused-resource rate,
+duplicated-content penalty, instruction-token reduction, behavioral lift,
+additional agent calls, and wall time. Use reviewed outcomes before changing
+the default mode.
 
 ## Semantic decision formula
 
@@ -222,3 +344,14 @@ Priority-score weights and detector saturation are now searchable knobs. The
 four weights are constrained to sum to approximately one. The runtime
 normalizes them defensively as well, so an invalid external override cannot
 silently inflate the score scale.
+
+### Methodology value floor
+
+`methodology.min_value_score` rejects weak methodology candidates before they
+consume a diagnosis call. `evolution_policy.min_methodology_value` applies the
+same floor again before a methodology edit can pass the quality gate. Keep the
+two values aligned. The default is `0.30`: trace trials showed that single-run
+phase-order findings at `0.2733` and `0.297889` both produced no-change after
+roughly one minute of DeepSeek diagnosis, while adding no reusable capability.
+Lower this only for research profiles that intentionally study marginal
+methodology candidates; do not lower it merely to increase operation count.

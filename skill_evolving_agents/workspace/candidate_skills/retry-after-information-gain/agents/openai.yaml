@@ -1,0 +1,4 @@
+interface:
+  display_name: "Retry After Information Gain"
+  short_description: "Decide whether another attempt is justified from the last recorded action…"
+  default_prompt: "Use $retry-after-information-gain for this request."

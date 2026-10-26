@@ -13,15 +13,49 @@ Checks cover changelog reversal, goal alignment, difficulty, unnecessary complex
 
 Do not set `action`. Judge does that. Do not hand-write `verification_steps`, `per_skill`, or `changelog`; `verification_from_goal.py` copies the runner-owned change manifest. Do not drop `problem`, `fix`, or `next` when a script fails. The runner prompt lists the mechanical standards. Apply that list and one run of the prescribed scripts. Do not open the checker source or the parent repository to re-derive them. Match a claimed section or directory name with a loose regex. Case, extra words, and heading level do not matter: `overview`, `## Overview`, and `# Overview` are the same name. Pass that claim when its content is new, deleted, or changed in the direction of the goal. That match is enough. Do not fail it because the wording is tighter than the goal, including "all of the following are true", when the goal's cases are present. Frontmatter `name` is lowercase hyphen-case, matches the directory, and is at most 64 characters. `description` is required, at most 1024 characters, and contains no angle brackets. Allowed frontmatter fields are name, description, license, compatibility, allowed-tools, and metadata. `SKILL.md` is at most 500 lines and contains no `TODO`, `[TODO`, `EXAMPLE_SCRIPT`, `EXAMPLE_REFERENCE`, or `EXAMPLE_ASSET` placeholder. No symbolic links and no file over 10MB. Reference files are one directory level deep. A named Python script must compile. A named `evals` directory contains `evals/evals.json` with the goal's positive and near-miss cases. Directories are only references, scripts, agents, assets, evals, or a goal-named other/ood directory. Create contains every claimed section and directory. Update changes every claimed section and leaves frontmatter, the preamble, and every unclaimed section identical to `target/raw_skills`; both copies exist. Delete removes the skill directory. Merge and split keep the source snapshot and remove only the sources the operation names. `changelog.json` already stores the content hashes; do not reimplement that digest. List each defect once in `penalties` as `{id, target}`. The runner prices that list and writes the skill score. The score starts at 1.0. The sections and directories this goal names share a 0.80 claim budget. `missing_section`, `missing_directory`, and `goal_contradiction` each cost one share. `missing_near_miss_eval` costs half a share. `heading_level`, `unclaimed_heading`, `tighter_wording`, and `description_shape` each cost 0.05, and those shape charges stop at 0.20, so shape alone stays at or above 0.80 and still passes. `replay_fail` costs 0.125, and one replay failure still passes. Do not charge a section or directory the goal did not name. The 8 core sections are the inventory, not the divisor. A script finding is one listed penalty, not a veto. Pass when the priced score is at least `pass_threshold`. Do not reject a skill because it has a heading or directory outside `common/skill_format.json`. Name that heading or directory as `other` or `ood` on the goal. An outside heading or directory that changes and was not named fails the diff. One that does not change does not fail the skill. Do not edit `target/raw_skills` after the copy is taken.
 
+A merge target may rewrite any section needed to preserve the named source
+capabilities; do not apply the narrow-update unchanged-section rule to it.
+Evaluate duplication against the exact named merge sources and target. An
+unrelated inventory skill is not a forbidden duplicate merely because its
+description is semantically similar.
+
+For every update that changes a `SKILL.md` section, also verify that the
+existing eval suite is preserved and a focused regression case sourced from
+the active finding was added or revised. A behavioral section diff without an
+eval delta fails the goal even when the changed prose is structurally valid.
+
+For update and merge, verify that every authored source resource under
+`scripts`, `references`, `assets`, delegated `agents`, and `evals` survives in
+the result unless a concrete matching `remove` item authorizes deletion. A
+merge unions source eval cases rather than selecting one suite. Generated
+`agents/openai.yaml` is not an authored delegated-agent resource and is
+regenerated after acceptance. Treat silent inherited-resource loss as a goal
+failure even when the model-authored resource plan originally said `omit`.
+
+For create and update, a positive resource decision requires a non-empty
+authored resource and a discoverable relative-path reference from `SKILL.md`
+for scripts, references, assets, and delegated prompts. An empty directory or
+generated `agents/openai.yaml` alone does not satisfy the claim. Confirm Python
+helpers compile before passing a scripts claim.
+
+Check provenance fidelity. A resource may not claim facts, headings, copied
+content, or digests absent from its finding contract. Do not fail a
+navigational reference for lacking a current digest when the contract marks
+`content_digest_available: false` and the Goal correctly asks for a runtime
+freshness check instead.
+
 ## Workflow
 
-The runner prompt contains one skill's complete concrete input JSON and its
-complete required output JSON. Treat the embedded input as authoritative.
+The runner prompt contains one skill's complete concrete input JSON and a
+compact exception-report schema. Treat the embedded input as authoritative.
 Evaluate its shared assertions from `checks`, its materialized applicability
 and assertions under the single `skills[].checks` item, and every item under
 `skills[].requirements`. Do not substitute a generic checklist. Return only
-the completed output JSON in the prompt; do not write the output file. The
-runner parses and contract-validates the response before writing it. It may
+failed assertion IDs, their evidence, priced penalties, concise feedback,
+replay state, and OOD observations. Omit passing assertions: the runner
+deterministically expands them and all runner-owned fields into the complete
+verification document. Do not write the output file. The runner parses,
+expands, and contract-validates the response before writing it. It may
 repeat the identical request when the response is malformed JSON or violates
 the output contract; this is response repair, not an optimization retry.
 
@@ -64,9 +98,10 @@ the configured minimum held-out count and pass rate and maximum false-positive
 rate. Development-only improvement cannot satisfy promotion.
 
 - The runner uses `verification_from_goal.py` to build the required output
-  shapes before prompting. Each verifier response contains one
-  `verification_steps` item and one `feedback.per_skill` item. The runner
-  aggregates them and copies the full changelog into the final output.
+  shape internally. Each verifier response is a compact exception report.
+  The runner materializes one `verification_steps` item and one
+  `feedback.per_skill` item, aggregates them, and copies the full changelog
+  into the final output.
   `retry_budget` and every `retries_used` value stay 0 because parser retries
   do not retry or modify a skill.
 - `verify_deleted.py` checks delete. The skill must be gone from `target/to_be_improved_skills`.

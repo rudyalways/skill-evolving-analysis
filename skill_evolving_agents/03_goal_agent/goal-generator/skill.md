@@ -28,6 +28,39 @@ For the repeated-pattern exception, verify `finding.json` identifies
 confidence and distinct-window thresholds. Otherwise choose an evidence-backed
 update or a no-change disposition.
 
+A `resource_opportunity` has a separate bounded exception. Use it only when
+the finding meets the configured resource confidence, occurrence, and
+independent-window thresholds; records no equivalent resource; includes all
+deterministic false-positive guards; and provides a non-empty contract for the
+named resource. Never generalize this exception to ordinary single-session
+signals.
+
+An authored-resource lifecycle is the second bounded resource exception. When
+`resource_evidence_mode` is `authored_lifecycle`, use the separately configured
+authored-resource thresholds instead of the independent-window threshold. It
+may qualify in one trace only when the finding records at least the configured
+number of distinct lifecycle stages (normally create, successful validation or
+execution, and revision or observed reuse), includes
+`successful-post-authoring-validation` plus the ordinary resource guards,
+records no equivalent resource, and provides the named resource contract. Do
+not reject such a finding merely because `distinct_windows` is one, and do not
+apply this exception to an unvalidated add-file event.
+
+Treat every resource contract as a provenance ceiling. For a reference
+opportunity with `content_available: false`, request only a navigational index,
+source locator, and runtime freshness-check procedure. Do not ask Optimize to
+copy source knowledge, exact headings, excerpts, or a current content digest
+that the finding does not contain. A later run may enrich the reference after
+the detector supplies that evidence.
+
+For any resource contract with `content_available: true`, compare the supplied
+content with the bounded `resources` rows in recalled-skill evidence. A skill
+description that claims the resource exists, an empty directory, a manifest,
+or a placeholder is not an applied effect when the captured content is absent
+or semantically different. In that case propose the smallest update that
+replaces or reconciles the resource and its verification; do not choose
+`no_change` merely because SKILL.md already names the expected path.
+
 For methodology findings, preserve only the generalized method in
 `features.lesson`: prerequisites, decision rule, failure guard, minimal
 successful sequence, and non-generic completion contract. Check
@@ -37,6 +70,29 @@ and remains provisional; cross-task consolidated evidence may be stable.
 Prefer updating a recalled skill. Use `no_change` when the candidate restates
 the prompt, says only to inspect/edit/test, embeds one-off paths or constants,
 or adds no information beyond the recalled skill.
+
+For trace-free inventory maintenance, treat
+`duplicate_create_evidence_collision` as provenance evidence that a create was
+published from a finding already applied to another current skill. Review the
+complete skill documents and prefer a merge when one result can preserve both
+capability surfaces without duplication. Do not reject this candidate merely
+because its maintenance wrapper has no turns; choose `no_change` when the
+documents establish genuinely separate responsibilities.
+When the candidate names exactly one `created_skill` and one `prior_owner`,
+merge into `prior_owner` by default and retire `created_skill`. Invent a new
+target name only when neither existing skill can represent the combined
+capability without misleading activation; explain that exception and check it
+against the rest of the inventory before proposing it.
+
+For a `resource_opportunity` finding, preserve its normalized mechanic and
+script contract. A detector recommendation of `resource=scripts` and
+`resource_decision=use` is rebuttable but strong evidence: choose `scripts:
+use` when the boundedness, pacing, termination, non-destructive, repetition,
+and fixture guards remain valid. Override it only with a concrete reason such
+as an equivalent existing script, unsafe semantics, a false normalization
+match, or insufficient independent invocations. Do not answer with the generic
+example reason that no repeated transformation exists when the finding records
+qualified repetitions.
 
 ## Constraints
 
@@ -86,8 +142,20 @@ with a goal to capture evidence-backed positive and near-miss behavioral cases.
 Do not request evals for purely subjective output unless the finding supplies
 observable acceptance criteria.
 
-Plan supporting resources explicitly. A directory goal is an authorization and
-an acceptance contract, not a request for an empty folder. Request only the
+For an update that changes any `SKILL.md` section, set the `evals` resource
+decision to `use`, include `evals` in `dirs`, and require at least one focused
+regression case sourced from the active finding. Preserve the existing eval
+suite. An update that changes only resource files or performs other
+directory-only maintenance may omit evals when it does not change behavior.
+
+Plan supporting resources explicitly. Every create, update, merge result, and
+split result must include `resource_plan`, with exactly one record for each of
+`scripts`, `references`, `assets`, `agents`, and `evals`. Each record has
+`resource`, `decision` (`use` or `omit`), a concrete `reason`, and `confidence`
+from 0 to 1. A `use` decision must have a matching canonical entry in `dirs`;
+an `omit` decision must not. This records both positive and negative decisions
+for audit, search, and learning. A directory goal is an authorization and an
+acceptance contract, not a request for an empty folder. Request only the
 resources supported by the finding:
 
 - `references` for substantial conditional knowledge, schemas, policies, or
@@ -100,7 +168,8 @@ resources supported by the finding:
   user's deliverable. Name the artifact and its intended use.
 - `agents` only for a concrete delegated prompt. Do not request
   `agents/openai.yaml`; the runner generates that interface metadata
-  deterministically after acceptance.
+  deterministically after acceptance. The resource-plan decision for `agents`
+  refers only to delegated prompt files, never to generated interface metadata.
 - `evals` for observable activation or outcome behavior, with positive and
   near-miss cases.
 
@@ -112,6 +181,33 @@ Resource goals may name paths up to four levels below their canonical resource
 directory, for example `references/providers/aws.md`,
 `scripts/lib/parser.py`, or `assets/templates/react-app/`. Prefer the shallowest
 structure that keeps genuinely distinct modes or components understandable.
+
+For update and merge, resource planning is additive to inheritance. Preserve
+and reconcile every authored file already present under `scripts`,
+`references`, `assets`, delegated `agents`, and `evals`. Here `omit` means
+"do not add this resource capability from the new finding"; it never means
+"delete an inherited resource." If any source already contains a resource
+kind, the runner changes that result's decision to `use` and adds a concrete
+directory goal before Optimize. A merge must union and deduplicate source eval
+cases and retain nested resource paths. Removal is allowed only through a
+concrete `remove` item naming the file or resource suite and explaining why it
+is obsolete. Generated `agents/openai.yaml` is excluded from inheritance
+because the runner regenerates it after acceptance.
+
+Use this exact resource-plan shape on each affected result record:
+
+```json
+"resource_plan": [
+  {"resource": "scripts", "decision": "omit", "reason": "No repeated deterministic transformation is supported by the finding.", "confidence": 0.9},
+  {"resource": "references", "decision": "omit", "reason": "The required knowledge fits in the main workflow.", "confidence": 0.85},
+  {"resource": "assets", "decision": "omit", "reason": "The skill produces no reusable deliverable files.", "confidence": 0.95},
+  {"resource": "agents", "decision": "omit", "reason": "The finding does not demonstrate a reusable delegated prompt.", "confidence": 0.9},
+  {"resource": "evals", "decision": "use", "reason": "The finding supplies observable positive and near-miss behavior.", "confidence": 0.95}
+]
+```
+
+The reasons above illustrate the required specificity; replace them with the
+actual evidence-based decisions for the operation.
 
 When the new skill composes existing skills, list their exact names in optional
 `dependencies`; do not duplicate their instructions. When creation requires

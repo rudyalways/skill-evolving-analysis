@@ -1,0 +1,4 @@
+interface:
+  display_name: "Starter Asset Reuse"
+  short_description: "Reuse a captured starter asset, such as the service-starter config template…"
+  default_prompt: "Use $starter-asset-reuse for this request."

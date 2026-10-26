@@ -1,0 +1,14 @@
+{
+  "schema": "site-ops.pipeline/v1",
+  "id": "outlink-discovery",
+  "owner": "content-operations",
+  "inputPorts": [{ "name": "source-config", "schemaRef": "deep-prep.outlink-sources/v1" }],
+  "stages": [
+    { "id": "discover", "executor": "local-or-cloud", "deterministic": false },
+    { "id": "normalize", "executor": "contract-core", "deterministic": true },
+    { "id": "review", "executor": "human", "deterministic": false }
+  ],
+  "reviewPolicyRef": "deep-prep.outlinks/v1",
+  "targetAdapterRef": "deep-prep.outlinks",
+  "limits": { "timeoutMs": 60000, "maxRecords": 500, "maxBytes": 10485760 }
+}

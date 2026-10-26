@@ -7,6 +7,7 @@ import argparse
 import hashlib
 import json
 import math
+import os
 import re
 import time
 import uuid
@@ -15,6 +16,12 @@ from typing import Any
 
 
 TOKEN = re.compile(r"[\w-]+", re.UNICODE)
+
+
+def configure_framework_environment() -> None:
+    """Keep the embedding runtime on its supported PyTorch execution path."""
+    os.environ.setdefault("USE_TF", "0")
+    os.environ.setdefault("USE_TORCH", "1")
 
 
 class HashingBackend:
@@ -38,6 +45,12 @@ class HashingBackend:
     def embed_query(self, text: str) -> list[float]:
         return self.embed(text)
 
+    def embed_many(self, texts: list[str]) -> list[list[float]]:
+        return [self.embed(text) for text in texts]
+
+    def embed_query_many(self, texts: list[str]) -> list[list[float]]:
+        return [self.embed_query(text) for text in texts]
+
 
 class SentenceTransformerBackend:
     """Lazy local backend for the selected Qwen embedding model."""
@@ -51,6 +64,7 @@ class SentenceTransformerBackend:
         dimensions: int = 1024,
         query_instruction: str = "Retrieve the relevant skill or finding for this query",
     ):
+        configure_framework_environment()
         try:
             from sentence_transformers import SentenceTransformer
         except ImportError as error:
@@ -68,14 +82,17 @@ class SentenceTransformerBackend:
             trust_remote_code=True,
         )
 
-    def _encode(self, text: str) -> list[float]:
-        vector = self.model.encode(
-            [text],
+    def _encode_many(self, texts: list[str]) -> list[list[float]]:
+        vectors = self.model.encode(
+            texts,
             normalize_embeddings=True,
             truncate_dim=self.dimensions,
             show_progress_bar=False,
-        )[0]
-        return [float(value) for value in vector]
+        )
+        return [[float(value) for value in vector] for vector in vectors]
+
+    def _encode(self, text: str) -> list[float]:
+        return self._encode_many([text])[0]
 
     def embed(self, text: str) -> list[float]:
         return self._encode(text)
@@ -83,6 +100,15 @@ class SentenceTransformerBackend:
     def embed_query(self, text: str) -> list[float]:
         instructed = f"Instruct: {self.query_instruction}\nQuery: {text}"
         return self._encode(instructed)
+
+    def embed_many(self, texts: list[str]) -> list[list[float]]:
+        return self._encode_many(texts)
+
+    def embed_query_many(self, texts: list[str]) -> list[list[float]]:
+        instructed = [
+            f"Instruct: {self.query_instruction}\nQuery: {text}" for text in texts
+        ]
+        return self._encode_many(instructed)
 
 
 BACKEND = HashingBackend()
@@ -116,10 +142,16 @@ def cosine(left: list[float], right: list[float]) -> float:
 
 
 def ranked(queries: list[str], candidates: dict[str, str], top_k: int) -> list[dict[str, Any]]:
-    candidate_vectors = {key: BACKEND.embed(text) for key, text in candidates.items()}
+    candidate_items = list(candidates.items())
+    candidate_embeddings = BACKEND.embed_many(
+        [text for _, text in candidate_items]
+    )
+    candidate_vectors = {
+        key: vector
+        for (key, _), vector in zip(candidate_items, candidate_embeddings)
+    }
     output = []
-    for query in queries:
-        vector = BACKEND.embed_query(query)
+    for vector in BACKEND.embed_query_many(queries):
         matches = sorted(
             (
                 {"id": key, "score": round(cosine(vector, candidate), 6)}
@@ -162,7 +194,7 @@ class Handler(BaseHTTPRequestHandler):
             if not isinstance(texts, list) or not texts or not all(isinstance(text, str) for text in texts):
                 raise ValueError("texts or queries must be a non-empty string array")
             if self.path == "/v1/embeddings":
-                data: Any = [BACKEND.embed(text) for text in texts]
+                data: Any = BACKEND.embed_many(texts)
                 key = "embeddings"
             elif self.path in {"/v1/classify", "/v1/search"}:
                 candidates = payload.get("categories" if self.path == "/v1/classify" else "documents")

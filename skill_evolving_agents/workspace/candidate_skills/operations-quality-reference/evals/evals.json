@@ -1,0 +1,44 @@
+{
+  "skill_name": "operations-quality-reference",
+  "evals": [
+    {
+      "id": 1,
+      "kind": "should_apply",
+      "prompt": "We are ready to merge this branch. Find out what the repository requires for the merge gate and run the CI command it names.",
+      "expected_output": "The agent consults the operations quality reference, jumps to the CI and merge-gate section of owner/docs/operations/engineering_quality_and_delivery.md, cites that heading, and runs the named command before reporting a result.",
+      "expectations": [
+        "references/operations/engineering_quality_and_delivery.md is consulted before the source document is read in full.",
+        "The consulted source heading is named in the response.",
+        "No gate result is claimed without observed command output.",
+        "The recorded digest is reported as matched, refreshed, or unavailable."
+      ],
+      "files": [],
+      "source_trace_ids": ["sig-1783dd75be14fd05b5398398"]
+    },
+    {
+      "id": 2,
+      "kind": "should_apply",
+      "prompt": "A previous turn already read the operations quality document for the resource-lease rules. Now I need the same lease rule again to release a shared test environment.",
+      "expected_output": "The agent uses the existing reference to reach the resource-lease section directly, without reading the whole source document again, and cites the lease heading it applied.",
+      "expectations": [
+        "The agent does not re-read the whole source document from the top.",
+        "The resource-lease section is located through the recorded section map or heading search.",
+        "The lease rule applied is cited by heading."
+      ],
+      "files": [],
+      "source_trace_ids": ["sig-1783dd75be14fd05b5398398"]
+    },
+    {
+      "id": 3,
+      "kind": "should_not_apply",
+      "prompt": "Summarize the arguments in our product README so I can paste the summary into a release announcement.",
+      "expected_output": "The operations quality reference is not selected; the README is handled as an ordinary documentation task.",
+      "expectations": [
+        "references/operations/engineering_quality_and_delivery.md is not consulted.",
+        "No merge-gate, lease, CI, or delivery-checklist workflow is invoked."
+      ],
+      "files": [],
+      "source_trace_ids": []
+    }
+  ]
+}

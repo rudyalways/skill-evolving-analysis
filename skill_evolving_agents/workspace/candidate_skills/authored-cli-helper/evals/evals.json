@@ -1,0 +1,82 @@
+{
+  "skill_name": "authored-cli-helper",
+  "evals": [
+    {
+      "id": 1,
+      "kind": "should_apply",
+      "prompt": "Add a reusable operations command to this repository that lists the read-only checks in scripts/fixtures/manifest.json as one JSON object, then prove it with a runtime syntax check and a live read-only invocation.",
+      "expected_output": "A repository-local helper at scripts/ops-cli.mjs whose list subcommand exits zero and prints one JSON object with ok, command, manifest, count, and entries.",
+      "expectations": [
+        "node --check scripts/ops-cli.mjs exits zero.",
+        "The live list invocation exits zero and stdout parses as one JSON object containing ok, command, manifest, count, and entries.",
+        "The helper reports each fixture entry with id, target, and read_only fields."
+      ],
+      "files": ["scripts/ops-cli.mjs", "scripts/fixtures/manifest.json"],
+      "source_trace_ids": ["sig-f7ccd004139711d75952d9e2"]
+    },
+    {
+      "id": 2,
+      "kind": "should_apply",
+      "prompt": "Harden the helper's argument handling so it refuses an unknown flag, and verify that the invocation exits nonzero with no partial JSON on stdout.",
+      "expected_output": "The unknown argument is rejected with exit code 2, a single error object on stderr, and empty stdout.",
+      "expectations": [
+        "The process exits nonzero.",
+        "stdout is empty, so no partial success object is published.",
+        "stderr contains a single parseable error object."
+      ],
+      "files": ["scripts/ops-cli.mjs", "scripts/fixtures/manifest.json"],
+      "source_trace_ids": ["sig-f7ccd004139711d75952d9e2"]
+    },
+    {
+      "id": 3,
+      "kind": "should_apply",
+      "prompt": "Prove that the helper fails when the required manifest input is missing, without printing any success payload.",
+      "expected_output": "The invocation exits nonzero with empty stdout and an error naming the missing required input.",
+      "expectations": [
+        "The process exits nonzero.",
+        "stdout is empty.",
+        "The error identifies the missing required manifest input."
+      ],
+      "files": ["scripts/ops-cli.mjs"],
+      "source_trace_ids": ["sig-f7ccd004139711d75952d9e2"]
+    },
+    {
+      "id": 4,
+      "kind": "should_apply",
+      "prompt": "Verify that asking the helper to serve on host 0.0.0.0 is rejected before any socket is bound.",
+      "expected_output": "The non-loopback host is refused with a nonzero exit and empty stdout, and no server listens.",
+      "expectations": [
+        "The process exits nonzero.",
+        "stdout is empty.",
+        "The error names the refused non-loopback host.",
+        "No listening socket is created for the refused host."
+      ],
+      "files": ["scripts/ops-cli.mjs"],
+      "source_trace_ids": ["sig-f7ccd004139711d75952d9e2"]
+    },
+    {
+      "id": 5,
+      "kind": "should_not_apply",
+      "prompt": "Run a quick one-off shell command to inspect this repository's files and summarize what you find.",
+      "expected_output": "The authored CLI helper workflow is not selected; the agent handles the exploration directly.",
+      "expectations": [
+        "No operational CLI helper is authored or modified.",
+        "No repository files are created for the inspection."
+      ],
+      "files": [],
+      "source_trace_ids": []
+    },
+    {
+      "id": 6,
+      "kind": "should_not_apply",
+      "prompt": "Deploy the review server to production behind a public domain with TLS and user authentication for external users.",
+      "expected_output": "The authored CLI helper workflow is not selected because production deployment, TLS, and authentication are out of scope.",
+      "expectations": [
+        "The helper is not repurposed into a deployment or authentication adapter.",
+        "No non-loopback bind is introduced under this skill."
+      ],
+      "files": [],
+      "source_trace_ids": []
+    }
+  ]
+}

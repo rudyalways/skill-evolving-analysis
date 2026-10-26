@@ -82,12 +82,49 @@ task's identifiers into this skill as reusable instructions.
    continuing.
 8. Only after the identity check passes, read from or act on the page.
 
+### Closing sequence for a claimed fix
+
+Steps 9-13 apply when the task claims a fix to a surface the user reported on,
+such as a live page region or an email the host delivers. Passing tests, a
+green build, and a healthy deployment are inputs to this sequence, never a
+substitute for it.
+
+9. Name the reported surfaces before checking anything. List each one as a
+   concrete target: the route and the exact region for a page, and the
+   recipient, subject, and message for an email. If a surface cannot be named
+   from the task, stop and ask for it; do not substitute a proxy such as a test
+   report, a local fixture, or an email template.
+10. Verify the live rendered page itself. Load the page in the bound surface
+    and inspect the exact reported region through the live DOM or a screenshot.
+    Confirm the requested copy and the layout at the user's viewport: the text
+    matches, and the elements are present, positioned, and styled as requested.
+    Compare against the user's report or the pre-fix state, not merely against
+    a selector that happens to exist.
+11. Verify the delivered email itself. Retrieve the message from the hosting or
+    mail provider that actually delivered it and open the received copy, not a
+    template, preview, or send log. Check the rendered subject, sender, body
+    copy, and layout, and record the message id and received timestamp. If the
+    message has not arrived, poll within a stated budget; if it still has not
+    arrived, record it as unverified.
+12. Carry an open-items ledger across rounds. For every item an external
+    dependency blocks, record: the item, the surface or artifact still
+    unverified, the blocking dependency, the credential or action required to
+    unblock it, the owner if known, and the date first recorded. Keep the
+    ledger when the round ends; do not drop, downgrade, or silently close an
+    item because the round is over.
+13. Close only when every reported surface has its own live artifact evidence.
+    If any item remains blocked, declare the round incomplete, present the
+    ledger and the escalation, and do not present the overall fix as done.
+
 | Observation | Action |
 | --- | --- |
 | Named handle attached | Bind to it, navigate, verify title and URL |
 | Named lookup unavailable | Switch once to the controllable surface; do not retry the lookup |
 | Title or URL mismatch | Check the tab and surface, re-navigate, verify again |
 | No controllable surface | Report blocked; do not invent a handle |
+| Live page copy or layout differs | Keep the item open; correct it and re-inspect the named region |
+| Delivered email differs or is missing | Keep the item open; retrieve the received copy or record the block |
+| Item blocked by rejected credential | Record it in the carried ledger, escalate the required access, do not close the round |
 
 ## Constraints
 
@@ -103,6 +140,25 @@ task's identifiers into this skill as reusable instructions.
   controllable surface lacks the signed-in session, report that condition.
 - Treat any unavailable or not-found result as a surface-selection fact, not a
   transient error to retry.
+- Do not declare a round complete from passing test counts, a green build,
+  deployment health, or a successful send response. A claimed fix is complete
+  only after its live rendered artifact and, when claimed, its received email
+  have been inspected.
+- Do not accept a local fixture, an email template or preview, or a
+  selector-presence check as evidence for a live artifact. Evidence must come
+  from the live deployment and the hosting provider that delivered the
+  artifact.
+- When an external dependency such as a rejected management credential blocks
+  an item, stop re-declaring the round complete. Escalate the missing access
+  explicitly, including what was attempted, the exact error, and the credential
+  or role required, and keep the item open in the carried ledger until its
+  hosted artifact is verified.
+- Carry every unresolved externally blocked item forward as an explicit
+  precondition for the next round or session. Do not omit it from the report or
+  re-label it as done.
+- Name each reported surface when closing. A general statement that the page
+  "looks good", or a passing suite with no artifact inspection, is not a
+  surface check.
 
 ## Verification
 
@@ -114,11 +170,40 @@ The pre-flight is complete only when all of these are observable:
   expected redirect.
 - The named lookup was attempted at most once before the switch.
 
-Positive evidence is a named-browser lookup that reported unavailable, followed
-by a tab created or attached on the controllable surface that reached the
-expected title and URL. A successful-looking page without the title and URL
-check is not completion. On a mismatch, report it and do not present downstream
-findings as if the page were confirmed.
+Positive evidence for the pre-flight is a named-browser lookup that reported
+unavailable, followed by a tab created or attached on the controllable surface
+that reached the expected title and URL. A successful-looking page without the
+title and URL check is not completion. On a mismatch, report it and do not
+present downstream findings as if the page were confirmed.
+
+When the task claims a fix to a reported surface, completion additionally
+requires artifact-level evidence captured from the live deployment and the
+hosting provider, for each named surface:
+
+- Rendered page: a screenshot or DOM excerpt of the exact reported region on
+  the live URL, showing the requested copy and layout. State the route,
+  viewport, account or access class, and capture time.
+- Delivered email: the actual message as received from the host, including the
+  rendered subject, sender, body copy, and layout, with the message id and
+  received timestamp. A template, preview, or send log does not satisfy this.
+- Deployment identity: the live URL or artifact id and the deployment or
+  version currently serving it, so the evidence is tied to the deployed build
+  rather than local code.
+
+These are not completion evidence for a claimed fix, alone or together:
+
+- passing unit, integration, or browser test counts;
+- a green build, successful upload, or successful send response;
+- a healthy deployment or health check;
+- a local fixture, an email template or preview, or a selector-presence check;
+- a general statement that the page or email "looks correct" without a named
+  region, viewport, and received copy.
+
+If a reported surface differs from the request, keep the item open and report
+the observed difference. If an external dependency prevents capture, record the
+item in the carried open-items ledger with the credential or action required,
+escalate it, and mark the round incomplete; do not report the item as verified
+or the round as complete.
 
 ## Output Format
 

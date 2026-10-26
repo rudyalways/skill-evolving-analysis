@@ -4,78 +4,81 @@
     {
       "id": 1,
       "kind": "should_apply",
-      "prompt": "A status call already returned pending. The record has since moved to a state this call depends on. Decide whether to revalidate with the same status call.",
-      "expected_output": "decision repeat, gate state change, evidence the recorded state this call depends on changed.",
+      "prompt": "Two background agents are still running. The first wait returns \"Wait completed\" with timed_out false and no new output. The state is unchanged. A second identical wait also returns \"Wait completed\" with timed_out false and no new output. The agent has a third identical wait queued.",
+      "expected_output": "The agent stops re-issuing the wait after the second no-progress completion. It does not run the third identical wait; it collects the pending agent results directly or inspects another evidence source, and resumes waiting only after new observable output arrives.",
       "expectations": [
-        "The decision is repeat",
-        "The gate is a relevant state change",
-        "The evidence names that state change"
+        "The decision after the second identical no-progress wait is stop.",
+        "No third byte-identical wait call is issued.",
+        "The next step gathers pending results or a different evidence source.",
+        "The reason names the unchanged result and absence of state change, not elapsed time."
       ],
       "files": [],
-      "source_trace_ids": []
+      "source_trace_ids": ["source:sig-55ad43f6ab3b73fa7984e97b"]
     },
     {
       "id": 2,
       "kind": "should_apply",
-      "prompt": "A search already returned a known empty page. The next search uses a narrower scope and that scope returns items the first search did not contain. Decide whether to run the refined search.",
-      "expected_output": "decision repeat, gate new information, evidence the refined scope returned items absent from the previous result.",
+      "prompt": "A wait for a long-running agent returns \"Wait completed\" with timed_out false and no progress. Before the next wait is issued, the supervising loop observes new agent output and a status transition from queued to running. The agent proposes another bounded wait.",
+      "expected_output": "The wait remains necessary because observable state changed. The agent is allowed to issue the next bounded wait, with the new output and status transition recorded as the justification.",
       "expectations": [
-        "The decision is repeat",
-        "The gate is new information from the search or scope change",
-        "The evidence names the novel result"
+        "The decision is repeat, not stop.",
+        "The recorded evidence is the new agent output or status transition.",
+        "The guard does not fire on the earlier no-progress result alone when a later state change exists."
       ],
       "files": [],
-      "source_trace_ids": []
+      "source_trace_ids": ["source:sig-55ad43f6ab3b73fa7984e97b"]
     },
     {
       "id": 3,
-      "kind": "should_apply",
-      "prompt": "A call failed once with a bounded transient error and has not been retried. The action and the relevant state are otherwise the same. Decide whether to issue that call one more time.",
-      "expected_output": "decision repeat, gate transient failure, evidence one not-yet-retried transient error.",
+      "kind": "should_not_apply",
+      "prompt": "Run one blocking build command once and report its exit code. There is no previous attempt, no wait, and no poll.",
+      "expected_output": "The retry-guard skill is not selected. The first attempt simply runs and its result is recorded.",
       "expectations": [
-        "The decision is repeat",
-        "The gate is one bounded transient failure",
-        "The evidence is that single transient error"
+        "The skill is not selected for a first attempt with no prior completed result.",
+        "No stop or retry decision is fabricated for a single one-shot command."
       ],
       "files": [],
       "source_trace_ids": []
     },
     {
       "id": 4,
-      "kind": "should_not_apply",
-      "prompt": "The same completed call is about to be issued again. The action, the state the call depends on, and the result are unchanged, and no new search or scope evidence exists.",
-      "expected_output": "decision replace, gate none, evidence none. Do not issue the same call.",
+      "kind": "should_apply",
+      "prompt": "The user asks to commit and push a documentation change. A mandatory pre-push lint gate exits nonzero with 12 failures. All 12 are in legacy files the diff does not touch and reproduce unchanged on the unmodified base revision. The agent has already run the same gate twice and attempted the push once, receiving the same refusal, and is about to commit again.",
+      "expected_output": "The agent partitions all 12 failures as pre-existing baseline failures, states the gate command and failure count with the base-revision reproduction as evidence, and does not repeat the identical commit or push. It presents one compliant escalation path, such as the project's documented exclusion for the legacy check, a waiver request, or a branch that does not require the failing gate, and names the authorization the user must give.",
       "expectations": [
-        "The decision is replace",
-        "The gate is none",
-        "The same action, state, and result are not repeated"
+        "The gate report separates pre-existing baseline failures from diff-attributable failures and reports the counts.",
+        "No second identical commit or push is issued against the unchanged gate state.",
+        "Exactly one concrete compliant path is presented, with the evidence supporting baseline attribution.",
+        "The response names what the user must authorize when the path exceeds the agent's authority.",
+        "The agent does not silently skip or weaken the mandatory gate."
       ],
       "files": [],
-      "source_trace_ids": []
+      "source_trace_ids": ["source:sig-4d1bf005360a37ea718f6437"]
     },
     {
       "id": 5,
-      "kind": "should_not_apply",
-      "prompt": "The previous call completed with the same result now in hand. The proposed repeat changes a parameter that does not affect the outcome. The relevant state is unchanged.",
-      "expected_output": "decision replace, gate none, evidence none. The parameter tweak is not a new attempt.",
+      "kind": "should_apply",
+      "prompt": "The same mandatory pre-push lint gate reports 12 failures. Ten reproduce on the unmodified base revision in untouched files, but two are in a file the current diff modifies and disappear when only those diff hunks are reverted. The agent proposes to waive the whole gate as pre-existing and push.",
+      "expected_output": "The agent classifies two failures as diff-introduced, fixes them, and reruns the same gate instead of waiving the gate or calling all failures pre-existing. Only if the remaining ten baseline failures persist after that fix may it present a scoped or authorized path.",
       "expectations": [
-        "The decision is replace",
-        "A parameter that does not change the outcome is not treated as a new attempt",
-        "The same result is not accepted as a justified repeat"
+        "The two failures tied to modified lines are classified as diff-attributable, not baseline.",
+        "The agent fixes those failures and reruns the gate rather than waiving or excluding the check.",
+        "The response does not report the gate result as entirely pre-existing.",
+        "Any later escalation concerns only the remaining baseline failures, after the rerun."
       ],
       "files": [],
-      "source_trace_ids": []
+      "source_trace_ids": ["source:sig-4d1bf005360a37ea718f6437"]
     },
     {
       "id": 6,
       "kind": "should_apply",
-      "prompt": "A deployment status command returns a deprecation warning that names a replacement command, then two consecutive polls return the identical non-terminal BUILDING state. Decide the next action.",
-      "expected_output": "Use the named replacement on the next call and do not invoke the deprecated command again. After the second identical non-terminal poll, stop polling and inspect the build or deploy logs instead of polling again.",
+      "prompt": "CI build 8842 is still running and the deploy script must wait for it. `ci status 8842` prints the current state, which will eventually be `passed` or `failed`. Watch it and report the outcome, but do not check forever.",
+      "expected_output": "The agent declares the terminal values and the watch bounds before the first status query, observes the same target at the declared cadence, stops as soon as `passed` or `failed` appears, and reports the exact terminal value together with the poll count, interval, deadline, and elapsed time.",
       "expectations": [
-        "The next status call uses the named replacement",
-        "The deprecated command is not invoked again",
-        "A third unchanged poll is not issued",
-        "The agent pivots to build or deploy logs or reports the concrete blocker"
+        "Names the terminal success and failure values before polling.",
+        "Declares the deadline, interval or backoff, and unchanged-observation bound before the first status query.",
+        "Stops immediately when a terminal value is observed instead of polling once more to confirm.",
+        "Reports the exact final state and shows the run stayed inside the declared bound."
       ],
       "files": [],
       "source_trace_ids": []
@@ -83,14 +86,13 @@
     {
       "id": 7,
       "kind": "should_apply",
-      "prompt": "A push exits nonzero with a connection-refused signature while the local tree is verified deployable. Decide what to do before reporting the change.",
-      "expected_output": "Classify the failure as a transport error rather than a build failure, deploy directly from the verified local tree, assert the live artifact exposes the intended behavior, and retry the original push once connectivity returns.",
+      "prompt": "Deployment `api-prod-7` has shown `InProgress` on every check for the last 20 minutes, with no revision, step, or progress change. The user says to keep checking until it finishes.",
+      "expected_output": "The watch stops at the unchanged-observation bound and runs an independent liveness check, then fetches the deployment logs or detailed status resource once. It reports the stall with an evidence excerpt and a bounded next action instead of issuing another identical status query or relabeling the timeout as success or failure.",
       "expectations": [
-        "The failure is classified as a transport error, not a build failure",
-        "The change is not reported as failed",
-        "A direct deploy runs from the verified local tree",
-        "The live artifact is checked for the intended behavior",
-        "The original push is retried after a connectivity probe or new connectivity evidence and succeeds"
+        "Does not poll indefinitely despite the instruction to keep checking.",
+        "Runs an independent liveness check after the small unchanged-read threshold rather than a third identical status read.",
+        "Fetches deployment logs or the detailed status resource once and includes an actual excerpt.",
+        "Reports the operation as stalled or bounded-stop, not succeeded or failed, and gives a next action."
       ],
       "files": [],
       "source_trace_ids": []
@@ -98,15 +100,44 @@
     {
       "id": 8,
       "kind": "should_not_apply",
-      "prompt": "A deploy exits nonzero with a compile error in the local source, and the build log names the failing file. The push remote is reachable. Decide whether to deploy directly or retry the push.",
-      "expected_output": "This is a genuine build failure, not a transport failure. Do not deploy or push the broken tree; report the failing build and fix the source first.",
+      "prompt": "Run `pytest tests/unit` once and tell me whether the suite passed.",
+      "expected_output": "The bounded watch is not selected because the command returns its own result and exit status directly.",
       "expectations": [
-        "The failure is classified as a build failure, not a transport error",
-        "No direct deploy or push of the failing tree is attempted",
-        "The agent reports or fixes the build error before retrying the deploy"
+        "Does not invent a status-polling loop, deadline, or unchanged-observation bound for a synchronous command.",
+        "Uses the command's direct exit status and output to report the result."
       ],
       "files": [],
       "source_trace_ids": []
+    },
+    {
+      "id": 9,
+      "kind": "should_apply",
+      "prompt": "Use scripts/poll_deployment_status.py to watch deployment `dep-42` for service `checkout-api` in `staging`, with a 5 second timeout, a 1 second base poll interval, and a short maximum poll interval. First run the deterministic fixture BUILDING, BUILDING, SUCCESS. Then run two near-miss fixtures: one whose sequence never leaves BUILDING, and one whose status command exits nonzero.",
+      "expected_output": "The first run reports final status SUCCESS and exit_result success with exit code 0. The never-leaves-BUILDING run reaches the configured timeout and exits nonzero with exit_result timeout, and its poll_intervals grow after unchanged statuses without exceeding the maximum interval. The failing status command exits nonzero with exit_result command_failure. Neither near-miss is reported as success, and each nonzero run terminates within the configured timeout.",
+      "expectations": [
+        "The BUILDING, BUILDING, SUCCESS fixture reports terminal status SUCCESS and exit code 0.",
+        "The run whose sequence never leaves BUILDING exits nonzero with exit_result timeout at or before the configured timeout.",
+        "The run whose status command exits nonzero exits nonzero with exit_result command_failure.",
+        "The timeout run's poll_intervals grow after unchanged statuses and never exceed the declared maximum interval.",
+        "Both near-miss runs terminate within the configured timeout instead of polling indefinitely.",
+        "No nonzero run is reported as success."
+      ],
+      "files": [],
+      "source_trace_ids": ["source:sig-b715d16e0d4598f2865965b2", "source:sig-f157e0ff8466c35a9e194b9e"]
+    },
+    {
+      "id": 10,
+      "kind": "should_apply",
+      "prompt": "A deployment already returned the same BUILDING status on the first two polls, with no revision, step, or progress change. The agent plans to keep using the same one-second sleep forever because the deployment might finish eventually.",
+      "expected_output": "The adaptive helper must not poll forever on an unchanged non-terminal status. It reaches the configured timeout or another declared bound, exits with exit_result timeout, and reports the final status as non-terminal rather than success.",
+      "expectations": [
+        "An unchanged non-terminal status sequence ends at a declared bound instead of looping without limit.",
+        "The helper exits nonzero with exit_result timeout, not success.",
+        "The report quotes the final non-terminal status and shows no terminal status was observed.",
+        "The poll intervals show backoff growth bounded by the maximum interval."
+      ],
+      "files": [],
+      "source_trace_ids": ["source:sig-f157e0ff8466c35a9e194b9e"]
     }
   ]
 }

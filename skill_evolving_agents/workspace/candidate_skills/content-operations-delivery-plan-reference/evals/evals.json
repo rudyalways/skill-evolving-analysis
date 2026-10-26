@@ -1,0 +1,33 @@
+{
+  "skill_name": "content-operations-delivery-plan-reference",
+  "evals": [
+    {
+      "id": 1,
+      "kind": "should_apply",
+      "prompt": "For the content operations phased delivery plan, who owns browser automation, and does RedNote or Xiaohongshu fall inside the MVP scope? Check the plan before answering.",
+      "expected_output": "The governing plan sections are located through the index with a runtime digest check, and the answer names the section and line range used for the authentication/browser-ownership and RedNote/Xiaohongshu scope questions.",
+      "expectations": [
+        "The skill opens references/content-operations-delivery-plan-index.md before reading the plan.",
+        "The current sha256 digest of docs/architecture/content_operations_phased_delivery_plan.md is recomputed and compared with the recorded digest.",
+        "A mismatch or unindexed state triggers a heading re-extraction rather than reuse of recorded line ranges.",
+        "Only the matching section ranges are read; the whole plan is not dumped.",
+        "The reply reports a freshness status and cites the governing heading and line range."
+      ],
+      "files": [],
+      "source_trace_ids": []
+    },
+    {
+      "id": 2,
+      "kind": "should_not_apply",
+      "prompt": "Summarize the retry and backoff behavior documented in docs/architecture/event_bus_retry_policy.md and recommend a safer timeout.",
+      "expected_output": "The content operations delivery plan index is not consulted, because the request is about an unrelated repository document.",
+      "expectations": [
+        "references/content-operations-delivery-plan-index.md is not opened or refreshed.",
+        "No digest is computed for docs/architecture/content_operations_phased_delivery_plan.md.",
+        "The answer works from the named event bus document or reports that it must be read."
+      ],
+      "files": [],
+      "source_trace_ids": []
+    }
+  ]
+}

@@ -1,0 +1,44 @@
+{
+  "skill_name": "audit-project-ui",
+  "evals": [
+    {
+      "id": 1,
+      "kind": "should_apply",
+      "prompt": "I pushed the density fix for the candidates page. The host reports the deployment as successful, but staging still shows the old oversized hero and the loose rows. Can you call this done?",
+      "expected_output": "The agent detects that the live page is still the previous revision, withholds the completion claim, waits for the intended revision, and only after confirming it re-checks the complete first viewport for density, whitespace, and control sizes.",
+      "expectations": [
+        "Checks which revision the live URL serves instead of treating deployment success or a green build as proof",
+        "Reports the deployment as stale or queued and does not declare the fix done while the old revision is live",
+        "After the intended revision is confirmed, inspects the rendered first viewport rather than only tests or the DOM",
+        "Names the recovered density, whitespace, and control-size expectations in the verification evidence"
+      ],
+      "files": [],
+      "source_trace_ids": ["sig-3e9201fda8c236da06b57da1"]
+    },
+    {
+      "id": 2,
+      "kind": "should_apply",
+      "prompt": "Confirm that the export button is visible to a Free-tier user on staging before we ship it.",
+      "expected_output": "The agent opens the deployed staging page signed in as the named Free-tier role, confirms the rendered control there, and reports the evidence instead of relying on deployment health.",
+      "expectations": [
+        "Uses the deployed URL and the named role rather than a local build or an admin session",
+        "Confirms the control in the rendered page and reports the deployed revision checked",
+        "Does not call the control ready from deploy status, tests, or an HTTP health check"
+      ],
+      "files": [],
+      "source_trace_ids": ["sig-a749bcb3490a75ca5b928a07"]
+    },
+    {
+      "id": 3,
+      "kind": "should_not_apply",
+      "prompt": "The billing API returns a 500 for tenant ids that contain a colon. Add a migration and a unit test for the handler.",
+      "expected_output": "The skill is not selected; this is a backend data and API fix with no rendered UI decision.",
+      "expectations": [
+        "The skill is not selected and its deploy-and-viewport workflow is not used",
+        "The response stays on the backend migration and test instead of opening a browser or auditing page layout"
+      ],
+      "files": [],
+      "source_trace_ids": []
+    }
+  ]
+}

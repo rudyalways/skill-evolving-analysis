@@ -68,6 +68,24 @@ def _initialize(connection: sqlite3.Connection) -> None:
         "CREATE INDEX IF NOT EXISTS pipeline_spans_phase "
         "ON pipeline_spans(phase, category)"
     )
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS skill_recall_observations (
+            run_id TEXT NOT NULL,
+            scope TEXT NOT NULL,
+            skill TEXT NOT NULL,
+            observed_at TEXT NOT NULL,
+            recalled INTEGER NOT NULL,
+            rank INTEGER,
+            score REAL,
+            PRIMARY KEY (run_id, scope, skill)
+        )
+        """
+    )
+    connection.execute(
+        "CREATE INDEX IF NOT EXISTS skill_recall_by_skill "
+        "ON skill_recall_observations(skill, observed_at)"
+    )
 
 
 def _databases(workspace: Path) -> list[Path]:
@@ -85,6 +103,10 @@ def clear_shared_run(workspace: Path) -> None:
         _initialize(connection)
         connection.execute(
             "DELETE FROM pipeline_spans WHERE run_id = ?",
+            (workspace.name,),
+        )
+        connection.execute(
+            "DELETE FROM skill_recall_observations WHERE run_id = ?",
             (workspace.name,),
         )
 
@@ -107,16 +129,72 @@ def replace_shared_run(workspace: Path) -> None:
                 ).fetchall()
             except sqlite3.OperationalError:
                 rows = []
+            try:
+                recall_rows = source.execute(
+                    "SELECT * FROM skill_recall_observations WHERE run_id = ?",
+                    (workspace.name,),
+                ).fetchall()
+            except sqlite3.OperationalError:
+                recall_rows = []
         with sqlite3.connect(shared, timeout=30) as destination:
             _initialize(destination)
             destination.execute(
                 "DELETE FROM pipeline_spans WHERE run_id = ?",
                 (workspace.name,),
             )
+            destination.execute(
+                "DELETE FROM skill_recall_observations WHERE run_id = ?",
+                (workspace.name,),
+            )
             if rows:
                 destination.executemany(
                     "INSERT INTO pipeline_spans VALUES "
                     "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    rows,
+                )
+            if recall_rows:
+                destination.executemany(
+                    "INSERT INTO skill_recall_observations VALUES "
+                    "(?, ?, ?, ?, ?, ?, ?)",
+                    recall_rows,
+                )
+
+
+def record_skill_recall_observations(
+    workspace: Path,
+    scope: str,
+    inventory_skills: list[str],
+    recalled: list[dict[str, Any]],
+) -> None:
+    """Persist one exposure/retrieval observation for every inventory skill."""
+    workspace = workspace.resolve()
+    run_id = workspace.name
+    observed_at = datetime.now(UTC).isoformat()
+    ranked = {
+        str(row.get("skill")): (index, float(row.get("score") or 0))
+        for index, row in enumerate(recalled, start=1)
+        if isinstance(row, dict) and row.get("skill")
+    }
+    rows = [
+        (
+            run_id,
+            scope,
+            skill,
+            observed_at,
+            1 if skill in ranked else 0,
+            ranked.get(skill, (None, None))[0],
+            ranked.get(skill, (None, None))[1],
+        )
+        for skill in sorted(set(inventory_skills))
+    ]
+    with _LOCK:
+        for database in _databases(workspace):
+            database.parent.mkdir(parents=True, exist_ok=True)
+            with sqlite3.connect(database, timeout=30) as connection:
+                _initialize(connection)
+                connection.executemany(
+                    "INSERT OR REPLACE INTO skill_recall_observations VALUES "
+                    "(?, ?, ?, ?, ?, ?, ?)",
                     rows,
                 )
 
@@ -543,6 +621,22 @@ def collect_phase_metrics(
     diagnosis_spans = [
         row for row in spans if row.get("phase") == "label-traces-cluster"
     ]
+    evolution_gate = _read_json(
+        workspace / "traces/derived/evolution-gate.json"
+    )
+    gate_decisions = (
+        evolution_gate.get("decisions") or []
+        if isinstance(evolution_gate, dict)
+        else []
+    )
+    admitted_scopes = (
+        sum(
+            isinstance(row, dict) and row.get("disposition") == "selected"
+            for row in gate_decisions
+        )
+        if gate_decisions
+        else selected
+    )
     truncated_slices = sum(
         bool(_metadata(row).get("slice_truncated"))
         for row in diagnosis_spans
@@ -665,6 +759,16 @@ def collect_phase_metrics(
     resource_summary = skill_resources.aggregate_resource_metrics(
         resource_documents
     )
+    actual_agent_calls = sum(
+        row.get("category") == "llm_agent" for row in spans
+    )
+    prefiltered_scopes = max(selected - admitted_scopes, 0)
+    # Every scope admitted past the semantic/evidence filter would otherwise
+    # require one Diagnosis and one Goal call. Later Optimize/Verify calls are
+    # operation-dependent, so they are deliberately excluded from this
+    # conservative counterfactual.
+    estimated_calls_avoided = prefiltered_scopes * 2
+    counterfactual_agent_calls = actual_agent_calls + estimated_calls_avoided
 
     warnings: list[str] = []
     if truncated_slices:
@@ -709,11 +813,22 @@ def collect_phase_metrics(
                 "dispositions": dict(sorted(dispositions.items())),
                 "precision": None,
                 "precision_reason": "no human finding labels",
+                "resource_opportunities": sum(
+                    (row.get("features") or {}).get("candidate_source")
+                    == "resource_opportunity"
+                    for row in findings
+                ),
+                "selected_resource_opportunities": sum(
+                    decision.get("disposition") == "selected"
+                    and decision.get("candidate_source") == "resource_opportunity"
+                    for decision in decisions
+                ),
             },
             "diagnosis": {
-                "expected_scopes": selected,
+                "mined_selected_scopes": selected,
+                "expected_scopes": admitted_scopes,
                 "completed_scopes": len(diagnoses),
-                "coverage": _rate(len(diagnoses), selected),
+                "coverage": _rate(len(diagnoses), admitted_scopes),
                 "capability_gaps": len(diagnosis_gaps),
                 "newly_detected_gaps": newly_detected_gaps,
                 "mean_gap_confidence": (
@@ -772,6 +887,19 @@ def collect_phase_metrics(
                 "quality_reason": "edit completion is not behavioral improvement",
             },
             "resources": resource_summary,
+            "cost": {
+                "agent_calls_actual": actual_agent_calls,
+                "prefiltered_scopes": prefiltered_scopes,
+                "estimated_agent_calls_avoided": estimated_calls_avoided,
+                "counterfactual_agent_calls": counterfactual_agent_calls,
+                "estimated_agent_call_savings_rate": _rate(
+                    estimated_calls_avoided, counterfactual_agent_calls
+                ),
+                "estimation_basis": (
+                    "two avoided calls per selected finding filtered before "
+                    "Diagnosis and Goal; operation-dependent calls excluded"
+                ),
+            },
             "verify": {
                 "operations": len(verifications),
                 "artifact_records": len(verification_artifacts),
@@ -909,6 +1037,20 @@ def aggregate_phase_metrics(runs_root: Path) -> dict[str, Any]:
                     total("optimize", "operations_started"),
                 ),
                 "quality": None,
+            },
+            "cost": {
+                "agent_calls_actual": total("cost", "agent_calls_actual"),
+                "prefiltered_scopes": total("cost", "prefiltered_scopes"),
+                "estimated_agent_calls_avoided": total(
+                    "cost", "estimated_agent_calls_avoided"
+                ),
+                "counterfactual_agent_calls": total(
+                    "cost", "counterfactual_agent_calls"
+                ),
+                "estimated_agent_call_savings_rate": _rate(
+                    total("cost", "estimated_agent_calls_avoided"),
+                    total("cost", "counterfactual_agent_calls"),
+                ),
             },
             "verify": {
                 "operations": verify_operations,
@@ -1075,6 +1217,7 @@ def write_run_report(workspace: Path) -> Path | None:
             "edit_summary": edits["summary"],
             "edits": edits["edits"],
             "cut_budget": budget,
+            "agent_call_savings": phase_metrics["phases"]["cost"],
             "phase_metrics": phase_metrics,
         }
         path = workspace / "logs/run-timing.json"

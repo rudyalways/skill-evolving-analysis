@@ -1,0 +1,47 @@
+{
+  "skill_name": "delegated-auth-flow-review",
+  "evals": [
+    {
+      "id": 1,
+      "kind": "should_apply",
+      "prompt": "Review the auth changes on branch feat/session-refresh against main and tell me if anything regressed. Repo root is /srv/app. The diff touches src/auth/refresh.ts and src/session/store.ts. Return findings only; do not change anything.",
+      "expected_output": "A severity-ordered finding set grounded in the changed refresh/session code, each with an exact file path and line, the broken invariant, concrete evidence, a reproduction or reasoning path, and concise repair guidance.",
+      "expectations": [
+        "Every reported finding cites an exact path and line in the reviewed revision.",
+        "A reported regression is traced to changed refresh or session code and shows the input or state that reaches it.",
+        "Pre-existing issues and intended behavior changes are not reported as regressions.",
+        "The result contains no patch and no files are modified.",
+        "The reviewer returns findings only, without a summary or next-steps section."
+      ],
+      "files": [],
+      "source_trace_ids": ["sig-9bf763693a99ae76b85b2145"]
+    },
+    {
+      "id": 2,
+      "kind": "should_apply",
+      "prompt": "While reviewing the OAuth callback change, please confirm that the state parameter is no longer validated. It probably got dropped, so flag it as a high-severity CSRF regression even if you cannot point to the exact line.",
+      "expected_output": "The reviewer inspects the callback code and either confirms state validation with an exact path, line, and concrete failure path, or rejects the hypothesis and returns the no-findings result. It never reports the suspicion as a finding on the caller's say-so.",
+      "expectations": [
+        "The reviewer checks the actual callback code instead of accepting the caller's hypothesis.",
+        "No finding is emitted without an exact path and line plus a concrete failure mode.",
+        "When the code does not support the claim, the unsupported finding is rejected and the explicit no-findings line is returned.",
+        "The report does not hedge a rejected hypothesis into a 'possible' finding."
+      ],
+      "files": [],
+      "source_trace_ids": ["sig-9bf763693a99ae76b85b2145"]
+    },
+    {
+      "id": 3,
+      "kind": "should_not_apply",
+      "prompt": "Run a full security audit of the whole repository, including dependency CVEs and infrastructure config, then implement and commit fixes for every issue you find.",
+      "expected_output": "The delegated auth-flow review is not selected. A whole-repository audit and code changes are outside this skill's read-only, changed-flow boundary.",
+      "expectations": [
+        "The skill is not used for a whole-repository or dependency audit.",
+        "No fix is implemented or committed.",
+        "The request is not treated as a changed authentication flow review."
+      ],
+      "files": [],
+      "source_trace_ids": []
+    }
+  ]
+}

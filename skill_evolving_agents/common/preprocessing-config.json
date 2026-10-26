@@ -119,7 +119,7 @@
       "method-cross-task-consolidation"
     ],
     "min_events": 3,
-    "min_value_score": 0.12,
+    "min_value_score": 0.3,
     "max_obviousness": 0.55,
     "max_task_specificity": 0.65,
     "min_confidence": 0.68,
@@ -143,6 +143,15 @@
       "redundancy": 1.0
     }
   },
+  "resource_opportunities": {
+    "enabled": true,
+    "min_invocations": 3,
+    "min_supporting_resource_invocations": 3,
+    "min_loop_iterations": 3,
+    "min_confidence": 0.82,
+    "max_evidence_records": 5,
+    "reserved_selection_slots": 1
+  },
   "features": {
     "strategy": "tfidf",
     "max_terms": 4096,
@@ -164,11 +173,18 @@
     "create_min_distinct_sessions": 2,
     "single_session_pattern_min_confidence": 0.8,
     "single_session_pattern_min_distinct_windows": 3,
+    "allow_single_session_resource_create": true,
+    "single_session_resource_min_confidence": 0.9,
+    "single_session_resource_min_distinct_windows": 3,
+    "single_session_resource_min_occurrences": 3,
+    "allow_single_session_authored_resource_create": true,
+    "single_session_authored_resource_min_confidence": 0.9,
+    "single_session_authored_resource_min_lifecycle_stages": 3,
     "allow_single_session_methodology_create": true,
     "single_session_methodology_min_confidence": 0.82,
     "single_session_methodology_min_value": 0.18,
     "novelty_max_similarity": 0.82,
-    "min_methodology_value": 0.12,
+    "min_methodology_value": 0.3,
     "promotion_min_held_out_cases": 5,
     "promotion_min_held_out_pass_rate": 0.8,
     "promotion_max_activation_false_positive_rate": 0.1,

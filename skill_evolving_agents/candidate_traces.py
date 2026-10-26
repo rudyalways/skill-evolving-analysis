@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """Index candidate traces and start a run that copies one of them.
 
-The pool lives beside the runs directory. A run name is
+The pool lives beside the runs directory. The default run name is
 ``run-<source>-<session hex>-<turns>turns``. The hex starts at six
 characters and grows only when two traces would otherwise share a name.
+Use ``--run-id`` when execution identity should also be explicit, for example
+``trace-codex-01a135-31turns--runner-dsh-deepseek-flash``.
 """
 
 from __future__ import annotations
@@ -162,6 +164,7 @@ def create_run(
     replace: bool = False,
     source_path: Path | None = None,
     candidate_skills: Path | None = None,
+    run_id_override: str | None = None,
 ) -> Path:
     """Copy one candidate into a new run named from its metadata."""
     if source_path is not None:
@@ -180,7 +183,8 @@ def create_run(
         rows = index_traces(pool)
         row = _select(rows, selector)
         trace_source = pool / str(row["file"])
-    run_id = str(row["run_id"])
+    source_run_id = str(row["run_id"])
+    run_id = run_id_override or source_run_id
     if not re.fullmatch(r"[A-Za-z0-9_.-]+", run_id):
         raise SystemExit(f"refusing unsafe run id: {run_id}")
     source = str(row["source"])
@@ -214,9 +218,16 @@ def create_run(
     else:
         skills_pool = candidate_skills or pool.parent / CANDIDATE_SKILLS.name
         copied_skills: list[str] = []
+        invalid_candidate_skills: list[dict[str, object]] = []
         if skills_pool.is_dir():
             for skill_dir in sorted(skills_pool.iterdir()):
                 if skill_dir.is_dir() and (skill_dir / "SKILL.md").is_file():
+                    problems = run_pipeline.validate_inventory_skill(skill_dir)
+                    if problems:
+                        invalid_candidate_skills.append(
+                            {"skill": skill_dir.name, "problems": problems}
+                        )
+                        continue
                     shutil.copytree(
                         skill_dir,
                         workspace / "target/to_be_improved_skills" / skill_dir.name,
@@ -264,6 +275,7 @@ def create_run(
     selection = {
         "schema_version": 1,
         "run_id": run_id,
+        "source_run_id": source_run_id,
         "source": source,
         "session_id": row["session_id"],
         "turns": row["turns"],
@@ -278,6 +290,8 @@ def create_run(
         selection["seeded_from"] = seed_run
     elif copied_skills:
         selection["candidate_skills"] = copied_skills
+    if not seed_run and invalid_candidate_skills:
+        selection["invalid_candidate_skills"] = invalid_candidate_skills
     (workspace / "run/trace-selection.json").write_text(
         json.dumps(selection, indent=2, ensure_ascii=False) + "\n"
     )
@@ -296,6 +310,13 @@ def main() -> None:
     create.add_argument(
         "selector",
         help="candidate filename, session id, or generated run id",
+    )
+    create.add_argument(
+        "--run-id",
+        help=(
+            "override the workspace run id; useful for naming trace source and "
+            "runner/model separately"
+        ),
     )
     create.add_argument(
         "--seed-run",
@@ -318,6 +339,7 @@ def main() -> None:
             seed_run=args.seed_run,
             replace=args.replace,
             source_path=args.source,
+            run_id_override=args.run_id,
         )
         return
     rows = index_traces()

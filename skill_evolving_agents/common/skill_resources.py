@@ -103,11 +103,21 @@ def generate_openai_yaml(skill: Path) -> Path:
 
 
 def _resource_files(skill: Path) -> dict[str, list[Path]]:
+    def authored(path: Path) -> bool:
+        relative = path.relative_to(skill)
+        return (
+            path.is_file()
+            and path != skill / GENERATED_INTERFACE
+            and "__pycache__" not in relative.parts
+            and path.suffix != ".pyc"
+            and path.name != ".DS_Store"
+        )
+
     return {
         kind: sorted(
             path
             for path in (skill / kind).rglob("*")
-            if path.is_file() and path != skill / GENERATED_INTERFACE
+            if authored(path)
         )
         if (skill / kind).is_dir()
         else []
@@ -144,6 +154,8 @@ def measure_skill_resources(
     skill: Path,
     evidence: str = "",
     use_evidence: str | None = None,
+    resource_plan: list[dict[str, Any]] | None = None,
+    runtime_observation_available: bool = True,
 ) -> dict[str, Any]:
     """Measure observed use separately from static progressive-disclosure proxies."""
     use_evidence = evidence if use_evidence is None else use_evidence
@@ -184,8 +196,12 @@ def measure_skill_resources(
 
     reference_count = len(by_kind["references"])
     asset_count = len(by_kind["assets"])
+    delegated_agent_count = len(by_kind["agents"])
+    eval_file_count = len(by_kind["evals"])
     reference_uses = len(observed["references"])
     asset_uses = len(observed["assets"])
+    delegated_agent_uses = len(observed["agents"])
+    eval_uses = len(observed["evals"])
     skill_tokens = _tokens(skill_text)
     reference_tokens = sum(_tokens(resource_text[path]) for path in by_kind["references"])
     disclosure_total = skill_tokens + reference_tokens
@@ -219,9 +235,31 @@ def measure_skill_resources(
     positive_rates = [
         value
         for value in (
-            successes / attempts if attempts else None,
-            reference_uses / reference_count if reference_count else None,
-            asset_uses / asset_count if asset_count else None,
+            (
+                successes / attempts
+                if attempts and runtime_observation_available
+                else None
+            ),
+            (
+                reference_uses / reference_count
+                if reference_count and runtime_observation_available
+                else None
+            ),
+            (
+                asset_uses / asset_count
+                if asset_count and runtime_observation_available
+                else None
+            ),
+            (
+                delegated_agent_uses / delegated_agent_count
+                if delegated_agent_count and runtime_observation_available
+                else None
+            ),
+            (
+                eval_uses / eval_file_count
+                if eval_file_count and runtime_observation_available
+                else None
+            ),
         )
         if value is not None
     ]
@@ -231,21 +269,72 @@ def measure_skill_resources(
         if observed_score is not None
         else None
     )
+    generated_interface = (skill / GENERATED_INTERFACE).is_file()
+    plan_decisions = {
+        str(row.get("resource")): str(row.get("decision"))
+        for row in resource_plan or []
+        if isinstance(row, dict)
+    }
+    plan_compliance = {
+        kind: {
+            "decision": plan_decisions.get(kind),
+            "authored_files": len(by_kind[kind]),
+            "compliant": (
+                (plan_decisions.get(kind) == "use" and bool(by_kind[kind]))
+                or (plan_decisions.get(kind) == "omit" and not by_kind[kind])
+                or plan_decisions.get(kind) is None
+            ),
+        }
+        for kind in RESOURCE_KINDS
+    }
     return {
         "skill": skill.name,
         "resource_counts": {kind: len(paths) for kind, paths in by_kind.items()},
+        "resource_inventory": {
+            "delegated_agent_files": delegated_agent_count,
+            "generated_interface_metadata_files": int(generated_interface),
+            "generated_interface_path": (
+                GENERATED_INTERFACE.as_posix() if generated_interface else None
+            ),
+        },
+        "resource_plan": resource_plan or [],
+        "runtime_observation": {
+            "available": runtime_observation_available,
+            "scope": "post-publication" if runtime_observation_available else None,
+            "reason": (
+                None
+                if runtime_observation_available
+                else "accepted-operation authoring logs are not runtime-use evidence"
+            ),
+        },
         "script_execution": {
             "attempts": attempts,
             "successes": successes,
-            "success_rate": round(successes / attempts, 6) if attempts else None,
-            "reason": None if attempts else "no script execution result was observed",
+            "success_rate": (
+                round(successes / attempts, 6)
+                if attempts and runtime_observation_available
+                else None
+            ),
+            "reason": (
+                "no post-publication runtime observation is available"
+                if attempts and not runtime_observation_available
+                else None
+                if attempts
+                else "no script execution result was observed"
+            ),
         },
         "reference_use": {
             "files": reference_count,
             "used": reference_uses,
-            "use_rate": round(reference_uses / reference_count, 6) if reference_count else None,
+            "use_rate": (
+                round(reference_uses / reference_count, 6)
+                if reference_count and runtime_observation_available
+                else None
+            ),
             "reason": (
-                None
+                "no post-publication runtime observation is available"
+                if reference_count and not runtime_observation_available
+                else None
                 if reference_uses
                 else (
                     "no reference retrieval or use was observed"
@@ -257,9 +346,15 @@ def measure_skill_resources(
         "asset_reuse": {
             "files": asset_count,
             "reused": asset_uses,
-            "reuse_rate": round(asset_uses / asset_count, 6) if asset_count else None,
+            "reuse_rate": (
+                round(asset_uses / asset_count, 6)
+                if asset_count and runtime_observation_available
+                else None
+            ),
             "reason": (
-                None
+                "no post-publication runtime observation is available"
+                if asset_count and not runtime_observation_available
+                else None
                 if asset_uses
                 else (
                     "no asset reuse was observed"
@@ -268,6 +363,47 @@ def measure_skill_resources(
                 )
             ),
         },
+        "delegated_agent_use": {
+            "files": delegated_agent_count,
+            "used": delegated_agent_uses,
+            "use_rate": (
+                round(delegated_agent_uses / delegated_agent_count, 6)
+                if delegated_agent_count and runtime_observation_available
+                else None
+            ),
+            "reason": (
+                "no post-publication runtime observation is available"
+                if delegated_agent_count and not runtime_observation_available
+                else None
+                if delegated_agent_uses
+                else (
+                    "no delegated-agent prompt use was observed"
+                    if delegated_agent_count
+                    else "skill has no delegated-agent prompt files"
+                )
+            ),
+        },
+        "eval_use": {
+            "files": eval_file_count,
+            "used": eval_uses,
+            "use_rate": (
+                round(eval_uses / eval_file_count, 6)
+                if eval_file_count and runtime_observation_available
+                else None
+            ),
+            "reason": (
+                "no post-publication runtime observation is available"
+                if eval_file_count and not runtime_observation_available
+                else None
+                if eval_uses
+                else (
+                    "no eval execution or retrieval was observed"
+                    if eval_file_count
+                    else "skill has no eval files"
+                )
+            ),
+        },
+        "resource_plan_compliance": plan_compliance,
         "progressive_disclosure": {
             "skill_md_tokens": skill_tokens,
             "reference_tokens": reference_tokens,
@@ -297,10 +433,20 @@ def aggregate_resource_metrics(documents: Iterable[dict[str, Any]]) -> dict[str,
 
     attempts = sum_field("script_execution", "attempts")
     successes = sum_field("script_execution", "successes")
-    references = sum_field("reference_use", "files")
-    reference_uses = sum_field("reference_use", "used")
-    assets = sum_field("asset_reuse", "files")
-    asset_uses = sum_field("asset_reuse", "reused")
+    def observed_rate(section: str, numerator: str) -> float | None:
+        eligible = [
+            row
+            for row in skills
+            if isinstance((row.get(section) or {}).get("use_rate"), (int, float))
+            or isinstance((row.get(section) or {}).get("reuse_rate"), (int, float))
+        ]
+        denominator = sum(
+            int((row.get(section) or {}).get("files") or 0) for row in eligible
+        )
+        used = sum(
+            int((row.get(section) or {}).get(numerator) or 0) for row in eligible
+        )
+        return round(used / denominator, 6) if denominator else None
     scores = [
         float(row["observed_usefulness_score"])
         for row in skills
@@ -309,9 +455,32 @@ def aggregate_resource_metrics(documents: Iterable[dict[str, Any]]) -> dict[str,
     return {
         "operations": len(documents),
         "skills": len(skills),
+        "delegated_agent_files": sum(
+            int((row.get("resource_inventory") or {}).get("delegated_agent_files") or 0)
+            for row in skills
+        ),
+        "generated_interface_metadata_files": sum(
+            int(
+                (row.get("resource_inventory") or {}).get(
+                    "generated_interface_metadata_files"
+                )
+                or 0
+            )
+            for row in skills
+        ),
         "script_execution_success_rate": round(successes / attempts, 6) if attempts else None,
-        "reference_use_rate": round(reference_uses / references, 6) if references else None,
-        "asset_reuse_rate": round(asset_uses / assets, 6) if assets else None,
+        "reference_use_rate": observed_rate("reference_use", "used"),
+        "asset_reuse_rate": observed_rate("asset_reuse", "reused"),
+        "delegated_agent_use_rate": observed_rate("delegated_agent_use", "used"),
+        "eval_use_rate": observed_rate("eval_use", "used"),
+        "resource_plan_noncompliance": sum(
+            sum(
+                not bool(item.get("compliant"))
+                for item in (row.get("resource_plan_compliance") or {}).values()
+                if isinstance(item, dict)
+            )
+            for row in skills
+        ),
         "mean_observed_usefulness_score": round(sum(scores) / len(scores), 6) if scores else None,
         "unused_resources": sum(
             len((row.get("penalties") or {}).get("unused_resources") or []) for row in skills

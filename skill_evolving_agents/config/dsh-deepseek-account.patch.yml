@@ -10,7 +10,23 @@
   config:
     provider: deepseek-account
     model: deepseek-flash
-    reasoningEffort: high
+    reasoningEffort: low
 - id: authorization
   name: '@deepseek-ai/dsh-authorization'
   disabled: false
+# Headless pipeline runs are non-interactive. Suppress the desktop approval
+# window while retaining the headless profile's workspace-write sandbox.
+- id: approval
+  name: '@deepseek-ai/dsh-user-approval'
+  config:
+    policy: never
+- id: permission
+  name: '@deepseek-ai/dsh-permission-presets'
+  config:
+    presets:
+      headless-workspace-write:
+        sandbox: workspace-write
+        approval: never
+        name: headless-workspace-write
+        description: Headless workspace writes without interactive approval.
+    defaultPreset: headless-workspace-write

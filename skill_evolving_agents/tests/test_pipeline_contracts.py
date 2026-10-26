@@ -44,6 +44,10 @@ methodology = load(
     "trace_methodology_test",
     AGENTS / "01_preprocessing_agent/trace_mining/methodology.py",
 )
+resource_opportunities = load(
+    "trace_resource_opportunities_test",
+    AGENTS / "01_preprocessing_agent/trace_mining/resource_opportunities.py",
+)
 type_checker = load("skill_type_checker_test", AGENTS / "common/skill_type_checker.py")
 format_checker = load(
     "skill_format_checker_test", AGENTS / "common/skill_format_checker.py"
@@ -86,6 +90,17 @@ def write_json(path: Path, value: dict) -> None:
 def write_jsonl(path: Path, rows: list[dict]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("".join(json.dumps(row) + "\n" for row in rows))
+
+
+def valid_skill_text(name: str, body: str | None = None) -> str:
+    return (
+        "---\n"
+        f"name: {name}\n"
+        "description: Use when a repeatable example workflow is needed.\n"
+        "---\n\n"
+        "# Example\n\n"
+        f"{body or 'Follow the verified workflow and report the observable result.'}\n"
+    )
 
 
 def codex_trace_rows(
@@ -200,7 +215,72 @@ def cursor_trace_rows() -> list[dict]:
     ]
 
 
+def resource_plan(*used: str) -> list[dict]:
+    selected = set(used)
+    return [
+        {
+            "resource": resource,
+            "decision": "use" if resource in selected else "omit",
+            "reason": (
+                "The operation has a concrete directory goal."
+                if resource in selected
+                else "The evidence does not justify this resource."
+            ),
+            "confidence": 0.9,
+        }
+        for resource in ("scripts", "references", "assets", "agents", "evals")
+    ]
+
+
+def _add_resource_plans(op: dict) -> dict:
+    kind = op.get("op")
+    if kind in {"create", "update"}:
+        records = op.get("skills") or []
+    elif kind == "merge":
+        records = [op.get("into")]
+    elif kind == "split":
+        records = op.get("into") or []
+    else:
+        records = []
+    for record in records:
+        if not isinstance(record, dict) or "resource_plan" in record:
+            continue
+        if kind == "update" and record.get("sections"):
+            dirs = record.setdefault("dirs", [])
+            if not any(
+                isinstance(row, dict) and row.get("dir") == "evals"
+                for row in dirs
+            ):
+                dirs.append(
+                    {
+                        "dir": "evals",
+                        "goal": "Add a focused regression case for the behavior change.",
+                    }
+                )
+        dirs = {
+            row.get("dir")
+            for row in record.get("dirs", [])
+            if isinstance(row, dict)
+        }
+        record["resource_plan"] = resource_plan(*dirs)
+    return op
+
+
 def valid_goal(op: dict | None = None) -> dict:
+    operation = _add_resource_plans(
+        op
+        or {
+            "op": "update",
+            "skills": [
+                {
+                    "skill": "seed",
+                    "goal": "Improve it.",
+                    "facet": "workflow",
+                    "sections": [{"section": "workflow", "goal": "Add checks."}],
+                }
+            ],
+        }
+    )
     return {
         "goal": {
             "improve_harness": {"scope": "out_of_scope"},
@@ -210,22 +290,7 @@ def valid_goal(op: dict | None = None) -> dict:
         "reasoning": "The skill is incomplete.",
         "plan": "Apply the named operation.",
         "action": {
-            "ops": [
-                op
-                or {
-                    "op": "update",
-                    "skills": [
-                        {
-                            "skill": "seed",
-                            "goal": "Improve it.",
-                            "facet": "workflow",
-                            "sections": [
-                                {"section": "workflow", "goal": "Add checks."}
-                            ],
-                        }
-                    ],
-                }
-            ]
+            "ops": [operation]
         },
         "feedback_to": "diagnosis",
     }
@@ -573,6 +638,160 @@ def initialize_pending_operation(
 
 
 class ContractTests(unittest.TestCase):
+    def test_low_cost_recurrence_matures_across_distinct_run_sessions(self) -> None:
+        profile = {
+            "evolution_gate": {
+                "enabled": True,
+                "minimum_distinct_sessions": 2,
+                "minimum_evidence_records": 3,
+                "minimum_confidence": 0.8,
+                "immediate_critical": True,
+                "immediate_detectors": [],
+            }
+        }
+
+        def prepare(root: Path, run: str, session: str) -> Path:
+            workspace = root / "workspace/runs" / run
+            finding_dir = workspace / "traces/derived/findings/finding"
+            finding_dir.mkdir(parents=True)
+            write_json(
+                finding_dir / "finding.json",
+                {
+                    "detector": "method-retry-oscillation",
+                    "severity": "high",
+                    "confidence": 0.9,
+                    "trace_ids": [f"codex:{session}:turn"],
+                    "evidence": [{"trace_id": f"codex:{session}:turn"}],
+                },
+            )
+            return workspace
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            first = prepare(root, "run-one", "session-one")
+            self.assertEqual(
+                runner.low_cost_allowed_scopes(first, ["finding"], profile), []
+            )
+            repeated = prepare(root, "run-one-replay", "session-one")
+            self.assertEqual(
+                runner.low_cost_allowed_scopes(repeated, ["finding"], profile), []
+            )
+            second = prepare(root, "run-two", "session-two")
+            self.assertEqual(
+                runner.low_cost_allowed_scopes(second, ["finding"], profile),
+                ["finding"],
+            )
+            decision = json.loads(
+                (second / "traces/derived/evolution-gate.json").read_text()
+            )["decisions"][0]
+            self.assertEqual(decision["reason_codes"], ["recurring_sessions"])
+            self.assertEqual(decision["distinct_sessions"], 2)
+            self.assertEqual(decision["historical_sessions"], 1)
+
+    def test_resource_recurrence_does_not_mix_unrelated_fingerprints(self) -> None:
+        profile = {
+            "evolution_gate": {
+                "enabled": True,
+                "minimum_distinct_sessions": 2,
+                "minimum_evidence_records": 3,
+                "minimum_confidence": 0.8,
+                "immediate_critical": True,
+                "immediate_detectors": [],
+            }
+        }
+
+        def prepare(root: Path, run: str, session: str, fingerprint: str) -> Path:
+            workspace = root / "workspace/runs" / run
+            finding_dir = workspace / "traces/derived/findings/finding"
+            finding_dir.mkdir(parents=True)
+            write_json(
+                finding_dir / "finding.json",
+                {
+                    "detector": "resource-references-opportunity",
+                    "severity": "medium",
+                    "confidence": 0.91,
+                    "trace_ids": [f"codex:{session}:turn"],
+                    "evidence": [{"trace_id": f"codex:{session}:turn"}],
+                    "features": {
+                        "candidate_source": "resource_opportunity",
+                        "resource_family": "repeated-knowledge-source",
+                        "resource_fingerprint": fingerprint,
+                    },
+                },
+            )
+            return workspace
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            first = prepare(root, "run-one", "session-one", "auth-policy")
+            second = prepare(root, "run-two", "session-two", "deploy-policy")
+            repeat = prepare(root, "run-three", "session-three", "auth-policy")
+            self.assertEqual(
+                runner.low_cost_allowed_scopes(first, ["finding"], profile), []
+            )
+            self.assertEqual(
+                runner.low_cost_allowed_scopes(second, ["finding"], profile), []
+            )
+            self.assertEqual(
+                runner.low_cost_allowed_scopes(repeat, ["finding"], profile),
+                ["finding"],
+            )
+            unrelated = json.loads(
+                (second / "traces/derived/evolution-gate.json").read_text()
+            )["decisions"][0]
+            self.assertEqual(unrelated["distinct_sessions"], 1)
+            self.assertTrue(unrelated["recurrence_key"].endswith("deploy-policy"))
+
+    def test_low_cost_gate_keeps_qualified_authored_resource_lifecycle(self) -> None:
+        profile = {
+            "evolution_gate": {
+                "enabled": True,
+                "minimum_distinct_sessions": 2,
+                "minimum_evidence_records": 3,
+                "minimum_confidence": 0.8,
+                "immediate_critical": True,
+                "immediate_detectors": [],
+            }
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory) / "workspace/runs/run-one"
+            finding_dir = workspace / "traces/derived/findings/finding"
+            finding_dir.mkdir(parents=True)
+            write_json(
+                finding_dir / "finding.json",
+                {
+                    "detector": "resource-scripts-opportunity",
+                    "severity": "high",
+                    "confidence": 0.94,
+                    "trace_ids": ["codex:session-one:turn"],
+                    "evidence": [{"trace_id": "codex:session-one:turn"}],
+                    "features": {
+                        "candidate_source": "resource_opportunity",
+                        "resource_evidence_mode": "authored_lifecycle",
+                        "resource_family": "authored-executable",
+                        "resource_fingerprint": "script-one",
+                        "distinct_lifecycle_stages": 3,
+                        "false_positive_guards": [
+                            "repeated-independent-invocations",
+                            "explicit-resource-shape",
+                            "stable-normalized-fingerprint",
+                            "successful-post-authoring-validation",
+                        ],
+                    },
+                },
+            )
+            self.assertEqual(
+                runner.low_cost_allowed_scopes(workspace, ["finding"], profile),
+                ["finding"],
+            )
+            decision = json.loads(
+                (workspace / "traces/derived/evolution-gate.json").read_text()
+            )["decisions"][0]
+            self.assertEqual(
+                decision["reason_codes"],
+                ["qualified_authored_resource_lifecycle"],
+            )
+
     def test_diagnosis_checker_canonicalizes_no_change_output(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             diagnosis = Path(directory) / "diagnosis.json"
@@ -618,6 +837,12 @@ class ContractTests(unittest.TestCase):
             self.assertTrue(
                 (created / "target/to_be_improved_skills/demo/SKILL.md").is_file()
             )
+            self.assertEqual(
+                json.loads(
+                    (created / "run/trace-selection.json").read_text()
+                )["candidate"],
+                "candidate_traces/trace.jsonl",
+            )
             self.assertFalse((created / "logs/execution.jsonl").exists())
             self.assertFalse((created / "traces/derived/findings/note.json").exists())
             self.assertFalse(runner.workspace_was_started(created))
@@ -629,6 +854,36 @@ class ContractTests(unittest.TestCase):
             again = runner.allocate_execution_workspace(source, moment=moment)
             self.assertEqual(again.name, f"timed-run@{stamp}-2")
             self.assertFalse(source.exists())
+
+    def test_runtime_budget_clamps_session_timeout(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            write_json(
+                workspace / "run/trace-selection.json",
+                {"turns": 11},
+            )
+            with patch.object(runner.time, "monotonic", return_value=100.0):
+                budget = runner.configure_run_deadline(workspace)
+            self.assertEqual(budget["budget_seconds"], 900)
+            self.assertEqual(budget["budget_source"], "derived-default")
+            self.assertEqual(budget["classification"], "short")
+            with patch.object(runner.time, "monotonic", return_value=950.0):
+                self.assertEqual(runner.session_timeout_seconds("goal"), 50)
+                self.assertEqual(runner.session_timeout_seconds("verifiter"), 50)
+            runner.ACTIVE_RUN_DEADLINE_MONOTONIC = None
+
+    def test_runtime_budget_accepts_environment_override(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            write_json(workspace / "run/trace-selection.json", {"turns": 11})
+            with (
+                patch.dict(os.environ, {"SKILL_EVOLVER_RUN_BUDGET_SECONDS": "1234"}),
+                patch.object(runner.time, "monotonic", return_value=100.0),
+            ):
+                budget = runner.configure_run_deadline(workspace)
+            self.assertEqual(budget["budget_seconds"], 1234)
+            self.assertEqual(budget["budget_source"], "environment")
+            runner.ACTIVE_RUN_DEADLINE_MONOTONIC = None
 
     def test_initialize_workspace_is_allowlisted(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -661,16 +916,32 @@ class ContractTests(unittest.TestCase):
                 json.dumps({"turn_count": 4})
             )
             (workspace / "traces/derived/signals/findings.jsonl").write_text(
-                json.dumps({"finding_id": "sig-a"}) + "\n"
+                json.dumps({"finding_id": "sig-a"})
+                + "\n"
+                + json.dumps({"finding_id": "sig-filtered"})
+                + "\n"
             )
             (
                 workspace
                 / "traces/derived/signals/selection-decisions.jsonl"
             ).write_text(
-                json.dumps(
-                    {"finding_id": "sig-a", "disposition": "selected"}
+                json.dumps({"finding_id": "sig-a", "disposition": "selected"})
+                + "\n"
+                + json.dumps(
+                    {"finding_id": "sig-filtered", "disposition": "selected"}
                 )
                 + "\n"
+            )
+            (workspace / "traces/derived/evolution-gate.json").write_text(
+                json.dumps(
+                    {
+                        "schema_version": 1,
+                        "decisions": [
+                            {"scope": "sig-a", "disposition": "selected"},
+                            {"scope": "sig-filtered", "disposition": "deferred"},
+                        ],
+                    }
+                )
             )
             (workspace / "run/sig-a/diagnosis.json").write_text(
                 json.dumps({"skill_capabilities_missing": ["recovery method"]})
@@ -715,6 +986,7 @@ class ContractTests(unittest.TestCase):
                 },
                 {
                     "phase": "optimize",
+                    "category": "llm_agent",
                     "metadata_json": json.dumps({"attempt": 1}),
                 },
                 {
@@ -729,6 +1001,12 @@ class ContractTests(unittest.TestCase):
             )
             self.assertEqual(metrics["phases"]["mining"]["turns"], 4)
             self.assertEqual(metrics["phases"]["diagnosis"]["coverage"], 1.0)
+            self.assertEqual(
+                metrics["phases"]["diagnosis"]["mined_selected_scopes"], 2
+            )
+            self.assertEqual(
+                metrics["phases"]["diagnosis"]["expected_scopes"], 1
+            )
             self.assertEqual(metrics["phases"]["diagnosis"]["truncated_slices"], 1)
             self.assertEqual(
                 metrics["phases"]["recall"]["candidate_coverage"], 1.0
@@ -738,6 +1016,14 @@ class ContractTests(unittest.TestCase):
             self.assertEqual(metrics["phases"]["verify"]["replay_coverage"], 0.0)
             self.assertEqual(
                 metrics["phases"]["judge"]["proposal_acceptance_rate"], 1.0
+            )
+            self.assertEqual(metrics["phases"]["cost"]["agent_calls_actual"], 1)
+            self.assertEqual(metrics["phases"]["cost"]["prefiltered_scopes"], 1)
+            self.assertEqual(
+                metrics["phases"]["cost"]["estimated_agent_calls_avoided"], 2
+            )
+            self.assertEqual(
+                metrics["phases"]["cost"]["counterfactual_agent_calls"], 3
             )
             path = runner.pipeline_metrics.write_phase_metrics(
                 workspace, spans
@@ -1461,6 +1747,33 @@ class ContractTests(unittest.TestCase):
             contracts.validate_goal(path)
             with self.assertRaises(contracts.ContractError):
                 contracts.validate_goal(path, exactly_one_op=True)
+
+    def test_behavioral_update_requires_regression_evals(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "goal.json"
+            skill = {
+                "skill": "existing-skill",
+                "goal": "Change the workflow behavior.",
+                "facet": "verification",
+                "sections": [
+                    {"section": "workflow", "goal": "Add the new behavior."}
+                ],
+                "dirs": [],
+                "resource_plan": resource_plan(),
+            }
+            write_json(path, valid_goal({"op": "update", "skills": [skill]}))
+            with self.assertRaisesRegex(
+                contracts.ContractError,
+                "behavioral section updates must use evals",
+            ):
+                contracts.validate_goal(path, exactly_one_op=True)
+
+            skill["dirs"] = [
+                {"dir": "evals", "goal": "Add a focused regression case."}
+            ]
+            skill["resource_plan"] = resource_plan("evals")
+            write_json(path, valid_goal({"op": "update", "skills": [skill]}))
+            contracts.validate_goal(path, exactly_one_op=True)
             placeholder = valid_goal()
             placeholder["reasoning"] = "<reason>"
             write_json(path, placeholder)
@@ -1924,6 +2237,39 @@ class ContractTests(unittest.TestCase):
                 (workspace / "target/to_be_improved_skills/_templates").exists()
             )
 
+    def test_optimize_context_carries_authoritative_resource_content(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            finding = workspace / "traces/derived/findings/sig-asset/finding.json"
+            finding.parent.mkdir(parents=True)
+            finding.write_text(
+                json.dumps(
+                    {
+                        "features": {
+                            "resource": "assets",
+                            "resource_family": "authored-pipeline-template",
+                            "asset_contract": {
+                                "content_available": True,
+                                "content": '{"schema":"pipeline/v1","id":"discovery"}\n',
+                                "content_sha256": "digest",
+                            },
+                        }
+                    }
+                )
+            )
+            contracts = runner.finding_resource_contracts(workspace, "sig-asset")
+            context = runner.optimize_session_context(
+                "sig-asset",
+                1,
+                {"op": "update", "skill": "starter"},
+                "",
+                contracts,
+            )
+            self.assertEqual(contracts["resource"], "assets")
+            self.assertIn('\\"id\\":\\"discovery\\"', context)
+            self.assertIn("write that content exactly", context)
+            self.assertIn("Do not reconstruct", context)
+
     def test_verifier_prompt_embeds_one_skill_input_and_output_json(self) -> None:
         root = AGENTS / "05_verifiter_agent/verifiter"
         verification_input = json.loads(
@@ -1967,6 +2313,7 @@ class ContractTests(unittest.TestCase):
             "example-skill",
             skill_input,
             required_output,
+            evidence_bundle="candidate/SKILL.md:\n# Example\n",
         )
         self.assertEqual(
             [row["skill"] for row in skill_input["skills"]],
@@ -1977,9 +2324,15 @@ class ContractTests(unittest.TestCase):
             ["example-skill"],
         )
         self.assertIn("<verification-input-json>", prompt)
-        self.assertIn("<verification-output-json>", prompt)
+        self.assertIn("<compact-verdict-json>", prompt)
+        self.assertIn("candidate/SKILL.md", prompt)
+        self.assertIn("use no tools", prompt)
         self.assertIn('"skill": "example-skill"', prompt)
-        self.assertIn("Return only one JSON object", prompt)
+        self.assertIn("exception report", prompt)
+        self.assertNotIn('"verification_steps"', prompt)
+        self.assertNotIn('"step_weights"', prompt)
+        self.assertNotIn('"formulas"', prompt)
+        self.assertNotIn('"definition_ref"', prompt)
         self.assertIn("loose regex", prompt)
         self.assertIn("`# Overview` are the same name", prompt)
         self.assertIn("all of the following are true", prompt)
@@ -1993,6 +2346,187 @@ class ContractTests(unittest.TestCase):
         avoid = runner.instruction("optimize", runner.OPTIMIZE_AVOIDANCE)
         self.assertIn("frontmatter description contains angle brackets", avoid)
         self.assertIn("scored 0.99 and still failed", avoid)
+
+    def test_verifier_evidence_bundle_uses_diff_and_resources(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            raw = workspace / "target/raw_skills/example"
+            candidate = workspace / "target/to_be_improved_skills/example"
+            (raw / "evals").mkdir(parents=True)
+            (candidate / "evals").mkdir(parents=True)
+            (raw / "SKILL.md").write_text("## Target\nBefore\n")
+            (candidate / "SKILL.md").write_text("## Target\nAfter\n")
+            (candidate / "evals/evals.json").write_text('{"evals": []}\n')
+            other = workspace / "target/to_be_improved_skills/other-skill"
+            other.mkdir()
+            (other / "SKILL.md").write_text(
+                "---\ndescription: Existing related method.\n---\n"
+                "## Overview\nPrevents duplicate behavior.\n"
+            )
+            bundle = runner.verifier_evidence_bundle(
+                workspace,
+                {
+                    "skill": "example",
+                    "role": "updated",
+                    "baseline_expected": True,
+                    "candidate_expected": True,
+                    "requirements": {
+                        "sections": [{"section": "target"}],
+                        "directories": [{"dir": "evals"}],
+                    },
+                },
+            )
+            self.assertIn("host-computed update boundary facts", bundle)
+            self.assertIn('"target": true', bundle)
+            self.assertIn("candidate claimed section target", bundle)
+            self.assertIn("candidate/evals/evals.json", bundle)
+            self.assertIn("duplicate/subsumption check", bundle)
+            self.assertIn("other-skill", bundle)
+
+    def test_merge_target_verifier_ignores_unrelated_inventory_summaries(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            raw = workspace / "target/raw_skills/target"
+            candidate = workspace / "target/to_be_improved_skills/target"
+            other = workspace / "target/to_be_improved_skills/unrelated"
+            raw.mkdir(parents=True)
+            candidate.mkdir(parents=True)
+            other.mkdir(parents=True)
+            (raw / "SKILL.md").write_text("## Overview\nBefore\n")
+            (candidate / "SKILL.md").write_text("## Overview\nMerged\n")
+            (other / "SKILL.md").write_text(
+                "---\ndescription: Semantically similar but out of scope.\n---\n"
+            )
+            bundle = runner.verifier_evidence_bundle(
+                workspace,
+                {
+                    "skill": "target",
+                    "role": "merge_target",
+                    "baseline_expected": True,
+                    "candidate_expected": True,
+                    "requirements": {"sections": [], "directories": []},
+                },
+            )
+            self.assertNotIn("other inventory skills", bundle)
+            self.assertNotIn("unrelated", bundle)
+            self.assertIn('"unclaimed_sections_unchanged": true', bundle)
+
+    def test_ood_lexical_fallback_recalls_existing_method_before_create(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            skill = root / "retry-guard"
+            skill.mkdir()
+            (skill / "SKILL.md").write_text(
+                "Retry polling only after state progress; stop identical waits."
+            )
+            recalled = runner.lexical_inventory_fallback(
+                {
+                    "skill_capabilities_missing": [],
+                    "newly_detected_skill_capabilites_missing": [
+                        {
+                            "type": "job/methodology/async-operation-progress-wait",
+                            "description": "Bound repeated polling when state does not progress.",
+                            "reasoning": "Identical waits returned no new evidence.",
+                        }
+                    ],
+                },
+                {
+                    "features": {
+                        "lesson": {
+                            "kind": "retry_guard",
+                            "rule": "Stop identical poll retries without state progress.",
+                        }
+                    }
+                },
+                {
+                    "skills_metadata": [
+                        {
+                            "skill": "retry-guard",
+                            "skill_types": [
+                                {"type": "job/methodology/workflow", "weight": 0.9}
+                            ],
+                        }
+                    ]
+                },
+                root,
+            )
+            self.assertEqual(recalled[0]["skill"], "retry-guard")
+            self.assertEqual(
+                recalled[0]["fallback_reason"],
+                "ood_lexical_collision_guard",
+            )
+            self.assertEqual(
+                recalled[0]["matches"][0]["cluster_type"],
+                "lexical/query",
+            )
+            self.assertGreater(
+                recalled[0]["matches"][0]["contribution"], 0
+            )
+
+    def test_exact_finding_replay_is_detected_from_current_skill_changelog(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            changelogs = workspace / "target/skill_changelogs"
+            changelogs.mkdir(parents=True)
+            (changelogs / "retry-guard.md").write_text(
+                "# retry-guard\n"
+                "- 2026-10-24 update sig-repeat/1 | workflow\n"
+            )
+            recalled = [{"skill": "retry-guard", "score": 0.9}]
+            self.assertEqual(
+                runner.previously_applied_finding_skills(
+                    workspace, "sig-repeat", recalled
+                ),
+                ["retry-guard"],
+            )
+            self.assertEqual(
+                runner.previously_applied_finding_skills(
+                    workspace, "sig-new", recalled
+                ),
+                [],
+            )
+
+    def test_exact_finding_replay_does_not_depend_on_semantic_recall(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            changelogs = workspace / "target/skill_changelogs"
+            changelogs.mkdir(parents=True)
+            (changelogs / "previous-owner.md").write_text(
+                "# previous-owner\n"
+                "- 2026-10-24 update sig-repeat/1 | workflow\n"
+            )
+            recalled = [{"skill": "different-skill", "score": 0.9}]
+            self.assertEqual(
+                runner.previously_applied_finding_skills(
+                    workspace, "sig-repeat", recalled
+                ),
+                ["previous-owner"],
+            )
+
+    def test_recalled_skill_evidence_is_bounded_and_carries_current_content(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            skill = root / "retry-guard"
+            skill.mkdir()
+            (skill / "SKILL.md").write_text("bounded retry guard " * 20)
+            (skill / "assets").mkdir()
+            (skill / "assets/template.json").write_text(
+                '{"schema":"pipeline/v1","placeholder":true}\n'
+            )
+            evidence = runner.recalled_skill_evidence(
+                root,
+                [{"skill": "retry-guard", "score": 0.8}],
+                per_skill_chars=40,
+            )
+            self.assertEqual(evidence["skills"][0]["skill"], "retry-guard")
+            self.assertEqual(len(evidence["skills"][0]["skill_md"]), 40)
+            self.assertTrue(evidence["skills"][0]["truncated"])
+            self.assertIn("no_change", evidence["instruction"])
+            resource = evidence["skills"][0]["resources"][0]
+            self.assertEqual(resource["path"], "assets/template.json")
+            self.assertIn('"placeholder":true', resource["content_preview"])
+            self.assertEqual(len(resource["sha256"]), 64)
+            self.assertIn("placeholder", evidence["instruction"])
 
     def test_verifier_response_parser_reads_json_from_event_stream(self) -> None:
         response = {
@@ -2017,6 +2551,51 @@ class ContractTests(unittest.TestCase):
                 runner.parse_verifier_response_log(path),
                 response,
             )
+
+    def test_compact_verifier_response_expands_and_validates(self) -> None:
+        root = AGENTS / "05_verifiter_agent/verifiter"
+        verification_input = json.loads(
+            (root / "verification-input.example.json").read_text()
+        )
+        output = json.loads(
+            (root / "verification-output.example.json").read_text()
+        )
+        skill_input, required_output = runner.verifier_skill_payloads(
+            verification_input,
+            output,
+            "example-skill",
+        )
+        response = {
+            "skill": "example-skill",
+            "failures": [],
+            "penalties": [],
+            "feedback": "No defects found in the operation-scoped evidence.",
+            "replay": {
+                "available": False,
+                "kind": "targeted_detector",
+                "status": "not_run",
+                "reason": "No post-edit replay was provided.",
+                "before": None,
+                "after": None,
+            },
+            "ood": [],
+        }
+        expanded = runner.expand_compact_verifier_response(
+            response,
+            required_output,
+            skill_input,
+            "example-skill",
+        )
+        runner.pipeline_contracts.apply_decision_scores(expanded, skill_input)
+        self.assertEqual(expanded["feedback"]["overall_score"], 1.0)
+        self.assertTrue(
+            all(
+                result["status"] == "pass"
+                for step in expanded["verification_steps"][0]["steps"]
+                if step["applicable"]
+                for result in step["assertion_results"]
+            )
+        )
 
     def test_verifier_aggregation_restores_full_input_indexes(self) -> None:
         root = AGENTS / "05_verifiter_agent/verifiter"
@@ -2064,6 +2643,12 @@ class ContractTests(unittest.TestCase):
         self.assertEqual(runner.configured_model("cursor"), "grok-4.7-low")
         self.assertEqual(runner.configured_model("cursor", "other-model"), "other-model")
         self.assertEqual(runner.configured_model("claude"), "haiku")
+        with patch.dict(
+            os.environ,
+            {"SKILL_EVOLVER_DSH_PATCH": "config/dsh-deepseek-account.patch.yml"},
+            clear=True,
+        ):
+            self.assertEqual(runner.configured_model("dsh"), "deepseek-flash")
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "agent-config.json"
             two_active = json.loads(json.dumps(config))
@@ -2079,6 +2664,26 @@ class ContractTests(unittest.TestCase):
         with patch.object(runner, "authenticated", return_value=True):
             self.assertEqual(runner.select_backend("auto", False), "codex")
             self.assertEqual(runner.select_backend("claude", False), "claude")
+
+    def test_embedding_fallback_config_removes_model_only_fields(self) -> None:
+        runtime = {
+            "transport": "local_process",
+            "host": "127.0.0.1",
+            "port": 8181,
+            "backend": "sentence-transformers",
+            "model": "Qwen/Qwen3-Embedding-0.6B",
+            "revision": "pinned",
+            "device": "cpu",
+            "query_instruction": "retrieve",
+            "dimensions": 1024,
+            "on_start_error": "hashing-reference",
+        }
+        fallback = runner.embedding_fallback_config(runtime)
+        self.assertEqual(fallback["backend"], "hashing-reference")
+        self.assertEqual(fallback["transport"], "local_process")
+        self.assertEqual(fallback["port"], 8181)
+        for field in ("model", "revision", "device", "query_instruction"):
+            self.assertNotIn(field, fallback)
 
     def test_optional_cli_commands_are_headless_and_model_aware(self) -> None:
         with (
@@ -2229,6 +2834,44 @@ class ContractTests(unittest.TestCase):
         )
         with self.assertRaises(ValueError):
             cuts.enabled_algorithms({"cut": {"algorithms": ["not-an-algorithm"]}})
+
+    def test_why_stop_is_both_correction_and_keep_going_signal(self) -> None:
+        observed = "why stop? continue to improve until all perfectly done"
+        self.assertIsNotNone(signals.CORRECTION.search(observed))
+        self.assertIsNotNone(signals.KEEP_GOING.search(observed))
+        self.assertIsNotNone(
+            signals.CORRECTION.search("Why did you stop before verification?")
+        )
+        self.assertIsNotNone(
+            signals.KEEP_GOING.search("Why did you stop before verification?")
+        )
+
+    def test_configured_keep_going_minimum_is_selectable(self) -> None:
+        turns = []
+        for index, user in enumerate(
+            ("continue to implement", "why stop? continue until verified")
+        ):
+            turns.append(
+                {
+                    "trace_id": f"trace-{index}",
+                    "_path": f"turn-{index}.json",
+                    "timestamp": f"2026-01-01T00:00:0{index}Z",
+                    "user": {"text": user},
+                    "assistant": {"text": "partial result"},
+                    "outcome": {"status": "completed", "error": None},
+                    "tool_summary": {"error_count": 0},
+                    "timing": {},
+                }
+            )
+        config = json.loads(
+            (AGENTS / "common/preprocessing-config.json").read_text()
+        )
+        findings = signals._session_findings("session", turns, config)
+        finding = next(
+            item for item in findings if item["detector"] == "keep-going-loop"
+        )
+        self.assertEqual(finding["severity"], "high")
+        self.assertGreaterEqual(finding["confidence"], 0.6)
 
     def test_feedback_detectors_select_pointer_scopes_and_store_metrics(
         self,
@@ -2454,6 +3097,7 @@ class ContractTests(unittest.TestCase):
             (AGENTS / "common/preprocessing-config.json").read_text()
         )
         config = full_config["methodology"]
+        config = {**config, "min_value_score": 0.12}
         findings = methodology.mine_trajectory(
             trajectory, "traces/derived/normalized/turns/a.json", config
         )
@@ -2531,6 +3175,424 @@ class ContractTests(unittest.TestCase):
         self.assertEqual(
             {row["detector"] for row in ablated},
             {"method-phase-workflow"},
+        )
+
+    def test_resource_script_opportunity_requires_guarded_repetition(self) -> None:
+        config = json.loads(
+            (AGENTS / "common/preprocessing-config.json").read_text()
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            root = workspace / "traces/derived"
+            trajectories = root / "normalized/task_trajectories"
+            trajectories.mkdir(parents=True)
+
+            def write_trajectory(name: str, arguments: list[str]) -> None:
+                write_json(
+                    trajectories / f"{name}.json",
+                    {
+                        "trace_id": f"codex:session-a:{name}",
+                        "session_id": "session-a",
+                        "events": [
+                            {
+                                "sequence": index,
+                                "status": "completed",
+                                "arguments_preview": value,
+                            }
+                            for index, value in enumerate(arguments, start=1)
+                        ],
+                        "provenance": {
+                            "turn_path": f"traces/derived/normalized/turns/{name}.json"
+                        },
+                    },
+                )
+
+            guarded = (
+                "for attempt in {1..10}; do "
+                "state=$(railway deployment list --service app --environment preview); "
+                "case $state in *SUCCESS*|*FAILED*) break;; esac; sleep 5; done"
+            )
+            write_trajectory("positive", [guarded, guarded, guarded])
+            write_trajectory(
+                "near-miss",
+                [
+                    "while true; do railway deployment list --service app; done",
+                    "while true; do railway deployment list --service app; done",
+                    "while true; do railway deployment list --service app; done",
+                ],
+            )
+            findings, decisions = resource_opportunities.analyze(
+                workspace, root, config
+            )
+            self.assertEqual(len(findings), 1)
+            finding = findings[0]
+            self.assertEqual(
+                finding["features"]["candidate_source"], "resource_opportunity"
+            )
+            self.assertEqual(finding["features"]["resource_decision"], "use")
+            self.assertEqual(finding["features"]["occurrence_count"], 3)
+            self.assertEqual(
+                len({row["trace_id"] for row in finding["evidence"]}),
+                len(finding["evidence"]),
+            )
+            self.assertTrue(
+                any(
+                    row.get("disposition") == "rejected"
+                    and "unbounded-loop" in row.get("reason_codes", [])
+                    for row in decisions
+                )
+            )
+
+            detector_config = config["signals"]
+            detector_config["_methodology"] = config["methodology"]
+            detector_config["_resource_opportunities"] = config[
+                "resource_opportunities"
+            ]
+            competing = {
+                **json.loads(json.dumps(finding)),
+                "signal_id": "sig-competing",
+                "detector": "tool-error-loop",
+                "severity": "critical",
+                "confidence": 0.99,
+                "features": {},
+            }
+            selected, selection = signals._select_findings(
+                [competing, finding], detector_config
+            )
+            self.assertIn(
+                finding["signal_id"], {row["signal_id"] for row in selected}
+            )
+            selected_decision = next(
+                row
+                for row in selection
+                if row["finding_id"] == finding["signal_id"]
+            )
+            self.assertEqual(selected_decision["disposition"], "selected")
+
+            existing = workspace / "candidate_skills/deploy/scripts/poll.sh"
+            existing.parent.mkdir(parents=True)
+            existing.write_text(
+                "# Generic bounded polling helper.\n"
+                "status_command=$1\n"
+                "poll_until_terminal() {\n"
+                "  deadline=$2\n"
+                "  while test $SECONDS -lt $deadline; do\n"
+                "    result=$($status_command)\n"
+                "    case $result in SUCCESS|FAILED) break;; esac\n"
+                "  done\n"
+                "}\n"
+            )
+            duplicate_findings, duplicate_decisions = (
+                resource_opportunities.analyze(workspace, root, config)
+            )
+            self.assertEqual(duplicate_findings, [])
+            self.assertTrue(
+                any(
+                    "equivalent-existing-script" in row.get("reason_codes", [])
+                    for row in duplicate_decisions
+                )
+            )
+
+    def test_supporting_resource_opportunities_require_independent_repetition(self) -> None:
+        config = json.loads(
+            (AGENTS / "common/preprocessing-config.json").read_text()
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            root = workspace / "traces/derived"
+            trajectories = root / "normalized/task_trajectories"
+            trajectories.mkdir(parents=True)
+            prompt = json.dumps(
+                {
+                    "task_name": "review",
+                    "message": (
+                        "Inspect the changed authentication flow, identify concrete "
+                        "regressions, and return only evidence-backed findings with "
+                        "exact file paths."
+                    ),
+                }
+            )
+            reference = "sed -n '1,220p' docs/policies/authentication.md"
+            asset = (
+                "*** Begin Patch\n"
+                "*** Add File: assets/templates/service-starter/config.yml\n"
+                "+service: example\n"
+                "+healthcheck: /health\n"
+                "+timeout_seconds: 30\n"
+                "*** End Patch"
+            )
+            for index in range(2):
+                write_json(
+                    trajectories / f"trace-{index}.json",
+                    {
+                        "trace_id": f"codex:session-a:turn-{index}",
+                        "session_id": "session-a",
+                        "events": [
+                            {
+                                "sequence": item,
+                                "status": "completed",
+                                "arguments_preview": value,
+                                "tool": (
+                                    "collaboration.spawn_agent"
+                                    if value == prompt
+                                    else "exec"
+                                ),
+                            }
+                            for item, value in enumerate(
+                                [prompt, reference, asset] + ([prompt, reference, asset] if index == 0 else []),
+                                start=1,
+                            )
+                        ],
+                        "provenance": {
+                            "turn_path": f"traces/derived/normalized/turns/{index}.json"
+                        },
+                    },
+                )
+            findings, _ = resource_opportunities.analyze(workspace, root, config)
+            by_resource = {
+                row["features"]["resource"]: row for row in findings
+            }
+            self.assertEqual(set(by_resource), {"agents", "references", "assets"})
+            self.assertTrue(
+                all(
+                    row["features"]["distinct_windows"] == 2
+                    for row in by_resource.values()
+                )
+            )
+            reference_contract = by_resource["references"]["features"][
+                "reference_contract"
+            ]
+            self.assertFalse(reference_contract["content_available"])
+            self.assertFalse(reference_contract["content_digest_available"])
+            self.assertIn("navigational index", reference_contract["allowed_artifact"])
+            self.assertFalse(
+                by_resource["assets"]["features"]["equivalent_resource_exists"]
+            )
+
+            delegated = (
+                workspace
+                / "candidate_skills/auth-review/agents/auth-flow-review.md"
+            )
+            delegated.parent.mkdir(parents=True)
+            delegated.write_text(
+                "Review the changed authentication flow and return only "
+                "evidence-backed regressions as findings. Include repair "
+                "guidance for each supported issue.\n"
+            )
+            findings, decisions = resource_opportunities.analyze(
+                workspace, root, config
+            )
+            by_resource = {
+                row["features"]["resource"]: row for row in findings
+            }
+            self.assertNotIn("agents", by_resource)
+            self.assertTrue(
+                any(
+                    row.get("resource") == "agents"
+                    and row.get("disposition") == "suppressed"
+                    and row.get("equivalent_resource_path", "").endswith(
+                        "agents/auth-flow-review.md"
+                    )
+                    for row in decisions
+                )
+            )
+
+            unrelated = workspace / "candidate_skills/unrelated/assets/theme.css"
+            unrelated.parent.mkdir(parents=True)
+            unrelated.write_text("body { color: blue; }\n")
+            matching = workspace / "candidate_skills/starter/assets/starter.txt"
+            matching.parent.mkdir(parents=True)
+            matching.write_text(
+                "service: example healthcheck: /health timeout_seconds: 30\n"
+            )
+            findings, decisions = resource_opportunities.analyze(workspace, root, config)
+            by_resource = {
+                row["features"]["resource"]: row for row in findings
+            }
+            self.assertNotIn("assets", by_resource)
+            suppressed = [
+                row
+                for row in decisions
+                if row.get("resource") == "assets"
+                and row.get("disposition") == "suppressed"
+            ]
+            self.assertEqual(len(suppressed), 1)
+            self.assertTrue(
+                suppressed[0]["equivalent_resource_path"].endswith(
+                    "starter/assets/starter.txt"
+                )
+            )
+
+            matching.unlink()
+            structured = (
+                workspace
+                / "candidate_skills/starter/assets/templates/service-starter/config.yml"
+            )
+            structured.parent.mkdir(parents=True)
+            structured.write_text(
+                "# Adapted reusable template.\n"
+                "service: example-service\n"
+                "healthcheck: /healthz\n"
+                "timeout_seconds: 45\n"
+            )
+            findings, decisions = resource_opportunities.analyze(workspace, root, config)
+            by_resource = {
+                row["features"]["resource"]: row for row in findings
+            }
+            self.assertNotIn("assets", by_resource)
+            self.assertTrue(
+                any(
+                    row.get("resource") == "assets"
+                    and row.get("disposition") == "suppressed"
+                    and row.get("equivalent_resource_path", "").endswith(
+                        "assets/templates/service-starter/config.yml"
+                    )
+                    for row in decisions
+                )
+            )
+
+            structured.write_text(
+                "service: example-service\nhealthcheck: /healthz\n"
+            )
+            findings, _ = resource_opportunities.analyze(workspace, root, config)
+            by_resource = {
+                row["features"]["resource"]: row for row in findings
+            }
+            self.assertFalse(
+                by_resource["assets"]["features"]["equivalent_resource_exists"]
+            )
+
+    def test_asset_reuse_opportunity_preserves_provenance_ceiling(self) -> None:
+        config = json.loads(
+            (AGENTS / "common/preprocessing-config.json").read_text()
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            root = workspace / "traces/derived"
+            trajectories = root / "normalized/task_trajectories"
+            trajectories.mkdir(parents=True)
+            reuse = "cp assets/templates/service-starter/config.yml build/config.yml"
+            for index in range(2):
+                write_json(
+                    trajectories / f"trace-{index}.json",
+                    {
+                        "trace_id": f"codex:session-a:turn-{index}",
+                        "session_id": "session-a",
+                        "events": [
+                            {
+                                "sequence": item,
+                                "status": "completed",
+                                "arguments_preview": reuse,
+                                "tool": "exec",
+                            }
+                            for item in range(2 if index == 0 else 1)
+                        ],
+                        "provenance": {
+                            "turn_path": f"traces/derived/normalized/turns/{index}.json"
+                        },
+                    },
+                )
+            findings, _ = resource_opportunities.analyze(workspace, root, config)
+            reuse_finding = next(
+                row
+                for row in findings
+                if row["features"]["resource_family"] == "repeated-starter-reuse"
+            )
+            reuse_contract = reuse_finding["features"]["asset_contract"]
+            self.assertFalse(reuse_contract["content_available"])
+            self.assertIsNone(reuse_contract["content"])
+            self.assertIn("reuse manifest", reuse_contract["allowed_artifact"])
+
+            false_positive = (
+                "sed -n '1,200p' product/config.ts; "
+                "node -e 'console.log(data.templates.find(x => x.id))'"
+            )
+            self.assertIsNone(
+                resource_opportunities._supporting_resource_candidate(
+                    false_positive, "exec"
+                )
+            )
+
+    def test_authored_resource_lifecycle_emits_script_and_asset(self) -> None:
+        config = json.loads(
+            (AGENTS / "common/preprocessing-config.json").read_text()
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            root = workspace / "traces/derived"
+            evidence = root / "normalized/tool_evidence/turn.jsonl"
+            evidence.parent.mkdir(parents=True)
+            rows = [
+                {
+                    "trace_id": "codex:session-a:turn-a", "sequence": 1,
+                    "status": "completed", "result_preview": "{}",
+                    "arguments": "*** Add File: /repo/platform/operations/cli/site-ops.mjs\\n+#!/usr/bin/env node\\n+console.log('{}')\\n*** End Patch",
+                },
+                {
+                    "trace_id": "codex:session-a:turn-a", "sequence": 2,
+                    "status": "completed", "result_preview": "syntax ok",
+                    "arguments": "node --check platform/operations/cli/site-ops.mjs",
+                },
+                {
+                    "trace_id": "codex:session-a:turn-a", "sequence": 3,
+                    "status": "completed", "result_preview": "{}",
+                    "arguments": "*** Update File: /repo/platform/operations/cli/site-ops.mjs\\n@@\\n+// validated revision",
+                },
+                {
+                    "trace_id": "codex:session-a:turn-a", "sequence": 4,
+                    "status": "completed", "result_preview": "{}",
+                    "arguments": "*** Add File: /repo/platform/operations/pipelines/discovery/pipeline.v1.json\\n+{\\\"schema\\\":\\\"pipeline/v1\\\"}\\n*** End Patch",
+                },
+                {
+                    "trace_id": "codex:session-a:turn-a", "sequence": 5,
+                    "status": "completed", "result_preview": '[{"id":"discovery"}]',
+                    "arguments": "node site-ops.mjs pipeline list --json",
+                },
+            ]
+            evidence.write_text("".join(json.dumps(row) + "\n" for row in rows))
+            findings, decisions = (
+                resource_opportunities._authored_resource_lifecycle_findings(
+                    workspace, root, config["resource_opportunities"]
+                )
+            )
+            self.assertEqual(
+                {row["features"]["resource"] for row in findings},
+                {"scripts", "assets"},
+            )
+            self.assertTrue(
+                all(
+                    row["features"]["resource_evidence_mode"]
+                    == "authored_lifecycle"
+                    and row["features"]["distinct_lifecycle_stages"] == 3
+                    and "successful-post-authoring-validation"
+                    in row["features"]["false_positive_guards"]
+                    for row in findings
+                )
+            )
+            self.assertEqual(
+                {row["disposition"] for row in decisions}, {"emitted"}
+            )
+            asset = next(
+                row for row in findings if row["features"]["resource"] == "assets"
+            )["features"]["asset_contract"]
+            self.assertTrue(asset["content_available"])
+            self.assertTrue(asset["content_digest_available"])
+            self.assertEqual(asset["content"], '{"schema":"pipeline/v1"}\n')
+            self.assertEqual(
+                asset["content_sha256"],
+                hashlib.sha256(asset["content"].encode()).hexdigest(),
+            )
+
+    def test_authored_asset_does_not_capture_truncated_patch_body(self) -> None:
+        arguments = (
+            "*** Add File: /repo/platform/operations/pipelines/discovery/pipeline.v1.json\n"
+            "+{\"schema\":\"pipeline/v1\",\n"
+            "+\"stages\":["
+        )
+        match = resource_opportunities.ADD_FILE.search(arguments)
+        self.assertIsNotNone(match)
+        self.assertIsNone(
+            resource_opportunities._complete_added_file_body(arguments, match)
         )
 
     def test_skillsbench_paired_multitrial_and_ablation_summary(self) -> None:
@@ -3119,6 +4181,65 @@ class ContractTests(unittest.TestCase):
                     },
                 )
 
+    def test_qualified_single_session_resource_create_is_allowed(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            cluster = "resource-finding"
+            finding = {
+                "confidence": 0.96,
+                "session_id": "one-session",
+                "evidence": [{"trace_id": "a"}, {"trace_id": "b"}],
+                "features": {
+                    "candidate_source": "resource_opportunity",
+                    "resource": "references",
+                    "resource_decision": "use",
+                    "occurrence_count": 6,
+                    "distinct_windows": 3,
+                    "equivalent_resource_exists": False,
+                    "false_positive_guards": [
+                        "repeated-independent-invocations",
+                        "explicit-resource-shape",
+                        "stable-normalized-fingerprint",
+                    ],
+                    "reference_contract": {
+                        "source": "docs/operations.md",
+                        "read_when": "before release work",
+                    },
+                },
+            }
+            finding_path = workspace / (
+                f"traces/derived/findings/{cluster}/finding.json"
+            )
+            write_json(finding_path, finding)
+            write_json(
+                workspace / f"run/{cluster}/diagnosis.json",
+                {
+                    "skill_capabilities_missing": [{"type": "form/reference"}],
+                    "newly_detected_skill_capabilites_missing": [],
+                },
+            )
+            create = {
+                "op": "create",
+                "skills": [{"skill": "operations-reference"}],
+            }
+            runner.enforce_creation_policy(workspace, cluster, {}, create)
+
+            for field, value in (
+                ("distinct_windows", 2),
+                ("equivalent_resource_exists", True),
+            ):
+                changed = json.loads(json.dumps(finding))
+                changed["features"][field] = value
+                write_json(finding_path, changed)
+                with self.assertRaises(runner.pipeline_contracts.ContractError):
+                    runner.enforce_creation_policy(workspace, cluster, {}, create)
+
+            changed = json.loads(json.dumps(finding))
+            changed["features"]["false_positive_guards"].pop()
+            write_json(finding_path, changed)
+            with self.assertRaises(runner.pipeline_contracts.ContractError):
+                runner.enforce_creation_policy(workspace, cluster, {}, create)
+
     def test_optimize_stage_has_existing_skill_operation_guidance(self) -> None:
         self.assertIn(
             "04_optimize_agent/skill-edit/skill.md",
@@ -3206,6 +4327,80 @@ class ContractTests(unittest.TestCase):
                 "run-codex-example-40turns",
             )
             self.assertNotIn("changelog", rows[0])
+
+    def test_new_merge_target_metadata_is_runner_materialized(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            metadata = workspace / (
+                "target/to_be_improved_skills_metadata/metadata.json"
+            )
+            write_json(
+                metadata,
+                {
+                    "skills_metadata": [
+                        {
+                            "skill": "source-a",
+                            "description": "A",
+                            "skill_types": [
+                                {"type": "job/methodology", "weight": 0.8}
+                            ],
+                            "unmatched_skill_types": [],
+                            "lifecycle": {
+                                "origin_session_ids": ["session-a"]
+                            },
+                        },
+                        {
+                            "skill": "source-b",
+                            "description": "B",
+                            "skill_types": [
+                                {"type": "job/methodology", "weight": 0.9},
+                                {"type": "form/technique/loop", "weight": 0.7},
+                            ],
+                            "unmatched_skill_types": [],
+                        },
+                    ]
+                },
+            )
+            write_json(
+                workspace / "traces/derived/findings/finding/finding.json",
+                {
+                    "confidence": 0.95,
+                    "evidence": [{"kind": "skill_inventory"}],
+                    "features": {"distinct_sessions": 1},
+                },
+            )
+            runner.materialize_created_skill_metadata(
+                workspace,
+                {
+                    "op": "merge",
+                    "skills": ["source-a", "source-b"],
+                    "into": {
+                        "skill": "merged-target",
+                        "description": "Combined method",
+                    },
+                },
+                "finding",
+            )
+            rows = {
+                row["skill"]: row
+                for row in json.loads(metadata.read_text())["skills_metadata"]
+            }
+            self.assertEqual(rows["merged-target"]["description"], "Combined method")
+            self.assertEqual(
+                rows["merged-target"]["skill_types"],
+                [
+                    {"type": "form/technique/loop", "weight": 0.7},
+                    {"type": "job/methodology", "weight": 0.9},
+                ],
+            )
+            self.assertEqual(
+                rows["merged-target"]["lifecycle"]["origin_finding_id"],
+                "finding",
+            )
+            self.assertEqual(
+                rows["merged-target"]["lifecycle"]["origin_session_ids"],
+                ["session-a"],
+            )
 
     def test_operation_changelog_is_hashed_and_added_to_metadata(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -3676,17 +4871,22 @@ class ContractTests(unittest.TestCase):
                 "# Deploy\n\n"
                 "Read `references/providers/aws.md`, execute "
                 "`scripts/lib/deploy.py`, and reuse "
-                "`assets/templates/react-app/index.html`.\n"
+                "`assets/templates/react-app/index.html`; delegate with "
+                "`agents/reviewer.md`.\n"
             )
             (skill / "references/providers/aws.md").write_text(
                 "Use the AWS provider deployment mode for this release.\n"
             )
             (skill / "scripts/lib/deploy.py").write_text("print('ok')\n")
+            cache = skill / "scripts/lib/__pycache__"
+            cache.mkdir()
+            (cache / "deploy.cpython-311.pyc").write_bytes(b"transient")
             (skill / "assets/templates/react-app/index.html").write_text(
                 "<main>starter</main>\n"
             )
             agents = skill / "agents"
             agents.mkdir()
+            (agents / "reviewer.md").write_text("Review the deployment.\n")
             (agents / "openai.yaml").write_text(
                 "interface:\n"
                 "  display_name: Old\n"
@@ -3704,12 +4904,16 @@ class ContractTests(unittest.TestCase):
             evidence = (
                 '{"command":"python scripts/lib/deploy.py",'
                 '"exit_code":0}\nUsed references/providers/aws.md and copied '
-                "assets/templates/react-app/index.html"
+                "assets/templates/react-app/index.html and agents/reviewer.md"
             )
-            metrics = skill_resources.measure_skill_resources(skill, evidence)
+            plan = resource_plan("scripts", "references", "assets", "agents")
+            metrics = skill_resources.measure_skill_resources(
+                skill, evidence, resource_plan=plan
+            )
             self.assertEqual(metrics["script_execution"]["success_rate"], 1.0)
             self.assertEqual(metrics["reference_use"]["use_rate"], 1.0)
             self.assertEqual(metrics["asset_reuse"]["reuse_rate"], 1.0)
+            self.assertEqual(metrics["delegated_agent_use"]["use_rate"], 1.0)
             self.assertGreater(
                 metrics["progressive_disclosure"][
                     "estimated_skill_md_token_reduction"
@@ -3717,6 +4921,145 @@ class ContractTests(unittest.TestCase):
                 0,
             )
             self.assertEqual(metrics["penalties"]["unused_resources"], [])
+            self.assertEqual(metrics["resource_plan"], plan)
+            self.assertEqual(metrics["resource_counts"]["agents"], 1)
+            self.assertEqual(metrics["resource_counts"]["scripts"], 1)
+            self.assertNotIn(
+                "scripts/lib/__pycache__/deploy.cpython-311.pyc",
+                metrics["penalties"]["unused_resources"],
+            )
+            self.assertEqual(metrics["resource_inventory"]["delegated_agent_files"], 1)
+            self.assertTrue(
+                all(
+                    row["compliant"]
+                    for row in metrics["resource_plan_compliance"].values()
+                )
+            )
+            self.assertEqual(
+                metrics["resource_inventory"]["generated_interface_metadata_files"],
+                1,
+            )
+            authoring_metrics = skill_resources.measure_skill_resources(
+                skill,
+                "",
+                resource_plan=plan,
+                runtime_observation_available=False,
+            )
+            self.assertFalse(authoring_metrics["runtime_observation"]["available"])
+            self.assertIsNone(authoring_metrics["reference_use"]["use_rate"])
+            self.assertIsNone(authoring_metrics["asset_reuse"]["reuse_rate"])
+            self.assertIsNone(
+                authoring_metrics["delegated_agent_use"]["use_rate"]
+            )
+            self.assertIsNone(authoring_metrics["observed_usefulness_score"])
+            aggregate = skill_resources.aggregate_resource_metrics(
+                [{"skills": [authoring_metrics]}]
+            )
+            self.assertIsNone(aggregate["reference_use_rate"])
+            self.assertIsNone(aggregate["asset_reuse_rate"])
+            runner.remove_transient_skill_artifacts(skill)
+            self.assertFalse(cache.exists())
+
+    def test_resource_usefulness_includes_agents_and_evals_and_gates_authoring_logs(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            skill = Path(directory) / "review-auth"
+            (skill / "agents").mkdir(parents=True)
+            (skill / "evals").mkdir()
+            (skill / "scripts").mkdir()
+            (skill / "SKILL.md").write_text(
+                valid_skill_text(
+                    "review-auth",
+                    "Use `agents/reviewer.md`, run `scripts/check.py`, and "
+                    "evaluate with `evals/evals.json`.",
+                )
+            )
+            (skill / "agents/reviewer.md").write_text("Review the auth flow.\n")
+            (skill / "evals/evals.json").write_text(
+                '{"skill_name":"review-auth","evals":[]}\n'
+            )
+            (skill / "scripts/check.py").write_text("print('ok')\n")
+            evidence = (
+                'Used agents/reviewer.md and evals/evals.json\n'
+                '{"command":"python scripts/check.py","exit_code":0}'
+            )
+            metrics = skill_resources.measure_skill_resources(skill, evidence)
+            self.assertEqual(metrics["delegated_agent_use"]["use_rate"], 1.0)
+            self.assertEqual(metrics["eval_use"]["use_rate"], 1.0)
+            self.assertEqual(metrics["script_execution"]["success_rate"], 1.0)
+            self.assertEqual(metrics["observed_usefulness_score"], 1.0)
+
+            authoring = skill_resources.measure_skill_resources(
+                skill, evidence, runtime_observation_available=False
+            )
+            self.assertEqual(authoring["script_execution"]["attempts"], 1)
+            self.assertIsNone(authoring["script_execution"]["success_rate"])
+            self.assertIsNone(authoring["delegated_agent_use"]["use_rate"])
+            self.assertIsNone(authoring["eval_use"]["use_rate"])
+            self.assertIsNone(authoring["observed_usefulness_score"])
+
+    def test_goal_resource_plan_is_complete_and_matches_dirs(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "goal.json"
+            op = {
+                "op": "create",
+                "skills": [
+                    {
+                        "skill": "planned-skill",
+                        "description": "Create a planned skill when evidence supports it.",
+                        "sections": [{"section": "overview", "goal": "Explain it."}],
+                        "dirs": [{"dir": "evals", "goal": "Add behavior cases."}],
+                        "resource_plan": resource_plan("evals"),
+                        "labels": [
+                            {"type": "job/methodology/workflow", "weight": 0.9},
+                            {"type": "job/verification/browser-check", "weight": 0.8},
+                            {"type": "form/technique/steps", "weight": 0.7},
+                        ],
+                    }
+                ],
+            }
+            write_json(path, valid_goal(op))
+            contracts.validate_goal(path, exactly_one_op=True)
+            op["skills"][0]["resource_plan"][0]["decision"] = "use"
+            write_json(path, valid_goal(op))
+            with self.assertRaises(contracts.ContractError):
+                contracts.validate_goal(path, exactly_one_op=True)
+
+    def test_goal_resource_plan_accepts_bounded_nested_resource_dirs(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "goal.json"
+            op = {
+                "op": "create",
+                "skills": [
+                    {
+                        "skill": "nested-assets",
+                        "description": "Reuse nested assets when scaffolding services.",
+                        "sections": [{"section": "overview", "goal": "Explain it."}],
+                        "dirs": [
+                            {
+                                "dir": "assets/templates/react-app",
+                                "goal": "Store the captured starter tree.",
+                            },
+                            {"dir": "evals", "goal": "Add behavior cases."},
+                        ],
+                        "resource_plan": resource_plan("assets", "evals"),
+                        "labels": [
+                            {"type": "job/methodology/workflow", "weight": 0.9},
+                            {"type": "artifact/code-change", "weight": 0.8},
+                            {"type": "form/technique/steps", "weight": 0.7},
+                        ],
+                    }
+                ],
+            }
+            write_json(path, valid_goal(op))
+            contracts.validate_goal(path, exactly_one_op=True)
+            op["skills"][0]["dirs"][0]["dir"] = "assets/../../outside"
+            write_json(path, valid_goal(op))
+            with self.assertRaises(contracts.ContractError):
+                contracts.validate_goal(path, exactly_one_op=True)
+            op["skills"][0]["dirs"][0]["dir"] = "assets/a/b/c/d/e"
+            write_json(path, valid_goal(op))
+            with self.assertRaises(contracts.ContractError):
+                contracts.validate_goal(path, exactly_one_op=True)
 
     def test_skill_eval_contract_and_benchmark_aggregation(self) -> None:
         fixture = {
@@ -4302,6 +5645,19 @@ class ContractTests(unittest.TestCase):
             summary = json.loads(first)
             self.assertEqual(summary["no_change_scopes"], ["scope-a"])
             self.assertEqual(summary["operations"], [])
+            self.assertEqual(
+                summary["outcome"],
+                {
+                    "accepted_changed_skills": [],
+                    "accepted_operation_count": 0,
+                    "inherited_skill_count": 0,
+                    "inherited_skills": [],
+                    "no_change_scope_count": 1,
+                    "proposed_operation_count": 0,
+                    "rejected_operation_count": 0,
+                    "zero_accepted_changes": True,
+                },
+            )
 
     def test_summary_reports_accepted_operation_missing_verification(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -4324,11 +5680,34 @@ class ContractTests(unittest.TestCase):
             )
             operation = summary["operations"][0]
             self.assertTrue(operation["accepted"])
+            self.assertEqual(summary["outcome"]["accepted_operation_count"], 1)
+            self.assertEqual(
+                summary["outcome"]["accepted_changed_skills"], ["seed"]
+            )
             self.assertEqual(
                 operation["artifact_error"],
                 "accepted operation has no completed verification",
             )
             self.assertIsNone(operation["judge_action"])
+
+    def test_inventory_summary_reports_seeded_skills_without_trace_selection(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            (workspace / "run").mkdir()
+            for name in ("alpha-skill", "beta-skill"):
+                skill = workspace / "target/to_be_improved_skills" / name
+                skill.mkdir(parents=True)
+                (skill / "SKILL.md").write_text(
+                    f"---\nname: {name}\ndescription: Test {name}.\n---\n"
+                )
+            summary = json.loads(
+                runner.write_pipeline_summary(workspace, []).read_text()
+            )
+            self.assertEqual(summary["outcome"]["inherited_skill_count"], 2)
+            self.assertEqual(
+                summary["outcome"]["inherited_skills"],
+                ["alpha-skill", "beta-skill"],
+            )
 
     def test_creation_policy_requires_evidence_for_single_session(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -4619,6 +5998,23 @@ class ContractTests(unittest.TestCase):
                 )
             self.assertFalse((root / ".pipeline-workers").exists())
 
+    def test_worker_copy_ignores_transient_sqlite_sidecars(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "skill_evolving_agents"
+            workspace = root / "workspace/runs/run"
+            logs = workspace / "logs"
+            logs.mkdir(parents=True)
+            (logs / "metrics.sqlite").write_bytes(b"database")
+            for suffix in ("journal", "wal", "shm"):
+                (logs / f"metrics.sqlite-{suffix}").write_bytes(b"transient")
+            with patch.object(runner, "ROOT", root):
+                worker = runner.create_worker_workspace(workspace, "goal", "one")
+            self.assertTrue((worker / "logs/metrics.sqlite").is_file())
+            for suffix in ("journal", "wal", "shm"):
+                self.assertFalse(
+                    (worker / f"logs/metrics.sqlite-{suffix}").exists()
+                )
+
     def test_failed_diagnosis_and_goal_lanes_do_not_stop_other_lanes(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / "skill_evolving_agents"
@@ -4672,18 +6068,23 @@ class ContractTests(unittest.TestCase):
                 patch.object(runner, "ROOT", root),
                 patch.object(runner, "run_session", side_effect=fake_session),
             ):
-                aggregate = runner.pipeline_diagnosis_and_goals(
-                    workspace,
-                    "run",
-                    ["diagnosis-fail", "goal-fail", "ok"],
-                    True,
-                    3,
-                    {},
-                    None,
-                    True,
-                    "finding",
-                )
+                with self.assertRaisesRegex(
+                    RuntimeError,
+                    "refusing to record no_change",
+                ):
+                    runner.pipeline_diagnosis_and_goals(
+                        workspace,
+                        "run",
+                        ["diagnosis-fail", "goal-fail", "ok"],
+                        True,
+                        3,
+                        {},
+                        None,
+                        True,
+                        "finding",
+                    )
 
+            aggregate = workspace / "run/diagnosis.json"
             diagnosis = json.loads(aggregate.read_text())
             self.assertEqual(
                 {
@@ -4774,6 +6175,92 @@ class ContractTests(unittest.TestCase):
                     (duplicate_directory / "publication.json").read_text()
                 )["accepted"]
             )
+
+    def test_goal_reducer_suppresses_overlapping_asset_creates(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+
+            def task(cluster: str, skill: str, content: str) -> dict:
+                write_json(
+                    workspace / f"traces/derived/findings/{cluster}/finding.json",
+                    {
+                        "confidence": 0.93,
+                        "score": 0.6,
+                        "features": {
+                            "candidate_source": "resource_opportunity",
+                            "resource": "assets",
+                            "resource_family": "repeated-inline-starter",
+                            "asset_contract": {
+                                "source": "assets/templates/service-starter/config.yml",
+                                "content": content,
+                            },
+                        },
+                    },
+                )
+                operation = {
+                    "op": "create",
+                    "skills": [
+                        {
+                            "skill": skill,
+                            "description": "Reuse a recurring starter asset.",
+                            "sections": [
+                                {"section": "workflow", "goal": "Reuse it."}
+                            ],
+                            "dirs": [
+                                {"dir": "assets", "goal": "Store the asset."}
+                            ],
+                            "labels": [
+                                {"type": "job/methodology", "weight": 1.0},
+                                {"type": "form/pattern", "weight": 0.8},
+                                {"type": "artifact/code-change", "weight": 0.6},
+                            ],
+                            "resource_plan": [
+                                {
+                                    "resource": resource,
+                                    "decision": (
+                                        "use" if resource == "assets" else "omit"
+                                    ),
+                                    "reason": (
+                                        "Required by the asset contract."
+                                        if resource == "assets"
+                                        else "Not required."
+                                    ),
+                                    "confidence": 0.9,
+                                }
+                                for resource in runner.skill_resources.RESOURCE_KINDS
+                            ],
+                        }
+                    ],
+                }
+                initialize_pending_operation(workspace, cluster, operation)
+                return {"cluster": cluster, "op_index": 1, "op": operation}
+
+            base = task(
+                "base",
+                "base-starter",
+                "service: example healthcheck: /health timeout_seconds: 30",
+            )
+            evolved = task(
+                "evolved",
+                "evolved-starter",
+                (
+                    "service: example healthcheck: /health readiness: /ready "
+                    "timeout_seconds: 30"
+                ),
+            )
+            selected = runner.reduce_operation_tasks(workspace, [base, evolved])
+            self.assertEqual([row["cluster"] for row in selected], ["evolved"])
+            reduction = json.loads(
+                (workspace / "run/goal-reduction.json").read_text()
+            )
+            self.assertEqual(reduction["selected_operation_count"], 1)
+            collision = reduction["decisions"][0]
+            self.assertEqual(collision["decision"], "overlapping-resource-create")
+            self.assertEqual(collision["selected_cluster"], "evolved")
+            publication = json.loads(
+                (workspace / "run/base/ops/1/publication.json").read_text()
+            )
+            self.assertEqual(publication["reason"], "overlapping-resource-create")
 
     def test_same_skill_updates_bundle_into_one_verified_op(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -5247,7 +6734,7 @@ class ContractTests(unittest.TestCase):
                 worker / "target/to_be_improved_skills" / created
             )
             produced.mkdir(parents=True)
-            (produced / "SKILL.md").write_text("from-worker")
+            (produced / "SKILL.md").write_text(valid_skill_text(created))
             write_json(
                 worker / "target/to_be_improved_skills_metadata/metadata.json",
                 {
@@ -5299,6 +6786,7 @@ class ContractTests(unittest.TestCase):
                 "include_infrastructure_failures"
             ] = True
             with (
+                patch.object(runner, "ROOT", workspace),
                 patch.object(
                     runner, "preprocessing_config", return_value=config
                 ),
@@ -5322,7 +6810,7 @@ class ContractTests(unittest.TestCase):
                 (
                     workspace / "target/to_be_improved_skills" / created / "SKILL.md"
                 ).read_text(),
-                "from-worker",
+                valid_skill_text(created),
             )
             self.assertEqual(
                 (
@@ -5503,6 +6991,43 @@ class ContractTests(unittest.TestCase):
                 )
             self.assertFalse((root / ".pipeline-workers").exists())
 
+    def test_empty_diagnosis_skips_goal_agent(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory) / "workspace/runs/run"
+            (workspace / "logs").mkdir(parents=True)
+            write_json(
+                workspace / "run/a/diagnosis.json",
+                {
+                    "skill_capabilities_missing": [],
+                    "newly_detected_skill_capabilites_missing": [],
+                },
+            )
+            write_json(
+                workspace
+                / "target/to_be_improved_skills_metadata/metadata.json",
+                {"skills_metadata": []},
+            )
+            (workspace / "target/to_be_improved_skills").mkdir(parents=True)
+
+            with patch.object(runner, "run_session") as run_session:
+                runner.fanout_goals(
+                    workspace, "run", ["a"], True, 1, {}, None, True, "finding"
+                )
+
+            run_session.assert_not_called()
+            goal = json.loads(
+                (workspace / "run/a/evolve-goal.json").read_text()
+            )
+            self.assertEqual(goal["action"]["disposition"], "no_change")
+            self.assertEqual(goal["action"]["ops"], [])
+            matching = json.loads(
+                (workspace / "run/a/label-matching.json").read_text()
+            )
+            self.assertEqual(
+                matching["matching"]["strategy"],
+                "empty-diagnosis-terminal-v1",
+            )
+
     def test_nonconflicting_operation_chains_run_each_stage_concurrently(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / "skill_evolving_agents"
@@ -5510,7 +7035,7 @@ class ContractTests(unittest.TestCase):
             for skill in ("a", "b"):
                 path = workspace / "target/to_be_improved_skills" / skill
                 path.mkdir(parents=True)
-                (path / "SKILL.md").write_text(f"# {skill}\n")
+                (path / "SKILL.md").write_text(valid_skill_text(skill))
             (workspace / "target/raw_skills").mkdir(parents=True)
             (workspace / "logs").mkdir(parents=True)
             labels = [
@@ -5567,7 +7092,7 @@ class ContractTests(unittest.TestCase):
                 if stage == "optimize":
                     raw = worker / "target/raw_skills" / skill
                     raw.mkdir(parents=True, exist_ok=True)
-                    (raw / "SKILL.md").write_text(f"# {skill}\n")
+                    (raw / "SKILL.md").write_text(valid_skill_text(skill))
                 elif stage == "verifiter":
                     verification_input = json.loads(
                         (worker / "run/verification-input.json").read_text()
@@ -5628,7 +7153,7 @@ class ContractTests(unittest.TestCase):
             for skill in ("a", "b"):
                 path = workspace / "target/to_be_improved_skills" / skill
                 path.mkdir(parents=True)
-                (path / "SKILL.md").write_text(f"# {skill}\n")
+                (path / "SKILL.md").write_text(valid_skill_text(skill))
             (workspace / "target/raw_skills").mkdir(parents=True)
             (workspace / "logs").mkdir(parents=True)
             labels = [
@@ -5682,7 +7207,7 @@ class ContractTests(unittest.TestCase):
                         raise subprocess.TimeoutExpired("agent", 180)
                     raw = worker / "target/raw_skills" / skill
                     raw.mkdir(parents=True, exist_ok=True)
-                    (raw / "SKILL.md").write_text(f"# {skill}\n")
+                    (raw / "SKILL.md").write_text(valid_skill_text(skill))
                     return
                 verification_input = json.loads(
                     (worker / "run/verification-input.json").read_text()
@@ -5747,7 +7272,7 @@ class ContractTests(unittest.TestCase):
             self.assertTrue(published["accepted"])
             self.assertEqual(
                 (workspace / "target/to_be_improved_skills/b/SKILL.md").read_text(),
-                "# b\n",
+                valid_skill_text("b"),
             )
             self.assertFalse((root / ".pipeline-workers").exists())
 
@@ -5757,7 +7282,7 @@ class ContractTests(unittest.TestCase):
             workspace = root / "workspace/runs/run"
             skill = workspace / "target/to_be_improved_skills/b"
             skill.mkdir(parents=True)
-            (skill / "SKILL.md").write_text("# old\n")
+            (skill / "SKILL.md").write_text(valid_skill_text("b", "Old workflow."))
             (workspace / "target/raw_skills").mkdir(parents=True)
             (workspace / "logs").mkdir(parents=True)
             labels = [
@@ -5802,9 +7327,13 @@ class ContractTests(unittest.TestCase):
                 if stage == "optimize":
                     raw = worker / "target/raw_skills/b"
                     raw.mkdir(parents=True, exist_ok=True)
-                    (raw / "SKILL.md").write_text("# old\n")
+                    (raw / "SKILL.md").write_text(
+                        valid_skill_text("b", "Old workflow.")
+                    )
                     optimize_input = kwargs["input_root"]
-                    (optimize_input / "b/SKILL.md").write_text("# new\n")
+                    (optimize_input / "b/SKILL.md").write_text(
+                        valid_skill_text("b", "New workflow.")
+                    )
                     return
                 raise subprocess.TimeoutExpired("agent", 180)
 
@@ -5851,10 +7380,10 @@ class ContractTests(unittest.TestCase):
                 workspace
                 / "run/cut/ops/1/candidate/to_be_improved_skills/b/SKILL.md"
             )
-            self.assertEqual(saved.read_text(), "# new\n")
+            self.assertEqual(saved.read_text(), valid_skill_text("b", "New workflow."))
             self.assertEqual(
                 (workspace / "target/to_be_improved_skills/b/SKILL.md").read_text(),
-                "# old\n",
+                valid_skill_text("b", "Old workflow."),
             )
             rejected = json.loads(
                 (workspace / "run/cut/ops/1/publication.json").read_text()
@@ -5870,7 +7399,7 @@ class ContractTests(unittest.TestCase):
             self.assertEqual(continued, ["cut"])
             self.assertEqual(
                 (workspace / "target/to_be_improved_skills/b/SKILL.md").read_text(),
-                "# new\n",
+                valid_skill_text("b", "New workflow."),
             )
             accepted = json.loads(
                 (workspace / "run/cut/ops/1/publication.json").read_text()
@@ -5904,6 +7433,18 @@ class ContractTests(unittest.TestCase):
             ):
                 parsed = runner.parse_args()
             self.assertEqual(parsed.resume_from, "verification")
+            with patch.object(
+                sys,
+                "argv",
+                [
+                    "run_pipeline.py",
+                    "run-codex@2026-10-22T19:32",
+                    "--from",
+                    "optimize",
+                ],
+            ):
+                parsed = runner.parse_args()
+            self.assertEqual(parsed.resume_from, "optimize")
             with patch.object(
                 sys, "argv", ["run_pipeline.py", "run-codex@2026-10-22T19:32"]
             ):
@@ -6372,6 +7913,25 @@ class MockedPipelineTest(unittest.TestCase):
             )
             self.assertEqual(selection["turns"], 2)
             self.assertEqual(selection["copied_to"], "traces/raw/codex/short.jsonl")
+            explicit = candidates.create_run(
+                "short.jsonl",
+                pool,
+                runs,
+                run_id_override=(
+                    "trace-codex-01a13505-2turns--runner-dsh-deepseek-flash"
+                ),
+            )
+            self.assertEqual(
+                explicit.name,
+                "trace-codex-01a13505-2turns--runner-dsh-deepseek-flash",
+            )
+            explicit_selection = json.loads(
+                (explicit / "run/trace-selection.json").read_text()
+            )
+            self.assertEqual(
+                explicit_selection["source_run_id"],
+                "run-codex-01a13505-2turns",
+            )
 
     def test_candidate_run_copies_candidate_skills_by_default(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -6381,7 +7941,7 @@ class MockedPipelineTest(unittest.TestCase):
             skill = root / "candidate_skills/example/SKILL.md"
             pool.mkdir()
             skill.parent.mkdir(parents=True)
-            skill.write_text("# Example\n")
+            skill.write_text(valid_skill_text("example"))
             (pool / "trace.jsonl").write_text(
                 json.dumps(
                     {
@@ -6397,18 +7957,89 @@ class MockedPipelineTest(unittest.TestCase):
             copied = (
                 workspace / "target/to_be_improved_skills/example/SKILL.md"
             )
-            self.assertEqual(copied.read_text(), "# Example\n")
+            self.assertEqual(copied.read_text(), valid_skill_text("example"))
             selection = json.loads(
                 (workspace / "run/trace-selection.json").read_text()
             )
             self.assertEqual(selection["candidate_skills"], ["example"])
 
+    def test_candidate_run_excludes_invalid_candidate_skills(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            pool = root / "candidate_traces"
+            runs = root / "runs"
+            skill = root / "candidate_skills/broken/SKILL.md"
+            pool.mkdir()
+            skill.parent.mkdir(parents=True)
+            skill.write_text("from-worker\n")
+            (pool / "trace.jsonl").write_text(
+                json.dumps(
+                    {
+                        "type": "session_meta",
+                        "payload": {"session_id": "abc123"},
+                    }
+                )
+                + "\n"
+            )
+
+            workspace = candidates.create_run("trace.jsonl", pool, runs)
+
+            self.assertFalse(
+                (workspace / "target/to_be_improved_skills/broken").exists()
+            )
+            selection = json.loads(
+                (workspace / "run/trace-selection.json").read_text()
+            )
+            self.assertEqual(
+                selection["invalid_candidate_skills"][0]["skill"], "broken"
+            )
+            self.assertIn(
+                "frontmatter is missing",
+                selection["invalid_candidate_skills"][0]["problems"][0],
+            )
+
+    def test_inventory_validation_checks_evals_against_skill_name(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            skill = Path(directory) / "example"
+            skill.mkdir()
+            (skill / "SKILL.md").write_text(valid_skill_text("example"))
+            write_json(
+                skill / "evals/evals.json",
+                {
+                    "skill_name": "wrong-name",
+                    "evals": [
+                        {
+                            "id": 1,
+                            "prompt": "Use the example workflow.",
+                            "expected_output": "The workflow is followed.",
+                        }
+                    ],
+                },
+            )
+
+            problems = runner.validate_inventory_skill(skill)
+
+            self.assertIn(
+                "skill_name must match SKILL.md frontmatter", problems
+            )
+
     def test_skill_changelog_records_phases_and_copies_back(self) -> None:
+        self.assertEqual(
+            runner._phase_line(
+                {
+                    "phase": "diagnosis",
+                    "finding_id": "sig-empty",
+                    "date": "2026-10-24",
+                    "summary": "",
+                }
+            ),
+            "- 2026-10-24 diagnosis sig-empty",
+        )
         with tempfile.TemporaryDirectory() as directory:
             workspace = Path(directory) / "run-codex-example@2026-10-22T23:22"
             skill = workspace / "target/to_be_improved_skills/example"
             skill.mkdir(parents=True)
-            (skill / "SKILL.md").write_text("# Example\n")
+            (skill / "SKILL.md").write_text(valid_skill_text("example"))
             scope = workspace / "run/sig-1"
             (scope / "ops/1").mkdir(parents=True)
             write_json(
@@ -6542,7 +8173,7 @@ class MockedPipelineTest(unittest.TestCase):
             inventory = Path(directory) / "inventory"
             runner.publish_inventory(workspace, inventory)
             copied = inventory / "candidate_skills/example/SKILL.md"
-            self.assertEqual(copied.read_text(), "# Example\n")
+            self.assertEqual(copied.read_text(), valid_skill_text("example"))
             stored = json.loads(
                 (
                     inventory / "candidate_skills_metadata/metadata.json"
@@ -6554,8 +8185,21 @@ class MockedPipelineTest(unittest.TestCase):
                 before,
             )
             shutil.rmtree(skill)
-            runner.update_candidate_pool(workspace, {"example"}, inventory)
+            archives = runner.update_candidate_pool(
+                workspace, {"example"}, inventory
+            )
             self.assertFalse((inventory / "candidate_skills/example").exists())
+            self.assertEqual(len(archives), 1)
+            archive = inventory / archives[0]["archive"]
+            self.assertTrue((archive / "skill/SKILL.md").is_file())
+            self.assertTrue((archive / "changelog.md").is_file())
+            retirement = json.loads((archive / "retirement.json").read_text())
+            self.assertTrue(retirement["recoverable"])
+            self.assertEqual(retirement["skill"], "example")
+            self.assertEqual(
+                retirement["content_sha256"],
+                runner.skill_content_sha256(archive / "skill"),
+            )
             removed = json.loads(
                 (
                     inventory / "candidate_skills_metadata/metadata.json"
@@ -6567,7 +8211,7 @@ class MockedPipelineTest(unittest.TestCase):
                 before,
             )
             skill.mkdir()
-            (skill / "SKILL.md").write_text("# Example\n")
+            (skill / "SKILL.md").write_text(valid_skill_text("example"))
             runner.update_candidate_pool(workspace, {"example"}, inventory)
             pool = Path(directory) / "candidate_traces"
             runs = Path(directory) / "runs"
@@ -6698,6 +8342,366 @@ class TransformVerificationTest(unittest.TestCase):
 
 
 class DshAndInventoryRegressionTest(unittest.TestCase):
+    def test_inventory_seed_copies_current_skill_changelogs(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "root"
+            skills = root / "workspace/candidate_skills"
+            metadata = root / "workspace/candidate_skills_metadata"
+            changelogs = root / "workspace/candidate_skills_changelog"
+            (skills / "example").mkdir(parents=True)
+            metadata.mkdir(parents=True)
+            changelogs.mkdir(parents=True)
+            (skills / "example/SKILL.md").write_text(valid_skill_text("example"))
+            (metadata / "metadata.json").write_text(
+                json.dumps(
+                    {
+                        "skills_metadata": [
+                            {"skill": "example", "skill_types": []}
+                        ]
+                    }
+                )
+            )
+            (changelogs / "example.md").write_text(
+                "# example\n- 2026-10-24 update sig-shared/1 | workflow\n"
+            )
+            (changelogs / "removed.md").write_text("# removed\n")
+            original_root = runner.ROOT
+            runner.ROOT = root
+            try:
+                workspace = Path(directory) / "run"
+                runner.initialize_inventory_workspace(workspace)
+            finally:
+                runner.ROOT = original_root
+            self.assertTrue(
+                (workspace / "target/skill_changelogs/example.md").is_file()
+            )
+            self.assertFalse(
+                (workspace / "target/skill_changelogs/removed.md").exists()
+            )
+
+    def test_restore_merge_candidate_replays_source_deletion(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory) / "run"
+            worker = Path(directory) / "worker"
+            cluster = "inventory-merge"
+            saved = runner.candidate_directory(workspace, cluster, 1)
+            merged = saved / "to_be_improved_skills/retry-guard"
+            merged.mkdir(parents=True)
+            (merged / "SKILL.md").write_text("# merged\n")
+            runner.atomic_write_json(
+                saved / "metadata.json",
+                {
+                    "skills_metadata": [
+                        {
+                            "skill": "retry-guard",
+                            "skill_types": [],
+                            "unmatched_skill_types": [],
+                            "dependencies": [],
+                            "sources": [],
+                        }
+                    ]
+                },
+            )
+            for name in ("retry-guard", "unchanged-retry-stop"):
+                skill = worker / "target/to_be_improved_skills" / name
+                skill.mkdir(parents=True)
+                (skill / "SKILL.md").write_text(f"# {name}\n")
+            runner.atomic_write_json(
+                worker / "target/to_be_improved_skills_metadata/metadata.json",
+                {
+                    "skills_metadata": [
+                        {
+                            "skill": "retry-guard",
+                            "skill_types": [],
+                            "unmatched_skill_types": [],
+                            "dependencies": [],
+                            "sources": [],
+                        },
+                        {
+                            "skill": "unchanged-retry-stop",
+                            "skill_types": [],
+                            "unmatched_skill_types": [],
+                            "dependencies": [],
+                            "sources": [],
+                        },
+                    ]
+                },
+            )
+            op = {
+                "op": "merge",
+                "skills": ["retry-guard", "unchanged-retry-stop"],
+                "into": {"skill": "retry-guard"},
+            }
+            runner.restore_optimized_candidate(worker, workspace, cluster, 1, op)
+            self.assertEqual(
+                (worker / "target/to_be_improved_skills/retry-guard/SKILL.md").read_text(),
+                "# merged\n",
+            )
+            self.assertFalse(
+                (worker / "target/to_be_improved_skills/unchanged-retry-stop").exists()
+            )
+            metadata = json.loads(
+                (
+                    worker
+                    / "target/to_be_improved_skills_metadata/metadata.json"
+                ).read_text()
+            )
+            self.assertEqual(
+                [row["skill"] for row in metadata["skills_metadata"]],
+                ["retry-guard"],
+            )
+
+    def test_removed_skill_verdict_is_deterministic_only_after_removal(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            baseline = workspace / "target/raw_skills/old-skill"
+            baseline.mkdir(parents=True)
+            (baseline / "SKILL.md").write_text("# old\n")
+            row = {
+                "skill": "old-skill",
+                "role": "merge_source",
+                "baseline_expected": True,
+                "candidate_expected": False,
+            }
+            verdict = runner.deterministic_removed_skill_verdict(workspace, row)
+            self.assertEqual(verdict["skill"], "old-skill")
+            self.assertEqual(verdict["failures"], [])
+
+            candidate = workspace / "target/to_be_improved_skills/old-skill"
+            candidate.mkdir(parents=True)
+            self.assertIsNone(
+                runner.deterministic_removed_skill_verdict(workspace, row)
+            )
+
+            row["role"] = "merge_target"
+            shutil.rmtree(candidate)
+            self.assertIsNone(
+                runner.deterministic_removed_skill_verdict(workspace, row)
+            )
+
+    def test_operation_coverage_distinguishes_real_accepted_operations(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "workspace"
+            current = root / "runs/current"
+            for run_id, operations in (
+                (
+                    "one",
+                    [
+                        {"op": "create", "accepted": True},
+                        {"op": "delete", "accepted": False},
+                    ],
+                ),
+                ("two", [{"op": "merge", "accepted": True}]),
+            ):
+                path = root / "runs" / run_id / "run/pipeline-summary.json"
+                path.parent.mkdir(parents=True)
+                runner.atomic_write_json(path, {"operations": operations})
+            current.mkdir(parents=True)
+            destination = runner.update_operation_coverage(current)
+            report = json.loads(destination.read_text())
+            self.assertEqual(report["operations"]["create"]["accepted"], 1)
+            self.assertEqual(report["operations"]["delete"]["rejected"], 1)
+            self.assertEqual(report["operations"]["merge"]["accepted"], 1)
+            self.assertEqual(
+                report["unverified_real_operations"],
+                ["update", "delete", "split"],
+            )
+
+    def test_retirement_requires_post_creation_non_use_and_subsumption(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "workspace"
+            workspace = root / "runs/current"
+            skills = workspace / "target/to_be_improved_skills"
+            for name, body in (
+                ("quiet", "retry state result stop"),
+                ("keeper", "retry state result stop plus diagnostics"),
+            ):
+                path = skills / name
+                path.mkdir(parents=True)
+                (path / "SKILL.md").write_text(body)
+            metadata = workspace / "target/to_be_improved_skills_metadata/metadata.json"
+            runner.atomic_write_json(
+                metadata,
+                {
+                    "skills_metadata": [
+                        {
+                            "skill": name,
+                            "skill_types": [
+                                {"type": "job/methodology", "weight": 0.9}
+                            ],
+                            "lifecycle": {
+                                "evaluated_at": "2020-01-01T00:00:00+00:00"
+                            },
+                        }
+                        for name in ("quiet", "keeper")
+                    ]
+                },
+            )
+            for index in range(20):
+                observed_workspace = root / "runs" / f"history-{index}"
+                runner.pipeline_metrics.record_skill_recall_observations(
+                    observed_workspace,
+                    f"scope-{index}",
+                    ["quiet", "keeper"],
+                    [{"skill": "keeper", "score": 1.0}],
+                )
+            candidates = runner.inventory_retirement_candidates(
+                workspace, metadata
+            )
+            self.assertEqual(len(candidates), 1)
+            self.assertEqual(candidates[0]["delete_skill"], "quiet")
+            self.assertEqual(candidates[0]["subsumed_by"], "keeper")
+            self.assertEqual(candidates[0]["operation_hint"], "delete")
+            evidence = json.loads(
+                (workspace / "run/inventory-retirement-evidence.json").read_text()
+            )
+            quiet = next(
+                row for row in evidence["skills"] if row["skill"] == "quiet"
+            )
+            self.assertTrue(quiet["eligible"])
+            self.assertEqual(quiet["distinct_post_creation_scopes"], 20)
+            self.assertEqual(quiet["blockers"], [])
+
+            document = json.loads(metadata.read_text())
+            document["skills_metadata"][0]["lifecycle"]["evaluated_at"] = (
+                "2999-01-01T00:00:00+00:00"
+            )
+            runner.atomic_write_json(metadata, document)
+            self.assertEqual(
+                runner.inventory_retirement_candidates(workspace, metadata),
+                [],
+            )
+            evidence = json.loads(
+                (workspace / "run/inventory-retirement-evidence.json").read_text()
+            )
+            quiet = next(
+                row for row in evidence["skills"] if row["skill"] == "quiet"
+            )
+            self.assertEqual(quiet["distinct_post_creation_scopes"], 0)
+            self.assertIn(
+                "insufficient_distinct_post_creation_scopes",
+                quiet["blockers"],
+            )
+
+    def test_legacy_lifecycle_baseline_is_backfilled_once(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            metadata = Path(directory) / "metadata.json"
+            runner.atomic_write_json(
+                metadata,
+                {
+                    "skills_metadata": [
+                        {"skill": "legacy", "skill_types": []},
+                        {
+                            "skill": "current",
+                            "skill_types": [],
+                            "lifecycle": {
+                                "status": "stable",
+                                "origin_run_id": "run-existing",
+                                "origin_finding_id": "finding-existing",
+                                "origin_session_ids": ["session-existing"],
+                                "confidence": 0.9,
+                                "evidence_records": 2,
+                                "distinct_windows": 2,
+                                "evaluated_at": "2025-01-01T00:00:00+00:00",
+                                "evaluation_kind": "verified",
+                            },
+                        },
+                    ]
+                },
+            )
+            self.assertEqual(
+                runner.ensure_lifecycle_evaluation_baselines(metadata),
+                ["legacy"],
+            )
+            first = json.loads(metadata.read_text())
+            legacy = first["skills_metadata"][0]["lifecycle"]
+            self.assertEqual(
+                legacy["evaluation_baseline_reason"],
+                "legacy_inventory_backfill",
+            )
+            self.assertTrue(legacy["evaluated_at"])
+            self.assertEqual(
+                runner.ensure_lifecycle_evaluation_baselines(metadata), []
+            )
+            second = json.loads(metadata.read_text())
+            self.assertEqual(first, second)
+
+    def test_skill_inventory_ignores_residual_directories_without_skill_md(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            live = root / "live"
+            live.mkdir()
+            (live / "SKILL.md").write_text("# Live\n")
+            (root / "removed/agents").mkdir(parents=True)
+            self.assertEqual(runner.skill_inventory_names(root), {"live"})
+
+    def test_retirement_does_not_count_replays_as_distinct_scopes(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "workspace"
+            workspace = root / "runs/current"
+            skills = workspace / "target/to_be_improved_skills"
+            for name, body in (
+                ("quiet", "retry state result stop"),
+                ("keeper", "retry state result stop plus diagnostics"),
+            ):
+                path = skills / name
+                path.mkdir(parents=True)
+                (path / "SKILL.md").write_text(body)
+            metadata = workspace / "target/to_be_improved_skills_metadata/metadata.json"
+            runner.atomic_write_json(
+                metadata,
+                {
+                    "skills_metadata": [
+                        {
+                            "skill": name,
+                            "skill_types": [
+                                {"type": "job/methodology", "weight": 0.9}
+                            ],
+                            "lifecycle": {
+                                "evaluated_at": "2020-01-01T00:00:00+00:00"
+                            },
+                        }
+                        for name in ("quiet", "keeper")
+                    ]
+                },
+            )
+            for index in range(25):
+                runner.pipeline_metrics.record_skill_recall_observations(
+                    root / "runs" / f"replay-{index}",
+                    "same-finding",
+                    ["quiet", "keeper"],
+                    [{"skill": "keeper", "score": 1.0}],
+                )
+            self.assertEqual(
+                runner.inventory_retirement_candidates(workspace, metadata),
+                [],
+            )
+            evidence = json.loads(
+                (workspace / "run/inventory-retirement-evidence.json").read_text()
+            )
+            quiet = next(
+                row for row in evidence["skills"] if row["skill"] == "quiet"
+            )
+            self.assertEqual(quiet["distinct_post_creation_scopes"], 1)
+            self.assertIn(
+                "insufficient_distinct_post_creation_scopes",
+                quiet["blockers"],
+            )
+
+    def test_parallel_dsh_views_are_isolated_by_suffix(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            first = runner.make_dsh_session_view("verifiter", workspace, "skill-a")
+            second = runner.make_dsh_session_view("verifiter", workspace, "skill-b")
+            self.assertNotEqual(first, second)
+            self.assertTrue((first / "05_verifiter_agent").is_dir())
+            self.assertTrue((second / "05_verifiter_agent").is_dir())
+            self.assertEqual((first / "workspace").resolve(), workspace.resolve())
+            runner.remove_dsh_session_view(first)
+            self.assertTrue(second.is_dir())
+            runner.remove_dsh_session_view(second)
+            self.assertFalse((workspace / ".dsh-sessions").exists())
+
     def test_verifier_parser_accepts_multiline_json_after_reasoning(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "session.jsonl"
@@ -6762,6 +8766,72 @@ class DshAndInventoryRegressionTest(unittest.TestCase):
                 ["retry-a", "retry-b"],
             )
 
+    def test_inventory_merge_candidates_review_shared_applied_finding(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            skills = workspace / "target/to_be_improved_skills"
+            changelogs = workspace / "target/skill_changelogs"
+            changelogs.mkdir(parents=True)
+            for name in ("older-owner", "new-owner"):
+                (skills / name).mkdir(parents=True)
+                (skills / name / "SKILL.md").write_text(
+                    f"---\nname: {name}\ndescription: Example\n---\n# {name}\n"
+                )
+                operation = "create" if name == "new-owner" else "update"
+                (changelogs / f"{name}.md").write_text(
+                    f"# {name}\n- 2026-10-24 {operation} sig-shared/1 | workflow\n"
+                )
+            metadata = workspace / "metadata.json"
+            metadata.write_text(
+                json.dumps(
+                    {
+                        "skills_metadata": [
+                            {"skill": "older-owner", "skill_types": []},
+                            {"skill": "new-owner", "skill_types": []},
+                        ]
+                    }
+                )
+            )
+            result = runner.inventory_merge_candidates(workspace, metadata)
+            self.assertEqual(result["candidate_count"], 1)
+            candidate = result["candidates"][0]
+            self.assertEqual(candidate["score"], 0.95)
+            self.assertEqual(candidate["shared_finding_ids"], ["sig-shared"])
+            self.assertIn("duplicate_create_evidence_collision", candidate["reasons"])
+            self.assertEqual(candidate["operation_hint"], "merge")
+            self.assertEqual(candidate["created_skill"], "new-owner")
+            self.assertEqual(candidate["prior_owner"], "older-owner")
+
+    def test_inventory_merge_candidates_ignore_legitimate_multi_skill_update(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            skills = workspace / "target/to_be_improved_skills"
+            changelogs = workspace / "target/skill_changelogs"
+            changelogs.mkdir(parents=True)
+            for name in ("first", "second"):
+                (skills / name).mkdir(parents=True)
+                (skills / name / "SKILL.md").write_text(
+                    f"---\nname: {name}\ndescription: Example\n---\n# {name}\n"
+                )
+                (changelogs / f"{name}.md").write_text(
+                    f"# {name}\n- 2026-10-24 update sig-shared/1 | workflow\n"
+                )
+            metadata = workspace / "metadata.json"
+            metadata.write_text(
+                json.dumps(
+                    {
+                        "skills_metadata": [
+                            {"skill": "first", "skill_types": []},
+                            {"skill": "second", "skill_types": []},
+                        ]
+                    }
+                )
+            )
+            self.assertEqual(
+                runner.inventory_merge_candidates(workspace, metadata)["candidate_count"],
+                0,
+            )
+
     def test_scope_source_path_does_not_duplicate_workspace(self) -> None:
         root = Path("/tmp/example-run")
         resolved = runner.scope_source_path(
@@ -6770,6 +8840,272 @@ class DshAndInventoryRegressionTest(unittest.TestCase):
         self.assertEqual(
             resolved, root / "traces/derived/findings/example"
         )
+
+    def test_merge_resource_plan_is_normalized_from_all_sources(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            skills = workspace / "target/to_be_improved_skills"
+            (skills / "first/scripts/lib").mkdir(parents=True)
+            (skills / "first/scripts/lib/check.py").write_text("print('ok')\n")
+            (skills / "first/agents").mkdir()
+            (skills / "first/agents/openai.yaml").write_text("interface: {}\n")
+            (skills / "second/evals").mkdir(parents=True)
+            (skills / "second/evals/evals.json").write_text('{"evals": []}\n')
+            operation = {
+                "op": "merge",
+                "skills": ["first", "second"],
+                "into": {
+                    "skill": "first",
+                    "dirs": [],
+                    "resource_plan": resource_plan(),
+                },
+            }
+            self.assertTrue(
+                runner.reconcile_inherited_resource_plan(workspace, operation)
+            )
+            result = operation["into"]
+            self.assertEqual(
+                {row["dir"] for row in result["dirs"]}, {"scripts", "evals"}
+            )
+            decisions = {
+                row["resource"]: row["decision"]
+                for row in result["resource_plan"]
+            }
+            self.assertEqual(decisions["scripts"], "use")
+            self.assertEqual(decisions["evals"], "use")
+            self.assertEqual(decisions["agents"], "omit")
+
+    def test_merge_resource_plan_is_moved_from_operation_to_result(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            skills = workspace / "target/to_be_improved_skills"
+            (skills / "first/scripts").mkdir(parents=True)
+            (skills / "first/scripts/check.py").write_text("print('ok')\n")
+            operation = {
+                "op": "merge",
+                "skills": ["first", "second"],
+                "into": {"skill": "first", "dirs": []},
+                "resource_plan": resource_plan("scripts"),
+            }
+            self.assertTrue(
+                runner.reconcile_inherited_resource_plan(workspace, operation)
+            )
+            self.assertNotIn("resource_plan", operation)
+            result = operation["into"]
+            decisions = {
+                row["resource"]: row["decision"]
+                for row in result["resource_plan"]
+            }
+            self.assertEqual(set(decisions), contracts.RESOURCE_KINDS)
+            self.assertEqual(decisions["scripts"], "use")
+            self.assertEqual({row["dir"] for row in result["dirs"]}, {"scripts"})
+
+    def test_merge_validation_rejects_silent_nested_resource_loss(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            raw = workspace / "target/raw_skills/source/scripts/lib"
+            raw.mkdir(parents=True)
+            (raw / "check.py").write_text("print('ok')\n")
+            target = workspace / "target/to_be_improved_skills/result"
+            target.mkdir(parents=True)
+            operation = {
+                "op": "merge",
+                "skills": ["source"],
+                "into": {"skill": "result"},
+            }
+            with self.assertRaisesRegex(SystemExit, "dropped inherited resource"):
+                runner.validate_inherited_resources(workspace, operation)
+
+    def test_merge_validation_counts_preserved_eval_union(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            case = {
+                "prompt": "When should this apply?",
+                "expected_output": "Apply it.",
+                "expectations": ["It applies."],
+            }
+            for source in ("first", "second"):
+                path = workspace / f"target/raw_skills/{source}/evals"
+                path.mkdir(parents=True)
+                write_json(path / "evals.json", {"skill_name": source, "evals": [case]})
+            target = workspace / "target/to_be_improved_skills/result/evals"
+            target.mkdir(parents=True)
+            write_json(target / "evals.json", {"skill_name": "result", "evals": [case]})
+            report = runner.validate_inherited_resources(
+                workspace,
+                {
+                    "op": "merge",
+                    "skills": ["first", "second"],
+                    "into": {"skill": "result"},
+                },
+            )
+            self.assertEqual(report["inherited_eval_cases"], 2)
+            self.assertEqual(report["preserved_eval_cases"], 2)
+            self.assertEqual(report["preservation_rate"], 1.0)
+
+    def test_update_preserves_eval_identity_while_allowing_regression_revision(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            before = {
+                "id": 1,
+                "kind": "should_apply",
+                "prompt": "Reuse the starter.",
+                "expected_output": "The starter is reused.",
+                "expectations": ["The asset is copied."],
+            }
+            after = {
+                **before,
+                "expected_output": "The evolved starter is reused.",
+                "expectations": ["The asset is copied with readiness preserved."],
+            }
+            raw = workspace / "target/raw_skills/starter/evals"
+            raw.mkdir(parents=True)
+            write_json(raw / "evals.json", {"skill_name": "starter", "evals": [before]})
+            target = workspace / "target/to_be_improved_skills/starter/evals"
+            target.mkdir(parents=True)
+            write_json(
+                target / "evals.json",
+                {"skill_name": "starter", "evals": [after]},
+            )
+            report = runner.validate_inherited_resources(
+                workspace,
+                {
+                    "op": "update",
+                    "skills": [{"skill": "starter"}],
+                },
+            )
+            self.assertEqual(report["inherited_eval_cases"], 1)
+            self.assertEqual(report["preserved_eval_cases"], 1)
+            self.assertEqual(report["revised_eval_cases"], 1)
+            self.assertEqual(report["preservation_rate"], 1.0)
+
+    def test_planned_resources_require_files_discoverability_and_compilation(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            skill = workspace / "target/to_be_improved_skills/example"
+            (skill / "scripts/lib").mkdir(parents=True)
+            (skill / "references/providers").mkdir(parents=True)
+            (skill / "assets/templates").mkdir(parents=True)
+            (skill / "agents").mkdir(parents=True)
+            (skill / "evals").mkdir(parents=True)
+            resources = (
+                "scripts/lib/check.py",
+                "references/providers/api.md",
+                "assets/templates/report.md",
+                "agents/reviewer.md",
+            )
+            (skill / "SKILL.md").write_text(
+                valid_skill_text("example", "Use " + ", ".join(resources) + ".")
+            )
+            (skill / "scripts/lib/check.py").write_text("print('ok')\n")
+            (skill / "references/providers/api.md").write_text("API rules\n")
+            (skill / "assets/templates/report.md").write_text("# Report\n")
+            (skill / "agents/reviewer.md").write_text("Review the result.\n")
+            (skill / "evals/evals.json").write_text('{"skill_name":"example","evals":[]}\n')
+            operation = {
+                "op": "create",
+                "skills": [
+                    {
+                        "skill": "example",
+                        "resource_plan": resource_plan(
+                            "scripts", "references", "assets", "agents", "evals"
+                        ),
+                    }
+                ],
+            }
+            runner.validate_planned_resource_outputs(workspace, operation)
+            (skill / "SKILL.md").write_text(valid_skill_text("example"))
+            with self.assertRaisesRegex(SystemExit, "not discoverable"):
+                runner.validate_planned_resource_outputs(workspace, operation)
+
+    def test_planned_resource_use_rejects_empty_directory(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            skill = workspace / "target/to_be_improved_skills/example"
+            skill.mkdir(parents=True)
+            (skill / "SKILL.md").write_text(valid_skill_text("example"))
+            operation = {
+                "op": "create",
+                "skills": [
+                    {
+                        "skill": "example",
+                        "resource_plan": resource_plan("assets"),
+                    }
+                ],
+            }
+            with self.assertRaisesRegex(SystemExit, "produced no authored file"):
+                runner.validate_planned_resource_outputs(workspace, operation)
+
+    def test_resource_finding_idempotency_requires_effect_to_still_exist(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            changelog = workspace / "target/skill_changelogs/retry-guard.md"
+            changelog.parent.mkdir(parents=True)
+            changelog.write_text(
+                "- 2026-10-24 update sig-resource/1 | scripts workflow\n"
+            )
+            skill = workspace / "target/to_be_improved_skills/retry-guard"
+            skill.mkdir(parents=True)
+            (skill / "SKILL.md").write_text(valid_skill_text("retry-guard"))
+            finding = {
+                "features": {
+                    "candidate_source": "resource_opportunity",
+                    "resource": "scripts",
+                }
+            }
+            self.assertEqual(
+                runner.previously_applied_finding_skills(
+                    workspace, "sig-resource", [], finding
+                ),
+                [],
+            )
+            (skill / "scripts").mkdir()
+            (skill / "scripts/poll.py").write_text("print('ok')\n")
+            self.assertEqual(
+                runner.previously_applied_finding_skills(
+                    workspace, "sig-resource", [], finding
+                ),
+                ["retry-guard"],
+            )
+
+    def test_resource_finding_idempotency_rejects_placeholder_for_captured_asset(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            changelog = workspace / "target/skill_changelogs/starter.md"
+            changelog.parent.mkdir(parents=True)
+            changelog.write_text(
+                "- 2026-10-24 update sig-asset/1 | assets workflow\n"
+            )
+            skill = workspace / "target/to_be_improved_skills/starter"
+            asset = skill / "assets/templates/pipeline.v1.json"
+            asset.parent.mkdir(parents=True)
+            (skill / "SKILL.md").write_text(valid_skill_text("starter"))
+            asset.write_text('{"schema":"pipeline/v1","__PLACEHOLDER__":true}\n')
+            finding = {
+                "features": {
+                    "candidate_source": "resource_opportunity",
+                    "resource": "assets",
+                    "asset_contract": {
+                        "content_available": True,
+                        "content": '{"schema":"pipeline/v1","id":"discovery"}\n',
+                    },
+                }
+            }
+            self.assertEqual(
+                runner.previously_applied_finding_skills(
+                    workspace, "sig-asset", [], finding
+                ),
+                [],
+            )
+            asset.write_text(
+                '{\n  "id": "discovery", "schema": "pipeline/v1"\n}\n'
+            )
+            self.assertEqual(
+                runner.previously_applied_finding_skills(
+                    workspace, "sig-asset", [], finding
+                ),
+                ["starter"],
+            )
 
 
 if __name__ == "__main__":

@@ -1,0 +1,8 @@
+# Starter service configuration.
+# Contract: service, healthcheck, readiness, and timeout_seconds.
+# Copy this file into the target location and adapt only the values the
+# request changes. Do not add credentials or environment-specific secrets.
+service: example-service
+healthcheck: /health
+readiness: /ready
+timeout_seconds: 30

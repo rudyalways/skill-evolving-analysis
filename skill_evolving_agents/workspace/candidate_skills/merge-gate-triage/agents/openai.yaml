@@ -1,0 +1,4 @@
+interface:
+  display_name: "Merge Gate Triage"
+  short_description: "Triages a blocked merge or pre-push quality gate by using its named failure…"
+  default_prompt: "Use $merge-gate-triage for this request."

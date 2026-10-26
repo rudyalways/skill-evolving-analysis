@@ -1,0 +1,61 @@
+{
+  "skill_name": "merge-gate-triage",
+  "evals": [
+    {
+      "id": 1,
+      "kind": "should_apply",
+      "prompt": "My pre-push gate failed with working-tree-iteration-only right after I rebased onto main. The diff only changes api/handler.go, but the gate output points at files I never touched. Triage it.",
+      "expected_output": "Untracked or generated artifacts are moved to a hold directory outside the repository under a restore trap, the identical gate command is rerun, and it passes; the artifacts are restored and no code commit is created.",
+      "expectations": [
+        "The exact gate command and working-tree-iteration-only mode are recorded before any change.",
+        "Untracked artifacts are moved, not deleted or overwritten, to a hold directory outside the repository.",
+        "A restore trap is installed before the move and the artifacts are restored afterward.",
+        "The same gate command is rerun unchanged and its exit code is reported.",
+        "No code or feature commit is created for a pure workspace-contamination failure."
+      ],
+      "files": [],
+      "source_trace_ids": []
+    },
+    {
+      "id": 2,
+      "kind": "should_apply",
+      "prompt": "The merge gate still fails in clean-checkout mode after I quarantined the build artifacts, on an assertion in pkg/parse/reader_test.go. My branch only touched api/handler.go. Can I just rerun until it passes or should I ignore it?",
+      "expected_output": "Git blame on the exact failing lines shows the defect predates the merge base and that the current diff does not touch those lines; the defect is fixed in a separate commit on top of the feature branch and the unchanged gate reruns green.",
+      "expectations": [
+        "The failing assertion and its file and line range are identified before editing.",
+        "git blame is run on the exact failing lines and the blamed commit is checked against the merge base.",
+        "The current diff is shown not to touch the failing lines or fix site.",
+        "The fix is a separate commit, not an amendment or squash into the feature commit.",
+        "The same gate command is rerun and exits zero after the fix."
+      ],
+      "files": [],
+      "source_trace_ids": []
+    },
+    {
+      "id": 3,
+      "kind": "should_apply",
+      "prompt": "Gate fails clean-checkout on the new assertion in reader_test.go. The branch rewrote the parser function that assertion covers, and blame on those lines points at my latest feature commit. I think it is the rebase. Confirm and fix.",
+      "expected_output": "The failure is classified as feature-caused because blame places the failing lines inside the current diff; the fix is made in the feature commit and no separate inherited-defect commit is created.",
+      "expectations": [
+        "Blame evidence is used to check whether the failing lines belong to the current diff.",
+        "The skill does not label the failure as inherited or change-independent when blame points at a current-diff commit.",
+        "The fix is applied in the normal feature change rather than a separate inherited-defect commit.",
+        "The same gate command is rerun to confirm the result."
+      ],
+      "files": [],
+      "source_trace_ids": []
+    },
+    {
+      "id": 4,
+      "kind": "should_not_apply",
+      "prompt": "One of my new unit tests fails with a stack trace pointing at the exact function I just wrote. Help me debug the null dereference.",
+      "expected_output": "The merge gate triage workflow is not selected; the failure is already localized by the stack trace to the current change.",
+      "expectations": [
+        "The skill is not selected for an ordinary localized test failure.",
+        "No quarantine, gate rerun, or git blame triage is proposed."
+      ],
+      "files": [],
+      "source_trace_ids": []
+    }
+  ]
+}

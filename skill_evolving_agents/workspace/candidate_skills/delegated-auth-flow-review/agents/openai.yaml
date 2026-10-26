@@ -1,0 +1,4 @@
+interface:
+  display_name: "Delegated Auth Flow Review"
+  short_description: "Delegate a read-only review of a changed authentication flow and return only…"
+  default_prompt: "Use $delegated-auth-flow-review for this request."

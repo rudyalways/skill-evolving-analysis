@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import socket
 import sys
 import tempfile
@@ -8,6 +9,7 @@ import threading
 import unittest
 from http.server import ThreadingHTTPServer
 from pathlib import Path
+from unittest.mock import patch
 
 
 AGENTS = Path(__file__).resolve().parents[1]
@@ -45,7 +47,8 @@ from policy import (
 )
 from policy.heads import build_head_specs
 from services.embedding_api.client import EmbeddingClient
-from services.embedding_api.server import Handler
+from services.embedding_api.server import Handler, configure_framework_environment
+from services.embedding_api import server as embedding_server
 from services.embedding_api.provider import EmbeddingProvider
 from services.generation_api.client import GenerationClient
 from services.generation_api.server import Handler as GenerationHandler
@@ -53,6 +56,35 @@ import run_pipeline as runner
 
 
 class CostAwareArchitectureTests(unittest.TestCase):
+    def test_embedding_ranking_batches_candidates_and_queries(self) -> None:
+        class BatchBackend:
+            def __init__(self) -> None:
+                self.calls: list[tuple[str, list[str]]] = []
+
+            def embed_many(self, texts: list[str]) -> list[list[float]]:
+                self.calls.append(("candidates", texts))
+                return [[1.0, 0.0], [0.0, 1.0]]
+
+            def embed_query_many(self, texts: list[str]) -> list[list[float]]:
+                self.calls.append(("queries", texts))
+                return [[1.0, 0.0] for _ in texts]
+
+        backend = BatchBackend()
+        with patch.object(embedding_server, "BACKEND", backend):
+            rows = embedding_server.ranked(
+                ["first", "second"],
+                {"left": "alpha", "right": "beta"},
+                1,
+            )
+        self.assertEqual(
+            backend.calls,
+            [
+                ("candidates", ["alpha", "beta"]),
+                ("queries", ["first", "second"]),
+            ],
+        )
+        self.assertEqual(rows, [{"matches": [{"id": "left", "score": 1.0}]}] * 2)
+
     def test_optimization_specs_validate_and_grid_respects_constraints(self) -> None:
         registry = validate_knob_registry(
             load_spec(AGENTS / "config/knob-registry.json", "knob registry")
@@ -387,6 +419,14 @@ class CostAwareArchitectureTests(unittest.TestCase):
             resolved = resolve_execution_config(profile, super_config, service_tiers)
             self.assertEqual(resolved["profile"], name)
 
+    def test_local_embedding_phase_timeouts_cover_measured_cpu_latency(self) -> None:
+        profile = load_profile(AGENTS / "profiles/low-cost-local-service.json")
+        runtime_timeout = profile["embedding_runtime"]["timeout_ms"]
+        for phase_name in ("semantic_prefilter", "recall"):
+            phase_timeout = profile["phases"][phase_name]["timeout_ms"]
+            self.assertGreaterEqual(phase_timeout, 10_000)
+            self.assertLessEqual(phase_timeout, runtime_timeout)
+
     def test_super_config_rejects_phase_algorithm_mismatch(self) -> None:
         profile = load_profile(AGENTS / "profiles/full-agent.json")
         profile["phases"]["goal"]["algorithm"] = "diagnosis.agent-full-json-v1"
@@ -532,6 +572,18 @@ class CostAwareArchitectureTests(unittest.TestCase):
             server.shutdown()
             server.server_close()
             thread.join(timeout=2)
+
+    def test_embedding_service_selects_pytorch_without_overwriting_operator_env(self) -> None:
+        with patch.dict(os.environ, {}, clear=True):
+            configure_framework_environment()
+            self.assertEqual(os.environ["USE_TF"], "0")
+            self.assertEqual(os.environ["USE_TORCH"], "1")
+        with patch.dict(
+            os.environ, {"USE_TF": "1", "USE_TORCH": "0"}, clear=True
+        ):
+            configure_framework_environment()
+            self.assertEqual(os.environ["USE_TF"], "1")
+            self.assertEqual(os.environ["USE_TORCH"], "0")
 
     def test_in_process_embedding_provider_uses_no_http(self) -> None:
         provider = EmbeddingProvider(

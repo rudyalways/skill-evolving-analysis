@@ -2,256 +2,198 @@
   "skills_metadata": [
     {
       "skill": "audit-project-ui",
-      "description": "Covers a project web-UI audit: classify the shared layout boundary, review first-viewport hierarchy, density, navigation, and responsive behavior against a failure-mode checklist, then verify the rendered page.",
+      "description": "Frontend UI audit and repair skill: it diagnoses page and shell defects, implements fixes in the shared page framework, and verifies the deployed revision through live browser and first-viewport evidence.",
       "skill_types": [
         {
-          "type": "job/verification/audit",
+          "type": "domain/frontend",
           "weight": 0.95
         },
         {
-          "type": "domain/frontend",
+          "type": "job/verification/browser-check",
           "weight": 0.9
         },
         {
           "type": "form/technique/checklist",
-          "weight": 0.82
+          "weight": 0.7
         },
         {
-          "type": "job/verification/browser-check",
-          "weight": 0.78
-        },
-        {
-          "type": "domain/design/typography",
+          "type": "artifact/code-change",
           "weight": 0.6
         }
       ],
-      "unmatched_skill_types": []
+      "unmatched_skill_types": [],
+      "lifecycle": {
+        "status": "stable",
+        "origin_run_id": "legacy-inventory",
+        "origin_finding_id": "legacy-import:audit-project-ui",
+        "origin_session_ids": [
+          "legacy-inventory"
+        ],
+        "confidence": 1.0,
+        "evidence_records": 0,
+        "distinct_windows": 0,
+        "evaluated_at": "2026-10-24T14:12:41.037026+00:00",
+        "evaluation_kind": "legacy_inventory_backfill",
+        "evaluation_baseline_reason": "legacy_inventory_backfill"
+      }
+    },
+    {
+      "skill": "authored-cli-helper",
+      "description": "Author and validate a repository operational CLI script with a stable machine-readable contract, safe loopback defaults, strict argument handling, and nonzero-on-failure behavior verified by syntax and live-command checks.",
+      "skill_types": [
+        {
+          "weight": 0.3,
+          "type": "job/skill-authoring"
+        },
+        {
+          "weight": 0.25,
+          "type": "form/reference/cli"
+        },
+        {
+          "weight": 0.2,
+          "type": "artifact/code-change"
+        },
+        {
+          "weight": 0.15,
+          "type": "domain/software/typescript"
+        },
+        {
+          "weight": 0.1,
+          "type": "job/verification/test"
+        }
+      ],
+      "unmatched_skill_types": [],
+      "lifecycle": {
+        "status": "evaluated",
+        "origin_run_id": "deep-prep-authored-resources-dsh-05",
+        "origin_finding_id": "sig-f7ccd004139711d75952d9e2",
+        "origin_session_ids": [
+          "01a16c53-bf96-7d62-992e-91c76506a6d8"
+        ],
+        "distinct_sessions": 1,
+        "confidence": 0.94,
+        "evidence_records": 1,
+        "distinct_windows": 1,
+        "evaluated_at": "2026-10-24T22:57:17.135104+00:00",
+        "evaluation_kind": "structural",
+        "content_sha256": "0af0f5bf40c8f5ec3ae57aea7d0682b5299592a779f2b967e93569cce11f99fc"
+      }
     },
     {
       "skill": "close-implementation-choice",
-      "description": "When a follow-up offers concrete implementation options, end the turn with a visible choice or a short impossibility note.",
+      "description": "Answer-closing skill: it forces the final assistant text to select one named implementation option or state a short impossibility note, following a constrained decision workflow and output shape.",
       "skill_types": [
         {
           "type": "job/output-format",
-          "weight": 1.0
-        },
-        {
-          "type": "job/verification",
-          "weight": 0.6
-        },
-        {
-          "type": "form/pattern/constraint",
-          "weight": 0.5
-        }
-      ],
-      "unmatched_skill_types": [],
-      "lifecycle": {
-        "status": "evaluated",
-        "origin_run_id": "run-codex-top5-len-2026-10-23T05-00-sig-72a822635f776468cf5fdb23-op-1",
-        "origin_finding_id": "sig-72a822635f776468cf5fdb23",
-        "origin_session_ids": [
-          "01a15433-e71b-7f22-aa75-bd4b93fb2d7a"
-        ],
-        "distinct_sessions": 1,
-        "confidence": 0.95,
-        "evidence_records": 2,
-        "distinct_windows": 0,
-        "evaluated_at": "2026-10-22T21:50:03.100662+00:00",
-        "evaluation_kind": "structural",
-        "content_sha256": "d12136fe08a25f6a94b69c9022803f064ddf2c62af1af3f4d1dc8d0382c21694"
-      }
-    },
-    {
-      "skill": "establish-browser-surface",
-      "description": "Establish a controllable browser surface before authenticated browser work; treat an unavailable named-browser lookup as a switch signal rather than a retry, and confirm the loaded page identity before acting.",
-      "skill_types": [
-        {
-          "weight": 0.9,
-          "type": "job/methodology/workflow"
-        },
-        {
-          "weight": 0.8,
-          "type": "job/verification/browser-check"
-        },
-        {
-          "weight": 0.6,
-          "type": "form/technique/steps"
-        }
-      ],
-      "unmatched_skill_types": [],
-      "lifecycle": {
-        "status": "evaluated",
-        "origin_run_id": "run-codex-01a15f-17turns-2026-10-23T14-55-sig-4cf9dd309e6216e3a445a73a-op-1",
-        "origin_finding_id": "sig-4cf9dd309e6216e3a445a73a",
-        "origin_session_ids": [
-          "01a15f0c-a159-71a2-82f4-250ac3fa262f"
-        ],
-        "distinct_sessions": 1,
-        "confidence": 0.91,
-        "evidence_records": 1,
-        "distinct_windows": 1,
-        "method_fingerprint": "method-v1:8362627187a46f3d598b366c",
-        "methodology_value": 0.345839,
-        "evaluated_at": "2026-10-23T07:05:34.680750+00:00",
-        "evaluation_kind": "structural",
-        "content_sha256": "ac6a08da77f7d43c5f7f20f6b7a822c0e7e8131d3140cb4227f6ccdc9d540467"
-      }
-    },
-    {
-      "skill": "preserve-request-after-provider-rate-limit",
-      "skill_types": [
-        {
-          "type": "job/workflow",
-          "weight": 1.0
-        }
-      ],
-      "unmatched_skill_types": []
-    },
-    {
-      "skill": "retry-after-information-gain",
-      "description": "Decide whether another attempt is justified from the last recorded action, observed state, and result.",
-      "skill_types": [
-        {
-          "type": "job/methodology",
-          "weight": 1.0
-        },
-        {
-          "type": "job/methodology/workflow",
-          "weight": 0.8
-        },
-        {
-          "type": "form/technique/loop",
-          "weight": 0.7
-        }
-      ],
-      "unmatched_skill_types": [],
-      "lifecycle": {
-        "status": "evaluated",
-        "origin_run_id": "run-codex-01a135-30turns-2026-10-22T23-22-sig-d11f532c46418581aa57cdf4-op-1",
-        "origin_finding_id": "sig-d11f532c46418581aa57cdf4",
-        "origin_session_ids": [
-          "01a13505-8693-7372-8ff2-2acdcfd7f457"
-        ],
-        "distinct_sessions": 1,
-        "confidence": 0.9,
-        "evidence_records": 1,
-        "distinct_windows": 1,
-        "method_fingerprint": "method-v1:cf7966716cbe804ed979fd1c",
-        "methodology_value": 0.355668,
-        "evaluated_at": "2026-10-23T05:41:35.888924+00:00",
-        "evaluation_kind": "structural",
-        "content_sha256": "e4947b74242eef22fb3671503b35441726ed0f62a08f7e8f289e3b86b14ec407"
-      }
-    },
-    {
-      "skill": "retry-guard",
-      "description": "Decide whether a repeated tool action is justified. Allow a repeat only after relevant state changed, a search or scope change produced new information, or a single bounded transient failure; otherwise change the action or gather different evidence.",
-      "skill_types": [
-        {
-          "type": "job/methodology/workflow",
           "weight": 0.9
         },
         {
           "type": "form/pattern/constraint",
-          "weight": 0.85
-        },
-        {
-          "type": "form/technique/loop",
-          "weight": 0.8
-        }
-      ],
-      "unmatched_skill_types": [],
-      "lifecycle": {
-        "status": "evaluated",
-        "origin_run_id": "run-codex-retry-merge-2026-10-23T05-41-sig-625a365661e7ae0025430ca7-op-1",
-        "origin_finding_id": "sig-625a365661e7ae0025430ca7",
-        "origin_session_ids": [
-          "01a13505-8693-7372-8ff2-2acdcfd7f457"
-        ],
-        "distinct_sessions": 1,
-        "confidence": 0.9,
-        "evidence_records": 1,
-        "distinct_windows": 1,
-        "method_fingerprint": "method-v1:e25374de7772344b5a141094",
-        "methodology_value": 0.355668,
-        "evaluated_at": "2026-10-23T05:41:57.359836+00:00",
-        "evaluation_kind": "structural",
-        "content_sha256": "58877dfd6f8962a4a01eb08058e2e702f7b5702db237c680eeacf8efadc10293"
-      }
-    },
-    {
-      "skill": "standing-approval",
-      "description": "After a user approves a named action, carry that approval through the remaining prepared steps and stop only for a new irreversible choice that was explicitly reserved.",
-      "skill_types": [
-        {
-          "type": "job/methodology/workflow",
-          "weight": 0.86
-        },
-        {
-          "type": "form/pattern/constraint",
-          "weight": 0.74
-        },
-        {
-          "type": "form/technique/steps",
-          "weight": 0.62
-        }
-      ],
-      "unmatched_skill_types": [],
-      "lifecycle": {
-        "status": "evaluated",
-        "origin_run_id": "run-codex-top5-len-2026-10-23T05-00-sig-1cc1053e8b4f9320fb053738-op-1",
-        "origin_finding_id": "sig-1cc1053e8b4f9320fb053738",
-        "origin_session_ids": [
-          "01a13505-8693-7372-8ff2-2acdcfd7f457"
-        ],
-        "distinct_sessions": 1,
-        "confidence": 1.0,
-        "evidence_records": 5,
-        "distinct_windows": 0,
-        "evaluated_at": "2026-10-22T21:47:50.939942+00:00",
-        "evaluation_kind": "structural",
-        "content_sha256": "f35c2633f0c782b301560160a4a8ec55831b93f33ba0bc67b5685619f40260a4"
-      }
-    },
-    {
-      "skill": "unchanged-retry-stop",
-      "description": "Stop a retry loop when the action, observed state, and result are unchanged. Retry only after a relevant state change, a meaningful search or scope refinement, or a bounded transient failure; otherwise change the action or acquire new evidence.",
-      "skill_types": [
-        {
-          "type": "form/technique/loop",
-          "weight": 1.0
+          "weight": 0.75
         },
         {
           "type": "job/methodology/workflow",
-          "weight": 0.7
-        },
-        {
-          "type": "form/pattern/constraint",
           "weight": 0.6
         }
       ],
       "unmatched_skill_types": [],
       "lifecycle": {
-        "status": "evaluated",
-        "origin_run_id": "run-codex-01a135-30turns-2026-10-22T23-22-sig-625a365661e7ae0025430ca7-op-1",
-        "origin_finding_id": "sig-625a365661e7ae0025430ca7",
+        "status": "stable",
+        "origin_run_id": "legacy-inventory",
+        "origin_finding_id": "legacy-import:close-implementation-choice",
         "origin_session_ids": [
-          "01a13505-8693-7372-8ff2-2acdcfd7f457"
+          "legacy-inventory"
         ],
-        "distinct_sessions": 1,
-        "confidence": 0.9,
-        "evidence_records": 1,
-        "distinct_windows": 1,
-        "method_fingerprint": "method-v1:e25374de7772344b5a141094",
-        "methodology_value": 0.355668,
-        "evaluated_at": "2026-10-22T21:14:20.674617+00:00",
-        "evaluation_kind": "structural",
-        "content_sha256": "0d0fba3f690619160f36e63b4e7e3b93833f6101f1ad5ec2b57adf9d9eed4216"
+        "confidence": 1.0,
+        "evidence_records": 0,
+        "distinct_windows": 0,
+        "evaluated_at": "2026-10-24T14:12:41.037026+00:00",
+        "evaluation_kind": "legacy_inventory_backfill",
+        "evaluation_baseline_reason": "legacy_inventory_backfill"
       }
     },
     {
-      "skill": "verify-acceptance-states",
-      "description": "Verify each user-facing acceptance state end to end in the running app before reporting completion. Enumerate the states the request names, drive each one with a separate account when ownership or role gates it, and attach one labeled screenshot or artifact per state. Passing unit, component, or database tests support the check but never substitute for it, and a blocked browser check leaves the state unverified rather than done.",
+      "skill": "content-operations-delivery-plan-reference",
+      "description": "Consult a durable navigational index for owner/docs/architecture/content_operations_phased_delivery_plan.md before answering questions about its authentication, browser automation, owner decisions, MVP sources, or RedNote scope, and refresh the index at runtime when the source digest changes. This is the OOD specialization form/reference/navigational-index and is recommended for taxonomy promotion.",
+      "skill_types": [
+        {
+          "weight": 0.9,
+          "type": "form/reference/rest"
+        },
+        {
+          "weight": 0.85,
+          "type": "job/repo-understanding/map"
+        },
+        {
+          "weight": 0.8,
+          "type": "domain/writing/docs"
+        },
+        {
+          "weight": 0.7,
+          "type": "artifact/document"
+        }
+      ],
+      "unmatched_skill_types": [],
+      "lifecycle": {
+        "status": "evaluated",
+        "origin_run_id": "deep-prep-resources-dsh-01",
+        "origin_finding_id": "sig-971d2086d380225853d406ad",
+        "origin_session_ids": [
+          "01a16c53-bf96-7d62-992e-91c76506a6d8"
+        ],
+        "distinct_sessions": 1,
+        "confidence": 0.96,
+        "evidence_records": 3,
+        "distinct_windows": 3,
+        "evaluated_at": "2026-10-24T22:47:21.352760+00:00",
+        "evaluation_kind": "structural",
+        "content_sha256": "92124475461a72882ac55d8a5b33f9fb9d7018e358c6c5ef39e45ab25742f6c4"
+      }
+    },
+    {
+      "skill": "delegated-auth-flow-review",
+      "description": "Read-only authentication security review skill: it bounds a delegated review of a changed login/session/token flow, falsifies suspicions, and returns only evidence-backed regressions with exact file locations.",
+      "skill_types": [
+        {
+          "type": "domain/security/auth",
+          "weight": 0.95
+        },
+        {
+          "type": "job/verification/audit",
+          "weight": 0.9
+        },
+        {
+          "type": "job/reflection/review",
+          "weight": 0.85
+        },
+        {
+          "type": "job/verification/evidence",
+          "weight": 0.8
+        },
+        {
+          "type": "artifact/none",
+          "weight": 0.6
+        }
+      ],
+      "unmatched_skill_types": [],
+      "lifecycle": {
+        "status": "stable",
+        "origin_run_id": "legacy-inventory",
+        "origin_finding_id": "legacy-import:delegated-auth-flow-review",
+        "origin_session_ids": [
+          "legacy-inventory"
+        ],
+        "confidence": 1.0,
+        "evidence_records": 0,
+        "distinct_windows": 0,
+        "evaluated_at": "2026-10-24T14:12:41.037026+00:00",
+        "evaluation_kind": "legacy_inventory_backfill",
+        "evaluation_baseline_reason": "legacy_inventory_backfill"
+      }
+    },
+    {
+      "skill": "establish-browser-surface",
+      "description": "Browser pre-flight skill: it inventories and binds a controllable browser surface, navigates and verifies page identity, and requires live artifact evidence before a claimed fix is closed.",
       "skill_types": [
         {
           "type": "job/verification/browser-check",
@@ -262,33 +204,302 @@
           "weight": 0.85
         },
         {
-          "type": "domain/testing/qa",
+          "type": "form/technique/steps",
+          "weight": 0.75
+        },
+        {
+          "type": "job/methodology/workflow",
+          "weight": 0.65
+        }
+      ],
+      "unmatched_skill_types": [],
+      "lifecycle": {
+        "status": "stable",
+        "origin_run_id": "legacy-inventory",
+        "origin_finding_id": "legacy-import:establish-browser-surface",
+        "origin_session_ids": [
+          "legacy-inventory"
+        ],
+        "confidence": 1.0,
+        "evidence_records": 0,
+        "distinct_windows": 0,
+        "evaluated_at": "2026-10-24T14:12:41.037026+00:00",
+        "evaluation_kind": "legacy_inventory_backfill",
+        "evaluation_baseline_reason": "legacy_inventory_backfill"
+      }
+    },
+    {
+      "skill": "merge-gate-triage",
+      "description": "Merge-gate debugging skill: it classifies a blocked quality gate from its named failure mode, quarantines untracked workspace artifacts, and uses git history and blame to isolate and fix change-independent defects.",
+      "skill_types": [
+        {
+          "type": "job/methodology/debug",
+          "weight": 0.9
+        },
+        {
+          "type": "domain/git",
+          "weight": 0.85
+        },
+        {
+          "type": "domain/cloud-devops/ci",
+          "weight": 0.7
+        },
+        {
+          "type": "job/verification/test",
+          "weight": 0.7
+        },
+        {
+          "type": "form/technique/steps",
+          "weight": 0.65
+        }
+      ],
+      "unmatched_skill_types": [],
+      "lifecycle": {
+        "status": "stable",
+        "origin_run_id": "legacy-inventory",
+        "origin_finding_id": "legacy-import:merge-gate-triage",
+        "origin_session_ids": [
+          "legacy-inventory"
+        ],
+        "confidence": 1.0,
+        "evidence_records": 0,
+        "distinct_windows": 0,
+        "evaluated_at": "2026-10-24T14:12:41.037026+00:00",
+        "evaluation_kind": "legacy_inventory_backfill",
+        "evaluation_baseline_reason": "legacy_inventory_backfill"
+      }
+    },
+    {
+      "skill": "operations-quality-reference",
+      "description": "Document-reference skill: it maintains and consults a bounded section-level navigational record with a digest for the repository operations quality document, used before CI, merge-gate, lease, and delivery checklist work.",
+      "skill_types": [
+        {
+          "type": "domain/documents",
+          "weight": 0.9
+        },
+        {
+          "type": "domain/cloud-devops/ci",
           "weight": 0.7
         },
         {
           "type": "form/technique/checklist",
-          "weight": 0.6
+          "weight": 0.65
         },
         {
-          "type": "artifact/code-change",
-          "weight": 0.5
+          "type": "job/verification/evidence",
+          "weight": 0.55
+        }
+      ],
+      "unmatched_skill_types": [],
+      "lifecycle": {
+        "status": "stable",
+        "origin_run_id": "legacy-inventory",
+        "origin_finding_id": "legacy-import:operations-quality-reference",
+        "origin_session_ids": [
+          "legacy-inventory"
+        ],
+        "confidence": 1.0,
+        "evidence_records": 0,
+        "distinct_windows": 0,
+        "evaluated_at": "2026-10-24T14:12:41.037026+00:00",
+        "evaluation_kind": "legacy_inventory_backfill",
+        "evaluation_baseline_reason": "legacy_inventory_backfill"
+      }
+    },
+    {
+      "skill": "retry-after-information-gain",
+      "description": "Retry-decision and CI-closure skill: it compares a proposed repeat against the recorded action/state/result triple, builds a failure ledger, fixes shared-boundary causes, and reruns the canonical gate to a full green or documented external block.",
+      "skill_types": [
+        {
+          "type": "form/technique/loop",
+          "weight": 0.9
+        },
+        {
+          "type": "job/methodology/debug",
+          "weight": 0.85
+        },
+        {
+          "type": "domain/cloud-devops/ci",
+          "weight": 0.75
+        },
+        {
+          "type": "job/verification/test",
+          "weight": 0.7
+        },
+        {
+          "type": "job/verification/evidence",
+          "weight": 0.65
+        }
+      ],
+      "unmatched_skill_types": [],
+      "lifecycle": {
+        "status": "stable",
+        "origin_run_id": "legacy-inventory",
+        "origin_finding_id": "legacy-import:retry-after-information-gain",
+        "origin_session_ids": [
+          "legacy-inventory"
+        ],
+        "confidence": 1.0,
+        "evidence_records": 0,
+        "distinct_windows": 0,
+        "evaluated_at": "2026-10-24T14:12:41.037026+00:00",
+        "evaluation_kind": "legacy_inventory_backfill",
+        "evaluation_baseline_reason": "legacy_inventory_backfill"
+      }
+    },
+    {
+      "skill": "retry-guard",
+      "description": "Retry and bounded-watch skill: it gates repeated tool calls, polls, and waits on information gain, and supervises asynchronous builds, deployments, and sessions through declared terminal states, deadlines, liveness checks, and log escalation.",
+      "skill_types": [
+        {
+          "type": "form/technique/loop",
+          "weight": 0.95
+        },
+        {
+          "type": "job/methodology/workflow",
+          "weight": 0.75
+        },
+        {
+          "type": "job/verification/evidence",
+          "weight": 0.65
+        },
+        {
+          "type": "domain/cloud-devops/ci",
+          "weight": 0.6
+        }
+      ],
+      "unmatched_skill_types": [],
+      "lifecycle": {
+        "status": "stable",
+        "origin_run_id": "legacy-inventory",
+        "origin_finding_id": "legacy-import:retry-guard",
+        "origin_session_ids": [
+          "legacy-inventory"
+        ],
+        "confidence": 1.0,
+        "evidence_records": 0,
+        "distinct_windows": 0,
+        "evaluated_at": "2026-10-24T14:12:41.037026+00:00",
+        "evaluation_kind": "legacy_inventory_backfill",
+        "evaluation_baseline_reason": "legacy_inventory_backfill"
+      }
+    },
+    {
+      "skill": "standing-approval",
+      "description": "Approval-scope skill: it carries an already-granted approval through the remaining reversible prepared steps and stops only at an explicitly reserved irreversible or credential boundary.",
+      "skill_types": [
+        {
+          "type": "form/pattern/constraint",
+          "weight": 0.85
+        },
+        {
+          "type": "job/methodology/workflow",
+          "weight": 0.8
+        },
+        {
+          "type": "form/technique/steps",
+          "weight": 0.75
+        },
+        {
+          "type": "job/methodology/plan",
+          "weight": 0.6
         }
       ],
       "unmatched_skill_types": [],
       "lifecycle": {
         "status": "evaluated",
-        "origin_run_id": "run-codex-01a15f-18turns-2026-10-23T14-04-sig-5f035698cd5da49916cc7c46-op-1",
-        "origin_finding_id": "sig-5f035698cd5da49916cc7c46",
+        "origin_run_id": "legacy-inventory",
+        "origin_finding_id": "legacy-import:standing-approval",
         "origin_session_ids": [
-          "01a15f0c-a159-71a2-82f4-250ac3fa262f"
+          "legacy-inventory"
         ],
-        "distinct_sessions": 1,
-        "confidence": 0.81,
-        "evidence_records": 3,
-        "distinct_windows": 3,
-        "evaluated_at": "2026-10-23T07:03:18.449529+00:00",
+        "confidence": 1.0,
+        "evidence_records": 0,
+        "distinct_windows": 0,
+        "evaluated_at": "2026-10-24T22:36:53.403745+00:00",
         "evaluation_kind": "structural",
-        "content_sha256": "91075c0bc1bb27466eae7d75c3654e9684e1f3947fb5666fe8c51bf800caa24c"
+        "evaluation_baseline_reason": "legacy_inventory_backfill",
+        "content_sha256": "c8f5e8b1115d1f456dca5f30462e9e14331b00ecd8ee4b9cec5f7a230f586c32"
+      }
+    },
+    {
+      "skill": "starter-asset-reuse",
+      "description": "Starter-template reuse skill: it copies and adapts a recorded service-starter configuration contract instead of regenerating equivalent content, preserving defaults and reporting unresolved placeholders.",
+      "skill_types": [
+        {
+          "type": "form/pattern/convention",
+          "weight": 0.75
+        },
+        {
+          "type": "artifact/code-change",
+          "weight": 0.7
+        },
+        {
+          "type": "job/methodology/workflow",
+          "weight": 0.7
+        },
+        {
+          "type": "domain/cloud-devops",
+          "weight": 0.6
+        }
+      ],
+      "unmatched_skill_types": [],
+      "lifecycle": {
+        "status": "evaluated",
+        "origin_run_id": "legacy-inventory",
+        "origin_finding_id": "legacy-import:starter-asset-reuse",
+        "origin_session_ids": [
+          "legacy-inventory"
+        ],
+        "confidence": 1.0,
+        "evidence_records": 0,
+        "distinct_windows": 0,
+        "evaluated_at": "2026-10-24T23:04:51.846097+00:00",
+        "evaluation_kind": "structural",
+        "evaluation_baseline_reason": "legacy_inventory_backfill",
+        "content_sha256": "d9199cdaf1e1594041ede1d737ee8e33846dde4502d199f950b513151693bc6a"
+      }
+    },
+    {
+      "skill": "verify-acceptance-states",
+      "description": "End-to-end acceptance verification skill: it derives an explicit state checklist, drives each state through the running app with the correct actor, captures one labeled artifact per state, and refuses completion from tests alone.",
+      "skill_types": [
+        {
+          "type": "job/verification/evidence",
+          "weight": 0.9
+        },
+        {
+          "type": "job/verification/eval",
+          "weight": 0.85
+        },
+        {
+          "type": "job/verification/browser-check",
+          "weight": 0.85
+        },
+        {
+          "type": "domain/testing/qa",
+          "weight": 0.8
+        },
+        {
+          "type": "form/technique/checklist",
+          "weight": 0.75
+        }
+      ],
+      "unmatched_skill_types": [],
+      "lifecycle": {
+        "status": "evaluated",
+        "origin_run_id": "legacy-inventory",
+        "origin_finding_id": "legacy-import:verify-acceptance-states",
+        "origin_session_ids": [
+          "legacy-inventory"
+        ],
+        "confidence": 1.0,
+        "evidence_records": 0,
+        "distinct_windows": 0,
+        "evaluated_at": "2026-10-24T22:37:01.035110+00:00",
+        "evaluation_kind": "structural",
+        "evaluation_baseline_reason": "legacy_inventory_backfill",
+        "content_sha256": "0be4284b7a3eed5c9e2203ac0f2b5c66efc0f209b72e3cd32a9b4dc64548e7b5"
       }
     }
   ]

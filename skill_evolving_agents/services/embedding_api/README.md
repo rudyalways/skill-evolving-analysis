@@ -30,6 +30,11 @@ python3 -m pip install -r \
   skill_evolving_agents/services/embedding_api/requirements.txt
 ```
 
+The dependency range intentionally stays on Transformers 4.x and Sentence
+Transformers 5.x. Qwen3 requires Transformers 4.51 or newer, while an
+unbounded major upgrade can pull incompatible HTTP/runtime dependencies into
+an existing Python installation.
+
 Start the dependency-free reference server:
 
 ```bash

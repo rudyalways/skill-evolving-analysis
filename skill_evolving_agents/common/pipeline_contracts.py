@@ -1302,13 +1302,103 @@ def _validate_change_lists(record: dict[str, Any], path: str) -> None:
             if not isinstance(value, dict):
                 fail(item_path, "must be a string or object")
             field = "section" if key == "sections" else "dir"
-            required_string(value, field, item_path)
+            name = required_string(value, field, item_path)
+            if key == "dirs":
+                normalized = name.replace("\\", "/").strip("/")
+                components = normalized.split("/") if normalized else []
+                if (
+                    name.startswith(("/", "\\"))
+                    or normalized != name.replace("\\", "/")
+                    or any(component in {"", ".", ".."} for component in components)
+                ):
+                    fail(f"{item_path}.dir", "must be a safe relative resource path")
+                if len(components) > 5:
+                    fail(
+                        f"{item_path}.dir",
+                        "must be at most four path components below its resource directory",
+                    )
             required_string(value, "goal", item_path)
     removals = record.get("remove", [])
     if not isinstance(removals, list) or any(
         not isinstance(value, str) or not value.strip() for value in removals
     ):
         fail(f"{path}.remove", "must be a list of non-empty strings")
+
+
+RESOURCE_KINDS = {"scripts", "references", "assets", "agents", "evals"}
+
+
+def _validate_resource_plan(record: dict[str, Any], path: str) -> None:
+    """Validate an explicit decision for every canonical resource kind.
+
+    ``dirs`` remains the executable acceptance contract.  The resource plan is
+    the auditable decision record, including negative decisions that would
+    otherwise disappear from the goal artifact.
+    """
+    plan = record.get("resource_plan")
+    # Goals written before the resource-planning contract remain resumable.
+    # New Goal sessions are instructed to emit this field; once present it is
+    # strict so partially planned operations cannot pass validation.
+    if plan is None:
+        return
+    if not isinstance(plan, list):
+        fail(f"{path}.resource_plan", "must be a list")
+    seen: set[str] = set()
+    decisions: dict[str, str] = {}
+    for index, row in enumerate(plan):
+        item_path = f"{path}.resource_plan[{index}]"
+        if not isinstance(row, dict):
+            fail(item_path, "must be an object")
+        resource = required_string(row, "resource", item_path)
+        if resource not in RESOURCE_KINDS:
+            fail(f"{item_path}.resource", "must name scripts, references, assets, agents, or evals")
+        if resource in seen:
+            fail(f"{item_path}.resource", "must not be duplicated")
+        seen.add(resource)
+        decision = required_string(row, "decision", item_path)
+        if decision not in {"use", "omit"}:
+            fail(f"{item_path}.decision", "must equal use or omit")
+        required_string(row, "reason", item_path)
+        confidence = row.get("confidence")
+        if (
+            not isinstance(confidence, (int, float))
+            or isinstance(confidence, bool)
+            or not 0 <= float(confidence) <= 1
+        ):
+            fail(f"{item_path}.confidence", "must be a number from 0 to 1")
+        decisions[resource] = decision
+    missing = sorted(RESOURCE_KINDS - seen)
+    if missing:
+        fail(f"{path}.resource_plan", f"must decide every resource kind; missing {', '.join(missing)}")
+    planned_dirs = {
+        str(value.get("dir")).replace("\\", "/").split("/", 1)[0]
+        for value in record.get("dirs", [])
+        if isinstance(value, dict)
+        and str(value.get("dir") or "").replace("\\", "/").split("/", 1)[0]
+        in RESOURCE_KINDS
+    }
+    selected = {resource for resource, decision in decisions.items() if decision == "use"}
+    if selected != planned_dirs:
+        fail(
+            f"{path}.resource_plan",
+            "use decisions must exactly match canonical resources named in dirs",
+        )
+
+
+def _require_behavioral_update_evals(record: dict[str, Any], path: str) -> None:
+    """Require an executable regression case for newly planned behavior edits."""
+    if record.get("resource_plan") is None or not record.get("sections"):
+        return
+    planned = {
+        row.get("resource"): row.get("decision")
+        for row in record.get("resource_plan") or []
+        if isinstance(row, dict)
+    }
+    if planned.get("evals") != "use":
+        fail(
+            f"{path}.resource_plan",
+            "behavioral section updates must use evals for a regression case",
+        )
 
 
 def validate_goal(path: Path, *, exactly_one_op: bool = False) -> dict[str, Any]:
@@ -1371,6 +1461,7 @@ def validate_goal(path: Path, *, exactly_one_op: bool = False) -> dict[str, Any]
                 skill_path = f"{op_path}.skills[{skill_index}]"
                 required_string(skill, "description", skill_path)
                 _validate_change_lists(skill, skill_path)
+                _validate_resource_plan(skill, skill_path)
                 if not skill.get("sections"):
                     fail(f"{skill_path}.sections", "must not be empty")
                 labels = skill.get("labels")
@@ -1409,6 +1500,8 @@ def validate_goal(path: Path, *, exactly_one_op: bool = False) -> dict[str, Any]
                 required_string(skill, "goal", skill_path)
                 required_string(skill, "facet", skill_path)
                 _validate_change_lists(skill, skill_path)
+                _validate_resource_plan(skill, skill_path)
+                _require_behavioral_update_evals(skill, skill_path)
                 if (
                     not skill.get("sections")
                     and not skill.get("dirs")
@@ -1427,11 +1520,13 @@ def validate_goal(path: Path, *, exactly_one_op: bool = False) -> dict[str, Any]
             into = op["into"]
             required_string(into, "description", f"{op_path}.into")
             _validate_change_lists(into, f"{op_path}.into")
+            _validate_resource_plan(into, f"{op_path}.into")
         elif name == "split":
             for part_index, part in enumerate(op["into"]):
                 part_path = f"{op_path}.into[{part_index}]"
                 required_string(part, "description", part_path)
                 _validate_change_lists(part, part_path)
+                _validate_resource_plan(part, part_path)
     return data
 
 

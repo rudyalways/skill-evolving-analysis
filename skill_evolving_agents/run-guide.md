@@ -30,6 +30,14 @@ The legacy `raw/target_agent` location remains accepted for Codex. Use
 `--seed-run` only when a run should inherit another run's skill inventory
 instead of `workspace/candidate_skills`.
 
+Candidate inventory is now a validated boundary. Before a new run is seeded,
+each skill must pass the authored-skill format checks and any bundled
+`evals/evals.json` validation. Invalid skills are excluded and listed with
+their errors in `run/trace-selection.json` under `invalid_candidate_skills`;
+they are not silently presented to the agents as usable skills. Trace-free
+inventory runs write the equivalent audit to
+`run/inventory-seed-validation.json`.
+
 ## Automated runner
 
 `run_pipeline.py` is the host control plane. By default it selects an
@@ -99,7 +107,20 @@ Create, merge, and split Optimize sessions also receive
 `workspace/_templates/complete-skill/`, a complete structural reference with
 `SKILL.md`, `agents`, `scripts`, `references`, `assets`, and `evals`. The Goal
 stage must still authorize every output directory with a concrete resource
-contract. The optimizer must not edit or publish the reference, and the runner
+contract. New goals record an explicit five-row `resource_plan` covering
+`scripts`, `references`, `assets`, delegated `agents`, and `evals`. Each row
+records `use` or `omit`, a reason, and confidence; `use` rows must exactly match
+the canonical directories named in `dirs`. This preserves negative planning
+decisions for audit and learning instead of recording only created resources.
+For update and merge, the runner normalizes this plan against the active skill
+inventory before Optimize. Existing authored resources are always inherited;
+`omit` means only that the new finding does not justify adding that resource
+kind. Removal requires a concrete `remove` entry. The deterministic post-edit
+validator rejects dropped nested files or eval cases, and accepted operation
+`resource-metrics.json` files include inherited, preserved, explicitly removed,
+and preservation-rate fields. Generated `agents/openai.yaml` is excluded from
+these authored-resource counts.
+The optimizer must not edit or publish the reference, and the runner
 copies back only operation-named skill directories, so `_templates` cannot
 enter the candidate inventory. Update sessions do not receive the reference.
 
@@ -109,8 +130,61 @@ surviving skill's `agents/openai.yaml` from its frontmatter and preserves
 unrelated existing policy or dependency blocks. The model does not author the
 three standard interface fields. The runner also writes per-operation
 `resource-metrics.json`, records the same measurements as a metrics audit event,
-and includes run aggregates in the online-learning database. Observed runtime
+and includes run aggregates in the online-learning database. Resource metrics
+include per-kind plan compliance plus observed delegated-agent prompt and eval
+use. They report delegated agent files separately from deterministically generated
+`agents/openai.yaml` interface metadata. Observed runtime
 rates remain null when logs contain no corresponding execution or use evidence.
+
+Repeated resource opportunities have a conservative single-session creation
+gate. By default it requires confidence `>= 0.90`, at least three occurrences
+across three independent windows, no equivalent existing resource, all three
+deterministic false-positive guards, and a resource-specific contract. This
+does not relax the generic skill-creation recurrence policy.
+
+Resource contracts are provenance ceilings. A repeated-read detector that has
+only a source path emits `content_available: false` and
+`content_digest_available: false`; Goal may request a navigational index and a
+runtime freshness check, but not copied knowledge, exact headings, or a digest
+the trace did not provide.
+
+Before Verifier runs, deterministic output validation rejects a positive
+resource decision that produced only an empty directory, an authored non-eval
+resource that is not mentioned by relative path in `SKILL.md`, or a Python
+helper that does not compile. Generated interface metadata cannot satisfy a
+delegated-agent resource decision.
+
+Resource coverage reports must distinguish **authored change**, **preserved
+coverage**, **suppressed duplicate**, and **no qualifying evidence**. A run
+does not count as creating or updating a resource merely because the skill has
+an inherited file, an empty directory, generated `agents/openai.yaml`, or an
+eval fixture. Reports claiming substantive resource evolution must name the
+new or changed file and its accepted operation; unchanged existing scripts or
+assets are reported as preserved coverage instead.
+
+Asset detection is command-shaped, not keyword-shaped. A copy/reuse candidate
+must be an actual `cp`, `copy`, or `rsync` command whose operand names a
+template, starter, or scaffold. A command that only mentions `templates` in a
+later query, patch body, or program expression is not asset reuse. When recent
+traces contain no genuine reusable starter/template evidence, the precise
+result is `no qualifying asset evidence`; profiles must not force an asset
+placeholder merely to satisfy a requested resource mix.
+
+Cross-run recurrence for resource opportunities is keyed by detector,
+resource family, and normalized resource fingerprint. Reads of unrelated
+documents and reuse of unrelated starters cannot mature each other into a
+create/update decision.
+
+The current implementation uses evidence-only resource discovery: Goal may
+authorize a resource only from the active finding. A deterministic
+`resource-script-opportunity` detector promotes qualified repeated polling
+mechanics into their own active findings, with a reserved selection slot and an
+auditable rejection ledger. This remains conservative and can leave other
+resource kinds prose-heavy even when mechanics repeat across runs.
+The proposed profile-backed `--resource-discovery` control and its
+`evidence-only`, `accumulate`, and `prototype` modes are specified in
+[`tuning-guide.md`](tuning-guide.md). The flag is not implemented yet; do not
+put it in production commands until it appears in `run_pipeline.py --help`.
 
 Create a one-trace run from the pool. The command creates the run directory
 and copies that trace plus the stable candidate skill inventory:
@@ -126,18 +200,22 @@ Run without clustering. The command moves that seed to
 python3 skill_evolving_agents/run_pipeline.py run-codex-01a135-73turns
 ```
 
-Continue a stamped run after optimize has saved a skill. This reruns
-verification and judge, or judge alone, and does not repeat preprocessing,
-labeling, diagnosis, goal, or optimize. Accepted operations are left as they
-are. The run id is the stamped directory name:
+Continue a stamped run from a failed optimize, from verification after
+optimize saved a skill, or from judge after verification completed. This does
+not repeat preprocessing, labeling, diagnosis, or goal. Accepted operations
+are left as they are. The run id is the stamped directory name:
 
 ```bash
+python3 skill_evolving_agents/run_pipeline.py \
+  run-codex-01a135-30turns@2026-10-22T19:32 --from optimize
 python3 skill_evolving_agents/run_pipeline.py \
   run-codex-01a135-30turns@2026-10-22T19:32 --from verification
 python3 skill_evolving_agents/run_pipeline.py \
   run-codex-01a135-30turns@2026-10-22T19:32 --from judge
 ```
 
+`--from optimize` uses the saved operation goal and reruns optimize, verify,
+and judge. It is limited to operations where optimize did not complete.
 `--from judge` requires a completed verification result. A verification
 timeout has no result to judge, so continue it with `--from verification`.
 
@@ -257,6 +335,82 @@ model is `flint`, the runner automatically applies
 `config/dsh-flint.patch.yml`, which reads `FLINT_BASE_URL` and
 `FLINT_API_KEY` from the environment.
 
+The signed-in DeepSeek account patch uses `deepseek-flash` with low reasoning
+effort. Pipeline stages already constrain inputs, validate every handoff, and
+price verification deterministically; high reasoning effort mainly increased
+stage self-dialogue in measured runs without improving accepted outcomes.
+The patch also sets DSH's approval policy to `never` so unattended headless
+runs do not open the desktop approval window. This does not select DSH's
+`danger-full-access` permission preset: the normal `workspace-write` sandbox
+remains in effect through the `headless-workspace-write` preset. Remove the
+`approval` and `permission` entries from the patch when interactive
+confirmation is preferred.
+
+Verifier sessions use an evidence-bundle protocol. For creates, the host embeds
+the candidate `SKILL.md`. For updates, it computes immutable boundary facts for
+frontmatter, preamble, and unclaimed sections, then embeds only the claimed
+candidate sections. It lists all resource paths but embeds resource contents
+only for directories required by the goal. Existing inventory descriptions
+provide a compact duplicate/subsumption check. The model therefore performs
+only the semantic exception decision and uses no tools.
+Filesystem shape, hashes, scoring, schema validation, aggregation, and judge
+actions remain runner-owned. Removed delete targets and merge/split sources are
+verified entirely deterministically when their immutable baseline exists and
+their candidate path is absent. In the first like-for-like DSH benchmark, an
+accepted update fell from 101.8 seconds to 10.9 seconds without changing its
+verdict. A later large-update regression reached 111.7 seconds; the narrowed
+boundary-fact bundle replayed that same accepted update in 20.9 seconds with
+the same pass verdict.
+
+Every published goal records one recall observation for every inventory skill
+in `skill_recall_observations` in `workspace/metrics.sqlite`: recalled rows
+carry their rank and score, while non-recalled inventory rows record the same
+scope as an exposure. These durable rows, rather than file timestamps or an
+absence inferred from logs, feed retirement eligibility. When embedding or
+taxonomy recall reports no candidate, a conservative lexical collision guard
+compares only the diagnosis and generalized lesson with existing skill names,
+descriptions, and instructions. It can recover likely existing skills for Goal
+to update, but cannot by itself authorize a merge or delete.
+
+`workspace/operation-coverage.json` aggregates proposed, accepted, and rejected
+create/update/delete/merge/split operations from retained real run summaries.
+It deliberately excludes unit tests, and `unverified_real_operations` makes
+missing live coverage explicit rather than allowing contract tests to be
+mistaken for end-to-end evidence.
+
+Inventory-only runs also evaluate conservative retirement candidates. A skill
+is eligible for delete review only after at least 20 distinct recall scopes recorded
+after its own evaluation timestamp, zero recalls in those scopes, at least
+0.90 weighted capability-label containment by one surviving skill, and at
+least 0.90 instruction-token containment by that same skill. The goal agent may
+delete only the nominated quiet skill and must otherwise choose `no_change`.
+This keeps newly created, low-frequency, and merely similar skills out of the
+retirement path. The detector nominates candidates; normal optimize,
+verification, judge, publication, and coverage records remain mandatory.
+Replaying the same finding under multiple run IDs still counts as one scope;
+reruns cannot manufacture retirement evidence.
+Every inventory evaluation writes `run/inventory-retirement-evidence.json`
+for all current skills, including threshold progress, recalled-scope count,
+best subsumer and containment scores, eligibility, and explicit blockers. This
+artifact is the tuning and audit surface even when no delete is nominated.
+Inventory-only audits give legacy metadata entries that lack `evaluated_at` a
+one-time baseline with reason `legacy_inventory_backfill`. Existing lifecycle
+timestamps are preserved, and observations before the baseline never count
+toward retirement.
+Only directories containing `SKILL.md` (or legacy `skill.md`) are inventory
+members. Empty resource directories left behind by a removed skill are not
+allowed to resurrect it or force an unnecessary relabel pass.
+
+Accepted delete, merge-source, and split-source removals are recoverable.
+Immediately before removing a candidate-pool directory, publication copies
+the complete skill to
+`workspace/quarantine/retired/<skill>/<run-digest>/skill/`, copies its external
+changelog, and writes `retirement.json` with the originating run, metadata
+snapshot, and pre-removal content digest. The operation bundle also writes
+`retirement-archives.json`. Publication refuses an archive-path collision when
+the saved content differs; a deletion therefore cannot silently overwrite its
+rollback source.
+
 The inactive Hermes and OpenClaw examples use the local Recursive Flint model.
 Load `/Users/maybewu/Documents/Projects/myexpore/recursive/.env` in the shell,
 then configure the CLI provider with `FLINT_BASE_URL` and `FLINT_API_KEY`.
@@ -276,6 +430,73 @@ End-to-end wall time, including every agent phase, should stay within:
 
 - 5 minutes for a short trace (up to 30 user turns)
 - 10 minutes for a long trace (more than 30 user turns)
+
+The runner now enforces these ceilings, rather than treating them only as an
+operator convention. `run/config/runtime-budget.json` records the selected
+five- or ten-minute budget, and every agent session timeout is clamped to the
+remaining end-to-end budget. A late verifier therefore cannot extend a short
+run beyond its five-minute policy window.
+
+The low-cost profiles request Qwen3-Embedding-0.6B. If its optional
+`sentence-transformers` runtime is unavailable, startup degrades explicitly to
+the deterministic hashing-reference backend and writes
+`run/config/embedding-runtime-fallback.json`. This is an auditable degraded
+mode, not a claim that hashing has Qwen-level semantic quality; install
+`services/embedding_api/requirements.txt` to remove the fallback.
+The fallback covers both in-process construction errors and managed local
+services that start but exit before becoming healthy. When the signed-in
+DeepSeek DSH patch is selected, the recorded model is `deepseek-flash` rather
+than the unrelated default model from `agent-config.json`.
+
+The CPU-local profile bounds semantic-filter inputs and recalled skill
+documents to 1,200 characters and gives the shared Qwen process a 60-second
+request budget. On the measured nine-skill inventory this reduced semantic
+filtering from 29.97 seconds to 14.30 seconds and allowed native embedding
+recall to complete without fallback. Any recall fallback records both
+`fallback_from` and `fallback_error` in `label-matching.json`; it must not be
+reported as native embedding recall.
+
+The local embedding service batches all candidate texts in one model call and
+all instructed queries in a second model call. On the same seven-finding,
+1,200-character Qwen3-Embedding-0.6B workload, this reduced measured semantic
+filter service time from 43.31 seconds to 7.40 seconds (82.9%) while preserving
+the model revision, inputs, ranking formula, and downstream selection policy.
+`run/status/semantic-prefilter/all.json` records both `service_ms` and
+end-to-end `wall_ms`; `logs/phase-adapter-metrics.json` must report the latter
+rather than zero so latency optimization uses measured execution time.
+The local Qwen CPU profile gives semantic filtering and recall 30-second HTTP
+timeouts. Batched inference is measured near 7.4 seconds on the reference
+machine, so the generic 1.5-second remote-service default is not suitable for
+this profile. Phase timeouts must cover measured warm inference latency and
+must not exceed the embedding runtime's 60-second request ceiling.
+
+Replaying an already-applied finding is idempotent. Before Goal, the runner
+scans every current inventory changelog for that exact finding ID; this check
+does not depend on which skills semantic recall happens to return. A match
+writes a deterministic `no_change` and skips Goal, Optimize, Verify, and Judge
+agent calls. A failed selected Diagnosis or Goal lane is never converted into
+`no_change`: the run fails explicitly while preserving its status and timing
+artifacts for retry.
+
+`logs/run-timing.json` reports conservative agent-call savings. The actual
+count comes from recorded LLM spans. Each mined finding deferred by the
+evolution gate counts as two avoided calls—Diagnosis and Goal—and no assumed
+Optimize or Verify saving is added because those calls depend on a proposed
+operation. Diagnosis coverage uses scopes admitted by the evolution gate as
+its denominator while retaining `mined_selected_scopes` separately. This makes
+intentional filtering visible as savings instead of falsely reporting missing
+diagnosis work.
+
+Low-cost recurrence also persists across runs. Before Diagnosis, every selected
+finding contributes one observation per source session to
+`finding_recurrence_observations` in `workspace/metrics.sqlite`. The evolution
+gate groups observations by detector and counts distinct source sessions;
+rerunning the same trace cannot manufacture recurrence. Its
+`traces/derived/evolution-gate.json` decision records current and historical
+session counts, current and accumulated evidence counts, and the recurrence
+key. A finding that matures through historical evidence still proceeds through
+normal semantic recall and Goal, so an existing skill can yield `no_change`
+instead of a duplicate update or create.
 
 These are total-run ceilings, not per-agent allowances. If a run crosses its
 ceiling, stop it and treat the delay as a pipeline defect. Do not normalize a
@@ -374,6 +595,15 @@ and later runs:
   manifest, and optional pointer-only cluster manifests
 - `target/to_be_improved_skills` and `target/raw_skills`
 - `target/to_be_improved_skills_metadata/metadata.json` holds skill records and no changelog. The runner reads and writes it. Each skill's history is the append-only `target/skill_changelogs/<skill>.md`. An optimize session receives a temp directory, `optimize-input/`, containing that skill directory and `<skill>.md` beside it, and does not receive metadata. After the run, skill directories go to `workspace/candidate_skills`, metadata to `workspace/candidate_skills_metadata/metadata.json`, and changelogs to `workspace/candidate_skills_changelog/<skill>.md`. The next `candidate_traces.py new` copies those three into the run.
+- Publication validates every skill before copying it. The complete decision is
+  written to `run/inventory-publication-validation.json`; invalid directories
+  are excluded, and incremental publication refuses an invalid accepted skill.
+- `run/pipeline-summary.json.outcome` distinguishes inherited inventory from
+  work performed in this run. Use `inherited_skill_count`,
+  `proposed_operation_count`, `accepted_operation_count`,
+  `rejected_operation_count`, `accepted_changed_skills`, and
+  `zero_accepted_changes` when comparing runs. A directory visible after a run
+  is not evidence that the run created or updated it.
 - `run/diagnosis.json`, each `run/<cluster>/evolve-goal.json`, each sliced `run/<cluster>/ops/<op>/evolve-goal.json`, the active compatibility files, and archived `run/<cluster>/ops/<op>/verification.json`
 - runner-owned completion records under `run/status/<stage>/<item>.json`
 - `logs/execution.jsonl`

@@ -1,0 +1,108 @@
+{
+  "skill_name": "starter-asset-reuse",
+  "evals": [
+    {
+      "id": 1,
+      "kind": "should_apply",
+      "prompt": "Scaffold a starter service config for the inventory-api service with healthcheck /healthz and a 45 second timeout.",
+      "expected_output": "A config copied from the starter template with service set to inventory-api, healthcheck set to /healthz, and timeout_seconds set to 45, with no other structural changes.",
+      "expectations": [
+        "The template at assets/templates/service-starter/config.yml is located and copied.",
+        "Only the service, healthcheck, and timeout_seconds values are adapted.",
+        "The emitted file preserves the starter contract keys and contains no credentials."
+      ],
+      "files": ["assets/templates/service-starter/config.yml"],
+      "source_trace_ids": []
+    },
+    {
+      "id": 2,
+      "kind": "should_apply",
+      "prompt": "We already made the same starter patch for another service. Produce the same bounded config again for this service instead of rewriting it from scratch.",
+      "expected_output": "The recorded starter patch is reused as a template and adapted only for the named service, even though this request restates the need rather than introducing it.",
+      "expectations": [
+        "The skill activates on the restatement alone without requiring a new argument for reuse.",
+        "The copied config differs from the template only in the intentionally adapted service value."
+      ],
+      "files": ["assets/templates/service-starter/config.yml"],
+      "source_trace_ids": []
+    },
+    {
+      "id": 3,
+      "kind": "should_not_apply",
+      "prompt": "Design a blue-green deployment manifest with autoscaling, secret references, and environment-specific network policies for the payments service.",
+      "expected_output": "The starter config template is not treated as a sufficient match; the skill is not selected for the broader deployment design.",
+      "expectations": [
+        "The response does not copy the starter template as if it satisfied the deployment contract.",
+        "The missing fields, secrets, and environment overrides are recognized as outside the template."
+      ],
+      "files": [],
+      "source_trace_ids": []
+    },
+    {
+      "id": 4,
+      "kind": "should_apply",
+      "prompt": "Scaffold the starter config for the billing-api service, using the captured readiness probe at /readyz and leaving the other starter defaults in place.",
+      "expected_output": "A config copied from the starter template with service set to billing-api, readiness set to /readyz, and healthcheck and timeout_seconds unchanged from the starter defaults.",
+      "expectations": [
+        "The template at assets/templates/service-starter/config.yml is located and copied.",
+        "The emitted config contains service, healthcheck, readiness, and timeout_seconds, with readiness adapted to /readyz.",
+        "Unmentioned values keep their starter defaults and no credentials are added."
+      ],
+      "files": ["assets/templates/service-starter/config.yml"],
+      "source_trace_ids": ["sig-c28377764c4ab30cd6b374aa"]
+    },
+    {
+      "id": 5,
+      "kind": "should_apply",
+      "prompt": "A later lifecycle stage needs the outlink discovery pipeline that was already authored, validated against site-ops.pipeline/v1, and registered. Instantiate it from the captured template for this stage instead of generating a new pipeline definition.",
+      "expected_output": "The pipeline.v1.json template is copied to the target with the site-ops.pipeline/v1 schema preserved, only the requested stage values are adapted, unresolved values remain documented placeholders, and both the schema-field check and pnpm ops:workbench pipeline list --json confirm the pipeline is valid and listed.",
+      "expectations": [
+        "The template at assets/templates/outlink-discovery-pipeline/pipeline.v1.json is copied rather than regenerated.",
+        "The emitted file keeps the site-ops.pipeline/v1 schema and adds no undocumented fields.",
+        "The schema-field validation passes and pnpm ops:workbench pipeline list --json reports the instantiated pipeline, with both results recorded.",
+        "Any value unavailable in the finding remains a documented placeholder and is reported as unresolved."
+      ],
+      "files": ["assets/templates/outlink-discovery-pipeline/pipeline.v1.json"],
+      "source_trace_ids": ["sig-9adca6c81413070898378cf5"]
+    },
+    {
+      "id": 6,
+      "kind": "should_not_apply",
+      "prompt": "The captured pipeline template has no schema or validation evidence for a new field the request needs, but the field looks reasonable. Add it and regenerate the rest of the pipeline definition so this lifecycle stage can proceed.",
+      "expected_output": "The template is not stretched: the undocumented field is not invented, the pipeline definition is not regenerated, and the missing schema or validation evidence is reported instead of guessed.",
+      "expectations": [
+        "No undocumented field is added to the template or the emitted pipeline.",
+        "The pipeline definition is not regenerated from scratch.",
+        "The missing observed schema field or validation evidence is reported rather than reconstructed."
+      ],
+      "files": [],
+      "source_trace_ids": ["sig-9adca6c81413070898378cf5"]
+    },
+    {
+      "id": 7,
+      "kind": "should_apply",
+      "prompt": "The validated outlink-discovery pipeline is already captured. Instantiate it for this stage with source-config pointed at deep-prep.outlink-sources/v1, and register it once before the stage runs.",
+      "expected_output": "The agent copies assets/templates/outlink-discovery-pipeline/pipeline.v1.json, adapts only the documented inputPorts source configuration, keeps id, owner, stages, reviewPolicyRef, targetAdapterRef, and limits from the template, and validates the result with the schema-field check and pnpm ops:workbench pipeline list --json before use.",
+      "expectations": [
+        "The pipeline template is copied with a direct file copy rather than reauthored or regenerated.",
+        "Only the documented input source configuration is adapted, and the captured id, owner, stages, reviewPolicyRef, targetAdapterRef, and limits are preserved.",
+        "The emitted pipeline passes the schema-field check and is confirmed once by pnpm ops:workbench pipeline list --json, with both results recorded."
+      ],
+      "files": ["assets/templates/outlink-discovery-pipeline/pipeline.v1.json"],
+      "source_trace_ids": ["sig-9adca6c81413070898378cf5"]
+    },
+    {
+      "id": 8,
+      "kind": "should_not_apply",
+      "prompt": "Add a transform stage and a new retryPolicy block to the outlink-discovery pipeline because the next stage might need them, then skip registration and just hand the regenerated definition to the runner.",
+      "expected_output": "The agent does not invent stages or fields absent from the validated template, does not regenerate the definition, and does not hand off the pipeline without validation or registration.",
+      "expectations": [
+        "The undocumented transform stage and retryPolicy block are not added to the template or the emitted pipeline.",
+        "The pipeline definition is not regenerated from scratch.",
+        "The missing documented value or validation evidence is reported rather than guessed, and the unregistered pipeline is not used."
+      ],
+      "files": [],
+      "source_trace_ids": ["sig-9adca6c81413070898378cf5"]
+    }
+  ]
+}

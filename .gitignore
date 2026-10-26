@@ -38,3 +38,11 @@ skill_evolving_agents/workspace/metrics.sqlite
 skill_evolving_agents/workspace/metrics-dashboard.html
 skill_evolving_agents/workspace/phase-metrics-summary.json
 skill_evolving_agents/workspace/optimization.sqlite
+
+# Local experiment outputs and benchmark scratch spaces. Accepted skills,
+# changelogs, fixtures, and public guides remain versioned separately.
+skill_evolving_agents/metrics.sqlite
+skill_evolving_agents/workspace/manual_skill_creator_baseline/
+skill_evolving_agents/workspace/quarantine/
+skill_evolving_agents/workspace/verifier-benchmark.*/
+skill_evolving_agents/workspace/operation-coverage.json

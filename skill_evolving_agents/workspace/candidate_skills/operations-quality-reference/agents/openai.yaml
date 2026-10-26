@@ -1,0 +1,4 @@
+interface:
+  display_name: "Operations Quality Reference"
+  short_description: "Record and consult a durable section-level reference for…"
+  default_prompt: "Use $operations-quality-reference for this request."

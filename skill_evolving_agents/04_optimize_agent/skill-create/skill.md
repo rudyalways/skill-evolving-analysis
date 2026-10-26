@@ -22,7 +22,9 @@ unknown capability into a nearby taxonomy leaf.
 
 ## Workflow
 
-1. Read the create record's name, description, labels, sections, and dirs. If
+1. Read the create record's name, description, labels, sections, dirs, and
+   five-row resource plan. Treat `dirs` as the authorized output set and the
+   resource plan as its audited rationale; they must agree. If
    any supporting directory is named, inspect
    `workspace/_templates/complete-skill/` once for file shape and resource
    boundaries. It is a reference, not an output or a scaffold to copy wholesale.
@@ -79,6 +81,14 @@ unknown capability into a nearby taxonomy leaf.
 - Add scripts only when they replace repeated or error-prone generated code.
 - Every requested resource must implement its directory goal. Omit unrequested
   resource directories even when they exist in the complete reference skill.
+- A `use` decision must produce at least one authored file, not an empty
+  directory. Mention every script, reference, asset, and delegated-agent prompt
+  by relative path in `SKILL.md` so it is discoverable at runtime. The runner
+  enforces this contract and compiles every generated Python helper.
+- Treat resource evidence as a ceiling. When a reference contract marks source
+  content or its digest unavailable, author only a truthful navigational index
+  and runtime freshness procedure. Never invent headings, rules, excerpts, or
+  a digest, and never leave a requested current digest as a placeholder.
 - Do not author `agents/openai.yaml`; the runner generates its interface fields
   deterministically after Judge accepts the operation.
 - Compile every generated Python script and execute a representative safe

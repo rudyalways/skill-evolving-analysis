@@ -65,6 +65,14 @@ Either of the following is enough to start. Do not wait for both, and do not req
 - The user says a just-deployed staging fix is still wrong. Before starting another fix, restate what the previous done claim checked and what it missed, then open the same rendered page the user showed and compare it in the browser with that capture.
 - The user asks to confirm a role-gated control on a named environment. Open that role's signed-in rendered page and check the control there before calling it ready. If the user later says the control is still absent, review that unmet visibility line against the same view before starting another change. That later report is a follow-up, not a condition the first check must already have.
 
+After deploying a UI change, complete this sequence before declaring the work done:
+
+1. Identify the intended revision: the commit, branch, or build that contains the change, with any revision marker the app exposes.
+2. Confirm the live URL serves that revision, not a queued or previously cached build. Load the deployed URL and compare a revision signal, or the exact elements the change touched, against the intended build. A SUCCESS deployment status, a green build, an HTTP 200, or a health check does not identify which revision the host is serving.
+3. If the live page still shows the previous revision, treat the deployment as queued or stale. Wait for it to finish and repeat the revision check; do not declare completion from the queued status, and do not start another code fix while the old revision is the only thing being served.
+4. Only after the intended revision is confirmed, reopen that URL as the affected visitor with a fresh cache state and re-check the complete first viewport against the constraints recovered earlier: the reported density, whitespace, control sizes, header and navigation treatment, and content hierarchy. Compare with the user's screenshot or earlier capture when one exists, at representative desktop and mobile widths.
+5. Declare done only when the revision evidence and the first-viewport checks both pass. If the deployment is still serving the old revision, report it as not yet verified and withhold the completion claim.
+
 ## Verification
 
 Before treating the turn as done, confirm the assistant produced a non-empty final answer that addresses the user's question. A requested choice, such as a new project versus a new database, is that answer when it is stated in the final reply.
@@ -79,12 +87,13 @@ A healthy deploy or deployment-status report does not complete the check. Comple
 
 A deployed UI fix is unverified until an end-to-end browser check of the deployed URL reproduces the affected user state. Run this check before declaring the fix complete; do not offer it as optional confirmation.
 
-1. Open the deployed URL as the affected visitor: signed out, or signed in on the Free tier when the report concerns a Free account. Do not substitute an admin, operator, or paid-account session, and do not substitute a local build for the deployed URL.
-2. Reproduce the user's cache state: load the page in a fresh private window or after clearing site data, then reload normally, so a stale cached bundle cannot hide either the bug or the fix.
-3. Inspect the rendered page for the reported element or symptom: confirm the element is visible and usable, or confirm the symptom is gone. A missing element, a placeholder, or the old behavior means the fix is not complete.
-4. Capture evidence from that check: the deployed URL, the visitor state and cache condition, a timestamp, and a screenshot or recording showing the reported element visible or the symptom absent.
+1. Confirm the live artifact is the intended revision. Record the revision marker or build evidence visible in the deployed page, or the observed state of the exact elements the change touched, and show that it matches the intended build rather than a queued, previous, or cached one. Evidence collected while the host is serving the old revision is not evidence about the fix; withhold completion and report the deployment as stale or queued instead.
+2. Open the deployed URL as the affected visitor: signed out, or signed in on the Free tier when the report concerns a Free account. Do not substitute an admin, operator, or paid-account session, and do not substitute a local build for the deployed URL.
+3. Reproduce the user's cache state: load the page in a fresh private window or after clearing site data, then reload normally, so a stale cached bundle cannot hide either the bug or the fix.
+4. Inspect the rendered page for the reported element or symptom: confirm the element is visible and usable, or confirm the symptom is gone. A missing element, a placeholder, or the old behavior means the fix is not complete. Re-check the complete first viewport from that confirmed revision, including the previously reported density, whitespace, and control-size behaviors: row and card heights, padding and gaps, line spacing, heading and hero proportion, and the rendered dimensions of the relevant controls. Passing source inspection or a computed-style value that the page does not render does not satisfy this step.
+5. Capture evidence from that check: the deployed URL, the confirmed revision, the visitor state and cache condition, a timestamp, and a screenshot or recording showing the reported element visible, the symptom absent, and the first viewport at its expected density.
 
-Passing tests, type or build checks, a green health endpoint, and a SUCCESS deployment status are supporting signals only. None of them proves the deployed UI is fixed. If the browser check cannot be run, report the fix as unverified and state which check is missing instead of declaring it complete.
+Passing tests, type or build checks, a green health endpoint, and a SUCCESS deployment status are supporting signals only. None of them proves the deployed UI is fixed or that the URL is serving the intended revision. If the browser check cannot be run, report the fix as unverified and state which check is missing instead of declaring it complete.
 
 ## Output Format
 

@@ -64,6 +64,20 @@
       ],
       "files": [],
       "source_trace_ids": []
+    },
+    {
+      "id": 6,
+      "kind": "should_apply",
+      "prompt": "The user approved 'the improvement pass' with four named slices: introduce the shared config, migrate the first caller, migrate the second caller, and update the runbook. The user later agreed to defer the runbook. Upstream release evidence proves the second-caller migration is blocked until a dependency release with no workaround. The shared config is finished, then the closing summary lists the first-caller migration as 'remaining', the second-caller migration as evidence-blocked, and the runbook as user-deferred, and the turn ends.",
+      "expected_output": "The summary is incomplete because the first-caller migration is unstarted and inside the approval. That slice continues in the same turn without a new user prompt. The runbook remains user-deferred and the second-caller migration remains evidence-blocked rather than complete. No completion claim is made while an unstarted, unlabeled item remains.",
+      "expectations": [
+        "The reply treats the closing summary as incomplete and does not claim the improvement pass is complete",
+        "The first-caller migration is identified as unstarted and continued in the same turn without a new go-ahead",
+        "The runbook is accepted only as user-deferred and the second-caller migration only as evidence-blocked",
+        "The final scope check labels each ledger item implemented, user-deferred, or blocked"
+      ],
+      "files": [],
+      "source_trace_ids": ["sig-539655f98183db8521f28ced"]
     }
   ]
 }

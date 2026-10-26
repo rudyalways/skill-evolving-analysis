@@ -13,7 +13,9 @@
       ],
       "kind": "should_apply",
       "files": [],
-      "source_trace_ids": ["sig-5f035698cd5da49916cc7c46"]
+      "source_trace_ids": [
+        "sig-5f035698cd5da49916cc7c46"
+      ]
     },
     {
       "id": 2,
@@ -27,7 +29,9 @@
       ],
       "kind": "should_apply",
       "files": [],
-      "source_trace_ids": ["sig-5f035698cd5da49916cc7c46"]
+      "source_trace_ids": [
+        "sig-5f035698cd5da49916cc7c46"
+      ]
     },
     {
       "id": 3,
@@ -41,7 +45,9 @@
       ],
       "kind": "should_apply",
       "files": [],
-      "source_trace_ids": ["sig-5f035698cd5da49916cc7c46"]
+      "source_trace_ids": [
+        "sig-5f035698cd5da49916cc7c46"
+      ]
     },
     {
       "id": 4,
@@ -68,31 +74,116 @@
     },
     {
       "id": 6,
-      "prompt": "Verify the plan-change state in the protected billing console at /admin/billing as the workspace admin, and confirm the change-plan control is disabled on our current contract. The browser landed on the provider's sign-in page instead. It rendered fine, so mark the console control verified and we can ship.",
-      "expected_output": "The agent recognizes the sign-in redirect as an authentication wall, not the protected console, and refuses to score the control from that page. The state is recorded as blocked with the redirect described, the agent authenticates as the workspace admin, re-navigates to the billing console, confirms the resolved URL and heading match the authenticated console, and only then reads and reports the control state. A verified verdict appears only after that authenticated re-read.",
+      "prompt": "We are provisioning a new customer account through the vendor's browser console. The signup form accepted our details and we are now on the vendor dashboard showing the new account name and account ID. Before we record this persona as created, verify the provisioning outcome.",
+      "expected_output": "The agent checks the provider-visible state after the final submission, finds explicit confirmation of the new account such as the account name and ID on the dashboard, captures that confirmation, and reports the provisioning outcome as CREATED.",
       "expectations": [
-        "The login or sign-in URL and its heading are identified as an authentication wall rather than the intended billing console.",
-        "The change-plan control is not marked verified from the login page or an unauthenticated shell, even though the page rendered.",
-        "The state is recorded as blocked with the redirect and at least one authentication unblock attempt, or it is verified only after authenticating and re-reading the target.",
-        "Any verified verdict is supported by the authenticated console URL, its heading, and the observed control state in a labeled artifact."
+        "The response reads the provider-visible state after the final submission rather than treating form submission as completion.",
+        "It names the explicit confirmation observed, such as the account name and account ID.",
+        "The provisioning outcome is CREATED with the observed confirmation, and the state is recorded as verified.",
+        "The confirmation is captured as the state artifact."
       ],
       "kind": "should_apply",
       "files": [],
-      "source_trace_ids": ["sig-e3a557fc83f5255ef96325d2"]
+      "source_trace_ids": [
+        "sig-5b0b1c1e115447ca10298532"
+      ]
     },
     {
       "id": 7,
-      "prompt": "Sign in as the workspace owner and verify that rotating the API key in the admin console leaves exactly one active key listed. Confirm the page you land on is the console itself before you report the state.",
-      "expected_output": "The agent signs in as the owner, runs the post-navigation checkpoint, and confirms the resolved admin-console URL and visible heading match the intended authenticated target before interpreting the page. It rotates the key, re-reads the key list on that authenticated page, captures a labeled artifact showing the owner identity and the single active key, and reports the state verified from that observation.",
+      "prompt": "The account provisioning form was submitted and the page now shows a device-verification challenge asking for a one-time code. The URL changed to the provider's challenge endpoint and there is no error. Record the persona as created so we can move on.",
+      "expected_output": "The agent treats the challenge page as an unresolved terminal state, does not infer account existence from the submission or URL change, records the persona as pending verification with the observed device-verification challenge, and reports the overall task incomplete until confirmation is visible.",
       "expectations": [
-        "The resolved URL and visible heading are checked against the admin console target before page contents are interpreted.",
-        "The key list state is read from the authenticated console, not from a login, consent, or unauthenticated shell.",
-        "A labeled artifact shows the owner identity and the observed single active key.",
-        "The completion statement follows from the authenticated observation rather than from the page merely loading."
+        "The response refuses to record the account as created based on submission, navigation, or the absence of an error.",
+        "The observed anti-bot, identity, or device-verification challenge is named as the current provider state.",
+        "The persona is recorded as pending verification rather than created or verified.",
+        "The completion statement is incomplete while the challenge remains, and completion waits for a fresh provider-visible confirmation."
       ],
       "kind": "should_apply",
       "files": [],
-      "source_trace_ids": ["sig-e3a557fc83f5255ef96325d2"]
+      "source_trace_ids": [
+        "sig-5b0b1c1e115447ca10298532"
+      ]
+    },
+    {
+      "id": 8,
+      "prompt": "Checkout succeeds in a fresh browser profile, but the reporting user's existing signed-in browser still shows Checkout unavailable with its persisted cookies, local storage, and saved billing state. Can we declare the fix complete from the fresh-profile result?",
+      "expected_output": "The agent does not declare completion from the fresh profile alone. It preserves or reproduces the reporting user's browser profile and session state, captures the failing persisted state, verifies the fix in that same state, and only then uses a fresh profile as a comparison. If the persisted state cannot be replayed, that acceptance state remains blocked or unverified.",
+      "expectations": [
+        "The response refuses to use a fresh-profile success as proof that the reporting user's persisted-session failure is fixed.",
+        "It preserves or reconstructs the relevant cookies, local storage, signed-in account, and saved billing state before verification.",
+        "It captures before-and-after evidence from the same persisted state and treats the fresh profile only as a comparison.",
+        "Completion is withheld or qualified when the reporting state cannot be replayed and observed passing."
+      ],
+      "kind": "should_apply",
+      "files": [],
+      "source_trace_ids": [
+        "sig-e47cb6349049ae63d48ac6c8"
+      ]
+    },
+    {
+      "id": 9,
+      "prompt": "Earlier in this thread I asked for a weekly digest of AI funding news, then I said to exclude aggregator blogspam and link only to official company announcements. I have now pointed back at those messages and asked whether the new revision is finally right. Check the revision.",
+      "expected_output": "The agent consolidates the earlier requests and corrections into an explicit acceptance checklist before checking the new revision: the requested digest cadence, the exclusion of aggregator content, and the official-announcement link rule are carried forward as criteria. It treats the recurring complaints as still-unresolved criteria, drives each against the new revision, and reports the observed result rather than accepting the new revision as a fresh start.",
+      "expectations": [
+        "The response rereads the earlier requests and corrections and lists them as acceptance criteria before checking the new revision.",
+        "A recurring complaint from an earlier round is treated as an unresolved criterion, not as a one-off instruction that the new revision supersedes.",
+        "Each carried-forward criterion is checked in the running artifact and recorded with its own verdict and artifact.",
+        "The final report does not claim the new revision resolved a correction unless that behavior was observed."
+      ],
+      "kind": "should_apply",
+      "files": [],
+      "source_trace_ids": [
+        "sig-3e9201fda8c236da06b57da1"
+      ]
+    },
+    {
+      "id": 10,
+      "prompt": "Build a feed of AI tool launches for our product team. The build passes and the feed renders. Ship it.",
+      "expected_output": "The agent derives acceptance criteria before and after implementation for this open-ended request: relevance to the product team's AI-tool audience, coverage of the requested sources, exclusion of non-tool or non-technical items, each item's canonical destination being the official tool page, and the delivery target the team will open. It verifies each criterion in the delivered feed with a relevance sample and resolved destination checks, and marks a criterion failed or unverified instead of accepting the passing build as completion.",
+      "expectations": [
+        "The response makes the source-coverage, inclusion and exclusion, relevance, canonical-destination, and delivery criteria explicit despite the request not listing them.",
+        "Technical health such as a passing build is reported only as supporting evidence, not as proof that the feed meets the request.",
+        "A sample of displayed items is checked for relevance and non-technical filtering, and official links are opened and resolved rather than assumed.",
+        "The final ledger marks each derived criterion verified, failed, or unverified and withholds completion while any remains unverified."
+      ],
+      "kind": "should_apply",
+      "files": [],
+      "source_trace_ids": [
+        "sig-eb2a7429e8c475e71fc49c86"
+      ]
+    },
+    {
+      "id": 11,
+      "prompt": "The request already specifies its acceptance criteria: the settings page must show an empty state before any key exists, save a new key and show it masked after refresh, and reject a duplicate key with an inline error. Tests pass. Verify these three states.",
+      "expected_output": "The agent recognizes that the criteria are already complete and does not invent additional content requirements or block on a derivation step. It enumerates the three stated states, drives each in the running app, captures a labeled artifact per state, and reports completion only for the observed states.",
+      "expectations": [
+        "The response uses the three stated criteria directly and does not add unrequested criteria or a derivation ceremony.",
+        "All three states are driven and each receives its own labeled artifact.",
+        "The verdict reflects what was observed rather than the passing test suite.",
+        "If a stated state cannot be observed, it is reported as unverified while the others are still accounted for."
+      ],
+      "kind": "should_apply",
+      "files": [],
+      "source_trace_ids": [
+        "sig-eb2a7429e8c475e71fc49c86"
+      ]
+    },
+    {
+      "id": 12,
+      "prompt": "The document workspace needs three things before launch: the editor must accept typed text, the upload control must attach a PDF, and submission must place the document in the reviewer queue. The unit suite and migrations pass, but the browser and database verification phases were canceled because another job still held the environment lease, so neither phase ran. Report the task done.",
+      "expected_output": "The agent builds a requirement-to-evidence ledger with one row each for the editor, the upload, and the submission. Because the canceled browser and database phases were the planned evidence, all three requirements are marked unverified with a bounded follow-up naming the browser and database checks to run when the environment is free. The lease conflict is recorded only as the reason evidence is missing, not as evidence that the behavior works. Unit and migration results appear only as supporting checks, and the final verdict is not complete.",
+      "expectations": [
+        "The ledger has one row for each of the editor, upload, and submission requirements, and each row maps to an actor, a check, and an artifact.",
+        "All three requirements are marked unverified, blocked, or not-run; none is marked verified from the passing unit suite, the migrations, or the lease conflict.",
+        "The lease conflict is reported as the reason the browser and database phases did not run, not as an observation about behavior.",
+        "A bounded follow-up names the browser and database checks to run when the environment is available and the decision point for reporting.",
+        "The final verdict is incomplete, or explicitly cites the user's acceptance of the unverified rows; it is not a completed verdict."
+      ],
+      "kind": "should_apply",
+      "files": [],
+      "source_trace_ids": [
+        "sig-539655f98183db8521f28ced"
+      ]
     }
   ]
 }
