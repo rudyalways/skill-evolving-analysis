@@ -102,10 +102,12 @@ deduplication.
 The pre-fix reference run on the same 23 cases passed 20/23. All three failures
 were supporting resources used once in each of three sessions.
 
-The separate `celia-hk-agent/skill-evolving-agents` repository is an older,
-one-commit public snapshot. It is not a configured remote, subtree, submodule,
-or automatic mirror. Do not publish to it without an explicit privacy-reviewed
-export.
+The separate `celia-hk-agent/skill-evolving-agents` repository is the
+privacy-reviewed public export of this directory. It mirrors the public-safe
+tracked files; credentials, raw traces, private documents, generated run
+state, and internal product snapshots are excluded. It is not a configured
+remote, subtree, submodule, or automatic mirror. Review every export before
+pushing.
 
 ## Cost-aware execution
 
