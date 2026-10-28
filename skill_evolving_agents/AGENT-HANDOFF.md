@@ -54,10 +54,10 @@ clean worktree based on `origin/main` for isolated work and verification.
 The personal repository baseline is:
 
 ```text
-6759de1 Extend funnel benchmark to asset and eval usefulness
+6673be9 Mark converged resource replays as idempotent
 ```
 
-That commit passed all 206 tests in a clean worktree and the 23-case
+That commit passed all 207 tests in a clean worktree and the 23-case
 deterministic funnel benchmark at 23/23. It includes configurable funnel
 targets, single-session diagnosis controls, novel-versus-idempotent metrics,
 an action-oriented profile, inventory and release helpers, replay support,
@@ -67,7 +67,10 @@ privacy helpers, dashboard extensions, and:
   calibration and held-out cases for positive, negative, already-applied,
   semantic-policy, creation-policy, and resource-usefulness boundaries;
 - cross-session grouping for repeated references, starter assets, and delegated
-  prompts, so the evolution gate receives the recurrence evidence it scores.
+  prompts, so the evolution gate receives the recurrence evidence it scores;
+- converged replay accounting: resource opportunities suppressed because an
+  equivalent authored resource exists count as already applied, so a replay
+  reports `converged` consumer targets instead of false `missed` targets.
 
 The pre-fix reference run on the same 23 cases passed 20/23. All three failures
 were supporting resources used once in each of three sessions.
