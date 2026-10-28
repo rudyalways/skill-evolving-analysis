@@ -778,5 +778,35 @@
       ],
       "min_unused_rate": 1.0
     }
+  },
+  {
+    "case_id": "cal-resource-useful-asset",
+    "kind": "resource",
+    "split": "calibration",
+    "skill": "starter-asset",
+    "files": {
+      "assets/template.json": "{\"service\":\"example\",\"healthcheck\":\"/health\"}\n"
+    },
+    "use_evidence": "Copied assets/template.json into the new service.\n",
+    "expect": {
+      "min_usefulness": 0.9,
+      "unused_resources": [],
+      "max_unused_rate": 0.0
+    }
+  },
+  {
+    "case_id": "heldout-resource-useful-evals",
+    "kind": "resource",
+    "split": "heldout",
+    "skill": "regression-evals",
+    "files": {
+      "evals/evals.json": "{\n  \"evals\": [\n    {\n      \"id\": \"fallback-case\",\n      \"prompt\": \"Handle a missing deployment state without retrying forever.\",\n      \"expected_output\": \"Stops at the terminal state and reports the result.\"\n    }\n  ]\n}\n"
+    },
+    "use_evidence": "Ran evals/evals.json for the observed regression case.\n",
+    "expect": {
+      "min_usefulness": 0.9,
+      "unused_resources": [],
+      "max_unused_rate": 0.0
+    }
   }
 ]

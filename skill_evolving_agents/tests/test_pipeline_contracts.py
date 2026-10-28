@@ -8147,6 +8147,7 @@ class FunnelBenchmarkTest(unittest.TestCase):
             0,
             json.dumps(report["overall"], sort_keys=True),
         )
+        self.assertEqual(report["overall"]["cases"], 23)
         self.assertEqual(report["boundaries"]["replay_checks"], 9)
 
 
