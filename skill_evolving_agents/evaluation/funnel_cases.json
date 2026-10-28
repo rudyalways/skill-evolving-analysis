@@ -1,0 +1,782 @@
+[
+  {
+    "case_id": "cal-positive-correction-heavy",
+    "kind": "trace",
+    "split": "calibration",
+    "sessions": [
+      {
+        "id": "cal-correction-session",
+        "turns": [
+          {
+            "user": "Please fix the failing deployment.",
+            "assistant": "I changed the deployment command."
+          },
+          {
+            "user": "Actually, wait. That is wrong; use the existing configuration.",
+            "assistant": "I reverted the command and reused the current configuration."
+          },
+          {
+            "user": "No, I said preserve the timeout and only change the health check.",
+            "assistant": "Updated only the health-check path and kept the timeout."
+          }
+        ]
+      }
+    ],
+    "expect": {
+      "findings_any": [
+        "correction-heavy"
+      ],
+      "selected_any": [
+        "correction-heavy"
+      ],
+      "admitted": true,
+      "admission_reason": "critical"
+    }
+  },
+  {
+    "case_id": "cal-positive-repeated-instructions",
+    "kind": "trace",
+    "split": "calibration",
+    "sessions": [
+      {
+        "id": "cal-repeated-session",
+        "turns": [
+          {
+            "user": "Fix the release script and report the verified result.",
+            "assistant": "The release script is updated."
+          },
+          {
+            "user": "Fix the release script and report the verified result.",
+            "assistant": "The release script is still being checked."
+          },
+          {
+            "user": "Fix the release script and report the verified result.",
+            "assistant": "The release script now passes its check."
+          }
+        ]
+      }
+    ],
+    "expect": {
+      "findings_any": [
+        "repeated-instructions"
+      ],
+      "selected_any": [
+        "repeated-instructions"
+      ],
+      "admitted": true,
+      "admission_reason": "immediate_detector"
+    }
+  },
+  {
+    "case_id": "cal-negative-benign-request",
+    "kind": "trace",
+    "split": "calibration",
+    "sessions": [
+      {
+        "id": "cal-benign-session",
+        "turns": [
+          {
+            "user": "Document the current backup schedule.",
+            "assistant": "Added the weekly backup schedule to the runbook."
+          },
+          {
+            "user": "List the owners for the ingestion queue.",
+            "assistant": "The queue owner is the data platform team."
+          },
+          {
+            "user": "Summarize the retention policy in two sentences.",
+            "assistant": "Backups are retained for thirty days and audit records for one year."
+          }
+        ]
+      }
+    ],
+    "expect": {
+      "findings_none": [
+        "correction-heavy",
+        "repeated-instructions",
+        "keep-going-loop",
+        "negative-drift"
+      ],
+      "admitted": false
+    }
+  },
+  {
+    "case_id": "cal-resource-cross-session-reference",
+    "kind": "trace",
+    "split": "calibration",
+    "sessions": [
+      {
+        "id": "cal-reference-a",
+        "turns": [
+          {
+            "user": "Check the delivery policy before the release.",
+            "assistant": "Read the delivery policy and applied it.",
+            "tools": [
+              {
+                "name": "exec",
+                "arguments": "sed -n '1,220p' docs/operations/delivery.md"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "cal-reference-b",
+        "turns": [
+          {
+            "user": "Read the same delivery policy for this service.",
+            "assistant": "Read the delivery policy and applied it.",
+            "tools": [
+              {
+                "name": "exec",
+                "arguments": "sed -n '1,220p' docs/operations/delivery.md"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "cal-reference-c",
+        "turns": [
+          {
+            "user": "Confirm the delivery policy again before publishing.",
+            "assistant": "Read the delivery policy and applied it.",
+            "tools": [
+              {
+                "name": "exec",
+                "arguments": "sed -n '1,220p' docs/operations/delivery.md"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "expect": {
+      "findings_any": [
+        "resource-references-opportunity"
+      ],
+      "selected_any": [
+        "resource-references-opportunity"
+      ],
+      "resource_decisions": [
+        {
+          "resource": "references",
+          "disposition": "emitted"
+        }
+      ],
+      "admitted": true
+    }
+  },
+  {
+    "case_id": "cal-resource-single-use-negative",
+    "kind": "trace",
+    "split": "calibration",
+    "sessions": [
+      {
+        "id": "cal-single-reference",
+        "turns": [
+          {
+            "user": "Check the schema once before editing.",
+            "assistant": "Checked the schema and edited the payload.",
+            "tools": [
+              {
+                "name": "exec",
+                "arguments": "sed -n '1,120p' docs/schema/payload.md"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "expect": {
+      "findings_none": [
+        "resource-references-opportunity"
+      ],
+      "no_resource_decisions": [
+        {
+          "resource": "references",
+          "disposition": "emitted"
+        }
+      ],
+      "admitted": false
+    }
+  },
+  {
+    "case_id": "cal-resource-guarded-script",
+    "kind": "trace",
+    "split": "calibration",
+    "sessions": [
+      {
+        "id": "cal-guarded-script",
+        "turns": [
+          {
+            "user": "Watch the deployment to a terminal state.",
+            "assistant": "Observed the terminal deployment state.",
+            "tools": [
+              {
+                "name": "exec",
+                "arguments": "for attempt in 1 2 3; do state=$(aws ecs describe-services --cluster app --services web); case $state in *SUCCESS*|*FAILED*) break;; esac; sleep 5; done"
+              }
+            ]
+          },
+          {
+            "user": "Watch the deployment again with the same bounded loop.",
+            "assistant": "Observed the terminal deployment state.",
+            "tools": [
+              {
+                "name": "exec",
+                "arguments": "for attempt in 1 2 3; do state=$(aws ecs describe-services --cluster app --services web); case $state in *SUCCESS*|*FAILED*) break;; esac; sleep 5; done"
+              }
+            ]
+          },
+          {
+            "user": "Use the bounded watcher for the final deployment.",
+            "assistant": "Observed the terminal deployment state.",
+            "tools": [
+              {
+                "name": "exec",
+                "arguments": "for attempt in 1 2 3; do state=$(aws ecs describe-services --cluster app --services web); case $state in *SUCCESS*|*FAILED*) break;; esac; sleep 5; done"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "expect": {
+      "findings_any": [
+        "resource-script-opportunity"
+      ],
+      "selected_any": [
+        "resource-script-opportunity"
+      ],
+      "resource_decisions": [
+        {
+          "disposition": "emitted",
+          "reason_contains": "qualified-script-opportunity"
+        }
+      ],
+      "admitted": true,
+      "admission_reason": "strong_evidence"
+    }
+  },
+  {
+    "case_id": "cal-resource-unbounded-negative",
+    "kind": "trace",
+    "split": "calibration",
+    "sessions": [
+      {
+        "id": "cal-unbounded-script",
+        "turns": [
+          {
+            "user": "Keep checking the deployment until it is done.",
+            "assistant": "The watcher is still running.",
+            "tools": [
+              {
+                "name": "exec",
+                "arguments": "while true; do railway deployment list --service app; done"
+              }
+            ]
+          },
+          {
+            "user": "Run the deployment watcher again.",
+            "assistant": "The watcher is still running.",
+            "tools": [
+              {
+                "name": "exec",
+                "arguments": "while true; do railway deployment list --service app; done"
+              }
+            ]
+          },
+          {
+            "user": "Repeat the deployment watcher.",
+            "assistant": "The watcher is still running.",
+            "tools": [
+              {
+                "name": "exec",
+                "arguments": "while true; do railway deployment list --service app; done"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "expect": {
+      "findings_none": [
+        "resource-script-opportunity"
+      ],
+      "resource_decisions": [
+        {
+          "disposition": "rejected",
+          "reason_contains": "unbounded-loop"
+        }
+      ],
+      "admitted": false
+    }
+  },
+  {
+    "case_id": "cal-idempotent-update",
+    "kind": "idempotency",
+    "split": "calibration",
+    "changelogs": {
+      "retry-guard": "# retry-guard\n- 2026-10-24 update sig-repeat/1 | workflow\n"
+    },
+    "finding": {
+      "signal_id": "sig-repeat",
+      "confidence": 0.9,
+      "session_id": "cal-replay-session",
+      "features": {
+        "candidate_source": "signal_detector"
+      },
+      "evidence": [
+        {
+          "trace_id": "codex:cal-replay-session:turn"
+        }
+      ]
+    },
+    "recalled": [
+      {
+        "skill": "retry-guard",
+        "score": 0.9
+      }
+    ],
+    "expect": {
+      "applied_skills": [
+        "retry-guard"
+      ]
+    }
+  },
+  {
+    "case_id": "cal-idempotent-placeholder-not-applied",
+    "kind": "idempotency",
+    "split": "calibration",
+    "changelogs": {
+      "deploy-watch": "# deploy-watch\n- 2026-10-24 update sig-script/1 | scripts\n"
+    },
+    "skills": {
+      "deploy-watch": {
+        "scripts/watch.sh": "#!/usr/bin/env bash\necho placeholder\n"
+      }
+    },
+    "finding": {
+      "signal_id": "sig-script",
+      "confidence": 0.94,
+      "session_id": "cal-placeholder-session",
+      "features": {
+        "candidate_source": "resource_opportunity",
+        "resource": "scripts",
+        "resource_family": "cloud-status",
+        "resource_fingerprint": "cal-placeholder",
+        "script_contract": {
+          "content_available": true,
+          "content": "#!/usr/bin/env bash\nfor attempt in 1 2 3; do\n  state=$(aws ecs describe-services --cluster app --services web)\n  case $state in *SUCCESS*|*FAILED*) break;; esac\n  sleep 5\ndone\n"
+        }
+      },
+      "evidence": [
+        {
+          "trace_id": "codex:cal-placeholder-session:turn"
+        }
+      ]
+    },
+    "expect": {
+      "applied_skills": []
+    }
+  },
+  {
+    "case_id": "cal-semantic-strong-relevant",
+    "kind": "semantic",
+    "split": "calibration",
+    "matches": [
+      {
+        "id": "correction",
+        "score": 0.86
+      },
+      {
+        "id": "noise",
+        "score": 0.2
+      }
+    ],
+    "expect": {
+      "disposition": "selected",
+      "reason_code": "confident_relevant_category"
+    }
+  },
+  {
+    "case_id": "cal-semantic-ambiguous",
+    "kind": "semantic",
+    "split": "calibration",
+    "matches": [
+      {
+        "id": "correction",
+        "score": 0.74
+      },
+      {
+        "id": "noise",
+        "score": 0.7
+      }
+    ],
+    "expect": {
+      "disposition": "escalate",
+      "reason_code": "uncertain_category"
+    }
+  },
+  {
+    "case_id": "heldout-positive-keep-going",
+    "kind": "trace",
+    "split": "heldout",
+    "sessions": [
+      {
+        "id": "heldout-keep-going-session",
+        "turns": [
+          {
+            "user": "Finish the migration and verify the rollback.",
+            "assistant": "The migration is partially applied."
+          },
+          {
+            "user": "Keep going. The rollback check is still missing.",
+            "assistant": "The migration is partially applied."
+          },
+          {
+            "user": "Continue until the rollback check passes.",
+            "assistant": "The rollback check now passes."
+          }
+        ]
+      }
+    ],
+    "expect": {
+      "findings_any": [
+        "keep-going-loop"
+      ],
+      "admitted": true,
+      "admission_reason": "strong_evidence",
+      "selected_any_of": [
+        [
+          "keep-going-loop"
+        ],
+        [
+          "cut-keep_going_streak"
+        ]
+      ]
+    }
+  },
+  {
+    "case_id": "heldout-negative-infrastructure",
+    "kind": "trace",
+    "split": "heldout",
+    "sessions": [
+      {
+        "id": "heldout-infra-session",
+        "turns": [
+          {
+            "user": "Run the release check.",
+            "assistant": "",
+            "outcome_error": "429 Too Many Requests from upstream"
+          },
+          {
+            "user": "Retry the release check.",
+            "assistant": "",
+            "outcome_error": "429 Too Many Requests from upstream"
+          }
+        ]
+      }
+    ],
+    "expect": {
+      "selected_none": [
+        "missing-final-response",
+        "tool-error-loop"
+      ],
+      "admitted": false
+    }
+  },
+  {
+    "case_id": "heldout-resource-cross-session-asset",
+    "kind": "trace",
+    "split": "heldout",
+    "sessions": [
+      {
+        "id": "heldout-asset-a",
+        "turns": [
+          {
+            "user": "Bootstrap a service from the starter.",
+            "assistant": "Copied the starter configuration.",
+            "tools": [
+              {
+                "name": "exec",
+                "arguments": "cp assets/templates/service-starter/config.yml build/config.yml"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "heldout-asset-b",
+        "turns": [
+          {
+            "user": "Use the same starter for another service.",
+            "assistant": "Copied the starter configuration.",
+            "tools": [
+              {
+                "name": "exec",
+                "arguments": "cp assets/templates/service-starter/config.yml build/config.yml"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "heldout-asset-c",
+        "turns": [
+          {
+            "user": "Reuse the starter for the final service.",
+            "assistant": "Copied the starter configuration.",
+            "tools": [
+              {
+                "name": "exec",
+                "arguments": "cp assets/templates/service-starter/config.yml build/config.yml"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "expect": {
+      "findings_any": [
+        "resource-assets-opportunity"
+      ],
+      "resource_decisions": [
+        {
+          "resource": "assets",
+          "disposition": "emitted"
+        }
+      ],
+      "admitted": true
+    }
+  },
+  {
+    "case_id": "heldout-resource-cross-session-delegate",
+    "kind": "trace",
+    "split": "heldout",
+    "sessions": [
+      {
+        "id": "heldout-delegate-a",
+        "turns": [
+          {
+            "user": "Delegate the authentication review.",
+            "assistant": "Returned the bounded review.",
+            "tools": [
+              {
+                "name": "collaboration.spawn_agent",
+                "arguments": "{\"task_name\":\"auth_review\",\"message\":\"Inspect the changed authentication flow, identify concrete regressions, and return only evidence-backed findings with exact file paths and concise repair guidance.\"}"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "heldout-delegate-b",
+        "turns": [
+          {
+            "user": "Run the same bounded review on another patch.",
+            "assistant": "Returned the bounded review.",
+            "tools": [
+              {
+                "name": "collaboration.spawn_agent",
+                "arguments": "{\"task_name\":\"auth_review\",\"message\":\"Inspect the changed authentication flow, identify concrete regressions, and return only evidence-backed findings with exact file paths and concise repair guidance.\"}"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "heldout-delegate-c",
+        "turns": [
+          {
+            "user": "Delegate the review for the final patch.",
+            "assistant": "Returned the bounded review.",
+            "tools": [
+              {
+                "name": "collaboration.spawn_agent",
+                "arguments": "{\"task_name\":\"auth_review\",\"message\":\"Inspect the changed authentication flow, identify concrete regressions, and return only evidence-backed findings with exact file paths and concise repair guidance.\"}"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "expect": {
+      "findings_any": [
+        "resource-agents-opportunity"
+      ],
+      "resource_decisions": [
+        {
+          "resource": "agents",
+          "disposition": "emitted"
+        }
+      ],
+      "admitted": true
+    }
+  },
+  {
+    "case_id": "heldout-idempotent-create",
+    "kind": "idempotency",
+    "split": "heldout",
+    "changelogs": {
+      "release-verification": "# release-verification\n- 2026-10-25 create sig-create/1 | workflow\n"
+    },
+    "finding": {
+      "signal_id": "sig-create",
+      "confidence": 0.93,
+      "session_id": "heldout-replay-session",
+      "features": {
+        "candidate_source": "methodology"
+      },
+      "evidence": [
+        {
+          "trace_id": "codex:heldout-replay-session:turn"
+        }
+      ]
+    },
+    "recalled": [],
+    "expect": {
+      "applied_skills": [
+        "release-verification"
+      ]
+    }
+  },
+  {
+    "case_id": "heldout-semantic-confident-noise",
+    "kind": "semantic",
+    "split": "heldout",
+    "matches": [
+      {
+        "id": "noise",
+        "score": 0.91
+      },
+      {
+        "id": "correction",
+        "score": 0.24
+      }
+    ],
+    "expect": {
+      "disposition": "rejected",
+      "reason_code": "confident_noise"
+    }
+  },
+  {
+    "case_id": "heldout-creation-multisession",
+    "kind": "creation_policy",
+    "split": "heldout",
+    "finding": {
+      "confidence": 0.9,
+      "session_id": "heldout-create-session",
+      "evidence": [
+        {
+          "trace_id": "codex:one:turn"
+        },
+        {
+          "trace_id": "codex:two:turn"
+        }
+      ],
+      "features": {
+        "candidate_source": "signal_detector",
+        "distinct_sessions": 2
+      }
+    },
+    "diagnosis": {
+      "skill_capabilities_missing": [
+        {
+          "type": "form/pattern/constraint"
+        }
+      ],
+      "newly_detected_skill_capabilites_missing": []
+    },
+    "goal_op": {
+      "op": "create",
+      "skills": [
+        {
+          "skill": "release-check-boundary"
+        }
+      ]
+    },
+    "expect": {
+      "allowed": true
+    }
+  },
+  {
+    "case_id": "heldout-creation-single-session-denied",
+    "kind": "creation_policy",
+    "split": "heldout",
+    "finding": {
+      "confidence": 0.9,
+      "session_id": "heldout-single-session",
+      "evidence": [
+        {
+          "trace_id": "codex:one:turn"
+        },
+        {
+          "trace_id": "codex:one:turn-2"
+        }
+      ],
+      "features": {
+        "candidate_source": "signal_detector",
+        "distinct_sessions": 1
+      }
+    },
+    "diagnosis": {
+      "skill_capabilities_missing": [
+        {
+          "type": "form/pattern/constraint"
+        }
+      ],
+      "newly_detected_skill_capabilites_missing": []
+    },
+    "goal_op": {
+      "op": "create",
+      "skills": [
+        {
+          "skill": "unqualified-single-session"
+        }
+      ]
+    },
+    "expect": {
+      "allowed": false,
+      "error_contains": "without sufficient recurrence"
+    }
+  },
+  {
+    "case_id": "heldout-resource-useful-reference",
+    "kind": "resource",
+    "split": "heldout",
+    "skill": "delivery-reference",
+    "files": {
+      "references/delivery-policy.md": "# Delivery policy\n\nDeploy only after the health check and rollback drill pass.\n",
+      "scripts/check.sh": "#!/usr/bin/env bash\nexit 0\n"
+    },
+    "evidence": "process exited with code 0 for scripts/check.sh\n",
+    "use_evidence": "Read references/delivery-policy.md and ran scripts/check.sh before the release.\n",
+    "expect": {
+      "min_usefulness": 0.9,
+      "unused_resources": [],
+      "max_unused_rate": 0.0
+    }
+  },
+  {
+    "case_id": "heldout-resource-unused-placeholder",
+    "kind": "resource",
+    "split": "heldout",
+    "skill": "placeholder-skill",
+    "files": {
+      "references/runbook.md": "# Runbook\n\nUnused placeholder content that no workflow retrieves.\n",
+      "scripts/unused.sh": "#!/usr/bin/env bash\necho placeholder\n"
+    },
+    "evidence": "",
+    "use_evidence": "",
+    "expect": {
+      "max_usefulness": 0.0,
+      "unused_resources": [
+        "references/runbook.md",
+        "scripts/unused.sh"
+      ],
+      "min_unused_rate": 1.0
+    }
+  }
+]

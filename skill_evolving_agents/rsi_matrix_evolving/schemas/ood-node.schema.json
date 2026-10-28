@@ -1,0 +1,12 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "type":"object",
+  "required":["schema_version","node_id","parent_id","display_name","layer","status","dimensions","shift_axes","expansion_policy","evidence","metrics","child_ids"],
+  "properties":{
+    "schema_version":{"const":1},"node_id":{"type":"string"},"parent_id":{"type":["string","null"]},"display_name":{"type":"string","minLength":3},"layer":{"type":"integer","minimum":0},
+    "status":{"enum":["id_observed","id_declared","boundary","ood_candidate","ood_confirmed","unknown"]},
+    "dimensions":{"type":"object"},"shift_axes":{"type":"array","items":{"type":"string"}},"expansion_policy":{"type":"string"},
+    "evidence":{"type":"array","items":{"type":"string"}},"metrics":{"type":"object"},"child_ids":{"type":"array","items":{"type":"string"}},
+    "mutation":{"type":"object"},"branch_index":{"type":"integer"}
+  }
+}

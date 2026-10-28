@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "target_id": "draft-unknown-target",
+  "adapter": {"kind": "trace_replay", "model": null, "command": null, "api_key_env": null, "base_url": null},
+  "expected_distribution": {"domains": ["unknown"], "scenarios": ["unknown"], "capabilities": ["unknown"]},
+  "constraints": {"network": "deny_by_default", "filesystem": "ephemeral_workspace", "max_wall_seconds": 300, "max_tokens": 32000, "max_cost_usd": 0.25, "max_tool_calls": 80},
+  "secrets": {"env_allowlist": []},
+  "privacy": {"redaction_profile": "default"}
+}
+

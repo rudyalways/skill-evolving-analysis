@@ -1,0 +1,3 @@
+{"timestamp":"2026-10-20T10:00:00Z","messages":[{"role":"user","content":"Explain why this Python function returns None"},{"role":"assistant","content":"The function has no return statement."}],"status":"success","duration_ms":120}
+{"timestamp":"2026-10-21T10:00:00Z","prompt":"Debug the failing file test without changing unrelated code","response":"I inspected the failure and fixed it.","status":"failed","duration_ms":250,"tool_events":[{"tool":"read_file"},{"tool":"pytest"}]}
+

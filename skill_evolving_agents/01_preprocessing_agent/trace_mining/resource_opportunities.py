@@ -466,7 +466,12 @@ def _supporting_resource_findings(
     settings: dict[str, Any],
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     minimum = int(settings.get("min_supporting_resource_invocations", 3))
-    groups: dict[tuple[str, str, str, str], list[dict[str, Any]]] = defaultdict(list)
+    # Repetition is an evidence property, not a session property. A reference,
+    # starter, or delegated prompt used once in three independent sessions is
+    # exactly the cross-run signal the evolution gate exists to mature. Keying
+    # this group by session made every such case one-invocation noise and
+    # produced no finding for the later recurrence gate to admit.
+    groups: dict[tuple[str, str, str], list[dict[str, Any]]] = defaultdict(list)
     decisions: list[dict[str, Any]] = []
     for record in records:
         candidate = _supporting_resource_candidate(
@@ -476,12 +481,19 @@ def _supporting_resource_findings(
             continue
         resource, family, normalized = candidate
         digest = hashlib.sha256(normalized.encode()).hexdigest()[:24]
-        groups[(record["session_id"], resource, family, digest)].append(
+        groups[(resource, family, digest)].append(
             {**record, "resource": resource, "family": family, "normalized": normalized}
         )
     findings: list[dict[str, Any]] = []
-    for (session_id, resource, family, digest), matches in sorted(groups.items()):
+    for (resource, family, digest), matches in sorted(groups.items()):
         traces = sorted({str(row["trace_id"]) for row in matches})
+        sessions = sorted(
+            {
+                str(row["session_id"])
+                for row in matches
+                if isinstance(row.get("session_id"), str) and row["session_id"]
+            }
+        )
         if len(matches) < minimum or len(traces) < 2:
             decisions.append(
                 {
@@ -492,9 +504,11 @@ def _supporting_resource_findings(
                     "reason_codes": ["insufficient-independent-invocations"],
                     "invocations": len(matches),
                     "distinct_traces": len(traces),
+                    "distinct_sessions": len(sessions),
                 }
             )
             continue
+        session_id = sessions[0] if sessions else "unknown-session"
         existing_path = _equivalent_supporting_resource(
             workspace, resource, matches[0]["normalized"]
         )
@@ -514,7 +528,7 @@ def _supporting_resource_findings(
             continue
         confidence = min(0.96, 0.78 + 0.03 * min(len(matches), 4) + 0.02 * min(len(traces), 3))
         identity = json.dumps(
-            ["supporting-resource", session_id, resource, family, digest],
+            ["supporting-resource", sessions or ["unknown-session"], resource, family, digest],
             separators=(",", ":"),
         )
         signal_id = "sig-" + hashlib.sha256(identity.encode()).hexdigest()[:24]
@@ -542,6 +556,7 @@ def _supporting_resource_findings(
             "resource_fingerprint": digest,
             "occurrence_count": len(matches),
             "distinct_windows": len(traces),
+            "distinct_sessions": len(sessions),
             "equivalent_resource_exists": existing_path is not None,
             "equivalent_resource_path": existing_path,
             "false_positive_guards": [
@@ -606,6 +621,7 @@ def _supporting_resource_findings(
                 "reason_codes": [f"qualified-{resource}-opportunity"],
                 "invocations": len(matches),
                 "distinct_traces": len(traces),
+                "distinct_sessions": len(sessions),
                 "confidence": round(confidence, 6),
             }
         )

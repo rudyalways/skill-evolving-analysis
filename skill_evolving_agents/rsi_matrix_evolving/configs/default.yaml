@@ -1,0 +1,8 @@
+seed: 184221
+database: .sampler/sampler.db
+artifact_dir: .sampler/artifacts
+scenario_registry: scenarios/bootstrap/scenarios.json
+target_profile: target-profile.json
+novelty_reserve: 0.15
+regression_reserve: 0.10
+

@@ -3892,6 +3892,91 @@ class ContractTests(unittest.TestCase):
                 by_resource["assets"]["features"]["equivalent_resource_exists"]
             )
 
+    def test_supporting_resource_repetition_accumulates_across_sessions(self) -> None:
+        config = json.loads(
+            (AGENTS / "common/preprocessing-config.json").read_text()
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            root = workspace / "traces/derived"
+            trajectories = root / "normalized/task_trajectories"
+            trajectories.mkdir(parents=True)
+            reference = "sed -n '1,220p' docs/operations/delivery.md"
+            sessions = ("session-a", "session-b", "session-c")
+            for index, session in enumerate(sessions):
+                write_json(
+                    trajectories / f"trace-{index}.json",
+                    {
+                        "trace_id": f"codex:{session}:turn",
+                        "session_id": session,
+                        "events": [
+                            {
+                                "sequence": 1,
+                                "status": "completed",
+                                "arguments_preview": reference,
+                                "tool": "exec",
+                            }
+                        ],
+                        "provenance": {
+                            "turn_path": f"traces/derived/normalized/turns/{index}.json"
+                        },
+                    },
+                )
+            findings, decisions = resource_opportunities.analyze(
+                workspace, root, config
+            )
+            self.assertEqual(len(findings), 1)
+            finding = findings[0]
+            self.assertEqual(finding["features"]["resource"], "references")
+            self.assertEqual(finding["features"]["occurrence_count"], 3)
+            self.assertEqual(finding["features"]["distinct_windows"], 3)
+            self.assertEqual(finding["features"]["distinct_sessions"], 3)
+            self.assertEqual(set(finding["trace_ids"]), {
+                f"codex:{session}:turn" for session in sessions
+            })
+            emitted = [
+                row for row in decisions if row.get("disposition") == "emitted"
+            ]
+            self.assertEqual(len(emitted), 1)
+            self.assertEqual(emitted[0]["distinct_sessions"], 3)
+            repeated, _ = resource_opportunities.analyze(workspace, root, config)
+            self.assertEqual(repeated[0]["signal_id"], finding["signal_id"])
+
+            # Two sessions with one read each are still below the independent
+            # repetition threshold. Grouping must not manufacture evidence.
+            for index, session in enumerate(sessions[:2]):
+                write_json(
+                    trajectories / f"trace-{index}.json",
+                    {
+                        "trace_id": f"codex:{session}:turn",
+                        "session_id": session,
+                        "events": [
+                            {
+                                "sequence": 1,
+                                "status": "completed",
+                                "arguments_preview": reference,
+                                "tool": "exec",
+                            }
+                        ],
+                        "provenance": {
+                            "turn_path": f"traces/derived/normalized/turns/{index}.json"
+                        },
+                    },
+                )
+            (trajectories / "trace-2.json").unlink()
+            below, below_decisions = resource_opportunities.analyze(
+                workspace, root, config
+            )
+            self.assertEqual(below, [])
+            self.assertTrue(
+                any(
+                    row.get("disposition") == "rejected"
+                    and "insufficient-independent-invocations"
+                    in (row.get("reason_codes") or [])
+                    for row in below_decisions
+                )
+            )
+
     def test_asset_reuse_opportunity_preserves_provenance_ceiling(self) -> None:
         config = json.loads(
             (AGENTS / "common/preprocessing-config.json").read_text()
@@ -8041,6 +8126,28 @@ class ContractTests(unittest.TestCase):
             )
             self.assertEqual(saved["feedback"]["overall_score"], 0.4)
             self.assertEqual(saved["feedback"]["overall_status"], "fail")
+
+
+class FunnelBenchmarkTest(unittest.TestCase):
+    def test_labeled_funnel_cases_pass(self) -> None:
+        benchmark = load(
+            "funnel_benchmark_test",
+            AGENTS / "evaluation/funnel_benchmark.py",
+        )
+        cases = json.loads(
+            (AGENTS / "evaluation/funnel_cases.json").read_text()
+        )
+        profile = json.loads(
+            (AGENTS / "profiles/action-oriented-local-service.json").read_text()
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            report = benchmark.evaluate(cases, profile, Path(directory))
+        self.assertEqual(
+            report["overall"]["failed"],
+            0,
+            json.dumps(report["overall"], sort_keys=True),
+        )
+        self.assertEqual(report["boundaries"]["replay_checks"], 9)
 
 
 class MockedPipelineTest(unittest.TestCase):
