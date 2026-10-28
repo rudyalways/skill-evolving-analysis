@@ -685,10 +685,75 @@ def collect_phase_metrics(
         isinstance(scope, dict) and scope.get("disposition") == "no_change"
         for scope in scopes
     )
+    idempotent_scopes = sum(
+        isinstance(scope, dict)
+        and "exact finding was already applied" in str(scope.get("reason") or "").lower()
+        for scope in scopes
+    )
+    novel_goal_scopes = max(len(scopes) - idempotent_scopes, 0)
     accepted = sum(
         isinstance(operation, dict) and operation.get("accepted") is True
         for operation in operations
     )
+    profile = _read_json(workspace / "run/config/pipeline-profile.json")
+    funnel_targets = (
+        profile.get("funnel_targets") or []
+        if isinstance(profile, dict)
+        else {}
+    )
+    if not isinstance(funnel_targets, dict):
+        funnel_targets = {}
+    action_count_distribution: dict[str, int] = defaultdict(int)
+    for scope in scopes:
+        if isinstance(scope, dict):
+            action_count_distribution[str(int(scope.get("operation_count") or 0))] += 1
+    operation_type_distribution: dict[str, int] = defaultdict(int)
+    accepted_operation_type_distribution: dict[str, int] = defaultdict(int)
+    for operation in operations:
+        if isinstance(operation, dict):
+            operation_type = str(
+                operation.get("op")
+                or operation.get("operation")
+                or operation.get("action")
+                or "unknown"
+            )
+            operation_type_distribution[operation_type] += 1
+            if operation.get("accepted") is True:
+                accepted_operation_type_distribution[operation_type] += 1
+
+    funnel_rates = {
+        "diagnosis_rate": _rate(len(diagnoses), selected),
+        "goal_decision_rate": _rate(len(scopes), selected),
+        "action_scope_rate": _rate(changed_scopes, selected),
+        "action_given_goal_rate": _rate(changed_scopes, len(scopes)),
+        "novel_action_scope_rate": _rate(changed_scopes, novel_goal_scopes),
+        "proposal_rate": _rate(len(operations), selected),
+        "proposal_given_goal_rate": _rate(len(operations), len(scopes)),
+        "novel_proposal_rate": _rate(len(operations), novel_goal_scopes),
+        "final_acceptance_rate": _rate(accepted, selected),
+        "acceptance_given_goal_rate": _rate(accepted, len(scopes)),
+        "novel_final_acceptance_rate": _rate(accepted, novel_goal_scopes),
+        "proposal_acceptance_rate": _rate(accepted, len(operations)),
+    }
+    target_evaluation = {}
+    for name, target in funnel_targets.items():
+        if name not in funnel_rates or not isinstance(target, (int, float)):
+            continue
+        actual = funnel_rates[name]
+        target_evaluation[name] = {
+            "target": float(target),
+            "actual": actual,
+            "delta": (
+                round(float(actual) - float(target), 6)
+                if actual is not None
+                else None
+            ),
+            "status": (
+                "met"
+                if actual is not None and float(actual) >= float(target)
+                else "missed" if actual is not None else "unavailable"
+            ),
+        }
 
     reduction = _read_json(workspace / "run/goal-reduction.json")
     reduction_decisions = (
@@ -782,6 +847,15 @@ def collect_phase_metrics(
     if matching_files and matched_scopes < len(matching_files):
         warnings.append(
             f"{len(matching_files) - matched_scopes}/{len(matching_files)} scopes had no recalled skill"
+        )
+    missed_targets = [
+        name
+        for name, result in target_evaluation.items()
+        if result["status"] == "missed"
+    ]
+    if missed_targets:
+        warnings.append(
+            "funnel targets missed: " + ", ".join(sorted(missed_targets))
         )
 
     return {
@@ -941,6 +1015,19 @@ def collect_phase_metrics(
             "changed_scopes": changed_scopes,
             "proposed_operations": len(operations),
             "accepted_proposals": accepted,
+            "idempotent_replay_scopes": idempotent_scopes,
+            "novel_goal_scopes": novel_goal_scopes,
+            "rates": funnel_rates,
+            "action_count_distribution": dict(
+                sorted(action_count_distribution.items(), key=lambda row: int(row[0]))
+            ),
+            "operation_type_distribution": dict(
+                sorted(operation_type_distribution.items())
+            ),
+            "accepted_operation_type_distribution": dict(
+                sorted(accepted_operation_type_distribution.items())
+            ),
+            "targets": target_evaluation,
         },
         "warnings": warnings,
     }

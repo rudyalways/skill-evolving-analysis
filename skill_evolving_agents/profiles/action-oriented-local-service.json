@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "name": "action-oriented-local-service",
+  "max_cost_tier": 3,
+  "preferred_cost_tier": 1,
+  "budgets": {
+    "target_agent_calls": 16,
+    "hard_agent_call_cap": 24,
+    "on_cap": "defer"
+  },
+  "funnel_targets": {
+    "diagnosis_rate": 1.0,
+    "goal_decision_rate": 1.0,
+    "novel_action_scope_rate": 0.5,
+    "novel_proposal_rate": 0.5,
+    "novel_final_acceptance_rate": 0.2,
+    "proposal_acceptance_rate": 0.4
+  },
+  "embedding_runtime": {
+    "transport": "local_process",
+    "host": "127.0.0.1",
+    "port": 8181,
+    "backend": "sentence-transformers",
+    "model": "Qwen/Qwen3-Embedding-0.6B",
+    "revision": "97b0c614be4d77ee51c0cef4e5f07c00f9eb65b3",
+    "device": "cpu",
+    "dimensions": 1024,
+    "query_instruction": "Retrieve the relevant reusable agent skill, failure category, or evolution evidence for this query",
+    "startup_timeout_seconds": 180,
+    "timeout_ms": 60000,
+    "on_start_error": "hashing-reference"
+  },
+  "evolution_gate": {
+    "enabled": true,
+    "minimum_distinct_sessions": 2,
+    "minimum_evidence_records": 3,
+    "minimum_confidence": 0.8,
+    "immediate_critical": true,
+    "immediate_detectors": ["correction-heavy", "keep-going-loop", "repeated-instructions", "rapid-corrections"],
+    "single_session_diagnosis_limit": 4,
+    "single_session_diagnosis_min_confidence": 0.82,
+    "single_session_diagnosis_min_evidence": 1,
+    "diagnosis_target_rate": 1.0,
+    "maximum_diagnosis_scopes": 8
+  },
+  "phases": {
+    "normalize": {"mode": "enabled", "kind": "deterministic", "algorithm": "normalize.vendor-json-v1"},
+    "detect": {"mode": "enabled", "kind": "deterministic", "algorithm": "detect.rules-v1"},
+    "semantic_prefilter": {
+      "mode": "enabled", "kind": "embedding-service", "algorithm": "prefilter.embedding-json-v1",
+      "reject_below": 0.15, "accept_at": 0.7, "noise_accept_at": 0.75, "minimum_margin": 0.08,
+      "top_k": 3, "input_max_chars": 1200, "timeout_ms": 60000, "on_error": "escalate",
+      "categories": {
+        "correction": "user correction, dissatisfaction, repeated instruction, or unresolved request",
+        "execution_failure": "tool error, unchanged retry, oscillation, edit churn, or failed execution",
+        "latency": "slow execution, timeout, excessive waiting, or abandonment",
+        "methodology": "reusable successful workflow, recovery, verification, or decision method",
+        "noise": "incidental, infrastructure-only, non-reusable, or non-evolvable event"
+      }
+    },
+    "diagnosis": {"mode": "enabled", "kind": "agent", "algorithm": "diagnosis.agent-full-json-v1"},
+    "recall": {"mode": "enabled", "kind": "embedding-service", "algorithm": "recall.embedding-v1", "reject_below": 0.15, "accept_at": 0.7, "minimum_score": 0.35, "top_k": 5, "document_max_chars": 1200, "timeout_ms": 60000, "on_error": "fallback"},
+    "goal": {"mode": "enabled", "kind": "agent", "algorithm": "goal.agent-full-json-v1"},
+    "optimize": {"mode": "enabled", "kind": "agent", "algorithm": "optimize.agent-v1"},
+    "verify": {"mode": "enabled", "kind": "agent", "algorithm": "verify.agent-structural-v1"},
+    "publish": {"mode": "enabled", "kind": "deterministic", "algorithm": "publish.atomic-v1"}
+  }
+}

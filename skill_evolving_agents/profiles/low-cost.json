@@ -11,7 +11,11 @@
     "minimum_evidence_records": 3,
     "minimum_confidence": 0.8,
     "immediate_critical": true,
-    "immediate_detectors": ["correction-heavy", "keep-going-loop", "repeated-instructions", "rapid-corrections"]
+    "immediate_detectors": ["correction-heavy", "keep-going-loop", "repeated-instructions", "rapid-corrections"],
+    "single_session_diagnosis_limit": 2,
+    "single_session_diagnosis_min_confidence": 0.85,
+    "single_session_diagnosis_min_evidence": 1,
+    "maximum_diagnosis_scopes": 1
   },
   "phases": {
     "normalize": {"mode": "enabled", "kind": "deterministic", "algorithm": "normalize.vendor-json-v1"},

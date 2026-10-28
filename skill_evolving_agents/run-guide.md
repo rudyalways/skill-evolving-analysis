@@ -72,6 +72,36 @@ Profiles may also set an agent-call budget. The runner reserves calls atomically
 before launching a hosted session and writes `logs/agent-call-budget.json`.
 Once `hard_agent_call_cap` is reached, no additional paid agent session starts.
 
+### Configurable funnel targets
+
+Use `profiles/action-oriented-local-service.json` when the purpose of a run is
+to exercise the complete evolution funnel rather than minimize calls. Its
+`evolution_gate.diagnosis_target_rate` and `maximum_diagnosis_scopes` control
+how many selected findings may reach Diagnosis; the agent-call cap remains the
+hard safety boundary. `funnel_targets` are optimization objectives, not quotas
+that can override evidence, verification, idempotency, or Judge.
+
+`logs/phase-metrics.json` reports these rates and their target deltas:
+
+- `diagnosis_rate`: diagnosed findings / selected findings.
+- `goal_decision_rate`: Goal decisions, including evidence-backed no-change /
+  selected findings.
+- `action_scope_rate`: scopes proposing at least one operation / selected
+  findings.
+- `novel_action_scope_rate`: action scopes / Goal scopes that were not exact
+  replays of an already-applied finding. This is the primary action objective;
+  excluding idempotent replay prevents duplicate edits made only to hit a rate.
+- `proposal_rate` and `novel_proposal_rate`: operations proposed against the
+  corresponding selected or novel denominator.
+- `final_acceptance_rate` and `novel_final_acceptance_rate`: accepted
+  operations against those denominators.
+- `proposal_acceptance_rate`: accepted / proposed operations.
+
+The same report includes distributions for operations per scope, proposed
+operation type, accepted operation type, idempotent replay scopes, and target
+status (`met`, `missed`, or `unavailable`). A missed target is a tuning signal;
+it must never cause the pipeline to fabricate an action or weaken verification.
+
 ### Trace-free inventory maintenance
 
 Use `--inventory-only` to inspect and improve the current candidate skill
@@ -135,6 +165,65 @@ include per-kind plan compliance plus observed delegated-agent prompt and eval
 use. They report delegated agent files separately from deterministically generated
 `agents/openai.yaml` interface metadata. Observed runtime
 rates remain null when logs contain no corresponding execution or use evidence.
+
+### Release bundles and rollback
+
+Every accepted operation is prepared as a content-addressed release before the
+active run inventory is changed. The immutable bundle under
+`run/releases/<release-id>/` contains the before and after skill trees,
+metadata and changelog snapshots, the exact operation, operation evidence,
+tree digests, and replay-derived release channel. `publication.json` records
+the release ID and channel.
+
+A qualified paired held-out replay enters the `canary` channel. An otherwise
+accepted operation without qualifying replay publishes explicitly as
+`provisional`; structural verification is never mislabeled as behavioral
+promotion. `run/releases/active.json` is replaced atomically under a
+cross-process file lock. `stable.json` advances only after the canary has at
+least 20 observations and remains within the failure, latency, and cost
+regression bounds. A severe regression rolls back immediately. If inventory
+merge fails, the runner restores the captured before snapshot.
+
+Record a canary observation (repeat as traffic accumulates):
+
+```bash
+python3 skill_evolving_agents/common/release_bundle.py observe \
+  skill_evolving_agents/workspace/runs/<execution-run-id> <release-id> \
+  --samples 20 --failures 0 --latency-regression 0.05 --cost-regression 0.02
+```
+
+For an operator-directed rollback inside a run workspace:
+
+```bash
+python3 skill_evolving_agents/common/release_bundle.py rollback \
+  skill_evolving_agents/workspace/runs/<execution-run-id> <release-id>
+```
+
+Rollback restores affected skill trees, metadata, and changelogs from the
+bundle and writes a rollback record.
+
+### Held-out replay, inventory pointers, privacy, and tenants
+
+Place immutable held-out cases at
+`evaluation/held_out/<skill>.json` inside the run workspace and configure
+`SKILL_EVOLVER_REPLAY_COMMAND`. The command receives one JSON request on stdin
+for each `without_skill` and `with_skill` case and must return a JSON object
+with boolean `passed` and `activated` fields; numeric token, tool-call, error,
+and timing fields are optional. The runner creates and validates the replay
+manifest and benchmark automatically. Without a real evaluator command it
+records `not_run` and cannot promote the release.
+
+Published candidate inventories are snapshotted under
+`workspace/inventory_releases/<content-digest>/` and selected by the atomically
+replaced `workspace/active-inventory.json`. New trace and inventory runs read
+the pointer; the legacy candidate folders are only a compatibility mirror.
+
+Normalization redacts credential-shaped values, authorization fields, private
+keys, and email addresses before canonical turns, trajectories, or tool
+evidence reach agents. Trace strings remain untrusted data; redaction is not an
+instruction interpreter. Use `--tenant <id>` to place run state, inventory,
+metrics, and optimization data below `workspace/tenants/<id>/`; tenant IDs are
+validated before path resolution and traversal values are rejected.
 
 Repeated resource opportunities have a conservative single-session creation
 gate. By default it requires confidence `>= 0.90`, at least three occurrences

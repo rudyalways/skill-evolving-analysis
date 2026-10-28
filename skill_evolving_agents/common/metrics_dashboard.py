@@ -15,6 +15,7 @@ from datetime import UTC, datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
+from urllib.parse import parse_qs, quote, unquote, urlparse
 
 
 def _load_metrics():
@@ -30,6 +31,7 @@ def _load_metrics():
 
 _METRICS = _load_metrics()
 _SIG_RE = re.compile(r"(sig-[0-9a-f]+)")
+_LIVE_STATUS_MAX_SECONDS = 12 * 60 * 60
 _TRUNK = {
     "normalize-traces",
     "detect-signals",
@@ -38,6 +40,464 @@ _TRUNK = {
     "label-skills",
     "validate-skill-labels",
 }
+_PHASE_OUTPUT_JSON = {
+    "finding.json",
+    "diagnosis.json",
+    "label-matching.json",
+    "evolve-goal.json",
+    "goal-reduction.json",
+    "changelog.json",
+    "verification-input.json",
+    "verification-output.required.json",
+    "verification.json",
+    "judge.json",
+    "publication.json",
+    "pipeline-summary.json",
+}
+_PHASE_OUTPUT_ORDER = (
+    "detect-signals",
+    "label-traces-cluster",
+    "label-skills",
+    "goal",
+    "optimize",
+    "verification",
+    "judge",
+    "publication",
+    "summary",
+)
+
+
+def skill_inventory_stats(database: Path) -> dict[str, Any]:
+    """Aggregate domain, OOD, lifecycle, and per-skill inventory statistics."""
+    path = database.parent / "candidate_skills_metadata/metadata.json"
+    empty = {
+        "source": str(path), "total_skills": 0, "domain_stats": [],
+        "ood_stats": [], "lifecycle_stats": [], "top_skills": [], "per_skill": [],
+    }
+    try:
+        document = json.loads(path.read_text())
+    except (OSError, json.JSONDecodeError):
+        return empty
+    rows = [row for row in document.get("skills_metadata", []) if isinstance(row, dict)]
+    domains: dict[str, dict[str, float]] = defaultdict(lambda: {"skills": 0, "weight": 0.0})
+    ood: dict[str, int] = defaultdict(int)
+    lifecycle_counts: dict[str, int] = defaultdict(int)
+    per_skill = []
+    for row in rows:
+        lifecycle = row.get("lifecycle") if isinstance(row.get("lifecycle"), dict) else {}
+        status = str(lifecycle.get("status") or "unknown")
+        evidence_records = int(lifecycle.get("evidence_records") or 0)
+        evaluation_kind = str(lifecycle.get("evaluation_kind") or "unknown")
+        legacy_default = (
+            evaluation_kind == "legacy_inventory_backfill"
+            or lifecycle.get("evaluation_baseline_reason") == "legacy_inventory_backfill"
+        )
+        confidence_state = "legacy_default" if legacy_default else "measured" if evidence_records else "no_evidence"
+        lifecycle_counts[status] += 1
+        skill_domains = []
+        for value in row.get("skill_types") or []:
+            if not isinstance(value, dict) or not str(value.get("type", "")).startswith("domain/"):
+                continue
+            name = str(value["type"]).removeprefix("domain/") or "unspecified"
+            weight = float(value.get("weight") or 0)
+            domains[name]["skills"] += 1
+            domains[name]["weight"] += weight
+            skill_domains.append({"domain": name, "weight": weight})
+        unmatched = [str(value.get("type") if isinstance(value, dict) else value) for value in row.get("unmatched_skill_types") or []]
+        for value in unmatched:
+            ood[value or "unspecified"] += 1
+        per_skill.append({
+            "skill": str(row.get("skill") or "unnamed"),
+            "description": str(row.get("description") or ""),
+            "domains": sorted(skill_domains, key=lambda value: (-value["weight"], value["domain"])),
+            "ood": unmatched,
+            "status": status,
+            "confidence": lifecycle.get("confidence"),
+            "evidence_records": evidence_records,
+            "distinct_sessions": int(lifecycle.get("distinct_sessions") or len(lifecycle.get("origin_session_ids") or [])),
+            "evaluation_kind": evaluation_kind,
+            "confidence_state": confidence_state,
+            "is_uncalibrated": confidence_state != "measured",
+        })
+    domain_stats = [
+        {
+            "domain": name,
+            "skills": int(values["skills"]),
+            "weight": round(values["weight"], 3),
+            "mean_weight": round(values["weight"] / values["skills"], 3),
+        }
+        for name, values in domains.items()
+    ]
+    domain_stats.sort(key=lambda row: (-row["skills"], -row["weight"], row["domain"]))
+    per_skill.sort(key=lambda row: row["skill"])
+    top_skills = sorted(
+        per_skill,
+        key=lambda row: (
+            row["is_uncalibrated"],
+            -(float(row["confidence"]) if isinstance(row["confidence"], (int, float)) else -1),
+            -row["evidence_records"], -row["distinct_sessions"], row["skill"],
+        ),
+    )[:10]
+    return {
+        "source": str(path), "total_skills": len(per_skill),
+        "domain_stats": domain_stats,
+        "ood_stats": [{"type": name, "skills": count} for name, count in sorted(ood.items(), key=lambda item: (-item[1], item[0]))],
+        "lifecycle_stats": [{"status": name, "skills": count} for name, count in sorted(lifecycle_counts.items(), key=lambda item: (-item[1], item[0]))],
+        "top_skills": top_skills, "per_skill": per_skill,
+    }
+
+
+def _json_phase(relative: Path) -> str:
+    """Map a run-owned JSON artifact to the phase that produced it."""
+    parts = relative.parts
+    name = relative.name
+    if parts[:3] == ("traces", "derived", "normalized"):
+        return "preprocessing"
+    if parts[:3] == ("traces", "derived", "findings"):
+        return "detect-signals"
+    if name in {"cluster-metrics.json", "diagnosis.json"}:
+        return "label-traces-cluster"
+    if name == "label-matching.json":
+        return "label-skills"
+    if name in {"evolve-goal.json", "goal-reduction.json"}:
+        return "goal"
+    if name in {"optimization.json", "changelog.json"}:
+        return "optimize"
+    if name in {"verification.json", "verification-input.json", "verification-output.required.json"}:
+        return "verification"
+    if name == "judge.json":
+        return "judge"
+    if name == "publication.json":
+        return "publication"
+    if name == "pipeline-summary.json":
+        return "summary"
+    if len(parts) > 2 and parts[:2] == ("run", "status"):
+        return parts[2]
+    if parts and parts[0] == "logs":
+        return "observability"
+    if parts and parts[0] == "target":
+        return "inventory"
+    return "control-plane"
+
+
+def _artifact_id(value: Any, path: Path) -> str:
+    parts = path.parts
+    if "ops" in parts:
+        index = parts.index("ops")
+        if index > 0 and index + 1 < len(parts):
+            return f"{parts[index - 1]}:op-{parts[index + 1]}"
+    if isinstance(value, dict):
+        for key in ("id", "finding_id", "operation_id", "cluster_id", "skill", "run_id", "item"):
+            raw = value.get(key)
+            if isinstance(raw, (str, int)) and str(raw).strip():
+                return str(raw)
+    if path.parent.name.startswith("sig-"):
+        return path.parent.name
+    return path.stem
+
+
+def _ood_values(value: Any) -> list[str]:
+    found: list[str] = []
+    if isinstance(value, dict):
+        for key, child in value.items():
+            normalized = str(key).lower().replace("-", "_")
+            if normalized in {
+                "ood", "out_of_distribution", "unmatched_skill_types",
+                # Preserve the producer's historical misspelling.
+                "newly_detected_skill_capabilites_missing",
+                "newly_detected_skill_capabilities_missing",
+            }:
+                if child not in (None, [], {}, "", False):
+                    if isinstance(child, list):
+                        found.extend(
+                            str(item.get("type") or item.get("id") or item)
+                            if isinstance(item, dict) else str(item)
+                            for item in child[:8]
+                        )
+                    elif isinstance(child, dict):
+                        found.extend(str(item) for item in list(child)[:8])
+                    else:
+                        found.append(str(child))
+            found.extend(_ood_values(child))
+    elif isinstance(value, list):
+        for child in value:
+            found.extend(_ood_values(child))
+    return list(dict.fromkeys(found))[:12]
+
+
+def phase_json_audit(database: Path, run_id: str) -> dict[str, Any]:
+    runs_root = (database.parent / "runs").resolve()
+    root = (runs_root / run_id).resolve()
+    if root.parent != runs_root or not root.is_dir():
+        return {"run_id": run_id, "phases": [], "document_count": 0}
+    grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for path in sorted(root.rglob("*.json")):
+        relative = path.relative_to(root)
+        if path.name not in _PHASE_OUTPUT_JSON:
+            continue
+        try:
+            value = json.loads(path.read_text())
+        except (OSError, json.JSONDecodeError):
+            continue
+        ood = _ood_values(value)
+        grouped[_json_phase(relative)].append({
+            "path": relative.as_posix(),
+            "name": path.name,
+            "id": _artifact_id(value, path),
+            "ood": ood,
+            "has_ood": bool(ood),
+            "keys": list(value)[:12] if isinstance(value, dict) else [],
+            "bytes": path.stat().st_size,
+            "url": f"/api/artifact?run={quote(run_id)}&path={quote(relative.as_posix())}",
+        })
+    order = {name: index for index, name in enumerate(_PHASE_OUTPUT_ORDER)}
+    phases = [
+        {"phase": phase, "documents": documents,
+         "document_count": len(documents),
+         "ood_count": sum(row["has_ood"] for row in documents)}
+        for phase in _PHASE_OUTPUT_ORDER
+        for documents in [grouped.get(phase, [])]
+    ]
+    phases.sort(key=lambda row: (order.get(row["phase"], 999), row["phase"]))
+    return {"run_id": run_id, "phases": phases,
+            "document_count": sum(row["document_count"] for row in phases)}
+
+
+def goal_operation_stats(database: Path) -> dict[str, Any]:
+    """Aggregate proposed goal operations across runs, without relying on execution."""
+    kinds = ("create", "update", "delete", "merge", "split", "no_change")
+    operation_counts = defaultdict(int)
+    skills: dict[str, dict[str, dict[str, Any]]] = defaultdict(dict)
+    categories: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
+    ood_types: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
+    sections: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
+    directories: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
+    resource_decisions: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
+    goal_documents = 0
+    for run_root in sorted((database.parent / "runs").glob("*")):
+        metadata_path = run_root / "target/to_be_improved_skills_metadata/metadata.json"
+        metadata_by_skill: dict[str, dict[str, Any]] = {}
+        try:
+            metadata = json.loads(metadata_path.read_text())
+            metadata_by_skill = {
+                str(row.get("skill")): row
+                for row in metadata.get("skills_metadata", [])
+                if isinstance(row, dict) and row.get("skill")
+            }
+        except (OSError, json.JSONDecodeError):
+            pass
+        for path in sorted((run_root / "run").glob("*/evolve-goal.json")):
+            try:
+                goal = json.loads(path.read_text())
+            except (OSError, json.JSONDecodeError):
+                continue
+            goal_documents += 1
+            operations = ((goal.get("action") or {}).get("ops") or []) if isinstance(goal, dict) else []
+            if not operations:
+                operation_counts["no_change"] += 1
+                continue
+            for operation in operations:
+                if not isinstance(operation, dict):
+                    continue
+                kind = str(operation.get("op") or "unknown")
+                operation_counts[kind] += 1
+                embedded: dict[str, dict[str, Any]] = {}
+                raw_skills = operation.get("skills") or []
+                for value in raw_skills:
+                    if isinstance(value, dict) and value.get("skill"):
+                        embedded[str(value["skill"])] = value
+                    elif isinstance(value, str) and value:
+                        embedded[value] = {}
+                if isinstance(operation.get("into"), dict) and operation["into"].get("skill"):
+                    embedded[str(operation["into"]["skill"])] = operation["into"]
+                if isinstance(operation.get("skill"), str):
+                    embedded.setdefault(str(operation["skill"]), {})
+                into_values = operation.get("into") if isinstance(operation.get("into"), list) else []
+                for value in into_values:
+                    if isinstance(value, dict) and value.get("skill"):
+                        embedded[str(value["skill"])] = value
+                for name, definition in embedded.items():
+                    metadata_row = metadata_by_skill.get(name, {})
+                    labels = definition.get("labels") or metadata_row.get("skill_types") or []
+                    label_names = sorted({
+                        str(label.get("type"))
+                        for label in labels if isinstance(label, dict) and label.get("type")
+                    })
+                    unmatched = definition.get("unmatched_skill_types") or metadata_row.get("unmatched_skill_types") or []
+                    unmatched_names = sorted({
+                        str(value.get("type") if isinstance(value, dict) else value)
+                        for value in unmatched if value
+                    })
+                    section_names = sorted({
+                        str(value.get("section")) for value in definition.get("sections") or []
+                        if isinstance(value, dict) and value.get("section")
+                    })
+                    directory_names = sorted({
+                        str(value.get("dir")).split("/", 1)[0] for value in definition.get("dirs") or []
+                        if isinstance(value, dict) and value.get("dir")
+                    })
+                    plans = sorted({
+                        f"{value.get('resource')}:{value.get('decision')}"
+                        for value in definition.get("resource_plan") or []
+                        if isinstance(value, dict) and value.get("resource") and value.get("decision")
+                    })
+                    for bucket in (kind, "all"):
+                        row = skills[bucket].setdefault(name, {
+                            "skill": name, "count": 0, "categories": set(), "ood": set(),
+                            "sections": set(), "directories": set(), "resource_decisions": set(),
+                        })
+                        row["count"] += 1
+                        row["categories"].update(label_names)
+                        row["ood"].update(unmatched_names)
+                        row["sections"].update(section_names)
+                        row["directories"].update(directory_names)
+                        row["resource_decisions"].update(plans)
+                        for label in label_names:
+                            categories[bucket][label] += 1
+                        for value in unmatched_names:
+                            ood_types[bucket][value] += 1
+                        for value in section_names:
+                            sections[bucket][value] += 1
+                        for value in directory_names:
+                            directories[bucket][value] += 1
+                        for value in plans:
+                            resource_decisions[bucket][value] += 1
+    return {
+        "goal_documents": goal_documents,
+        "operations": [{"operation": kind, "count": operation_counts[kind]} for kind in kinds],
+        "by_operation": {
+            kind: {
+                "skills": [
+                    {**row, **{field: sorted(row[field]) for field in (
+                        "categories", "ood", "sections", "directories", "resource_decisions"
+                    )}}
+                    for row in sorted(skills[kind].values(), key=lambda value: (-value["count"], value["skill"]))
+                ],
+                "categories": [
+                    {"category": name, "count": count}
+                    for name, count in sorted(categories[kind].items(), key=lambda item: (-item[1], item[0]))
+                ],
+                "ood": [
+                    {"type": name, "count": count}
+                    for name, count in sorted(ood_types[kind].items(), key=lambda item: (-item[1], item[0]))
+                ],
+                "sections": [{"name": name, "count": count} for name, count in sorted(sections[kind].items(), key=lambda item: (-item[1], item[0]))],
+                "directories": [{"name": name, "count": count} for name, count in sorted(directories[kind].items(), key=lambda item: (-item[1], item[0]))],
+                "resource_decisions": [{"name": name, "count": count} for name, count in sorted(resource_decisions[kind].items(), key=lambda item: (-item[1], item[0]))],
+            }
+            for kind in ("all", *kinds)
+        },
+    }
+
+
+def optimize_distribution_stats(database: Path) -> dict[str, Any]:
+    """Aggregate actual optimized skill changes from operation changelogs."""
+    operation_kinds = ("create", "update", "delete", "merge", "split", "no_change")
+    counters = {name: defaultdict(int) for name in ("operations", "skills", "sections", "directories")}
+    by_operation: dict[str, dict[str, defaultdict[str, int]]] = defaultdict(
+        lambda: {name: defaultdict(int) for name in ("skills", "sections", "directories")}
+    )
+    document_count = 0
+    change_count = 0
+    for path in sorted((database.parent / "runs").glob("*/run/*/ops/*/changelog.json")):
+        try:
+            document = json.loads(path.read_text())
+        except (OSError, json.JSONDecodeError):
+            continue
+        document_count += 1
+        for change in document.get("changes") or []:
+            if not isinstance(change, dict):
+                continue
+            change_count += 1
+            operation = str(change.get("operation") or "unknown")
+            skill = str(change.get("skill") or "unknown")
+            counters["operations"][operation] += 1
+            counters["skills"][skill] += 1
+            by_operation[operation]["skills"][skill] += 1
+            for value in change.get("sections") or []:
+                counters["sections"][str(value)] += 1
+                by_operation[operation]["sections"][str(value)] += 1
+            for value in change.get("directories") or []:
+                directory = str(value).split("/", 1)[0]
+                counters["directories"][directory] += 1
+                by_operation[operation]["directories"][directory] += 1
+    serialize = lambda values: [
+        {"name": key, "count": count}
+        for key, count in sorted(values.items(), key=lambda item: (-item[1], item[0]))
+    ]
+    return {
+        "document_count": document_count,
+        "change_count": change_count,
+        **{
+            name: serialize(values)
+            for name, values in counters.items()
+        },
+        "operations": [
+            {"name": operation, "count": counters["operations"][operation]}
+            for operation in (*operation_kinds, *sorted(set(counters["operations"]) - set(operation_kinds)))
+        ],
+        "by_operation": {
+            operation: {name: serialize(values) for name, values in groups.items()}
+            for operation, groups in sorted(by_operation.items())
+        },
+    }
+
+
+def diagnosis_distribution_stats(database: Path) -> dict[str, Any]:
+    """Aggregate scoped diagnosis capability classifications across all runs."""
+    rows: dict[tuple[str, str], dict[str, Any]] = {}
+    document_count = 0
+    for path in sorted((database.parent / "runs").glob("*/run/*/diagnosis.json")):
+        try:
+            document = json.loads(path.read_text())
+        except (OSError, json.JSONDecodeError):
+            continue
+        if not isinstance(document, dict):
+            continue
+        document_count += 1
+        groups = (
+            ("known", document.get("skill_capabilities_missing") or []),
+            ("ood", document.get("newly_detected_skill_capabilites_missing") or document.get("newly_detected_skill_capabilities_missing") or []),
+        )
+        for classification, values in groups:
+            for value in values:
+                if not isinstance(value, dict):
+                    continue
+                capability = str(value.get("type") or value.get("skill_capability") or "unspecified")
+                key = (classification, capability)
+                row = rows.setdefault(key, {
+                    "classification": classification,
+                    "type": capability,
+                    "category": capability.split("/", 1)[0] if "/" in capability else "uncategorized",
+                    "count": 0,
+                    "confidences": [],
+                })
+                row["count"] += 1
+                confidence = value.get("confidence")
+                if isinstance(confidence, (int, float)):
+                    row["confidences"].append(float(confidence))
+    distribution = []
+    for row in rows.values():
+        confidences = row.pop("confidences")
+        distribution.append({
+            **row,
+            "mean_confidence": round(statistics.mean(confidences), 3) if confidences else None,
+        })
+    # Review in-distribution gaps before novel/OOD detections.
+    distribution.sort(key=lambda row: (row["classification"] == "ood", -row["count"], row["type"]))
+    categories: dict[tuple[str, str], int] = defaultdict(int)
+    for row in distribution:
+        categories[(row["classification"], row["category"])] += row["count"]
+    return {
+        "document_count": document_count,
+        "known_count": sum(row["count"] for row in distribution if row["classification"] == "known"),
+        "ood_count": sum(row["count"] for row in distribution if row["classification"] == "ood"),
+        "distribution": distribution,
+        "categories": [
+            {"classification": classification, "category": category, "count": count}
+            for (classification, category), count in sorted(categories.items(), key=lambda item: (item[0][0] == "ood", -item[1], item[0][1]))
+        ],
+    }
 
 
 def percentile(values: list[float], fraction: float) -> float:
@@ -81,11 +541,14 @@ def active_statuses(database: Path, run_id: str) -> list[dict[str, Any]]:
             started = datetime.fromisoformat(str(raw_started).replace("Z", "+00:00"))
         except ValueError:
             continue
+        elapsed_seconds = max((now - started).total_seconds(), 0)
+        if elapsed_seconds > _LIVE_STATUS_MAX_SECONDS:
+            continue
         record = {
             "stage": row.get("stage"),
             "item": row.get("item"),
             "started_at": started.isoformat(),
-            "elapsed_seconds": max((now - started).total_seconds(), 0),
+            "elapsed_seconds": elapsed_seconds,
         }
         skills = row.get("skills")
         if isinstance(skills, list):
@@ -143,11 +606,24 @@ def run_progress(
     stages: list[dict[str, Any]] = []
     for stage, label in display:
         rows = documents.get(stage, [])
-        states = [row.get("state") for row in rows]
+        states = []
+        for row in rows:
+            value = row.get("state")
+            if value == "started":
+                raw = row.get("started_at") or row.get("at")
+                try:
+                    started = datetime.fromisoformat(str(raw).replace("Z", "+00:00"))
+                    if (now - started).total_seconds() > _LIVE_STATUS_MAX_SECONDS:
+                        value = "stale"
+                except ValueError:
+                    value = "stale"
+            states.append(value)
         if "failed" in states:
             state = "failed"
         elif "started" in states:
             state = "running"
+        elif "stale" in states:
+            state = "stale"
         elif rows and all(value == "done" for value in states):
             state = "done"
         elif operations_skipped and stage in {"optimize", "verifiter", "judge"}:
@@ -160,8 +636,8 @@ def run_progress(
             if row.get("state") == "done"
         )
         running_seconds = 0.0
-        for row in rows:
-            if row.get("state") != "started":
+        for row, effective_state in zip(rows, states):
+            if effective_state != "started":
                 continue
             raw = row.get("started_at") or row.get("at")
             try:
@@ -869,6 +1345,10 @@ def metrics_payload(database: Path) -> dict[str, Any]:
         "runs": run_summaries,
         "phases": phase_summaries,
         "phase_metrics": _METRICS.aggregate_phase_metrics(runs_root),
+        "skill_stats": skill_inventory_stats(database),
+        "goal_stats": goal_operation_stats(database),
+        "diagnosis_stats": diagnosis_distribution_stats(database),
+        "optimize_stats": optimize_distribution_stats(database),
         "excluded_database_run_ids": excluded_run_ids,
     }
 
@@ -980,10 +1460,43 @@ def render(database: Path, output: Path) -> Path:
             "</tr>"
         )
 
+    skills = skill_inventory_stats(database)
+    domain_rows = "".join(
+        f"<tr><td>{html.escape(row['domain'])}</td><td>Recognized domain</td>"
+        f"<td>{row['skills']}</td><td>{row['weight']:.3f}</td><td>{row['mean_weight']:.3f}</td></tr>"
+        for row in skills["domain_stats"]
+    )
+    ood_rows = "".join(
+        f'<tr class="ood-row"><td>{html.escape(row["type"])}<span class="ood-tag">OOD</span></td>'
+        f"<td>Unmatched taxonomy type</td><td>{row['skills']}</td><td>—</td><td>—</td></tr>"
+        for row in skills["ood_stats"]
+    )
+    per_skill_rows_parts = []
+    for row in skills["per_skill"]:
+        if row["confidence_state"] == "legacy_default":
+            confidence = '<span class="confidence uncalibrated">Legacy default</span>'
+        elif row["confidence_state"] == "no_evidence":
+            confidence = '<span class="confidence uncalibrated">No evidence</span>'
+        elif isinstance(row["confidence"], (int, float)):
+            level = "high" if row["confidence"] >= .9 else "medium" if row["confidence"] >= .75 else "low"
+            confidence = f'<span class="confidence {level}">{row["confidence"]:.2f}</span>'
+        else:
+            confidence = "—"
+        per_skill_rows_parts.append(
+            "<tr>" f"<td>{html.escape(row['skill'])}</td>"
+            f"<td>{html.escape(row['status'])}</td><td>{confidence}</td>"
+            f"<td>{html.escape(row['evaluation_kind'].replace('_', ' '))}</td>"
+            f"<td>{row['evidence_records']}</td><td>{row['distinct_sessions']}</td>"
+            f"<td>{html.escape(', '.join(value['domain'] for value in row['domains'])) or '—'}</td>"
+            f"<td>{html.escape(', '.join(row['ood'])) or '—'}</td></tr>"
+        )
+    per_skill_rows = "".join(per_skill_rows_parts)
+
     payload = {
         "database": str(database),
         "run_count": len(runs),
         "span_count": len(rows),
+        "skill_stats": skills,
     }
     document = f"""<!doctype html>
 <html lang="en">
@@ -999,6 +1512,11 @@ h1 {{ margin-bottom: 4px; }} .muted {{ color: #9aa4b8; }}
 .card {{ background: #151c30; border: 1px solid #29334d; border-radius: 12px;
   padding: 18px; margin: 16px 0; }}
 .stats {{ display: flex; flex-wrap: wrap; gap: 18px; margin-bottom: 12px; }}
+.tabs {{ display:flex; gap:8px; flex-wrap:wrap; margin:18px 0; }}
+.tab {{ border:1px solid #36415f; background:#151c30; color:#cbd3e5;
+  padding:9px 14px; border-radius:9px; cursor:pointer; }}
+.tab.active {{ background:#7c5cff; border-color:#9a85ff; color:white; }}
+.panel {{ display:none; }} .panel.active {{ display:block; }}
 .bars {{ display: flex; overflow: hidden; border-radius: 7px; min-height: 32px; }}
 .bar {{ min-width: 5px; padding: 7px; white-space: nowrap; overflow: hidden;
   box-sizing: border-box; font-size: 12px; }}
@@ -1008,19 +1526,60 @@ table {{ width: 100%; border-collapse: collapse; background: #151c30; }}
 th, td {{ padding: 10px; border-bottom: 1px solid #29334d; text-align: left; }}
 th {{ position: sticky; top: 0; background: #202943; }}
 code {{ color: #9fd3ff; }}
+.ood-row {{ background:#2b2118; }} .ood-row td:first-child {{ border-left:3px solid #e89b4a; }}
+.ood-tag {{ display:inline-block; margin-left:7px; padding:2px 7px; border-radius:999px;
+  font-size:11px; font-weight:700; color:#ffd6a3; background:#5a351d; vertical-align:middle; }}
+.table-note {{ color:#9aa4b8; margin-top:-4px; }}
+.confidence {{ display:inline-block; min-width:74px; padding:3px 8px; border-radius:999px; text-align:center; font-weight:700; }}
+.confidence.high {{ color:#91ead8; background:#173f39; }}
+.confidence.medium {{ color:#ffe09a; background:#493915; }}
+.confidence.low {{ color:#ffc0c7; background:#47202a; }}
+.confidence.uncalibrated {{ color:#b7c0d4; background:#29334d; font-weight:600; }}
+.info-button {{ position:relative; display:inline-grid; place-items:center; width:18px; height:18px;
+  margin-left:5px; padding:0; border:1px solid #7181a5; border-radius:50%; background:#25314c;
+  color:#dbe7ff; font:bold 11px ui-sans-serif,system-ui; cursor:help; vertical-align:middle; }}
+.info-button::after {{ content:attr(data-tooltip); position:absolute; z-index:20; left:50%; top:24px;
+  width:290px; padding:9px 11px; border:1px solid #566585; border-radius:7px; background:#0c1222;
+  color:#e7eaf0; font:12px/1.4 ui-sans-serif,system-ui; transform:translateX(-50%); opacity:0; pointer-events:none; }}
+.info-button:hover::after,.info-button:focus::after {{ opacity:1; }}
 </style>
 </head>
 <body><main>
 <h1>Skill Evolver Pipeline Metrics</h1>
 <p class="muted">{len(runs)} runs · {len(rows)} spans · <code>{html.escape(str(database))}</code></p>
-{''.join(run_cards) or '<p>No spans recorded.</p>'}
-<section class="card">
+<nav class="tabs" aria-label="Dashboard sections">
+<button class="tab active" data-target="overview-panel">Overview</button>
+<button class="tab" data-target="skills-panel">Stats</button>
+<button class="tab" data-target="runs-panel">Runs ({len(runs)})</button>
+</nav>
+<section id="overview-panel" class="panel active"><section class="card">
 <h2>Cross-run phase statistics</h2>
 <table><thead><tr><th>Phase</th><th>Category</th><th>Count</th>
 <th>Average</th><th>P50</th><th>P95</th><th>Maximum</th></tr></thead>
 <tbody>{''.join(phase_rows)}</tbody></table>
-</section>
+</section></section>
+<section id="skills-panel" class="panel"><section class="card">
+<h2>Skill statistics</h2><div class="stats"><span>skills <b>{skills['total_skills']}</b></span>
+<span>domains <b>{len(skills['domain_stats'])}</b></span><span>OOD types <b>{len(skills['ood_stats'])}</b></span></div>
+<h3>Taxonomy coverage</h3>
+<p class="table-note">Skill count is the number of assigned skills. OOD means unmatched by the current taxonomy.</p>
+<table><thead><tr><th>Type</th><th>Classification</th><th>Skill count</th><th>Assignment weight sum
+<button type="button" class="info-button" aria-label="Explain assignment weight sum"
+data-tooltip="Raw sum of assignment weights for this type. It grows with inventory size and is not a probability, quality score, or directly comparable coverage metric.">!</button></th><th>Mean weight
+<button type="button" class="info-button" aria-label="Explain mean assignment weight" data-tooltip="Assignment weight sum divided by assigned skill count. Use this to compare typical assignment strength across types.">!</button></th></tr></thead>
+<tbody>{domain_rows}{ood_rows or '<tr class="ood-row"><td><span class="ood-tag">OOD</span></td><td>No unmatched types</td><td>0</td><td>—</td><td>—</td></tr>'}</tbody></table>
+<h3>Per-skill stats</h3><p class="table-note">Confidence is shown only when backed by evidence. Legacy defaults and zero-evidence scores are suppressed.</p>
+<table><thead><tr><th>Skill</th><th>Lifecycle</th><th>Confidence <button type="button" class="info-button" aria-label="Explain confidence" data-tooltip="Evaluation confidence, not probability of correctness. Color bands apply only to scores backed by evidence: high ≥ 0.90, medium ≥ 0.75, low &lt; 0.75. Legacy defaults and zero-evidence scores are suppressed.">!</button></th>
+<th>Evaluation</th><th>Evidence</th><th>Sessions</th><th>Domains</th><th>OOD types</th></tr></thead><tbody>{per_skill_rows}</tbody></table>
+</section></section>
+<section id="runs-panel" class="panel">{''.join(run_cards) or '<p>No spans recorded.</p>'}</section>
 <script type="application/json" id="dashboard-metadata">{html.escape(json.dumps(payload))}</script>
+<script>
+document.querySelectorAll('.tab').forEach(button => button.addEventListener('click', () => {{
+  document.querySelectorAll('.tab').forEach(node => node.classList.toggle('active', node === button));
+  document.querySelectorAll('.panel').forEach(node => node.classList.toggle('active', node.id === button.dataset.target));
+}}));
+</script>
 </main></body></html>
 """
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -1036,12 +1595,14 @@ def live_document(refresh_seconds: float) -> str:
 <title>Skill Evolver Live Metrics</title>
 <style>
 :root {{ color-scheme: dark; font-family: ui-sans-serif, system-ui; }}
-body {{ margin:0; padding:28px; background:#0b1020; color:#e7eaf0; }}
-main {{ max-width:1200px; margin:auto; }}
+body {{ margin:0; padding:28px; background:#0b1020; color:#e7eaf0; overflow-x:hidden }}
+main {{ max-width:1200px; margin:auto; min-width:0 }}
+h1,h2,h3,.active-run {{ overflow-wrap:anywhere }}
 .muted {{ color:#9aa4b8 }} .error {{ color:#ff8080 }}
 .card {{ background:#151c30; border:1px solid #29334d; border-radius:12px;
 padding:18px; margin:16px 0; }}
 .stats {{ display:flex; flex-wrap:wrap; gap:18px; margin-bottom:12px; }}
+.stats > span {{ min-width:0 }}
 .bars {{ display:flex; overflow:hidden; border-radius:7px; min-height:32px; }}
 .bar {{ min-width:5px; padding:7px; white-space:nowrap; overflow:hidden;
 box-sizing:border-box; font-size:12px; }}
@@ -1055,14 +1616,80 @@ th {{ background:#202943 }} code {{ color:#9fd3ff }}
 padding:9px 14px; border-radius:9px; cursor:pointer }}
 .tab.active {{ background:#7c5cff; border-color:#9a85ff; color:white }}
 .panel {{ display:none }} .panel.active {{ display:block }}
+.run-browser {{ margin:16px 0; padding:14px; border:1px solid #29334d; border-radius:10px; background:#10172a }}
+.run-filters {{ display:grid; grid-template-columns:minmax(220px,1fr) 180px; gap:10px; margin-bottom:12px }}
+.run-filters input,.run-filters select {{ padding:10px 12px; border-radius:8px; background:#151c30;
+color:#e7eaf0; border:1px solid #36415f; box-sizing:border-box; width:100% }}
+.run-results {{ display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:8px; max-height:330px; overflow:auto }}
+.run-option {{ text-align:left; padding:10px; border-radius:8px; background:#151c30; color:#dce3f2;
+border:1px solid #303b58; cursor:pointer; min-width:0 }}
+.run-option:hover,.run-option.selected {{ border-color:#9a85ff; background:#202943 }}
+.run-option strong {{ display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }}
+.run-meta {{ display:flex; gap:6px; margin-top:6px; color:#9aa4b8; font-size:11px }}
+.badge {{ padding:2px 6px; border-radius:999px; background:#29334d }} .badge.live {{ color:#95eadb; background:#16433a }}
+.badge.error {{ color:#ffc0c7; background:#47202a }}
+.ood-row {{ background:#2b2118 }} .ood-row td:first-child {{ border-left:3px solid #e89b4a }}
+.ood-tag {{ display:inline-block; margin-left:7px; padding:2px 7px; border-radius:999px;
+font-size:11px; font-weight:700; color:#ffd6a3; background:#5a351d; vertical-align:middle }}
+.table-note {{ color:#9aa4b8; margin-top:-4px }}
+.confidence {{ display:inline-block; min-width:74px; padding:3px 8px; border-radius:999px; text-align:center; font-weight:700 }}
+.confidence.high {{ color:#91ead8; background:#173f39 }}
+.confidence.medium {{ color:#ffe09a; background:#493915 }}
+.confidence.low {{ color:#ffc0c7; background:#47202a }}
+.confidence.uncalibrated {{ color:#b7c0d4; background:#29334d; font-weight:600 }}
+.info-button {{ position:relative; display:inline-grid; place-items:center; width:18px; height:18px;
+margin-left:5px; padding:0; border:1px solid #7181a5; border-radius:50%; background:#25314c;
+color:#dbe7ff; font:bold 11px ui-sans-serif,system-ui; cursor:help; vertical-align:middle }}
+.info-button::after {{ content:attr(data-tooltip); position:absolute; z-index:20; left:50%; top:24px;
+width:290px; padding:9px 11px; border:1px solid #566585; border-radius:7px; background:#0c1222;
+color:#e7eaf0; font:12px/1.4 ui-sans-serif,system-ui; box-shadow:0 8px 24px #0008;
+transform:translateX(-50%); opacity:0; pointer-events:none; transition:opacity .12s }}
+.info-button:hover::after,.info-button:focus::after {{ opacity:1 }}
+.audit-phase {{ margin:18px 0; border:1px solid #29334d; border-radius:9px; overflow:hidden }}
+.audit-phase summary {{ padding:11px 13px; background:#202943; font-weight:700; cursor:pointer }}
+.audit-phase summary span {{ color:#9aa4b8; font-weight:400; font-size:12px; margin-left:8px }}
+.phase-nav {{ display:flex; flex-wrap:wrap; gap:7px; margin:12px 0 }}
+.phase-nav button {{ padding:7px 10px; border:1px solid #36415f; border-radius:999px;
+background:#151c30; color:#cbd3e5; cursor:pointer }}
+.phase-nav button:hover {{ border-color:#9a85ff; background:#202943 }}
+.json-link {{ color:#9fd3ff; text-decoration:none }} .json-link:hover {{ text-decoration:underline }}
+.json-keys {{ max-width:360px; color:#aeb8cc; font:12px ui-monospace,monospace }}
+.run-pages {{ display:flex; justify-content:center; align-items:center; gap:12px; margin-top:12px; color:#9aa4b8 }}
+.run-pages button {{ padding:7px 11px; border-radius:7px; border:1px solid #36415f; background:#151c30; color:#dce3f2; cursor:pointer }}
+.run-pages button:disabled {{ opacity:.4; cursor:not-allowed }}
+.phase-flow {{ display:flex; gap:6px; overflow-x:auto; padding:10px 2px 12px; margin:8px 0; scrollbar-width:thin }}
+.phase-flow button {{ flex:0 0 auto; border:1px solid #36415f; background:#10172a; color:#b9c3d8; padding:8px 10px; border-radius:8px; cursor:pointer; text-align:left }}
+.phase-flow button::after {{ content:'→'; margin-left:8px; color:#65708a }}
+.phase-flow button:last-child::after {{ content:''; margin:0 }}
+.phase-flow button.active {{ color:white; background:#5140a8; border-color:#9a85ff }}
+.phase-flow small {{ display:block; color:#8f9ab2; margin-top:2px }}
+.goal-analysis {{ margin:16px 0 22px; padding:14px; border:1px solid #394462; border-radius:10px; background:#10172a }}
+.operation-flow {{ display:flex; flex-wrap:wrap; gap:7px; margin:10px 0 16px }}
+.operation-flow button {{ border:1px solid #46516e; background:#182139; color:#cbd3e5; padding:8px 11px; border-radius:8px; cursor:pointer }}
+.operation-flow button.active {{ background:#167d68; border-color:#4dc6aa; color:white }}
+.operation-filter {{ position:sticky; top:8px; z-index:8; display:flex; align-items:center; gap:10px;
+background:#11192c; border:1px solid #35415e; border-radius:10px; padding:10px 12px; margin:12px 0 16px }}
+.operation-filter label {{ font-weight:700; white-space:nowrap }}
+.operation-filter select {{ min-width:180px; background:#182139; color:#f4f7ff; border:1px solid #52617f;
+border-radius:7px; padding:8px 32px 8px 10px; font:inherit }}
+.analysis-grid {{ display:grid; grid-template-columns:minmax(0,2fr) minmax(260px,1fr); gap:14px }}
+.analysis-grid table {{ font-size:13px }}
+.expandable-rows tr.after-top-ten,.expandable-rows tr.after-id-top-ten,.expandable-rows tr.after-ood-top-ten {{ display:none }}
+.expandable-rows.expand-all tr.after-top-ten,.expandable-rows.expand-id tr.after-id-top-ten,.expandable-rows.expand-ood tr.after-ood-top-ten {{ display:table-row }}
+.table-expander {{ margin:9px 0 2px; padding:7px 11px; border:1px solid #9aabc1; border-radius:7px;
+background:#fff; color:#29466e; font:inherit; font-weight:700; cursor:pointer }}
+.table-expander:hover {{ background:#edf3fb }}
+@media (max-width:800px) {{ .analysis-grid {{ grid-template-columns:1fr }} }}
+@media (max-width:700px) {{ .run-filters {{ grid-template-columns:1fr }} }}
 .active-run {{ margin:12px 0; padding:12px; border-radius:8px;
-background:#112d29; border:1px solid #1d7668; color:#95eadb }}
+background:#112d29; border:1px solid #1d7668; color:#95eadb; max-width:100%; box-sizing:border-box }}
 .progress {{ margin:14px 0; padding:14px; border-radius:10px; background:#10172a }}
 .progress-grid {{ display:grid; grid-template-columns:minmax(150px,1fr) 110px 110px 130px;
 gap:7px 16px; align-items:center }}
 .state {{ font-weight:700 }} .state.done {{ color:#62d8a8 }}
 .state.running {{ color:#f4c15d }} .state.failed {{ color:#ff8080 }}
 .state.pending,.state.skipped {{ color:#8f9ab0 }}
+.state.stale {{ color:#b45309 }}
 .trace-tools {{ position:relative; z-index:6; display:flex; justify-content:space-between; align-items:center; gap:12px;
 padding:8px 12px; background:#10182c }}
 .trace-expand {{ border:1px solid #36415f; background:#151c30; color:#cbd3e5;
@@ -1121,6 +1748,54 @@ pointer-events:none; z-index:2; overflow:visible }}
 .trace-legend .chain {{ background:#f4f7ff }} .trace-legend .fanout {{ background:#ff8a3d }}
 .trace-legend .merge {{ background:#3dffa8 }}
 @keyframes trace-pulse {{ to {{ background-position:-200% 0 }} }}
+/* Light slate theme: calm neutral surfaces with blue/teal status accents. */
+:root {{ color-scheme:light }}
+body {{ background:#eef2f7; color:#172033 }}
+.muted,.table-note,.run-pages,.run-meta {{ color:#64748b }}
+.card,table {{ background:#ffffff }}
+.card {{ border-color:#d8e0eb; box-shadow:0 5px 18px #2538580d }}
+th {{ background:#e8eef7; color:#1e293b }}
+th,td {{ border-bottom-color:#dce3ed }}
+code,.json-link {{ color:#1769a6 }}
+.tab {{ background:#fff; color:#334155; border-color:#c7d1df }}
+.tab:hover {{ background:#edf3fb; border-color:#91a4c0 }}
+.tab.active {{ background:#3867c8; border-color:#3867c8; color:#fff }}
+.run-browser,.goal-analysis,.progress {{ background:#f7f9fc; border-color:#d5deea }}
+.run-filters input,.run-filters select,.run-option {{ background:#fff; color:#243044; border-color:#cbd5e1 }}
+.run-option:hover,.run-option.selected {{ background:#eaf1fb; border-color:#6387bd }}
+.badge {{ background:#e4eaf3; color:#334155 }}
+.badge.live {{ background:#d8f3eb; color:#136b59 }}
+.badge.error {{ background:#fee2e2; color:#a72836 }}
+.ood-row {{ background:#fff4e6 }} .ood-tag {{ background:#f7d7ae; color:#8a4814 }}
+.confidence.high {{ color:#12624f; background:#d8f3eb }}
+.confidence.medium {{ color:#7a5200; background:#fff0bf }}
+.confidence.low {{ color:#9f2634; background:#fee2e2 }}
+.confidence.uncalibrated {{ color:#526174; background:#e4eaf3 }}
+.info-button {{ background:#e8eef7; color:#31476a; border-color:#8093b0 }}
+.info-button::after {{ background:#26354d; color:#f8fafc; border-color:#526987; box-shadow:0 8px 24px #33415533 }}
+.audit-phase {{ border-color:#d5deea }} .audit-phase summary {{ background:#e8eef7 }}
+.audit-phase summary span,.phase-flow small,.json-keys {{ color:#64748b }}
+.phase-nav button,.run-pages button,.operation-flow button,.trace-expand {{ background:#fff; color:#334155; border-color:#c7d1df }}
+.phase-nav button:hover,.operation-flow button:hover {{ background:#edf3fb; border-color:#7d97bd }}
+.phase-flow button {{ background:#f5f8fc; color:#42526a; border-color:#cbd5e1 }}
+.phase-flow button.active {{ background:#3867c8; border-color:#3867c8; color:#fff }}
+.operation-flow button.active {{ background:#16806a; border-color:#16806a; color:#fff }}
+.operation-filter {{ background:#edf3f8; border-color:#cbd6e3; box-shadow:0 3px 12px #33415514 }}
+.operation-filter select {{ background:#fff; color:#1e293b; border-color:#9aabc1 }}
+.active-run {{ background:#e0f5ef; border-color:#6bc0aa; color:#12624f }}
+.state.done {{ color:#14745b }} .state.running {{ color:#9a6100 }} .state.failed {{ color:#b52d3d }}
+.state.pending,.state.skipped {{ color:#718096 }}
+.trace-shell,.trace-label,.trace-ghost {{ background:#f8fafc }}
+.trace-shell,.trace-shell .trace-tools {{ border-color:#d4dde8 }}
+.trace-tools {{ background:#edf2f7 }}
+.trace-label {{ color:#526174 }} .trace-group {{ color:#334155 }}
+.trace-track {{ background:repeating-linear-gradient(90deg,#d9e2ed 0,#d9e2ed 1px,transparent 1px,transparent 20%) }}
+.trace-time,.trace-ticks,.trace-legend {{ color:#64748b }}
+.trace-ghost {{ color:#475569; border-color:#8493a8 }}
+.trace-skill {{ color:#172033; text-shadow:0 0 4px #fff,0 1px 0 #fff }}
+.trace-end.bad {{ color:#9f2634; background:#fee2e2; border-color:#e56b78 }}
+.trace-end.ok {{ color:#12624f; background:#d8f3eb; border-color:#43a98e }}
+.trace-shell.expanded {{ box-shadow:0 0 0 100vmax #d9e1eccf }}
 @media (max-width:700px) {{ .progress-grid {{ grid-template-columns:1fr 90px }} }}
 </style></head><body><main>
 <h1>Skill Evolver Live Metrics</h1>
@@ -1131,31 +1806,141 @@ pointer-events:none; z-index:2; overflow:visible }}
 const esc = value => String(value).replace(/[&<>"']/g, c =>
   ({{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}})[c]);
 const sec = value => `${{Number(value).toFixed(3)}}s`;
-const VIEW_COOKIE = 'skill-evolver-view';
+let compactTableSequence = 0;
+let compactTablesScheduled = false;
+const compactLongTables = (root=document) => {{
+  root.querySelectorAll('table tbody').forEach(body => {{
+    if (body.classList.contains('expandable-rows') || body.dataset.autoCompacted === 'true') return;
+    const rows = [...body.children].filter(row => row.tagName === 'TR');
+    if (rows.length <= 10) return;
+    body.dataset.autoCompacted = 'true';
+    body.classList.add('expandable-rows');
+    if (!body.id) body.id = `compact-table-${{++compactTableSequence}}`;
+    rows.slice(10).forEach(row => row.classList.add('after-top-ten'));
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'table-expander';
+    button.dataset.expandRows = body.id;
+    button.dataset.expandClass = 'all';
+    button.dataset.label = 'rows';
+    button.dataset.total = String(rows.length);
+    button.setAttribute('aria-expanded','false');
+    button.textContent = `Show all ${{rows.length}} rows`;
+    body.closest('table').insertAdjacentElement('afterend',button);
+  }});
+}};
+const compactTableObserver = new MutationObserver(() => {{
+  if (compactTablesScheduled) return;
+  compactTablesScheduled = true;
+  requestAnimationFrame(() => {{
+    compactTablesScheduled = false;
+    compactLongTables();
+  }});
+}});
+compactTableObserver.observe(document.getElementById('panels'), {{childList:true,subtree:true}});
+const VIEW_STORAGE_KEY = 'skill-evolver-dashboard-view-v2';
 const readView = () => {{
-  const prefix = `${{VIEW_COOKIE}}=`;
-  const raw = document.cookie.split('; ').find(part => part.startsWith(prefix));
-  if (!raw) return {{run:'', expanded:false}};
   try {{
-    const data = JSON.parse(decodeURIComponent(raw.slice(prefix.length)));
-    const run = typeof data.run === 'string' ? data.run : '';
-    return {{run, expanded: data.expanded === true && run !== ''}};
+    const data = JSON.parse(window.localStorage.getItem(VIEW_STORAGE_KEY) || '{{}}');
+    return data && typeof data === 'object' ? data : {{}};
   }} catch (error) {{
-    return {{run:'', expanded:false}};
+    return {{}};
   }}
 }};
 const savedView = readView();
-let selectedTab = savedView.run || 'total';
-let expandedRun = savedView.expanded ? savedView.run : '';
+let selectedTab = ['total','skills','runs'].includes(savedView.tab) ? savedView.tab : 'total';
+let selectedRunId = typeof savedView.run === 'string' ? savedView.run : '';
+let runQuery = typeof savedView.query === 'string' ? savedView.query : '';
+let runDay = typeof savedView.day === 'string' ? savedView.day : 'all';
+let runPage = Number.isInteger(savedView.runPage) && savedView.runPage > 0 ? savedView.runPage : 1;
+const RUNS_PER_PAGE = 12;
+let auditPhasePage = Number.isInteger(savedView.phasePage) && savedView.phasePage >= 0 ? savedView.phasePage : 0;
+let selectedGoalOperation = typeof savedView.goalOperation === 'string' ? savedView.goalOperation : 'create';
+let selectedOptimizeOperation = typeof savedView.optimizeOperation === 'string' ? savedView.optimizeOperation : 'all';
+let latestGoalStats = null;
+let latestDiagnosisStats = null;
+let latestOptimizeStats = null;
+let renderedSignature = '';
+const phaseAuditCache = new Map();
+let expandedRun = savedView.expanded === true && selectedRunId ? selectedRunId : '';
+let restoreScrollY = Number.isFinite(savedView.scrollY) ? Math.max(0, savedView.scrollY) : null;
 const writeView = () => {{
-  const run = expandedRun || (selectedTab === 'total' ? '' : selectedTab);
-  const payload = encodeURIComponent(JSON.stringify({{
-    run, expanded: Boolean(expandedRun)
-  }}));
-  document.cookie = `${{VIEW_COOKIE}}=${{payload}}; Path=/; Max-Age=31536000; SameSite=Lax`;
+  const run = expandedRun || selectedRunId;
+  try {{
+    window.localStorage.setItem(VIEW_STORAGE_KEY, JSON.stringify({{
+      tab:selectedTab, run, expanded:Boolean(expandedRun), phasePage:auditPhasePage,
+      goalOperation:selectedGoalOperation, optimizeOperation:selectedOptimizeOperation,
+      query:runQuery, day:runDay, runPage,
+      scrollY:Math.round(window.scrollY)
+    }}));
+  }} catch (error) {{ /* Storage can be disabled without breaking the dashboard. */ }}
 }};
+window.addEventListener('beforeunload', writeView);
 const traceScroll = new Map();
 let traceDrag = null;
+let runPickerOpen = false;
+document.addEventListener('pointerdown', event => {{
+  if (event.target.closest('[data-run-picker]')) runPickerOpen = true;
+}});
+document.addEventListener('focusin', event => {{
+  if (event.target.matches('[data-run-picker]')) runPickerOpen = true;
+}});
+document.addEventListener('focusout', event => {{
+  if (event.target.matches('[data-run-picker]')) runPickerOpen = false;
+}});
+document.addEventListener('click', event => {{
+  const choice = event.target.closest('[data-run-choice]');
+  if (!choice) return;
+  selectedRunId = choice.dataset.runChoice;
+  auditPhasePage = 0;
+  runPickerOpen = false;
+  writeView();
+  refresh();
+}});
+document.addEventListener('change', event => {{
+  const select = event.target.closest('[data-goal-operation-select],[data-optimize-operation-select]');
+  if (!select) return;
+  if (select.matches('[data-goal-operation-select]')) selectedGoalOperation = select.value;
+  else selectedOptimizeOperation = select.value;
+  writeView();
+  const audit = phaseAuditCache.get(select.dataset.runId);
+  if (!audit) return;
+  document.querySelectorAll(`[data-phase-audit][data-run-id="${{CSS.escape(select.dataset.runId)}}"]`)
+    .forEach(target => {{ target.innerHTML = renderPhaseAudit(audit); compactLongTables(target); }});
+}});
+document.addEventListener('click', event => {{
+  const button = event.target.closest('[data-expand-rows]');
+  if (!button) return;
+  const body = document.getElementById(button.dataset.expandRows);
+  if (!body) return;
+  const classification = button.dataset.expandClass;
+  const expanded = body.classList.toggle(`expand-${{classification}}`);
+  const label = button.dataset.label || classification.toUpperCase();
+  button.textContent = expanded ? `Show top 10${{label ? ` ${{label}}` : ''}}` : `Show all ${{button.dataset.total}}${{label ? ` ${{label}}` : ''}}`;
+  button.setAttribute('aria-expanded', String(expanded));
+}});
+document.addEventListener('click', event => {{
+  const button = event.target.closest('[data-audit-page],[data-audit-index]');
+  if (!button) return;
+  const audit = phaseAuditCache.get(button.dataset.runId);
+  if (!audit) return;
+  auditPhasePage = button.dataset.auditIndex == null
+    ? auditPhasePage + (button.dataset.auditPage === 'next' ? 1 : -1)
+    : Number(button.dataset.auditIndex);
+  writeView();
+  document.querySelectorAll(`[data-phase-audit][data-run-id="${{CSS.escape(button.dataset.runId)}}"]`)
+    .forEach(target => {{ target.innerHTML = renderPhaseAudit(audit); compactLongTables(target); }});
+}});
+document.addEventListener('click', event => {{
+  const button = event.target.closest('[data-goal-operation]');
+  if (!button) return;
+  selectedGoalOperation = button.dataset.goalOperation;
+  writeView();
+  const audit = phaseAuditCache.get(button.dataset.runId);
+  if (!audit) return;
+  document.querySelectorAll(`[data-phase-audit][data-run-id="${{CSS.escape(button.dataset.runId)}}"]`)
+    .forEach(target => {{ target.innerHTML = renderPhaseAudit(audit); compactLongTables(target); }});
+}});
 document.addEventListener('pointerdown', event => {{
   const shell = event.target.closest('.trace-shell');
   if (!shell || event.button !== 0 || event.target.closest('button, a')) return;
@@ -1192,7 +1977,7 @@ document.addEventListener('click', event => {{
   const button = event.target.closest('[data-trace-expand]');
   if (!button) return;
   expandedRun = expandedRun === button.dataset.traceExpand ? '' : button.dataset.traceExpand;
-  if (expandedRun) selectedTab = expandedRun;
+  if (expandedRun) selectedTab = 'runs';
   writeView();
   applyExpandedTrace();
   tickTraces();
@@ -1214,6 +1999,26 @@ const phaseTable = rows =>
     `<td>${{sec(row.average_seconds)}}</td><td>${{sec(row.p50_seconds)}}</td>`+
     `<td>${{sec(row.p95_seconds)}}</td><td>${{sec(row.maximum_seconds)}}</td></tr>`
   ).join('')+`</tbody></table>`;
+const skillStatsPanel = stats => {{
+  if (!stats || !stats.total_skills) return `<section class="card"><h2>Skill statistics</h2><p class="muted">No skill metadata.</p></section>`;
+  const domains = stats.domain_stats.map(row => `<tr><td>${{esc(row.domain)}}</td><td>Recognized domain</td><td>${{row.skills}}</td><td>${{row.weight}}</td><td>${{row.mean_weight}}</td></tr>`).join('');
+  const ood = stats.ood_stats.map(row => `<tr class="ood-row"><td>${{esc(row.type)}}<span class="ood-tag">OOD</span></td>`+
+    `<td>Unmatched taxonomy type</td><td>${{row.skills}}</td><td>—</td><td>—</td></tr>`).join('');
+  const skills = stats.per_skill.map(row => `<tr><td>${{esc(row.skill)}}</td><td>${{esc(row.status)}}</td>`+
+    `<td>${{row.confidence_state === 'legacy_default' ? '<span class="confidence uncalibrated">Legacy default</span>' : row.confidence_state === 'no_evidence' ? '<span class="confidence uncalibrated">No evidence</span>' : row.confidence == null ? '—' : `<span class="confidence ${{Number(row.confidence) >= .9 ? 'high' : Number(row.confidence) >= .75 ? 'medium' : 'low'}}">${{Number(row.confidence).toFixed(2)}}</span>`}}</td>`+
+    `<td>${{esc(String(row.evaluation_kind || 'unknown').replaceAll('_', ' '))}}</td><td>${{row.evidence_records}}</td><td>${{row.distinct_sessions}}</td>`+
+    `<td>${{row.domains.map(value => esc(value.domain)).join(', ') || '—'}}</td>`+
+    `<td>${{row.ood.map(value => `<span class="ood-tag">${{esc(value)}}</span>`).join('') || '—'}}</td></tr>`).join('');
+  return `<section class="card"><h2>Skill statistics</h2><h3>Taxonomy coverage</h3>`+
+    `<p class="table-note">Skill count is the number of skills assigned to a type. OOD means the type did not match the current taxonomy.</p>`+
+    `<table><thead><tr><th>Type</th><th>Classification</th><th>Skill count</th><th>Assignment weight sum `+
+    `<button type="button" class="info-button" aria-label="Explain assignment weight sum" data-tooltip="Raw sum of assignment weights for this type. It grows with inventory size and is not a probability, quality score, or directly comparable coverage metric.">!</button></th>`+
+    `<th>Mean weight <button type="button" class="info-button" aria-label="Explain mean assignment weight" data-tooltip="Assignment weight sum divided by assigned skill count. Use this to compare typical assignment strength across types.">!</button></th></tr></thead>`+
+    `<tbody>${{domains}}${{ood || '<tr class="ood-row"><td><span class="ood-tag">OOD</span></td><td>No unmatched types</td><td>0</td><td>—</td><td>—</td></tr>'}}</tbody></table>`+
+    `<h3>Per-skill stats</h3><p class="table-note">Confidence is shown only when backed by evidence. Legacy defaults and zero-evidence scores are suppressed.</p>`+
+    `<table><thead><tr><th>Skill</th><th>Lifecycle</th><th>Confidence <button type="button" class="info-button" aria-label="Explain confidence" data-tooltip="Evaluation confidence, not probability of correctness. Color bands apply only to scores backed by evidence: high ≥ 0.90, medium ≥ 0.75, low &lt; 0.75. Legacy defaults and zero-evidence scores are suppressed.">!</button></th><th>Evaluation</th><th>Evidence</th><th>Sessions</th><th>Domains</th><th>OOD types</th></tr></thead>`+
+    `<tbody>${{skills}}</tbody></table></section>`;
+}};
 const TRUNK = ['normalize-traces','detect-signals','deduplicate-and-cluster',
   'validate-preprocessing','label-skills','validate-skill-labels'];
 const GRAPH = new Set([...TRUNK, 'label-traces-cluster','goal','reduce-goals',
@@ -1660,7 +2465,7 @@ const runPanel = run => {{
     `${{sec(row.elapsed_seconds)}}</b></div>`).join('');
   const progress = run.progress || {{selected_findings:0, stages:[]}};
   const progressRows = (progress.stages || []).map(row => {{
-    const duration = row.state === 'pending' || row.state === 'skipped'
+    const duration = ['pending','skipped','stale'].includes(row.state)
       ? '—' : sec(row.duration_seconds);
     const queue = row.queue_wait_ms == null ? '—' : `${{Number(row.queue_wait_ms).toFixed(2)}}ms`;
     const items = row.items_total ? `${{row.items_done}}/${{row.items_total}} items` : '—';
@@ -1704,24 +2509,238 @@ const runPanel = run => {{
     `<th>Judge</th><th>Status</th></tr></thead>`+
     `<tbody>${{spanRows}}</tbody></table></section>`;
 }};
+const runDate = run => String(run.started_at || '').slice(0,10) || 'unknown';
+const renderDiagnosisAnalysis = stats => {{
+  if (!stats?.distribution) return '';
+  const classIndex = {{known:0, ood:0}};
+  const rows = stats.distribution.map(row => {{
+    const index = classIndex[row.classification]++;
+    const overflow = index >= 10 ? `after-${{row.classification === 'ood' ? 'ood' : 'id'}}-top-ten` : '';
+    return `<tr class="${{row.classification === 'ood' ? 'ood-row ' : ''}}${{overflow}}">`+
+    `<td><span class="${{row.classification === 'ood' ? 'ood-tag' : 'badge'}}">${{row.classification === 'ood' ? 'OOD' : 'ID'}}</span></td>`+
+    `<td>${{esc(row.type)}}</td><td>${{esc(row.category)}}</td><td>${{row.count}}</td>`+
+    `<td>${{row.mean_confidence == null ? '—' : Number(row.mean_confidence).toFixed(2)}}</td></tr>`;
+  }}).join('') ||
+    `<tr><td colspan="5" class="muted">No capability diagnoses recorded.</td></tr>`;
+  const categoryClassIndex = {{known:0, ood:0}};
+  const categoryRows = stats.categories.map(row => {{
+    const index = categoryClassIndex[row.classification]++;
+    const overflow = index >= 10 ? `after-${{row.classification === 'ood' ? 'ood' : 'id'}}-top-ten` : '';
+    return `<tr class="${{row.classification === 'ood' ? 'ood-row ' : ''}}${{overflow}}">`+
+      `<td>${{esc(row.category)}}</td><td>${{row.classification === 'ood' ? 'OOD' : 'ID'}}</td><td>${{row.count}}</td></tr>`;
+  }}).join('') ||
+    `<tr><td colspan="3" class="muted">No categories recorded.</td></tr>`;
+  const expanders = (id,values) => ['known','ood'].map(classification => {{
+    const total = values.filter(row => row.classification === classification).length;
+    const label = classification === 'ood' ? 'OOD' : 'ID';
+    return total > 10 ? `<button type="button" class="table-expander" data-expand-rows="${{id}}" data-expand-class="${{label.toLowerCase()}}" data-total="${{total}}" aria-expanded="false">Show all ${{total}} ${{label}}</button>` : '';
+  }}).join(' ');
+  return `<section class="goal-analysis"><h3>Diagnosis capability distribution</h3>`+
+    `<div class="stats"><span>diagnosis JSON <b>${{stats.document_count}}</b></span>`+
+    `<span>ID gaps <b>${{stats.known_count}}</b></span><span>OOD detections <b>${{stats.ood_count}}</b></span></div>`+
+    `<p class="table-note">ID (in-distribution) gaps are shown first, followed by OOD detections. Long lists show the top 10 by count.</p>`+
+    `<div class="analysis-grid"><div><h4>Capability types</h4><table><thead><tr><th>Class</th><th>Type</th><th>Category / domain</th><th>Count</th><th>Mean confidence</th></tr></thead><tbody id="diagnosis-capability-rows" class="expandable-rows">${{rows}}</tbody></table>${{expanders('diagnosis-capability-rows',stats.distribution)}}</div>`+
+    `<div><h4>Category distribution</h4><table><thead><tr><th>Category</th><th>Class</th><th>Count</th></tr></thead><tbody id="diagnosis-category-rows" class="expandable-rows">${{categoryRows}}</tbody></table>${{expanders('diagnosis-category-rows',stats.categories)}}</div></div></section>`;
+}};
+const renderGoalAnalysis = (stats, runId) => {{
+  if (!stats?.operations) return '';
+  const total = stats.operations.reduce((sum,row) => sum + Number(row.count || 0), 0);
+  const valid = ['all', ...stats.operations.map(row => row.operation)];
+  if (!valid.includes(selectedGoalOperation)) selectedGoalOperation = 'create';
+  const detail = stats.by_operation?.[selectedGoalOperation] || {{skills:[], categories:[], ood:[]}};
+  const distribution = stats.operations.map(row => `<tr><td>${{esc(row.operation)}}</td><td>${{row.count}}</td>`+
+    `<td>${{total ? (row.count / total * 100).toFixed(1) : '0.0'}}%</td></tr>`).join('');
+  const buttons = stats.operations.map(row => `<button type="button" data-goal-operation="${{esc(row.operation)}}" `+
+    `data-run-id="${{esc(runId)}}" class="${{row.operation === selectedGoalOperation ? 'active' : ''}}">`+
+    `${{esc(row.operation)}} · ${{row.count}}</button>`).join('');
+  const options = `<option value="all"${{selectedGoalOperation === 'all' ? ' selected' : ''}}>All operations (${{total}})</option>`+
+    stats.operations.map(row => `<option value="${{esc(row.operation)}}"${{row.operation === selectedGoalOperation ? ' selected' : ''}}>`+
+    `${{esc(row.operation)}} (${{row.count}})</option>`).join('');
+  const goalKey = String(selectedGoalOperation).replace(/[^a-z0-9_-]/gi,'-');
+  const rowClass = index => index >= 10 ? ' class="after-top-ten"' : '';
+  const expander = (id,total,label='') => total > 10 ? `<button type="button" class="table-expander" data-expand-rows="${{id}}" data-expand-class="all" data-label="${{esc(label)}}" data-total="${{total}}" aria-expanded="false">Show all ${{total}}${{label ? ` ${{esc(label)}}` : ''}}</button>` : '';
+  const skillRows = detail.skills.map((row,index) => `<tr${{rowClass(index)}}><td><code>${{esc(row.skill)}}</code></td><td>${{row.count}}</td>`+
+    `<td>${{row.sections.map(value => `<span class="badge">${{esc(value)}}</span>`).join(' ') || '—'}}</td>`+
+    `<td>${{row.directories.map(value => `<span class="badge">${{esc(value)}}</span>`).join(' ') || '—'}}</td>`+
+    `<td>${{row.categories.map(value => `<span class="badge">${{esc(value)}}</span>`).join(' ') || '—'}}</td>`+
+    `<td>${{row.ood.map(value => `<span class="ood-tag">${{esc(value)}}</span>`).join(' ') || '—'}}</td></tr>`).join('') ||
+    `<tr><td colspan="6" class="muted">No skills are associated with this operation type.</td></tr>`;
+  const categoryRows = detail.categories.map((row,index) => `<tr${{rowClass(index)}}><td>${{esc(row.category)}}</td><td>${{row.count}}</td></tr>`).join('') ||
+    `<tr><td colspan="2" class="muted">No categories recorded.</td></tr>`;
+  const oodRows = detail.ood.map((row,index) => `<tr class="ood-row${{index >= 10 ? ' after-top-ten' : ''}}"><td>${{esc(row.type)}}</td><td>${{row.count}}</td></tr>`).join('') ||
+    `<tr><td colspan="2" class="muted">No OOD types recorded.</td></tr>`;
+  const simpleRows = values => values.map((row,index) => `<tr${{rowClass(index)}}><td>${{esc(row.name)}}</td><td>${{row.count}}</td></tr>`).join('') ||
+    `<tr><td colspan="2" class="muted">No values recorded.</td></tr>`;
+  return `<section class="goal-analysis"><h3>Goal operation distribution</h3>`+
+    `<p class="table-note">Across ${{stats.goal_documents}} goal JSON documents. Proposed operations are counted even when later phases were skipped.</p>`+
+    `<table><thead><tr><th>Operation</th><th>Count</th><th>Share</th></tr></thead><tbody>${{distribution}}</tbody></table>`+
+    `<div class="operation-filter"><label for="goal-operation-filter">Filter goal details</label>`+
+    `<select id="goal-operation-filter" data-goal-operation-select data-run-id="${{esc(runId)}}">${{options}}</select></div>`+
+    `<div class="operation-flow" aria-label="Goal operation filters">${{buttons}}</div>`+
+    `<h3>${{esc(selectedGoalOperation)}} details</h3><div>`+
+    `<h4>Per-skill distribution</h4><table><thead><tr><th>Skill title</th><th>Count</th><th>Sections</th><th>Resources</th><th>Categories</th><th>OOD</th></tr></thead><tbody id="goal-${{goalKey}}-skills" class="expandable-rows">${{skillRows}}</tbody></table>${{expander(`goal-${{goalKey}}-skills`,detail.skills.length,'skills')}}</div>`+
+    `<div class="analysis-grid"><div>`+
+    `<h4>Section distribution</h4><table><thead><tr><th>Section</th><th>Count</th></tr></thead><tbody id="goal-${{goalKey}}-sections" class="expandable-rows">${{simpleRows(detail.sections)}}</tbody></table>${{expander(`goal-${{goalKey}}-sections`,detail.sections.length,'sections')}}`+
+    `<h4>Resource directory distribution</h4><table><thead><tr><th>Directory</th><th>Count</th></tr></thead><tbody id="goal-${{goalKey}}-directories" class="expandable-rows">${{simpleRows(detail.directories)}}</tbody></table>${{expander(`goal-${{goalKey}}-directories`,detail.directories.length,'directories')}}`+
+    `</div><div><h4>Category distribution</h4><table><thead><tr><th>Category</th><th>Count</th></tr></thead><tbody id="goal-${{goalKey}}-categories" class="expandable-rows">${{categoryRows}}</tbody></table>${{expander(`goal-${{goalKey}}-categories`,detail.categories.length,'categories')}}`+
+    `<h4>Resource-plan decisions</h4><table><thead><tr><th>Resource : decision</th><th>Count</th></tr></thead><tbody id="goal-${{goalKey}}-decisions" class="expandable-rows">${{simpleRows(detail.resource_decisions)}}</tbody></table>${{expander(`goal-${{goalKey}}-decisions`,detail.resource_decisions.length,'decisions')}}`+
+    `<h4>OOD distribution</h4><table><thead><tr><th>OOD type</th><th>Count</th></tr></thead><tbody id="goal-${{goalKey}}-ood" class="expandable-rows">${{oodRows}}</tbody></table>${{expander(`goal-${{goalKey}}-ood`,detail.ood.length,'OOD types')}}</div></div></section>`;
+}};
+const renderOptimizeAnalysis = (stats, runId) => {{
+  if (!stats) return '';
+  const observedOperations = (stats.operations || []).map(row => row.name);
+  const operations = ['all', ...new Set(['create','update','delete','merge','split','no_change', ...observedOperations])];
+  if (!operations.includes(selectedOptimizeOperation)) selectedOptimizeOperation = 'all';
+  const detail = selectedOptimizeOperation === 'all' ? stats :
+    (stats.by_operation?.[selectedOptimizeOperation] || {{skills:[], sections:[], directories:[]}});
+  const operationOptions = operations.map(operation => {{
+    const count = operation === 'all' ? stats.change_count :
+      (stats.operations.find(row => row.name === operation)?.count || 0);
+    return `<option value="${{esc(operation)}}"${{operation === selectedOptimizeOperation ? ' selected' : ''}}>`+
+      `${{operation === 'all' ? 'All operations' : esc(operation)}} (${{count}})</option>`;
+  }}).join('');
+  const table = (title, label, values) => `<div><h4>${{title}}</h4><table><thead><tr><th>${{label}}</th><th>Count</th></tr></thead><tbody>`+
+    `${{values.map(row => `<tr><td>${{esc(row.name)}}</td><td>${{row.count}}</td></tr>`).join('') || `<tr><td colspan="2" class="muted">No values recorded.</td></tr>`}}`+
+    `</tbody></table></div>`;
+  return `<section class="goal-analysis"><h3>Optimize change distribution</h3>`+
+    `<div class="stats"><span>changelog JSON <b>${{stats.document_count}}</b></span><span>skill changes <b>${{stats.change_count}}</b></span></div>`+
+    `<div class="operation-filter"><label for="optimize-operation-filter">Filter optimize details</label>`+
+    `<select id="optimize-operation-filter" data-optimize-operation-select data-run-id="${{esc(runId)}}">${{operationOptions}}</select></div>`+
+    `<div class="analysis-grid">${{table('Operation distribution','Operation',stats.operations)}}${{table('Skill title distribution','Skill',detail.skills)}}`+
+    `${{table('Section distribution','Section',detail.sections)}}${{table('Resource directory distribution','Directory',detail.directories)}}</div></section>`;
+}};
+const renderPhaseAudit = audit => {{
+  if (!audit.phases?.length) return `<h3>Phase output JSON</h3><p class="muted">No phase-output JSON found for this run.</p>`;
+  auditPhasePage = Math.min(Math.max(auditPhasePage, 0), audit.phases.length - 1);
+  const group = audit.phases[auditPhasePage];
+  const phaseLabels = {{
+    'detect-signals':'Detect signals', 'label-traces-cluster':'Label traces / diagnose',
+    'label-skills':'Label skills', goal:'Goal', optimize:'Optimize',
+    verification:'Verification', judge:'Judge', publication:'Publication', summary:'Summary'
+  }};
+  const rows = group.documents.map(row => `<tr${{row.has_ood ? ' class="ood-row"' : ''}}>`+
+      `<td><code>${{esc(row.id)}}</code></td>`+
+      `<td><a class="json-link" href="${{esc(row.url)}}" target="_blank" rel="noopener">${{esc(row.path)}}</a></td>`+
+      `<td>${{row.has_ood ? row.ood.map(value => `<span class="ood-tag">${{esc(value)}}</span>`).join('') : '—'}}</td>`+
+      `<td class="json-keys">${{row.keys.map(esc).join(', ') || 'array/value'}}</td>`+
+      `<td>${{Number(row.bytes).toLocaleString()}}</td></tr>`).join('') ||
+      `<tr><td colspan="5" class="muted">No output JSON found for this phase. The phase may not have triggered, may have been skipped, or may have failed before writing its contract artifact.</td></tr>`;
+  const flow = audit.phases.map((phase, index) =>
+    `<button type="button" data-audit-index="${{index}}" data-run-id="${{esc(audit.run_id)}}" class="${{index === auditPhasePage ? 'active' : ''}}"${{index === auditPhasePage ? ' aria-current="step"' : ''}}>`+
+    `${{index + 1}}. ${{esc(phaseLabels[phase.phase] || phase.phase)}}<small>${{phase.document_count}} JSON · ${{phase.ood_count}} OOD</small></button>`
+  ).join('');
+  return `<h3>Phase output JSON</h3><p class="table-note">Run scope: <code>${{esc(audit.run_id)}}</code>. Operational status, configuration, logs, and intermediate trace files are excluded. OOD rows are highlighted.</p>`+
+    `<nav class="phase-flow" aria-label="Pipeline phase flow">${{flow}}</nav>`+
+    `<nav class="run-pages" aria-label="JSON audit phase pages">`+
+    `<button data-audit-page="prev" data-run-id="${{esc(audit.run_id)}}"${{auditPhasePage === 0 ? ' disabled' : ''}}>← Previous phase</button>`+
+    `<strong>${{esc(phaseLabels[group.phase] || group.phase)}}</strong><span>Phase ${{auditPhasePage + 1}} of ${{audit.phases.length}} · ${{group.document_count}} JSON · ${{group.ood_count}} OOD</span>`+
+    `<button data-audit-page="next" data-run-id="${{esc(audit.run_id)}}"${{auditPhasePage >= audit.phases.length - 1 ? ' disabled' : ''}}>Next phase →</button></nav>`+
+    `${{group.phase === 'label-traces-cluster' ? renderDiagnosisAnalysis(latestDiagnosisStats) : ''}}`+
+    `${{group.phase === 'goal' ? renderGoalAnalysis(latestGoalStats, audit.run_id) : ''}}`+
+    `${{group.phase === 'optimize' ? renderOptimizeAnalysis(latestOptimizeStats, audit.run_id) : ''}}`+
+    `<section class="audit-phase"><table><thead><tr><th>ID</th><th>Output JSON</th><th>OOD detections</th>`+
+    `<th>Top-level fields</th><th>Bytes</th></tr></thead><tbody>${{rows}}</tbody></table></section>`;
+}};
+const loadPhaseAudit = async runId => {{
+  const targets = [...document.querySelectorAll(`[data-phase-audit][data-run-id="${{CSS.escape(runId)}}"]`)];
+  if (!targets.length) return;
+  try {{
+    const response = await fetch(`/api/audit?run=${{encodeURIComponent(runId)}}`, {{cache:'no-store'}});
+    if (!response.ok) throw new Error(`HTTP ${{response.status}}`);
+    const audit = await response.json();
+    const previous = phaseAuditCache.get(runId);
+    phaseAuditCache.set(runId, audit);
+    if (previous && JSON.stringify(previous) === JSON.stringify(audit) &&
+        targets.every(target => target.querySelector('.audit-phase'))) return;
+    targets.forEach(target => {{ target.innerHTML = renderPhaseAudit(audit); compactLongTables(target); }});
+  }} catch (error) {{
+    targets.forEach(target => target.innerHTML = `<h3>Phase JSON audit</h3><p class="error">Audit failed: ${{esc(error)}}</p>`);
+  }}
+}};
+const matchingRuns = data => data.runs.filter(run => {{
+  const id = String(run.execution_id || run.run_id);
+  return (runDay === 'all' || runDate(run) === runDay) && id.toLowerCase().includes(runQuery.toLowerCase());
+}}).sort((a,b) => Number(Boolean((b.active || []).length)) - Number(Boolean((a.active || []).length)));
+const runChoices = data => {{
+  const matches = matchingRuns(data);
+  const pages = Math.max(1, Math.ceil(matches.length / RUNS_PER_PAGE));
+  runPage = Math.min(Math.max(runPage, 1), pages);
+  const rows = matches.slice((runPage - 1) * RUNS_PER_PAGE, runPage * RUNS_PER_PAGE);
+  if (!rows.length) return `<p class="muted">No runs match these filters.</p>`;
+  return rows.map(run => {{
+    const id = String(run.execution_id || run.run_id);
+    const live = (run.active || []).length;
+    return `<button class="run-option${{id === selectedRunId ? ' selected' : ''}}" data-run-choice="${{esc(id)}}" title="${{esc(id)}}">`+
+      `<strong>${{esc(id)}}</strong><span class="run-meta"><span class="badge">${{esc(runDate(run))}}</span>`+
+      `${{live ? '<span class="badge live">live</span>' : ''}}${{run.error_count ? `<span class="badge error">${{run.error_count}} errors</span>` : ''}}`+
+      `${{run.historical ? '<span class="badge">history</span>' : ''}}</span></button>`;
+  }}).join('');
+}};
+const runPicker = (data, run) => {{
+  const days = [...new Set(data.runs.map(runDate))].sort().reverse();
+  const matches = matchingRuns(data);
+  const pages = Math.max(1, Math.ceil(matches.length / RUNS_PER_PAGE));
+  runPage = Math.min(Math.max(runPage, 1), pages);
+  return `<section class="run-browser"><div class="run-filters">`+
+    `<input data-run-picker data-run-search type="search" value="${{esc(runQuery)}}" placeholder="Search run name or tag…" aria-label="Search runs">`+
+    `<select data-run-picker data-run-day aria-label="Filter runs by day"><option value="all">All days</option>`+
+    `${{days.map(day => `<option value="${{esc(day)}}"${{day === runDay ? ' selected' : ''}}>${{esc(day)}}</option>`).join('')}}</select></div>`+
+    `<div class="run-results" data-run-results>${{runChoices(data)}}</div>`+
+    `<div class="run-pages"><button data-run-page="prev"${{runPage <= 1 ? ' disabled' : ''}}>← Previous</button>`+
+    `<span>Page ${{runPage}} of ${{pages}} · ${{matches.length}} matches</span>`+
+    `<button data-run-page="next"${{runPage >= pages ? ' disabled' : ''}}>Next →</button></div></section>`;
+}};
 async function refresh() {{
+  if (runPickerOpen) return;
   try {{
     const response = await fetch('/api/metrics', {{cache:'no-store'}});
     if (!response.ok) throw new Error(`HTTP ${{response.status}}`);
     const data = await response.json();
+    if (runPickerOpen) return;
+    latestGoalStats = data.goal_stats || null;
+    latestDiagnosisStats = data.diagnosis_stats || null;
+    latestOptimizeStats = data.optimize_stats || null;
     document.getElementById('status').className = 'muted';
     document.getElementById('status').innerHTML =
       `${{data.run_count}} runs · ${{data.span_count}} spans · refreshed ${{esc(data.generated_at)}} · <code>${{esc(data.database)}}</code>`;
     const runIds = data.runs.map(run => String(run.execution_id || run.run_id));
     if (expandedRun && !runIds.includes(expandedRun)) expandedRun = '';
-    if (selectedTab !== 'total' && !runIds.includes(selectedTab)) selectedTab = 'total';
-    if (expandedRun) selectedTab = expandedRun;
+    if (!['total','skills','runs'].includes(selectedTab)) selectedTab = 'total';
+    if (!runIds.includes(selectedRunId)) selectedRunId = runIds[0] || '';
+    const selectedRun = data.runs.find(run => String(run.execution_id || run.run_id) === selectedRunId);
+    const signature = JSON.stringify({{
+      view:[selectedRunId, runQuery, runDay, runPage],
+      totals:[data.run_count, data.span_count], phases:data.phases,
+      skillStats:data.skill_stats, goalStats:data.goal_stats, diagnosisStats:data.diagnosis_stats,
+      optimizeStats:data.optimize_stats,
+      runs:data.runs.map(run => ({{
+        id:String(run.execution_id || run.run_id), historical:run.historical,
+        spans:run.span_count, errors:run.error_count, started:run.started_at,
+        categories:run.category_seconds, phases:run.phases,
+        // Running durations are clocks, not structural data. Including them here
+        // caused every poll to replace the dashboard DOM and visibly flash.
+        // tickTraces() owns live elapsed-time updates; this signature only tracks
+        // changes that require rebuilding a panel.
+        progress:run.progress ? {{
+          selected_findings:run.progress.selected_findings,
+          stages:(run.progress.stages || []).map(stage => [
+            stage.name, stage.label, stage.state, stage.items_done,
+            stage.items_total, stage.queue_wait_ms
+          ])
+        }} : null,
+        active:(run.active || []).map(row => [row.stage,row.item,row.started_at])
+      }}))
+    }});
+    if (signature === renderedSignature) {{
+      if (selectedRun) await loadPhaseAudit(selectedRun.run_id);
+      tickTraces();
+      return;
+    }}
+    renderedSignature = signature;
     document.getElementById('tabs').innerHTML =
-      `<button class="tab" data-tab="total">Total</button>`+
-      data.runs.map(run => {{
-        const id = String(run.execution_id || run.run_id);
-        return `<button class="tab" data-tab="${{esc(id)}}" title="${{esc(id)}}">${{esc(id)}}</button>`;
-      }}).join('');
+      `<button class="tab" data-tab="total">Overview</button>`+
+      `<button class="tab" data-tab="skills">Stats</button>`+
+      `<button class="tab" data-tab="runs">Runs (${{data.run_count}})</button>`;
     document.querySelectorAll('.trace-shell').forEach(shell => {{
       traceScroll.set(shell.dataset.run, shell.scrollLeft);
     }});
@@ -1731,19 +2750,49 @@ async function refresh() {{
       `<h2>Total across runs</h2>${{empty}}<div class="stats"><span>runs <b>${{data.run_count}}</b></span>`+
       `<span>completed spans <b>${{data.span_count}}</b></span></div>`+
       `<h3>Cross-run phase statistics</h3>${{phaseTable(data.phases)}}</section></section>`+
-      data.runs.map(run => {{
-        const id = String(run.execution_id || run.run_id);
-        return `<div class="panel" data-panel="${{esc(id)}}">${{runPanel(run)}}</div>`;
-      }}).join('');
+      `<section class="panel" data-panel="skills">`+
+      `${{selectedRun ? `<section class="card phase-audit" data-phase-audit data-run-id="${{esc(selectedRun.run_id)}}"><h2>Phase-by-phase output review</h2><p class="muted">Loading phase outputs…</p></section>` : ''}}`+
+      `${{skillStatsPanel(data.skill_stats)}}</section>`+
+      `<section class="panel" data-panel="runs">${{selectedRun ? runPicker(data, selectedRun)+runPanel(selectedRun) : empty}}</section>`;
+    compactLongTables(document.getElementById('panels'));
     document.querySelectorAll('.tab').forEach(node =>
       node.addEventListener('click', () => selectTab(node.dataset.tab)));
+    document.querySelectorAll('[data-run-search]').forEach(node =>
+      node.addEventListener('input', () => {{
+        runQuery = node.value;
+        runPage = 1;
+        writeView();
+        document.querySelectorAll('[data-run-search]').forEach(other => {{ if (other !== node) other.value = runQuery; }});
+        document.querySelectorAll('[data-run-results]').forEach(target => target.innerHTML = runChoices(data));
+      }}));
+    document.querySelectorAll('[data-run-day]').forEach(node =>
+      node.addEventListener('change', () => {{
+        runDay = node.value;
+        runPage = 1;
+        writeView();
+        document.querySelectorAll('[data-run-day]').forEach(other => other.value = runDay);
+        document.querySelectorAll('[data-run-results]').forEach(target => target.innerHTML = runChoices(data));
+      }}));
+    document.querySelectorAll('[data-run-page]').forEach(node =>
+      node.addEventListener('click', () => {{
+        runPage += node.dataset.runPage === 'next' ? 1 : -1;
+        runPickerOpen = false;
+        writeView();
+        refresh();
+      }}));
     selectTab(selectedTab);
+    if (selectedRun) await loadPhaseAudit(selectedRun.run_id);
     applyExpandedTrace();
     tickTraces();
     document.querySelectorAll('.trace-shell').forEach(shell => {{
       const left = traceScroll.get(shell.dataset.run);
       if (left) shell.scrollLeft = left;
     }});
+    if (restoreScrollY != null) {{
+      const targetScrollY = restoreScrollY;
+      restoreScrollY = null;
+      requestAnimationFrame(() => requestAnimationFrame(() => window.scrollTo(0, targetScrollY)));
+    }}
   }} catch (error) {{
     document.getElementById('status').className = 'error';
     document.getElementById('status').textContent = `Refresh failed: ${{error}}`;
@@ -1763,10 +2812,11 @@ def make_server(
 
     class Handler(BaseHTTPRequestHandler):
         def do_GET(self) -> None:
-            if self.path == "/" or self.path.startswith("/index.html"):
+            request = urlparse(self.path)
+            if request.path == "/" or request.path.startswith("/index.html"):
                 self._reply(200, "text/html; charset=utf-8", document)
                 return
-            if self.path.startswith("/api/metrics"):
+            if request.path == "/api/metrics":
                 try:
                     payload = json.dumps(
                         metrics_payload(database), ensure_ascii=False
@@ -1780,7 +2830,27 @@ def make_server(
                     return
                 self._reply(200, "application/json", payload)
                 return
-            if self.path == "/health":
+            if request.path == "/api/audit":
+                run_id = parse_qs(request.query).get("run", [""])[0]
+                payload = json.dumps(
+                    phase_json_audit(database, run_id), ensure_ascii=False
+                ).encode()
+                self._reply(200, "application/json", payload)
+                return
+            if request.path == "/api/artifact":
+                query = parse_qs(request.query)
+                run_id = query.get("run", [""])[0]
+                relative = unquote(query.get("path", [""])[0])
+                runs_root = (database.parent / "runs").resolve()
+                run_root = (runs_root / run_id).resolve()
+                target = (run_root / relative).resolve()
+                if (run_root.parent != runs_root or run_root not in target.parents
+                        or target.suffix != ".json" or not target.is_file()):
+                    self._reply(404, "application/json", b'{"error":"not found"}')
+                    return
+                self._reply(200, "application/json; charset=utf-8", target.read_bytes())
+                return
+            if request.path == "/health":
                 self._reply(200, "application/json", b'{"status":"ok"}')
                 return
             self._reply(404, "text/plain; charset=utf-8", b"not found")
