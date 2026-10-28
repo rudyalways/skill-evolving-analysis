@@ -54,10 +54,10 @@ clean worktree based on `origin/main` for isolated work and verification.
 The personal repository baseline is:
 
 ```text
-357c1ad Suppress overlapping structural merge candidates
+17c91a3 Enable split metadata and single delete operations
 ```
 
-That commit passed all 213 tests in a clean worktree and the 23-case
+That commit passed all 215 tests in a clean worktree and the 23-case
 deterministic funnel benchmark at 23/23. It includes configurable funnel
 targets, single-session diagnosis controls, novel-versus-idempotent metrics,
 an action-oriented profile, inventory and release helpers, replay support,
@@ -91,6 +91,13 @@ deduplication: one review unit now claims a skill set, overlapping candidates
 are retained under `suppressed_candidates`, and a verification run emits one
 merge with two suppressed candidates. This is test evidence, not a production
 inventory change.
+
+Controlled split and delete scenarios also reached accepted publication. Split
+parts now receive metadata rows with inherited labels; the split run produced
+release-handbook and retention-handbook and removed ops-handbook. A retirement
+scenario with post-creation non-use and content/label subsumption produced one
+accepted delete after delete candidates were included in candidate
+deduplication.
 
 The pre-fix reference run on the same 23 cases passed 20/23. All three failures
 were supporting resources used once in each of three sessions.
