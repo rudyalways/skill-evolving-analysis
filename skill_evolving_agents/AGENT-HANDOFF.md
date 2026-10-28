@@ -54,11 +54,11 @@ clean worktree based on `origin/main` for isolated work and verification.
 The personal repository baseline is:
 
 ```text
-92884f5 Merge measured funnel benchmark and cross-session resource fix
+6759de1 Extend funnel benchmark to asset and eval usefulness
 ```
 
-That commit passed all 206 tests in a clean worktree and the 21-case
-deterministic funnel benchmark at 21/21. It includes configurable funnel
+That commit passed all 206 tests in a clean worktree and the 23-case
+deterministic funnel benchmark at 23/23. It includes configurable funnel
 targets, single-session diagnosis controls, novel-versus-idempotent metrics,
 an action-oriented profile, inventory and release helpers, replay support,
 privacy helpers, dashboard extensions, and:
@@ -69,7 +69,7 @@ privacy helpers, dashboard extensions, and:
 - cross-session grouping for repeated references, starter assets, and delegated
   prompts, so the evolution gate receives the recurrence evidence it scores.
 
-The pre-fix reference run on the same 21 cases passed 18/21. All three failures
+The pre-fix reference run on the same 23 cases passed 20/23. All three failures
 were supporting resources used once in each of three sessions.
 
 The separate `celia-hk-agent/skill-evolving-agents` repository is an older,
