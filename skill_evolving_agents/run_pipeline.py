@@ -911,8 +911,8 @@ def recalled_skill_evidence(
     skills_root: Path,
     recalled: list[dict] | None,
     *,
-    per_skill_chars: int = 2400,
-    resource_chars: int = 2400,
+    per_skill_chars: int = 1800,
+    resource_chars: int = 1600,
 ) -> dict[str, object]:
     """Bound current recalled content so Goal can distinguish update from no-change."""
     rows: list[dict[str, object]] = []
@@ -4312,6 +4312,82 @@ def _empty_diagnosis() -> dict[str, object]:
     }
 
 
+def _deterministic_resource_diagnosis(
+    finding: dict[str, object], cluster: str
+) -> dict[str, object] | None:
+    """Build a bounded diagnosis for a qualified resource opportunity.
+
+    The detector has already proven repetition, shape, and false-positive
+    guards. A hosted diagnosis would restate that contract; use a compact
+    deterministic record and reserve agent calls for ambiguous findings.
+    """
+    features = finding.get("features")
+    if not isinstance(features, dict):
+        return None
+    if features.get("candidate_source") != "resource_opportunity":
+        return None
+    settings = preprocessing_config().get("resource_opportunities") or {}
+    if not settings.get("deterministic_diagnosis", False):
+        return None
+    confidence = float(finding.get("confidence") or 0)
+    if confidence < float(
+        settings.get("deterministic_diagnosis_min_confidence", 0.94)
+    ):
+        return None
+    resource = str(features.get("resource") or "")
+    contract_key = {
+        "scripts": "script_contract",
+        "references": "reference_contract",
+        "assets": "asset_contract",
+        "agents": "agent_contract",
+        "evals": "eval_contract",
+    }.get(resource)
+    contract = features.get(contract_key) if contract_key else None
+    if not isinstance(contract, dict) or not contract:
+        return None
+    capability_type = {
+        "scripts": "job/methodology",
+        "references": "form/reference",
+        "assets": "artifact/document",
+        "agents": "job/methodology",
+        "evals": "job/verification",
+    }.get(resource, "job/methodology")
+    source = str(
+        contract.get("source")
+        or features.get("source_path")
+        or features.get("resource_family")
+        or resource
+    )
+    evidence = [
+        str(trace)
+        for trace in finding.get("trace_ids") or []
+        if isinstance(trace, str) and trace
+    ][:3]
+    if not evidence:
+        evidence = [f"resource opportunity: {source}"]
+    return {
+        "skill_capabilities_missing": [
+            {
+                "type": capability_type,
+                "cluster": str(cluster),
+                "description": (
+                    f"Reusable {resource} opportunity from {source} with a "
+                    "deterministic detector contract."
+                ),
+                "confidence": confidence,
+                "reasoning": (
+                    "The resource detector already verified repeated "
+                    "independent invocations, explicit resource shape, a "
+                    "stable fingerprint, and its false-positive guards."
+                ),
+                "evidence_list": evidence,
+            }
+        ],
+        "newly_detected_skill_capabilites_missing": [],
+        "resource_terminal_diagnosis": True,
+    }
+
+
 def _diagnose_scope(
     workspace: Path,
     cluster: str,
@@ -4338,6 +4414,33 @@ def _diagnose_scope(
     diagnosis = private / "run/diagnosis.json"
     diagnosis.unlink(missing_ok=True)
     source = scope_source(cluster, clustered, unit_kind)
+    if unit_kind == "finding":
+        finding_path = scope_source_path(workspace, source) / "finding.json"
+        if finding_path.is_file():
+            finding_data = json.loads(finding_path.read_text())
+            applied = previously_applied_finding_skills(
+                workspace, str(cluster), None, finding_data
+            )
+            if applied:
+                atomic_write_json(
+                    diagnosis,
+                    {
+                        "skill_capabilities_missing": [],
+                        "newly_detected_skill_capabilites_missing": [],
+                        "reasoning": (
+                            "The exact finding is already applied to current "
+                            "inventory skills: " + ", ".join(applied) + "."
+                        ),
+                        "already_applied_skills": applied,
+                    },
+                )
+                return cluster, suffix, private
+            resource_diagnosis = _deterministic_resource_diagnosis(
+                finding_data, str(cluster)
+            )
+            if resource_diagnosis is not None:
+                atomic_write_json(diagnosis, resource_diagnosis)
+                return cluster, suffix, private
     embedded_source = ""
     if unit_kind == "finding":
         finding_path = scope_source_path(private, source) / "finding.json"
@@ -4612,6 +4715,62 @@ def _goal_scope(
             if preflight_available
             else {}
         )
+        applied_skills = diagnosis.get("already_applied_skills")
+        if isinstance(applied_skills, list) and applied_skills:
+            reason = (
+                "This exact finding was already applied to a current inventory "
+                f"skill: {', '.join(str(skill) for skill in applied_skills)}. "
+                "Reprocessing the same evidence is idempotent; require a new "
+                "finding or new behavior before another edit."
+            )
+            atomic_write_json(
+                matching,
+                {
+                    "matching": {
+                        "strategy": "applied-finding-terminal-v1",
+                        "config_version": 1,
+                        "config_sha256": hashlib.sha256(
+                            b"applied-finding-terminal-v1"
+                        ).hexdigest(),
+                    },
+                    "clusters": [
+                        {"cluster": cluster, "labels": [], "skills": []}
+                    ],
+                },
+            )
+            atomic_write_json(
+                goal,
+                {
+                    "goal": {
+                        "improve_harness": {"scope": "out_of_scope"},
+                        "improve_skills": [],
+                        "avoid": "Do not apply the same finding twice.",
+                    },
+                    "reasoning": reason,
+                    "plan": "Leave the current skills unchanged.",
+                    "feedback_to": "diagnosis",
+                    "action": {
+                        "disposition": "no_change",
+                        "reason": reason,
+                        "ops": [],
+                    },
+                },
+            )
+            with pipeline_metrics.span(
+                workspace,
+                stage,
+                suffix,
+                "deterministic",
+                metadata={
+                    "applied_finding_terminal": True,
+                    "applied_skills": applied_skills,
+                },
+            ):
+                pass
+            pipeline_contracts.validate_label_matching(matching, cluster)
+            pipeline_contracts.validate_goal(goal)
+            _emit_goal_decision(workspace, str(cluster), goal)
+            return cluster, suffix, private
         empty_diagnosis = (
             not inventory_skills
             and diagnosis.get("skill_capabilities_missing") == []
@@ -6759,9 +6918,17 @@ output contract.{correction}"""
 
 
 def verifier_evidence_bundle(
-    workspace: Path, skill_row: dict[str, object], *, max_chars: int = 26000
+    workspace: Path,
+    skill_row: dict[str, object],
+    *,
+    max_chars: int | None = None,
 ) -> str:
     """Materialize bounded, exact evidence so the verifier needs no tools."""
+    if max_chars is None:
+        max_chars = int(
+            os.environ.get("SKILL_EVOLVER_VERIFIER_EVIDENCE_CHARS", "18000")
+        )
+    max_chars = max(4000, max_chars)
     skill = str(skill_row.get("skill") or "")
     raw = workspace / "target/raw_skills" / skill
     candidate = workspace / "target/to_be_improved_skills" / skill
@@ -6865,6 +7032,11 @@ def verifier_evidence_bundle(
             }:
                 continue
             content = read_text(path)
+            if len(content) > 8000:
+                content = (
+                    content[:8000]
+                    + "\n[resource excerpt truncated at 8000 characters]"
+                )
             lines.extend([f"candidate/{relative}:", content])
     inventory_summaries = []
     inventory_root = workspace / "target/to_be_improved_skills"
@@ -6891,7 +7063,10 @@ def verifier_evidence_bundle(
         )
     bundle = "\n".join(lines)
     if len(bundle) > max_chars:
-        bundle = bundle[:max_chars] + "\n[host evidence truncated at 26000 characters]"
+        bundle = (
+            bundle[:max_chars]
+            + f"\n[host evidence truncated at {max_chars} characters]"
+        )
     return bundle
 
 
@@ -9313,6 +9488,8 @@ Important. These reject the skill. Avoid them.
   not yet been restated was outside the skill.
 - Headings: a required section is a level-2 heading, `## Overview`. `# Overview`
   is reported missing.
+- Response budget: edit the files and stop. Do not restate the skill, the
+  evidence, or the diff. Keep the final message under 150 words.
 """.strip()
 
 

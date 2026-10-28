@@ -1301,6 +1301,286 @@ class ContractTests(unittest.TestCase):
                 )
             )
 
+    def test_phase_metrics_break_out_operation_kinds_per_phase(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory) / "workspace/runs/op-kinds-run"
+            kinds = ("create", "update", "merge", "split", "delete")
+            for index, kind in enumerate(kinds, start=1):
+                cluster = f"sig-{kind}"
+                goal = {
+                    "goal": {"improve_harness": {"scope": "out_of_scope"}},
+                    "action": {
+                        "disposition": kind,
+                        "ops": [
+                            {
+                                "op": kind,
+                                "skills": [{"skill": f"{kind}-skill"}],
+                            }
+                        ],
+                    },
+                }
+                write_json(workspace / f"run/{cluster}/evolve-goal.json", goal)
+                write_json(
+                    workspace / f"run/{cluster}/ops/1/changelog.json",
+                    {
+                        "changes": [
+                            {
+                                "operation": kind,
+                                "skill": f"{kind}-skill",
+                                "status": "pending",
+                            }
+                        ]
+                    },
+                )
+                write_json(
+                    workspace / f"run/{cluster}/ops/1/verification.json",
+                    {
+                        "status": "skipped" if kind == "merge" else "completed",
+                        "feedback": {
+                            "overall_status": "fail" if kind == "update" else "pass"
+                        },
+                    },
+                )
+                write_json(
+                    workspace / f"run/{cluster}/ops/1/judge.json",
+                    {"status": "fail" if kind == "update" else "pass"},
+                )
+                write_json(
+                    workspace / f"run/{cluster}/ops/1/publication.json",
+                    {"accepted": kind != "update"},
+                )
+            write_json(
+                workspace / "run/sig-no-change/evolve-goal.json",
+                {
+                    "goal": {"improve_harness": {"scope": "out_of_scope"}},
+                    "action": {"disposition": "no_change", "ops": []},
+                },
+            )
+            metrics = runner.pipeline_metrics.collect_phase_metrics(
+                workspace, []
+            )
+            expected = {
+                "create": 1,
+                "update": 1,
+                "merge": 1,
+                "split": 1,
+                "delete": 1,
+                "no_change": 1,
+                "unknown": 0,
+            }
+            self.assertEqual(
+                metrics["phases"]["goal"]["proposed_by_operation"], expected
+            )
+            self.assertEqual(
+                metrics["phases"]["optimize"]["changed_by_operation"],
+                {**expected, "no_change": 0},
+            )
+            self.assertEqual(
+                metrics["phases"]["verify"]["operations_by_operation"],
+                {**expected, "no_change": 0},
+            )
+            self.assertEqual(
+                metrics["phases"]["verify"]["passed_by_operation"],
+                {
+                    "create": 1,
+                    "update": 0,
+                    "merge": 0,
+                    "split": 1,
+                    "delete": 1,
+                    "no_change": 0,
+                    "unknown": 0,
+                },
+            )
+            self.assertEqual(
+                metrics["phases"]["verify"]["skipped_by_operation"],
+                {
+                    "create": 0,
+                    "update": 0,
+                    "merge": 1,
+                    "split": 0,
+                    "delete": 0,
+                    "no_change": 0,
+                    "unknown": 0,
+                },
+            )
+            self.assertEqual(
+                metrics["phases"]["judge"]["accepted_by_operation"],
+                {
+                    "create": 1,
+                    "update": 0,
+                    "merge": 1,
+                    "split": 1,
+                    "delete": 1,
+                    "no_change": 0,
+                    "unknown": 0,
+                },
+            )
+            runner.pipeline_metrics.write_phase_metrics(workspace, [])
+            aggregate = runner.pipeline_metrics.aggregate_phase_metrics(
+                workspace.parent
+            )
+            self.assertEqual(
+                aggregate["phases"]["goal"]["proposed_by_operation"], expected
+            )
+            self.assertEqual(
+                aggregate["phases"]["verify"]["operations_by_operation"],
+                {**expected, "no_change": 0},
+            )
+
+    def test_qualified_resource_finding_skips_diagnosis_agent(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory) / "workspace/runs/resource-run"
+            cluster = "sig-resource"
+            write_json(
+                workspace
+                / f"traces/derived/findings/{cluster}/finding.json",
+                {
+                    "signal_id": cluster,
+                    "detector": "resource-references-opportunity",
+                    "severity": "high",
+                    "confidence": 0.96,
+                    "session_id": "session-a",
+                    "trace_ids": ["codex:session-a:turn"],
+                    "features": {
+                        "candidate_source": "resource_opportunity",
+                        "resource": "references",
+                        "resource_decision": "use",
+                        "resource_family": "repeated-knowledge-source",
+                        "false_positive_guards": [
+                            "repeated-independent-invocations",
+                            "explicit-resource-shape",
+                            "stable-normalized-fingerprint",
+                        ],
+                        "reference_contract": {
+                            "source": "docs/operations/delivery.md",
+                            "content_available": False,
+                        },
+                    },
+                    "evidence": [
+                        {
+                            "trace_id": "codex:session-a:turn",
+                            "quote": "sed -n '1,220p' docs/operations/delivery.md",
+                        }
+                    ],
+                },
+            )
+            with patch.object(
+                runner,
+                "run_session",
+                side_effect=AssertionError("diagnosis agent must not start"),
+            ):
+                _cluster, _suffix, private = runner._diagnose_scope(
+                    workspace,
+                    cluster,
+                    "resource-suffix",
+                    clustered=False,
+                    unit_kind="finding",
+                    workers=1,
+                    pool_items=1,
+                    ready_us=0,
+                    auth={},
+                    model=None,
+                    install_agent=False,
+                )
+            diagnosis = json.loads(
+                (private / "run/diagnosis.json").read_text()
+            )
+            self.assertTrue(diagnosis["resource_terminal_diagnosis"])
+            self.assertEqual(
+                diagnosis["skill_capabilities_missing"][0]["type"],
+                "form/reference",
+            )
+            self.assertEqual(
+                diagnosis["skill_capabilities_missing"][0]["confidence"], 0.96
+            )
+
+    def test_exact_replay_skips_diagnosis_and_goal_agents(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory) / "workspace/runs/replay-run"
+            cluster = "sig-replay"
+            write_json(
+                workspace
+                / f"traces/derived/findings/{cluster}/finding.json",
+                {
+                    "signal_id": cluster,
+                    "detector": "repeated-instructions",
+                    "severity": "high",
+                    "confidence": 0.9,
+                    "session_id": "session-a",
+                    "trace_ids": ["codex:session-a:turn"],
+                    "features": {"candidate_source": "signal_detector"},
+                    "evidence": [{"trace_id": "codex:session-a:turn"}],
+                },
+            )
+            (workspace / "target/skill_changelogs").mkdir(parents=True)
+            (workspace / "target/skill_changelogs/retry-guard.md").write_text(
+                "# retry-guard\n"
+                f"- 2026-10-24 update {cluster}/1 | workflow\n"
+            )
+            skill = workspace / "target/to_be_improved_skills/retry-guard"
+            skill.mkdir(parents=True)
+            (skill / "SKILL.md").write_text(valid_skill_text("retry-guard"))
+            write_json(
+                workspace
+                / "target/to_be_improved_skills_metadata/metadata.json",
+                {"skills_metadata": [{"skill": "retry-guard", "skill_types": []}]},
+            )
+            with patch.object(
+                runner,
+                "run_session",
+                side_effect=AssertionError("agent session must not start"),
+            ):
+                _cluster, _suffix, private = runner._diagnose_scope(
+                    workspace,
+                    cluster,
+                    "replay-suffix",
+                    clustered=False,
+                    unit_kind="finding",
+                    workers=1,
+                    pool_items=1,
+                    ready_us=0,
+                    auth={},
+                    model=None,
+                    install_agent=False,
+                )
+                diagnosis = json.loads(
+                    (private / "run/diagnosis.json").read_text()
+                )
+                self.assertEqual(
+                    diagnosis["already_applied_skills"], ["retry-guard"]
+                )
+                self.assertEqual(
+                    diagnosis["skill_capabilities_missing"], []
+                )
+
+                published = workspace / "run" / cluster
+                published.mkdir(parents=True)
+                shutil.copy2(
+                    private / "run/diagnosis.json",
+                    published / "diagnosis.json",
+                )
+                _cluster, _suffix, goal_private = runner._goal_scope(
+                    workspace,
+                    cluster,
+                    "replay-suffix",
+                    clustered=False,
+                    unit_kind="finding",
+                    workers=1,
+                    pool_items=1,
+                    ready_us=0,
+                    auth={},
+                    model=None,
+                    install_agent=False,
+                )
+                goal = json.loads(
+                    (goal_private / f"run/{cluster}/evolve-goal.json").read_text()
+                )
+                self.assertEqual(goal["action"]["disposition"], "no_change")
+                self.assertEqual(goal["action"]["ops"], [])
+                self.assertIn(
+                    "already applied", goal["action"]["reason"].lower()
+                )
+
     def test_pipeline_timings_write_local_global_and_chrome_outputs(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             workspace = Path(directory) / "workspace/runs/timed-run"
@@ -2891,6 +3171,37 @@ class ContractTests(unittest.TestCase):
             self.assertIn("duplicate/subsumption check", bundle)
             self.assertIn("other-skill", bundle)
 
+    def test_verifier_evidence_bundle_honors_character_cap(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            candidate = workspace / "target/to_be_improved_skills/long-skill"
+            (candidate / "references").mkdir(parents=True)
+            (candidate / "SKILL.md").write_text(
+                "---\nname: long-skill\ndescription: Long skill.\n---\n"
+                + ("## Overview\n" + "bounded evidence line\n" * 400)
+            )
+            (candidate / "references/index.md").write_text(
+                "reference line\n" * 800
+            )
+            bundle = runner.verifier_evidence_bundle(
+                workspace,
+                {
+                    "skill": "long-skill",
+                    "role": "created",
+                    "baseline_expected": False,
+                    "candidate_expected": True,
+                    "requirements": {
+                        "sections": [{"section": "overview"}],
+                        "directories": [{"dir": "references"}],
+                    },
+                },
+                max_chars=4000,
+            )
+            self.assertIn(
+                "[host evidence truncated at 4000 characters]", bundle
+            )
+            self.assertLessEqual(len(bundle), 4100)
+
     def test_merge_target_verifier_ignores_unrelated_inventory_summaries(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             workspace = Path(directory)
@@ -4054,6 +4365,55 @@ class ContractTests(unittest.TestCase):
                     for row in below_decisions
                 )
             )
+
+    def test_reference_opportunities_consolidate_by_source_root(self) -> None:
+        config = json.loads(
+            (AGENTS / "common/preprocessing-config.json").read_text()
+        )
+        detector_config = config["signals"]
+        detector_config["_methodology"] = config["methodology"]
+        detector_config["_resource_opportunities"] = config["resource_opportunities"]
+
+        def finding(name: str, source: str) -> dict:
+            return {
+                "signal_id": name,
+                "detector": "resource-references-opportunity",
+                "severity": "medium",
+                "confidence": 0.95,
+                "routing": "skill_evolution",
+                "session_id": "session-a",
+                "trace_ids": [f"codex:session-a:{name}"],
+                "features": {
+                    "candidate_source": "resource_opportunity",
+                    "resource": "references",
+                    "resource_family": "repeated-knowledge-source",
+                    "distinct_windows": 3,
+                    "occurrence_count": 3,
+                    "reference_contract": {"source": source},
+                },
+                "evidence": [{"trace_id": f"codex:session-a:{name}"}],
+            }
+
+        findings = [
+            finding("sig-a", "docs/operations/reliability/p0.md"),
+            finding("sig-b", "docs/operations/reliability/handoff.md"),
+            finding("sig-c", "docs/architecture/overview.md"),
+        ]
+        selected, decisions = signals._select_findings(
+            findings, detector_config
+        )
+        selected_ids = {row["signal_id"] for row in selected}
+        self.assertEqual(len(selected_ids), 2)
+        self.assertIn("sig-c", selected_ids)
+        self.assertEqual(len({"sig-a", "sig-b"} & selected_ids), 1)
+        duplicate = next(
+            row
+            for row in decisions
+            if row["finding_id"] in {"sig-a", "sig-b"}
+            and row["finding_id"] not in selected_ids
+        )
+        self.assertEqual(duplicate["disposition"], "deduplicated")
+        self.assertEqual(duplicate["reason"], "overlapping-reference-source")
 
     def test_asset_reuse_opportunity_preserves_provenance_ceiling(self) -> None:
         config = json.loads(

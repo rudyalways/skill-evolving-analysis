@@ -23,6 +23,23 @@ except ImportError:
 
 _LOCK = threading.RLock()
 _INT31 = 0x7FFFFFFF
+OPERATION_KINDS = (
+    "create",
+    "update",
+    "merge",
+    "split",
+    "delete",
+    "no_change",
+)
+
+
+def _operation_counts() -> dict[str, int]:
+    return {kind: 0 for kind in (*OPERATION_KINDS, "unknown")}
+
+
+def _add_operation(counts: dict[str, int], kind: object) -> None:
+    name = str(kind or "unknown")
+    counts[name if name in counts else "unknown"] += 1
 
 
 def trace_pid(run_id: str) -> int:
@@ -677,6 +694,79 @@ def collect_phase_metrics(
         if isinstance(pipeline_summary, dict)
         else []
     )
+    run_root = workspace / "run"
+    proposed_by_operation = _operation_counts()
+    operation_kind_by_scope: dict[tuple[str, str], str] = {}
+    for path in sorted(run_root.glob("*/evolve-goal.json")):
+        try:
+            goal = json.loads(path.read_text())
+        except (OSError, json.JSONDecodeError):
+            continue
+        action = goal.get("action") if isinstance(goal, dict) else None
+        ops = action.get("ops") if isinstance(action, dict) else []
+        if not isinstance(ops, list) or not ops:
+            _add_operation(proposed_by_operation, "no_change")
+            continue
+        cluster = path.parent.name
+        for index, op in enumerate(ops, start=1):
+            if not isinstance(op, dict):
+                continue
+            kind = str(op.get("op") or "unknown")
+            _add_operation(proposed_by_operation, kind)
+            operation_kind_by_scope[(cluster, str(index))] = kind
+    changed_by_operation = _operation_counts()
+    for path in sorted(run_root.glob("*/ops/*/changelog.json")):
+        try:
+            changelog = json.loads(path.read_text())
+        except (OSError, json.JSONDecodeError):
+            continue
+        for change in changelog.get("changes") or []:
+            if isinstance(change, dict):
+                _add_operation(changed_by_operation, change.get("operation"))
+    verify_operations_by_operation = _operation_counts()
+    verify_passed_by_operation = _operation_counts()
+    verify_skipped_by_operation = _operation_counts()
+    judge_decisions_by_operation = _operation_counts()
+    judge_passed_by_operation = _operation_counts()
+    accepted_by_operation = _operation_counts()
+    for path in sorted(run_root.glob("*/ops/*/verification.json")):
+        cluster = path.parents[2].name
+        kind = operation_kind_by_scope.get((cluster, path.parent.name), "unknown")
+        _add_operation(verify_operations_by_operation, kind)
+        try:
+            verification = json.loads(path.read_text())
+        except (OSError, json.JSONDecodeError):
+            continue
+        if isinstance(verification, dict):
+            skipped = verification.get("status") == "skipped"
+            if skipped:
+                _add_operation(verify_skipped_by_operation, kind)
+            feedback = verification.get("feedback")
+            if (
+                not skipped
+                and isinstance(feedback, dict)
+                and feedback.get("overall_status") == "pass"
+            ):
+                _add_operation(verify_passed_by_operation, kind)
+    for path in sorted(run_root.glob("*/ops/*/judge.json")):
+        cluster = path.parents[2].name
+        kind = operation_kind_by_scope.get((cluster, path.parent.name), "unknown")
+        _add_operation(judge_decisions_by_operation, kind)
+        try:
+            judge = json.loads(path.read_text())
+        except (OSError, json.JSONDecodeError):
+            continue
+        if isinstance(judge, dict) and judge.get("status") == "pass":
+            _add_operation(judge_passed_by_operation, kind)
+    for path in sorted(run_root.glob("*/ops/*/publication.json")):
+        cluster = path.parents[2].name
+        kind = operation_kind_by_scope.get((cluster, path.parent.name), "unknown")
+        try:
+            publication = json.loads(path.read_text())
+        except (OSError, json.JSONDecodeError):
+            continue
+        if isinstance(publication, dict) and publication.get("accepted") is True:
+            _add_operation(accepted_by_operation, kind)
     changed_scopes = sum(
         isinstance(scope, dict) and scope.get("disposition") != "no_change"
         for scope in scopes
@@ -996,6 +1086,7 @@ def collect_phase_metrics(
                     else "converged" if converged_replay else "no_change"
                 ),
                 "operations": len(operations),
+                "proposed_by_operation": dict(proposed_by_operation),
                 "reduction_decisions": dict(sorted(reduction_counts.items())),
                 "min_super_score": (
                     float(reduction.get("min_super_score") or 0)
@@ -1018,6 +1109,7 @@ def collect_phase_metrics(
                     optimize_attempt_twos,
                     optimize_first_attempts,
                 ),
+                "changed_by_operation": dict(changed_by_operation),
                 "quality": None,
                 "quality_reason": "edit completion is not behavioral improvement",
             },
@@ -1044,6 +1136,11 @@ def collect_phase_metrics(
                 "structural_pass_rate": _rate(
                     verification_passes, len(verifications)
                 ),
+                "operations_by_operation": dict(
+                    verify_operations_by_operation
+                ),
+                "passed_by_operation": dict(verify_passed_by_operation),
+                "skipped_by_operation": dict(verify_skipped_by_operation),
                 "replay_available": replay_available,
                 "replay_coverage": _rate(replay_available, len(verifications)),
                 "replay_passes": replay_passes,
@@ -1062,6 +1159,9 @@ def collect_phase_metrics(
                 ),
                 "proposed_operations": len(operations),
                 "accepted_proposals": accepted,
+                "decisions_by_operation": dict(judge_decisions_by_operation),
+                "passed_by_operation": dict(judge_passed_by_operation),
+                "accepted_by_operation": dict(accepted_by_operation),
                 "proposal_acceptance_rate": _rate(accepted, len(operations)),
                 "note": (
                     "proposals include bundled operations; judge decisions and "
@@ -1131,6 +1231,17 @@ def aggregate_phase_metrics(runs_root: Path) -> dict[str, Any]:
             for report in reports
         )
 
+    def operation_total(phase: str, key: str) -> dict[str, int]:
+        counts = _operation_counts()
+        for report in reports:
+            values = (((report.get("phases") or {}).get(phase) or {}).get(key))
+            if not isinstance(values, dict):
+                continue
+            for name, count in values.items():
+                target = str(name) if str(name) in counts else "unknown"
+                counts[target] += int(count or 0)
+        return counts
+
     mining_findings = total("mining", "findings")
     mining_selected = total("mining", "selected")
     diagnosis_expected = total("diagnosis", "expected_scopes")
@@ -1173,6 +1284,9 @@ def aggregate_phase_metrics(runs_root: Path) -> dict[str, Any]:
                 "changed_scopes": total("goal", "changed_scopes"),
                 "no_change_scopes": total("goal", "no_change_scopes"),
                 "operations": total("goal", "operations"),
+                "proposed_by_operation": operation_total(
+                    "goal", "proposed_by_operation"
+                ),
                 "idempotent_replay_scopes": total(
                     "goal", "idempotent_replay_scopes"
                 ),
@@ -1201,6 +1315,9 @@ def aggregate_phase_metrics(runs_root: Path) -> dict[str, Any]:
             "optimize": {
                 "operations_started": total("optimize", "operations_started"),
                 "second_attempts": total("optimize", "second_attempts"),
+                "changed_by_operation": operation_total(
+                    "optimize", "changed_by_operation"
+                ),
                 "retry_rate": _rate(
                     total("optimize", "second_attempts"),
                     total("optimize", "operations_started"),
@@ -1232,6 +1349,15 @@ def aggregate_phase_metrics(runs_root: Path) -> dict[str, Any]:
                 "structural_pass_rate": _rate(
                     total("verify", "structural_passes"), verify_operations
                 ),
+                "operations_by_operation": operation_total(
+                    "verify", "operations_by_operation"
+                ),
+                "passed_by_operation": operation_total(
+                    "verify", "passed_by_operation"
+                ),
+                "skipped_by_operation": operation_total(
+                    "verify", "skipped_by_operation"
+                ),
                 "replay_available": replay_available,
                 "replay_coverage": _rate(replay_available, verify_operations),
                 "behavioral_pass_rate": (
@@ -1243,6 +1369,15 @@ def aggregate_phase_metrics(runs_root: Path) -> dict[str, Any]:
             "judge": {
                 "proposed_operations": proposed,
                 "accepted_proposals": accepted,
+                "decisions_by_operation": operation_total(
+                    "judge", "decisions_by_operation"
+                ),
+                "passed_by_operation": operation_total(
+                    "judge", "passed_by_operation"
+                ),
+                "accepted_by_operation": operation_total(
+                    "judge", "accepted_by_operation"
+                ),
                 "proposal_acceptance_rate": _rate(accepted, proposed),
                 "first_attempt_passes": total(
                     "judge", "first_attempt_passes"

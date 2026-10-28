@@ -355,3 +355,30 @@ phase-order findings at `0.2733` and `0.297889` both produced no-change after
 roughly one minute of DeepSeek diagnosis, while adding no reusable capability.
 Lower this only for research profiles that intentionally study marginal
 methodology candidates; do not lower it merely to increase operation count.
+
+### Cost and latency controls
+
+These defaults reduce duplicate work without weakening semantic or executable
+verification:
+
+- Reference findings in the same source directory consolidate before selection;
+  one index is selected for the tree and the rest are recorded as
+  `overlapping-reference-source`.
+- A resource finding with confidence at or above `0.94`, a complete contract,
+  and all detector guards uses deterministic Diagnosis. Set
+  `resource_opportunities.deterministic_diagnosis` to `false` to restore a
+  hosted call for every resource finding.
+- Exact-finding replay is detected before Diagnosis. The run writes the
+  idempotent no-change Goal without a Diagnosis or Goal agent call.
+- Goal evidence defaults to 1,800 characters per recalled skill and 1,600 per
+  resource. Increase those arguments only for a measured recall or decision
+  regression.
+- Verifier evidence defaults to 18,000 characters with 8,000-character
+  resource excerpts. `SKILL_EVOLVER_VERIFIER_EVIDENCE_CHARS` overrides the
+  bundle ceiling without changing the contract.
+- Optimize prompts require edits and a final message under 150 words; the
+  response budget is a behavior instruction, not a correctness claim.
+
+Measure both token and wall-time effects. Fewer calls reduce token volume
+predictably, while wall time remains dominated by the slowest individual
+agent call and can vary between runs with the same evidence.

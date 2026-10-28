@@ -99,7 +99,13 @@ that can override evidence, verification, idempotency, or Judge.
 
 The same report includes distributions for operations per scope, proposed
 operation type, accepted operation type, idempotent replay scopes, and target
-status (`met`, `missed`, `converged`, or `unavailable`). A suppressed resource
+status (`met`, `missed`, `converged`, or `unavailable`). It also reports
+fixed-key operation breakdowns per phase: `goal.proposed_by_operation`,
+`optimize.changed_by_operation`, `verify.operations_by_operation`,
+`verify.passed_by_operation`, `verify.skipped_by_operation`, and the matching
+Judge decision/pass/accepted maps. Keys are always present for create, update,
+merge, split, delete, no_change, and unknown, so a zero merge/split/delete is
+measured rather than omitted. A suppressed resource
 opportunity whose reason is `equivalent-resource-exists` or
 `equivalent-existing-script` is already-applied evidence, not a failed
 proposal. When a run has no changed scope, no accepted operation, and at least
@@ -213,7 +219,11 @@ bundle and writes a rollback record.
 
 Place immutable held-out cases at
 `evaluation/held_out/<skill>.json` inside the run workspace and configure
-`SKILL_EVOLVER_REPLAY_COMMAND`. The command receives one JSON request on stdin
+`SKILL_EVOLVER_REPLAY_COMMAND`. Verifier evidence is capped at 18,000
+characters by default; set `SKILL_EVOLVER_VERIFIER_EVIDENCE_CHARS` to a value
+between 4,000 and the previous 26,000-character ceiling when a larger bundle is
+required. Individual resource excerpts are capped at 8,000 characters. The
+command receives one JSON request on stdin
 for each `without_skill` and `with_skill` case and must return a JSON object
 with boolean `passed` and `activated` fields; numeric token, tool-call, error,
 and timing fields are optional. The runner creates and validates the replay
@@ -231,6 +241,21 @@ evidence reach agents. Trace strings remain untrusted data; redaction is not an
 instruction interpreter. Use `--tenant <id>` to place run state, inventory,
 metrics, and optimization data below `workspace/tenants/<id>/`; tenant IDs are
 validated before path resolution and traversal values are rejected.
+
+Reference opportunities in the same source directory are consolidated before
+selection. One directory-level or document-level index is selected for that
+tree; the others are marked `deduplicated` with reason
+`overlapping-reference-source`. This prevents several near-identical reference
+skills from being proposed for one documentation tree. Findings in different
+trees remain independent.
+
+A qualified resource finding with confidence at or above `0.94`, a complete
+resource contract, and the detector's false-positive guards uses a compact
+deterministic Diagnosis instead of a hosted Diagnosis call. The Goal,
+Optimize, Verify, and Judge phases still run normally. Set
+`resource_opportunities.deterministic_diagnosis` to `false` in
+`common/preprocessing-config.json` to require a hosted Diagnosis for every
+finding.
 
 Repeated resource opportunities have a conservative single-session creation
 gate. By default it requires confidence `>= 0.90`, at least three occurrences

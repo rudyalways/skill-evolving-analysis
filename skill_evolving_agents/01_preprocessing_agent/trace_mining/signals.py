@@ -589,6 +589,27 @@ def _rank_key(row: dict[str, Any]) -> tuple[Any, ...]:
     )
 
 
+def _reference_source_root(features: dict[str, Any]) -> str:
+    """Return the source directory that a reference finding belongs to.
+
+    A directory-level index and a document-level index in the same tree are
+    one consolidation unit. Different trees remain independent.
+    """
+    contract = features.get("reference_contract") or {}
+    source = str(contract.get("source") or "").strip().rstrip("/")
+    if not source:
+        return ""
+    basename = source.rsplit("/", 1)[-1]
+    if "." in basename:
+        source = source.rsplit("/", 1)[0] if "/" in source else ""
+    return source.casefold()
+
+
+def _reference_is_directory(source: str) -> bool:
+    basename = source.rstrip("/").rsplit("/", 1)[-1]
+    return bool(source) and "." not in basename
+
+
 def _select_findings(
     findings: list[dict[str, Any]], detector_config: dict[str, Any]
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
@@ -737,10 +758,52 @@ def _select_findings(
     methodology_count = 0
     methodology_per_trace: Counter[str] = Counter()
     reserved_resources = max(0, int(resource_config.get("reserved_selection_slots", 1)))
-    resource_rows = [
+    resource_candidates = [
         row for row in deduplicated
         if (row.get("features") or {}).get("candidate_source") == "resource_opportunity"
-    ][:reserved_resources]
+    ]
+    resource_candidates.sort(
+        key=lambda row: (
+            0
+            if _reference_is_directory(
+                str(
+                    ((row.get("features") or {}).get("reference_contract") or {}).get(
+                        "source"
+                    )
+                    or ""
+                )
+            )
+            else 1,
+            _rank_key(row),
+        )
+    )
+    kept_resources: list[dict[str, Any]] = []
+    reference_roots: dict[str, str] = {}
+    for row in resource_candidates:
+        features = row.get("features") or {}
+        if features.get("resource") == "references":
+            root = _reference_source_root(features)
+            if root and root in reference_roots:
+                decisions[row["signal_id"]].update(
+                    {
+                        "disposition": "deduplicated",
+                        "reason": "overlapping-reference-source",
+                        "selected_representative": reference_roots[root],
+                    }
+                )
+                continue
+            if root:
+                reference_roots[root] = row["signal_id"]
+        kept_resources.append(row)
+    kept_resource_ids = {row["signal_id"] for row in kept_resources}
+    deduplicated = [
+        row
+        for row in deduplicated
+        if row["signal_id"] in kept_resource_ids
+        or (row.get("features") or {}).get("candidate_source")
+        != "resource_opportunity"
+    ]
+    resource_rows = kept_resources[:reserved_resources]
     selected.extend(resource_rows)
     for row in deduplicated:
         if row in selected:
