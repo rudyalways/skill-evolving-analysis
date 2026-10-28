@@ -54,10 +54,10 @@ clean worktree based on `origin/main` for isolated work and verification.
 The personal repository baseline is:
 
 ```text
-6673be9 Mark converged resource replays as idempotent
+c52fc62 Cut funnel calls and expose per-phase operation metrics
 ```
 
-That commit passed all 207 tests in a clean worktree and the 23-case
+That commit passed all 212 tests in a clean worktree and the 23-case
 deterministic funnel benchmark at 23/23. It includes configurable funnel
 targets, single-session diagnosis controls, novel-versus-idempotent metrics,
 an action-oriented profile, inventory and release helpers, replay support,
@@ -70,7 +70,18 @@ privacy helpers, dashboard extensions, and:
   prompts, so the evolution gate receives the recurrence evidence it scores;
 - converged replay accounting: resource opportunities suppressed because an
   equivalent authored resource exists count as already applied, so a replay
-  reports `converged` consumer targets instead of false `missed` targets.
+  reports `converged` consumer targets instead of false `missed` targets;
+- fixed-key operation breakdowns in every phase (`proposed_by_operation`,
+  `changed_by_operation`, `operations_by_operation`, `passed_by_operation`,
+  `accepted_by_operation`), including explicit zero merge/split/delete counts;
+- reference consolidation by source root, deterministic Diagnosis for
+  qualified resource findings, exact-replay detection before Diagnosis, an
+  18k verifier evidence cap, and a 150-word Optimize response budget.
+
+Four fresh/replay trace runs after these changes used 37 DSH calls and 7.75M
+tokens versus 53 calls and 10.87M tokens before (28.7% fewer tokens, about 32%
+lower peak cost). Wall time was mixed: A and C improved, B and the
+non-equivalent D run were slower; do not claim aggregate wall-time savings.
 
 The pre-fix reference run on the same 23 cases passed 20/23. All three failures
 were supporting resources used once in each of three sessions.
