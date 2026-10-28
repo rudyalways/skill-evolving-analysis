@@ -78,5 +78,10 @@ same case set passes 23/23 and the selected findings flow through the
 evolution gate and idempotent replay checks.
 
 A benchmark pass is evidence about deterministic routing and labeled
-expectations, not proof that a hosted mutation is useful. Keep held-out cases
-out of threshold tuning and report residual limitations with every result.
+expectations, not proof that a hosted mutation is useful. The cross-session
+fix above was diagnosed from both calibration and held-out failures, so the
+23/23 result is regression coverage rather than an unbiased held-out estimate;
+add unseen cases before treating it as a generalization claim. The runner does
+not start the embedding service or a hosted agent: it measures the semantic
+decision policy with labeled scores and the deterministic boundaries that
+decide whether those paid stages should run.
