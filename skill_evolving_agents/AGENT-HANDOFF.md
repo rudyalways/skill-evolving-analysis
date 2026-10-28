@@ -54,10 +54,10 @@ clean worktree based on `origin/main` for isolated work and verification.
 The personal repository baseline is:
 
 ```text
-c52fc62 Cut funnel calls and expose per-phase operation metrics
+357c1ad Suppress overlapping structural merge candidates
 ```
 
-That commit passed all 212 tests in a clean worktree and the 23-case
+That commit passed all 213 tests in a clean worktree and the 23-case
 deterministic funnel benchmark at 23/23. It includes configurable funnel
 targets, single-session diagnosis controls, novel-versus-idempotent metrics,
 an action-oriented profile, inventory and release helpers, replay support,
@@ -82,6 +82,15 @@ Four fresh/replay trace runs after these changes used 37 DSH calls and 7.75M
 tokens versus 53 calls and 10.87M tokens before (28.7% fewer tokens, about 32%
 lower peak cost). Wall time was mixed: A and C improved, B and the
 non-equivalent D run were slower; do not claim aggregate wall-time savings.
+
+A controlled duplicate-inventory structural benchmark produced accepted merges
+in 9 of 10 inventory-only runs; the remaining run correctly chose no_change
+for two references covering different documents. Three early runs emitted two
+merge operations for the same duplicate pair, which led to candidate
+deduplication: one review unit now claims a skill set, overlapping candidates
+are retained under `suppressed_candidates`, and a verification run emits one
+merge with two suppressed candidates. This is test evidence, not a production
+inventory change.
 
 The pre-fix reference run on the same 23 cases passed 20/23. All three failures
 were supporting resources used once in each of three sessions.
