@@ -1,2 +1,0 @@
-"""Scenario candidate generators."""
-
