@@ -2179,7 +2179,7 @@ def _dedupe_merge_candidates(
     ordered = sorted(
         candidates,
         key=lambda row: (
-            row.get("operation_hint") == "merge",
+            row.get("operation_hint") in {"merge", "delete"},
             float(row.get("score") or 0),
             tuple(row.get("skills") or []),
         ),
@@ -2200,7 +2200,7 @@ def _dedupe_merge_candidates(
             )
             continue
         selected.append(row)
-        if row.get("operation_hint") == "merge":
+        if row.get("operation_hint") in {"merge", "delete"}:
             claimed.update(skills)
     return selected, suppressed
 
@@ -3567,7 +3567,7 @@ def materialize_created_skill_metadata(
 ) -> None:
     """Materialize metadata for create and new-target merge operations."""
     operation = op.get("op")
-    if operation not in {"create", "merge"}:
+    if operation not in {"create", "merge", "split"}:
         return
     path = workspace / "target/to_be_improved_skills_metadata/metadata.json"
     try:
@@ -3609,6 +3609,30 @@ def materialize_created_skill_metadata(
                     for name, weight in sorted(label_weights.items())
                 ],
             }]
+    if operation == "split":
+        source_name = str(op.get("skill") or "")
+        source_row = by_name.get(source_name)
+        source_labels = (
+            copy.deepcopy(source_row.get("skill_types") or [])
+            if isinstance(source_row, dict)
+            else []
+        )
+        skill_specs = []
+        for part in op.get("into") or []:
+            if not isinstance(part, dict):
+                continue
+            labels = part.get("labels")
+            skill_specs.append(
+                {
+                    "skill": part.get("skill"),
+                    "description": str(part.get("description") or ""),
+                    "labels": (
+                        copy.deepcopy(labels)
+                        if isinstance(labels, list) and labels
+                        else source_labels
+                    ),
+                }
+            )
     lifecycle: dict[str, object] | None = None
     if cluster:
         finding_path = (

@@ -2817,6 +2817,57 @@ class ContractTests(unittest.TestCase):
                 (workspace / "target/to_be_improved_skills/_templates").exists()
             )
 
+    def test_split_materializes_metadata_for_each_part(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            metadata = (
+                workspace
+                / "target/to_be_improved_skills_metadata/metadata.json"
+            )
+            write_json(
+                metadata,
+                {
+                    "skills_metadata": [
+                        {
+                            "skill": "source",
+                            "description": "Source workflow",
+                            "skill_types": [
+                                {"type": "job/methodology", "weight": 0.9}
+                            ],
+                        }
+                    ]
+                },
+            )
+            runner.materialize_created_skill_metadata(
+                workspace,
+                {
+                    "op": "split",
+                    "skill": "source",
+                    "into": [
+                        {
+                            "skill": "part-a",
+                            "description": "Part A workflow",
+                            "sections": [{"section": "workflow", "goal": "keep"}],
+                        },
+                        {
+                            "skill": "part-b",
+                            "description": "Part B workflow",
+                            "sections": [{"section": "workflow", "goal": "keep"}],
+                        },
+                    ],
+                },
+            )
+            rows = {
+                row["skill"]: row
+                for row in json.loads(metadata.read_text())["skills_metadata"]
+            }
+            self.assertEqual(set(rows), {"source", "part-a", "part-b"})
+            self.assertEqual(
+                rows["part-a"]["skill_types"],
+                [{"type": "job/methodology", "weight": 0.9}],
+            )
+            self.assertEqual(rows["part-b"]["description"], "Part B workflow")
+
     def test_optimize_context_carries_authoritative_resource_content(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             workspace = Path(directory)
@@ -9732,6 +9783,24 @@ class DshAndInventoryRegressionTest(unittest.TestCase):
             suppressed[0]["suppression_reason"],
             "overlaps-selected-merge-candidate",
         )
+
+    def test_inventory_candidates_claim_delete_skills(self) -> None:
+        candidates = [
+            {
+                "skills": ["retired", "survivor"],
+                "score": 0.95,
+                "operation_hint": "delete",
+            },
+            {
+                "skills": ["survivor", "other"],
+                "score": 0.88,
+                "operation_hint": None,
+            },
+        ]
+        selected, suppressed = runner._dedupe_merge_candidates(candidates)
+        self.assertEqual([row["skills"] for row in selected], [["retired", "survivor"]])
+        self.assertEqual(len(suppressed), 1)
+        self.assertEqual(suppressed[0]["skills"], ["survivor", "other"])
 
     def test_inventory_merge_candidates_detect_same_method_fingerprint(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
