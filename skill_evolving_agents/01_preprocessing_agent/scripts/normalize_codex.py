@@ -18,6 +18,10 @@ from typing import Any
 PREPROCESSING_ROOT = Path(__file__).resolve().parents[1]
 if str(PREPROCESSING_ROOT) not in sys.path:
     sys.path.insert(0, str(PREPROCESSING_ROOT))
+AGENT_ROOT = PREPROCESSING_ROOT.parent
+if str(AGENT_ROOT) not in sys.path:
+    sys.path.insert(0, str(AGENT_ROOT))
+from common import privacy
 from trace_mining.source_adapters import (
     SourceAdapter,
     SourceAdapterRegistry,
@@ -464,6 +468,9 @@ def write_tool_evidence(
                 "result_bytes": len(result.encode()),
                 "result_sha256": hashlib.sha256(result.encode()).hexdigest(),
             }
+            row, redactions = privacy.redact(row)
+            if redactions:
+                row["dlp_redactions"] = redactions
             output.write(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n")
     return len(events), error_count
 
@@ -748,6 +755,9 @@ def normalize(
                 "tool_evidence_path": evidence_relative,
             },
         }
+        document, document_redactions = privacy.redact(document)
+        trajectory, trajectory_redactions = privacy.redact(trajectory)
+        counters["dlp_redactions"] += document_redactions + trajectory_redactions
         trajectory_target = trajectories_root / filename
         trajectory_target.write_text(
             json.dumps(trajectory, indent=2, ensure_ascii=False, sort_keys=True)

@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import math
 import copy
 import glob
 import hashlib
@@ -61,7 +62,7 @@ from core.state_machine import StateMachineRuntime, TransitionDecision, load_mac
 from core.super_config import SuperConfigError, load_super_config, resolve_execution_config
 from core.service_tiers import ServiceTierError, load_service_tiers
 from core.optimization import load_spec, validate_knob_registry
-from common import skill_resources
+from common import inventory_store, privacy, release_bundle, replay_runner, skill_resources
 from policy import FixedPolicy, PolicyCompiler, PolicyStore, extract_policy_features
 from services.embedding_api.client import EmbeddingClient, EmbeddingServiceError
 from services.embedding_api.provider import EmbeddingProvider, validate_embedding_runtime
@@ -114,6 +115,14 @@ ACTIVE_BACKEND = "docker-claude"
 ACTIVE_EXECUTION_CONFIG: dict = {}
 ACTIVE_EMBEDDING_PROVIDER: EmbeddingProvider | None = None
 ACTIVE_RUN_DEADLINE_MONOTONIC: float | None = None
+ACTIVE_INVENTORY_ROOT = ROOT / "workspace"
+
+
+def active_inventory_root() -> Path:
+    """Honor test/install root replacement while preserving tenant selection."""
+    if ACTIVE_INVENTORY_ROOT == INSTALL_ROOT / "workspace":
+        return ROOT / "workspace"
+    return ACTIVE_INVENTORY_ROOT
 
 
 def compile_runtime_policy(
@@ -500,6 +509,8 @@ def low_cost_allowed_scopes(
             shadow = {}
     allowed: list[str] = []
     decisions = []
+    single_session_candidates: list[tuple[float, int, int, str, int]] = []
+    severity_rank = {"critical": 4, "high": 3, "medium": 2, "low": 1}
     immediate = set(gate.get("immediate_detectors") or [])
     metrics_database = workspace.parents[1] / "metrics.sqlite"
     with sqlite3.connect(metrics_database, timeout=30) as connection:
@@ -610,6 +621,7 @@ def low_cost_allowed_scopes(
             keep, reasons = False, ["semantic_reject"]
         if keep:
             allowed.append(scope)
+        decision_index = len(decisions)
         decisions.append(
             {
                 "scope": scope,
@@ -625,6 +637,77 @@ def low_cost_allowed_scopes(
                 "semantic_disposition": semantic,
             }
         )
+        if (
+            not keep
+            and semantic != "rejected"
+            and len(current_sessions) == 1
+            and historical_sessions == 0
+            and confidence
+            >= float(gate.get("single_session_diagnosis_min_confidence", 0.85))
+            and current_evidence_count
+            >= int(gate.get("single_session_diagnosis_min_evidence", 1))
+        ):
+            single_session_candidates.append(
+                (
+                    confidence,
+                    current_evidence_count,
+                    severity_rank.get(severity, 0),
+                    scope,
+                    decision_index,
+                )
+            )
+    allowance = max(0, int(gate.get("single_session_diagnosis_limit", 0)))
+    for _, _, _, scope, decision_index in sorted(
+        single_session_candidates,
+        key=lambda row: (-row[0], -row[1], -row[2], row[3]),
+    )[:allowance]:
+        allowed.append(scope)
+        decisions[decision_index]["disposition"] = "selected"
+        decisions[decision_index]["reason_codes"] = [
+            "bounded_single_session_diagnosis"
+        ]
+    configured_scope_limit = max(
+        0, int(gate.get("maximum_diagnosis_scopes", 0))
+    )
+    target_rate = min(
+        1.0, max(0.0, float(gate.get("diagnosis_target_rate", 0.0)))
+    )
+    target_floor = math.ceil(len(scopes) * target_rate) if target_rate else 0
+    scope_limit = configured_scope_limit
+    if target_floor:
+        scope_limit = (
+            min(configured_scope_limit, target_floor)
+            if configured_scope_limit
+            else target_floor
+        )
+    if scope_limit and len(allowed) > scope_limit:
+        decision_by_scope = {row["scope"]: row for row in decisions}
+        protected_reasons = {
+            "critical",
+            "immediate_detector",
+            "qualified_authored_resource_lifecycle",
+        }
+        ranked = sorted(
+            set(allowed),
+            key=lambda scope: (
+                -int(
+                    bool(
+                        protected_reasons
+                        & set(decision_by_scope[scope]["reason_codes"])
+                    )
+                ),
+                -float(decision_by_scope[scope]["confidence"]),
+                -int(decision_by_scope[scope]["evidence_records"]),
+                scope,
+            ),
+        )
+        selected = set(ranked[:scope_limit])
+        for scope in set(allowed) - selected:
+            decision_by_scope[scope]["disposition"] = "deferred"
+            decision_by_scope[scope]["reason_codes"] = [
+                "diagnosis_scope_limit"
+            ]
+        allowed = ranked[:scope_limit]
     atomic_write_json(
         workspace / "traces/derived/evolution-gate.json",
         {"schema_version": 1, "decisions": decisions},
@@ -1083,7 +1166,8 @@ def initialize_workspace(workspace: Path) -> None:
 def initialize_inventory_workspace(workspace: Path) -> None:
     """Create a trace-free seed from the stable candidate inventory."""
     initialize_workspace(workspace)
-    source_skills = ROOT / "workspace/candidate_skills"
+    inventory_root = inventory_store.resolve(active_inventory_root())
+    source_skills = inventory_root / "candidate_skills"
     destination_skills = workspace / "target/to_be_improved_skills"
     if source_skills.is_dir():
         copied, invalid = copy_valid_skill_inventory(
@@ -1097,7 +1181,7 @@ def initialize_inventory_workspace(workspace: Path) -> None:
                 "invalid_skills": invalid,
             },
         )
-    source_metadata = ROOT / "workspace/candidate_skills_metadata"
+    source_metadata = inventory_root / "candidate_skills_metadata"
     destination_metadata = workspace / "target/to_be_improved_skills_metadata"
     if source_metadata.is_dir():
         shutil.rmtree(destination_metadata)
@@ -1115,7 +1199,7 @@ def initialize_inventory_workspace(workspace: Path) -> None:
                     ]
                 },
             )
-    source_changelogs = ROOT / "workspace/candidate_skills_changelog"
+    source_changelogs = inventory_root / "candidate_skills_changelog"
     destination_changelogs = workspace / SKILL_CHANGELOG_DIR
     destination_changelogs.mkdir(parents=True, exist_ok=True)
     if source_changelogs.is_dir():
@@ -2717,6 +2801,9 @@ def create_worker_workspace(
         }
         if Path(directory).resolve() == (workspace / "traces").resolve():
             ignored.add("raw")
+        if Path(directory).resolve() == workspace.resolve():
+            # Held-out cases are never copied into an Optimize worker.
+            ignored.add("evaluation")
         return ignored
 
     shutil.copytree(
@@ -2950,6 +3037,8 @@ def write_publication(
     outcome: str | None = None,
     selected_cluster: str | None = None,
     selected_op_index: int | None = None,
+    release_id: str | None = None,
+    release_channel: str | None = None,
 ) -> Path:
     path = (
         workspace
@@ -2970,6 +3059,11 @@ def write_publication(
         publication["selected_operation"] = {
             "cluster": selected_cluster,
             "op_index": selected_op_index,
+        }
+    if release_id is not None:
+        publication["release"] = {
+            "release_id": release_id,
+            "channel": release_channel,
         }
     atomic_write_json(path, publication)
     return path
@@ -3106,7 +3200,63 @@ def validate_preprocessing(workspace: Path, clustered: bool) -> list[Path]:
         finding = json.loads(finding_path.read_text())
         if finding.get("signal_id") != directory.name:
             raise SystemExit(f"finding ID does not match directory: {finding_path}")
-        if finding_ids != set(finding.get("trace_ids") or []):
+        expected_finding_ids = set(finding.get("trace_ids") or [])
+        missing_finding_ids = expected_finding_ids - finding_ids
+        if missing_finding_ids and missing_finding_ids <= turn_ids:
+            manifest_path = directory / "manifest.jsonl"
+            rows = [
+                json.loads(line)
+                for line in manifest_path.read_text().splitlines()
+                if line.strip()
+            ]
+            template = rows[0] if rows else {}
+            turn_paths = {}
+            for turn_path in turns.glob("*.json"):
+                turn = json.loads(turn_path.read_text())
+                turn_paths[str(turn["trace_id"])] = turn_path.relative_to(
+                    workspace
+                ).as_posix()
+            for trace_id in sorted(missing_finding_ids):
+                repaired = {
+                    key: value
+                    for key, value in template.items()
+                    if key not in {"trace_id", "turn_path"}
+                }
+                repaired.update(
+                    {
+                        "schema_version": 1,
+                        "cluster": directory.name,
+                        "finding_id": directory.name,
+                        "score": float(finding.get("confidence") or 0),
+                        "trace_id": trace_id,
+                        "turn_path": turn_paths[trace_id],
+                    }
+                )
+                rows.append(repaired)
+            manifest_path.write_text(
+                "".join(
+                    json.dumps(row, sort_keys=True) + "\n"
+                    for row in sorted(rows, key=lambda row: str(row["trace_id"]))
+                )
+            )
+            repair_path = workspace / "run/preprocessing-repairs.jsonl"
+            repair_path.parent.mkdir(parents=True, exist_ok=True)
+            with repair_path.open("a") as stream:
+                stream.write(
+                    json.dumps(
+                        {
+                            "finding": directory.name,
+                            "repair": "add_missing_manifest_rows",
+                            "trace_ids": sorted(missing_finding_ids),
+                        },
+                        sort_keys=True,
+                    )
+                    + "\n"
+                )
+            finding_ids = pipeline_contracts.validate_cluster_manifest(
+                manifest_path, directory.name, turns
+            )
+        if finding_ids != expected_finding_ids:
             raise SystemExit(
                 f"finding manifest does not cover its evidence: {directory}"
             )
@@ -4101,6 +4251,39 @@ def replay_meets_promotion_gate(replay: dict) -> bool:
             )
         )
     )
+
+
+def execute_configured_held_out_replay(
+    workspace: Path,
+    verification_path: Path,
+    op: dict,
+    *,
+    held_out_workspace: Path | None = None,
+) -> None:
+    """Attach real paired replay when an external held-out set is available."""
+    names, _ = optimize_written_and_removed(op)
+    if len(names) != 1:
+        return
+    skill = names[0]
+    held_out = (
+        held_out_workspace or workspace
+    ) / "evaluation/held_out" / f"{skill}.json"
+    candidate = workspace / "target/to_be_improved_skills" / skill
+    development = candidate / "evals/evals.json"
+    if not held_out.is_file() or not development.is_file() or not candidate.is_dir():
+        return
+    verification = json.loads(verification_path.read_text())
+    replay = replay_runner.execute(
+        workspace,
+        skill,
+        candidate,
+        development,
+        held_out,
+    )
+    verification["feedback"]["replay"] = replay
+    if replay.get("available") is True and replay.get("status") != "pass":
+        verification["feedback"]["overall_status"] = "fail"
+    atomic_write_json(verification_path, verification)
 
 
 def archive_verification(workspace: Path, cluster: str, op_index: int) -> None:
@@ -7616,7 +7799,21 @@ def publish_operation_result(
         skill = skill_root / name
         if skill.is_dir() and (skill / "SKILL.md").is_file():
             skill_resources.generate_openai_yaml(skill)
-    merge_operation_result(workspace, result)
+    release = release_bundle.prepare_release(
+        workspace,
+        result["worker"],
+        cluster,
+        op_index,
+        result["op"],
+        affected,
+    )
+    release_id = str(release["release_id"])
+    try:
+        merge_operation_result(workspace, result)
+    except BaseException:
+        release_bundle.rollback_release(workspace, release_id)
+        raise
+    release_pointer = release_bundle.commit_release(workspace, release_id)
     for name in sorted(affected):
         remove_transient_skill_artifacts(
             workspace / "target/to_be_improved_skills" / name
@@ -7654,7 +7851,13 @@ def publish_operation_result(
             },
         )
     write_publication(
-        workspace, cluster, op_index, accepted=True, reason=None
+        workspace,
+        cluster,
+        op_index,
+        accepted=True,
+        reason=None,
+        release_id=release_id,
+        release_channel=str(release_pointer["channel"]),
     )
     for source in result.get("bundled_sources") or []:
         if not isinstance(source, dict):
@@ -7675,6 +7878,8 @@ def publish_operation_result(
             outcome="bundled",
             selected_cluster=cluster,
             selected_op_index=op_index,
+            release_id=release_id,
+            release_channel=str(release_pointer["channel"]),
         )
 
 
@@ -8200,6 +8405,12 @@ def run_verification_and_judge(
             install_agent=install_agent,
             suffix=suffix,
             metadata={**op_metadata, "attempt": attempt},
+        )
+        execute_configured_held_out_replay(
+            private,
+            verification,
+            op,
+            held_out_workspace=workspace,
         )
         verification_data = pipeline_contracts.validate_verification(
             verification,
@@ -9503,7 +9714,7 @@ def update_candidate_pool(
     Its changelog file stays.
     """
     detach_skill_changelogs(workspace)
-    root = inventory or (ROOT / "workspace")
+    root = inventory or active_inventory_root()
     skills_src = workspace / "target/to_be_improved_skills"
     skills_dest = root / "candidate_skills"
     meta_src = workspace / "target/to_be_improved_skills_metadata/metadata.json"
@@ -9594,6 +9805,7 @@ def update_candidate_pool(
             ]
         },
     )
+    inventory_store.snapshot(root)
     return retirement_archives
 
 
@@ -9602,7 +9814,7 @@ def publish_inventory(
 ) -> None:
     """Copy accepted skills, metadata, and changelogs out of the run."""
     detach_skill_changelogs(workspace)
-    root = inventory or (ROOT / "workspace")
+    root = inventory or active_inventory_root()
     skills_src = workspace / "target/to_be_improved_skills"
     meta_src = workspace / "target/to_be_improved_skills_metadata/metadata.json"
     skills_dest = root / "candidate_skills"
@@ -9662,6 +9874,7 @@ def publish_inventory(
             ]
         },
     )
+    inventory_store.snapshot(root)
 
 
 OPTIMIZE_INPUT = Path("optimize-input")
@@ -9835,11 +10048,21 @@ def optimize_session_context(
 
 def execute(args: argparse.Namespace) -> None:
     global ACTIVE_BACKEND, ACTIVE_EXECUTION_CONFIG, ACTIVE_EMBEDDING_PROVIDER
-    global ACTIVE_RUN_DEADLINE_MONOTONIC
-    workspace = (ROOT / "workspace/runs" / args.run_id).resolve()
+    global ACTIVE_RUN_DEADLINE_MONOTONIC, ACTIVE_INVENTORY_ROOT
+    previous_inventory_root = ACTIVE_INVENTORY_ROOT
+    tenant_id = privacy.validate_tenant_id(getattr(args, "tenant", "default"))
+    ACTIVE_INVENTORY_ROOT = (
+        ROOT / "workspace"
+        if tenant_id == "default"
+        else privacy.tenant_root(ROOT / "workspace/tenants", tenant_id)
+    )
+    workspace = (ACTIVE_INVENTORY_ROOT / "runs" / args.run_id).resolve()
     if args.init:
-        initialize_workspace(workspace)
-        return
+        try:
+            initialize_workspace(workspace)
+            return
+        finally:
+            ACTIVE_INVENTORY_ROOT = previous_inventory_root
     if getattr(args, "inventory_only", False) and not workspace.exists():
         initialize_inventory_workspace(workspace)
     require_path(workspace, "run workspace")
@@ -10341,6 +10564,7 @@ def execute(args: argparse.Namespace) -> None:
         print(f"completed run {args.run_id}: {workspace}")
 
     finally:
+        ACTIVE_INVENTORY_ROOT = previous_inventory_root
         ACTIVE_RUN_DEADLINE_MONOTONIC = None
         if ACTIVE_EMBEDDING_PROVIDER is not None:
             ACTIVE_EMBEDDING_PROVIDER.stop()
@@ -10382,6 +10606,11 @@ def execute(args: argparse.Namespace) -> None:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("run_id", help="directory name under workspace/runs")
+    parser.add_argument(
+        "--tenant",
+        default="default",
+        help="isolated tenant namespace (default keeps the legacy workspace)",
+    )
     parser.add_argument(
         "--init", action="store_true", help="create the run workspace and stop"
     )

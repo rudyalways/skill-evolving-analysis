@@ -5,7 +5,7 @@
   "preferred_cost_tier": 1,
   "budgets": {"target_agent_calls": 4, "hard_agent_call_cap": 8, "on_cap": "defer"},
   "embedding_runtime": {"transport": "local_process", "host": "127.0.0.1", "port": 8181, "backend": "sentence-transformers", "model": "Qwen/Qwen3-Embedding-0.6B", "revision": "97b0c614be4d77ee51c0cef4e5f07c00f9eb65b3", "device": "cpu", "dimensions": 1024, "query_instruction": "Retrieve the relevant reusable agent skill, failure category, or evolution evidence for this query", "startup_timeout_seconds": 180, "timeout_ms": 60000, "on_start_error": "hashing-reference"},
-  "evolution_gate": {"enabled": true, "minimum_distinct_sessions": 2, "minimum_evidence_records": 3, "minimum_confidence": 0.8, "immediate_critical": true, "immediate_detectors": ["correction-heavy", "keep-going-loop", "repeated-instructions", "rapid-corrections"]},
+  "evolution_gate": {"enabled": true, "minimum_distinct_sessions": 2, "minimum_evidence_records": 3, "minimum_confidence": 0.8, "immediate_critical": true, "immediate_detectors": ["correction-heavy", "keep-going-loop", "repeated-instructions", "rapid-corrections"], "single_session_diagnosis_limit": 2, "single_session_diagnosis_min_confidence": 0.85, "single_session_diagnosis_min_evidence": 1, "maximum_diagnosis_scopes": 1},
   "phases": {
     "normalize": {"mode": "enabled", "kind": "deterministic", "algorithm": "normalize.vendor-json-v1"},
     "detect": {"mode": "enabled", "kind": "deterministic", "algorithm": "detect.rules-v1"},
