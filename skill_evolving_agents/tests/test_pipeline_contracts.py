@@ -1223,6 +1223,84 @@ class ContractTests(unittest.TestCase):
                 aggregate["phases"]["recall"]["candidate_coverage"], 1.0
             )
 
+    def test_phase_metrics_mark_converged_resource_replay(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory) / "workspace/runs/replay-run"
+            signals = workspace / "traces/derived/signals"
+            signals.mkdir(parents=True)
+            (signals / "resource-opportunity-decisions.jsonl").write_text(
+                json.dumps(
+                    {
+                        "resource": "references",
+                        "family": "repeated-knowledge-source",
+                        "disposition": "suppressed",
+                        "reason_codes": ["equivalent-resource-exists"],
+                        "equivalent_resource_path": (
+                            "target/to_be_improved_skills/reference/references/index.md"
+                        ),
+                    }
+                )
+                + "\n"
+            )
+            (workspace / "run/config").mkdir(parents=True)
+            write_json(
+                workspace / "run/config/pipeline-profile.json",
+                {
+                    "funnel_targets": {
+                        "novel_action_scope_rate": 0.5,
+                        "novel_final_acceptance_rate": 0.2,
+                    }
+                },
+            )
+            write_json(
+                workspace / "run/pipeline-summary.json",
+                {
+                    "scopes": [
+                        {
+                            "scope": "sig-replay",
+                            "disposition": "no_change",
+                            "operation_count": 0,
+                            "reason": (
+                                "This exact finding was already applied to a "
+                                "current inventory skill: reference."
+                            ),
+                        }
+                    ],
+                    "operations": [],
+                },
+            )
+            metrics = runner.pipeline_metrics.collect_phase_metrics(
+                workspace, []
+            )
+            self.assertTrue(metrics["funnel"]["converged_replay"])
+            self.assertEqual(
+                metrics["funnel"]["run_disposition"], "converged"
+            )
+            self.assertEqual(
+                metrics["funnel"]["idempotent_replay_scopes"], 1
+            )
+            self.assertEqual(
+                metrics["funnel"]["idempotent_resource_opportunities"], 1
+            )
+            self.assertEqual(
+                metrics["funnel"]["targets"]["novel_final_acceptance_rate"][
+                    "status"
+                ],
+                "converged",
+            )
+            self.assertFalse(
+                any(
+                    warning.startswith("funnel targets missed")
+                    for warning in metrics["warnings"]
+                )
+            )
+            self.assertTrue(
+                any(
+                    warning.startswith("converged replay")
+                    for warning in metrics["warnings"]
+                )
+            )
+
     def test_pipeline_timings_write_local_global_and_chrome_outputs(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             workspace = Path(directory) / "workspace/runs/timed-run"

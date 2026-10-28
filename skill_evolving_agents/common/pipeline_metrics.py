@@ -690,11 +690,36 @@ def collect_phase_metrics(
         and "exact finding was already applied" in str(scope.get("reason") or "").lower()
         for scope in scopes
     )
-    novel_goal_scopes = max(len(scopes) - idempotent_scopes, 0)
     accepted = sum(
         isinstance(operation, dict) and operation.get("accepted") is True
         for operation in operations
     )
+    resource_decisions = _read_jsonl(
+        signal_root / "resource-opportunity-decisions.jsonl"
+    )
+    converged_resource_opportunities = sum(
+        isinstance(row, dict)
+        and row.get("disposition") in {"suppressed", "rejected"}
+        and bool(
+            {"equivalent-resource-exists", "equivalent-existing-script"}
+            & {
+                str(code)
+                for code in (row.get("reason_codes") or [])
+                if isinstance(code, str)
+            }
+        )
+        for row in resource_decisions
+    )
+    # A replay can converge before Goal: the detector suppresses a resource
+    # whose authored equivalent already exists, so the finding never becomes a
+    # scope. That is idempotency, not a failure to propose an action. Keep the
+    # raw acceptance counts honest but mark consumer targets as converged.
+    converged_replay = (
+        changed_scopes == 0
+        and accepted == 0
+        and (idempotent_scopes + converged_resource_opportunities) > 0
+    )
+    novel_goal_scopes = max(len(scopes) - idempotent_scopes, 0)
     profile = _read_json(workspace / "run/config/pipeline-profile.json")
     funnel_targets = (
         profile.get("funnel_targets") or []
@@ -735,11 +760,32 @@ def collect_phase_metrics(
         "novel_final_acceptance_rate": _rate(accepted, novel_goal_scopes),
         "proposal_acceptance_rate": _rate(accepted, len(operations)),
     }
+    consumer_targets = {
+        "action_scope_rate",
+        "action_given_goal_rate",
+        "novel_action_scope_rate",
+        "proposal_rate",
+        "proposal_given_goal_rate",
+        "novel_proposal_rate",
+        "final_acceptance_rate",
+        "acceptance_given_goal_rate",
+        "novel_final_acceptance_rate",
+        "proposal_acceptance_rate",
+    }
     target_evaluation = {}
     for name, target in funnel_targets.items():
         if name not in funnel_rates or not isinstance(target, (int, float)):
             continue
         actual = funnel_rates[name]
+        if converged_replay and name in consumer_targets:
+            target_evaluation[name] = {
+                "target": float(target),
+                "actual": actual,
+                "delta": None,
+                "status": "converged",
+                "applicable": False,
+            }
+            continue
         target_evaluation[name] = {
             "target": float(target),
             "actual": actual,
@@ -853,6 +899,13 @@ def collect_phase_metrics(
         for name, result in target_evaluation.items()
         if result["status"] == "missed"
     ]
+    if converged_replay:
+        warnings.append(
+            "converged replay: "
+            f"{idempotent_scopes} exact finding scope(s) and "
+            f"{converged_resource_opportunities} equivalent resource "
+            "opportunit(ies) were already applied"
+        )
     if missed_targets:
         warnings.append(
             "funnel targets missed: " + ", ".join(sorted(missed_targets))
@@ -934,6 +987,14 @@ def collect_phase_metrics(
                 "scopes": len(scopes),
                 "changed_scopes": changed_scopes,
                 "no_change_scopes": no_change_scopes,
+                "idempotent_replay_scopes": idempotent_scopes,
+                "idempotent_resource_opportunities": converged_resource_opportunities,
+                "converged_replay": converged_replay,
+                "run_disposition": (
+                    "changed"
+                    if changed_scopes
+                    else "converged" if converged_replay else "no_change"
+                ),
                 "operations": len(operations),
                 "reduction_decisions": dict(sorted(reduction_counts.items())),
                 "min_super_score": (
@@ -1016,6 +1077,13 @@ def collect_phase_metrics(
             "proposed_operations": len(operations),
             "accepted_proposals": accepted,
             "idempotent_replay_scopes": idempotent_scopes,
+            "idempotent_resource_opportunities": converged_resource_opportunities,
+            "converged_replay": converged_replay,
+            "run_disposition": (
+                "changed"
+                if changed_scopes
+                else "converged" if converged_replay else "no_change"
+            ),
             "novel_goal_scopes": novel_goal_scopes,
             "rates": funnel_rates,
             "action_count_distribution": dict(
@@ -1105,6 +1173,20 @@ def aggregate_phase_metrics(runs_root: Path) -> dict[str, Any]:
                 "changed_scopes": total("goal", "changed_scopes"),
                 "no_change_scopes": total("goal", "no_change_scopes"),
                 "operations": total("goal", "operations"),
+                "idempotent_replay_scopes": total(
+                    "goal", "idempotent_replay_scopes"
+                ),
+                "idempotent_resource_opportunities": total(
+                    "goal", "idempotent_resource_opportunities"
+                ),
+                "converged_replay_runs": sum(
+                    bool(
+                        ((report.get("phases") or {}).get("goal") or {}).get(
+                            "converged_replay"
+                        )
+                    )
+                    for report in reports
+                ),
                 "runs_with_active_score_gate": sum(
                     (
                         ((report.get("phases") or {}).get("goal") or {}).get(

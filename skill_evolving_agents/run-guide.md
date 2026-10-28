@@ -99,8 +99,15 @@ that can override evidence, verification, idempotency, or Judge.
 
 The same report includes distributions for operations per scope, proposed
 operation type, accepted operation type, idempotent replay scopes, and target
-status (`met`, `missed`, or `unavailable`). A missed target is a tuning signal;
-it must never cause the pipeline to fabricate an action or weaken verification.
+status (`met`, `missed`, `converged`, or `unavailable`). A suppressed resource
+opportunity whose reason is `equivalent-resource-exists` or
+`equivalent-existing-script` is already-applied evidence, not a failed
+proposal. When a run has no changed scope, no accepted operation, and at least
+one exact or resource-level replay, `funnel.converged_replay` is true and
+consumer targets report `converged` instead of `missed`. Diagnosis and Goal
+coverage targets still apply. `funnel.run_disposition` is `changed`,
+`converged`, or `no_change`. A missed target is a tuning signal; it must never
+cause the pipeline to fabricate an action or weaken verification.
 
 ### Trace-free inventory maintenance
 
@@ -563,9 +570,11 @@ Replaying an already-applied finding is idempotent. Before Goal, the runner
 scans every current inventory changelog for that exact finding ID; this check
 does not depend on which skills semantic recall happens to return. A match
 writes a deterministic `no_change` and skips Goal, Optimize, Verify, and Judge
-agent calls. A failed selected Diagnosis or Goal lane is never converted into
-`no_change`: the run fails explicitly while preserving its status and timing
-artifacts for retry.
+agent calls. A resource opportunity is also idempotent when the detector finds
+an equivalent authored resource or script; it is suppressed before it can
+become a new finding. A failed selected Diagnosis or Goal lane is never
+converted into `no_change`: the run fails explicitly while preserving its
+status and timing artifacts for retry.
 
 `logs/run-timing.json` reports conservative agent-call savings. The actual
 count comes from recorded LLM spans. Each mined finding deferred by the
