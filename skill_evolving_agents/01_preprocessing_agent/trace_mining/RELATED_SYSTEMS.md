@@ -3,7 +3,7 @@
 This report compares systems relevant to trace normalization, interaction
 failure detection, semantic clustering, observability, human review, and
 closed-loop agent improvement. The repositories were cloned under
-`/Users/maybewu/Documents/Projects/oss` and inspected at source level.
+a local `oss` checkout and inspected at source level.
 
 ## Source snapshots
 

@@ -533,7 +533,7 @@ the saved content differs; a deletion therefore cannot silently overwrite its
 rollback source.
 
 The inactive Hermes and OpenClaw examples use the local Recursive Flint model.
-Load `/Users/maybewu/Documents/Projects/myexpore/recursive/.env` in the shell,
+Load the Recursive checkout's local `.env` in the shell,
 then configure the CLI provider with `FLINT_BASE_URL` and `FLINT_API_KEY`.
 Hermes uses its configured `HERMES_HOME`; OpenClaw uses
 `OPENCLAW_CONFIG_PATH` and `OPENCLAW_STATE_DIR`. The runner inherits those
