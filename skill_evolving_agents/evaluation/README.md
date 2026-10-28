@@ -44,3 +44,39 @@ Available search algorithms are bounded grid, seeded random, wide-and-deep,
 and persistent UCB/MCTS. Reviewed trial outcomes update a Beta success
 posterior and reward exponential moving average for each knob/value choice in
 `workspace/optimization.sqlite`.
+
+# Deterministic funnel benchmark
+
+`funnel_benchmark.py` measures the cheap boundaries before hosted agent calls:
+
+```text
+raw trace -> normalized turns -> findings -> selection -> evolution-gate
+admission -> resource decisions -> exact-finding idempotency
+```
+
+It also checks the semantic category policy with synthetic embedding scores,
+the deterministic single-session creation policy, and resource-usefulness
+scoring with observed use. Cases are synthetic and privacy-safe. Workspaces are
+created under a temporary directory unless `--keep-workspaces` is supplied.
+
+```bash
+python3 evaluation/funnel_benchmark.py --out /tmp/funnel-scorecard.json
+```
+
+`funnel_cases.json` has labeled calibration and held-out cases. The runner
+reports pass rate by split and case kind, funnel boundary counts, and one
+failure reason per unmet expectation. It also replays every selected generic
+finding through `previously_applied_finding_skills`; resource findings must
+remain replayable only when their authored effect exists.
+
+The 2026-10-28 reference run on `origin/main` passed 18/21 cases (11/11
+calibration, 8/10 held-out). All three failures were cross-session supporting
+resources: a reference, starter, or delegated prompt used once in each of
+three sessions produced no finding because repetition was grouped by session.
+The corrected detector groups by resource fingerprint across sessions, so the
+same case set passes 21/21 and the selected findings flow through the
+evolution gate and idempotent replay checks.
+
+A benchmark pass is evidence about deterministic routing and labeled
+expectations, not proof that a hosted mutation is useful. Keep held-out cases
+out of threshold tuning and report residual limitations with every result.
