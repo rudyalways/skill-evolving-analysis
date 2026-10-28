@@ -54,13 +54,23 @@ clean worktree based on `origin/main` for isolated work and verification.
 The personal repository baseline is:
 
 ```text
-ae73626 Make pipeline action funnel measurable and configurable
+92884f5 Merge measured funnel benchmark and cross-session resource fix
 ```
 
-That commit passed all 173 pipeline contract tests in a clean worktree. It
-includes configurable funnel targets, single-session diagnosis controls,
-novel-versus-idempotent metrics, an action-oriented profile, inventory and
-release helpers, replay support, privacy helpers, and dashboard extensions.
+That commit passed all 206 tests in a clean worktree and the 21-case
+deterministic funnel benchmark at 21/21. It includes configurable funnel
+targets, single-session diagnosis controls, novel-versus-idempotent metrics,
+an action-oriented profile, inventory and release helpers, replay support,
+privacy helpers, dashboard extensions, and:
+
+- `evaluation/funnel_benchmark.py` with `evaluation/funnel_cases.json`: labeled
+  calibration and held-out cases for positive, negative, already-applied,
+  semantic-policy, creation-policy, and resource-usefulness boundaries;
+- cross-session grouping for repeated references, starter assets, and delegated
+  prompts, so the evolution gate receives the recurrence evidence it scores.
+
+The pre-fix reference run on the same 21 cases passed 18/21. All three failures
+were supporting resources used once in each of three sessions.
 
 The separate `celia-hk-agent/skill-evolving-agents` repository is an older,
 one-commit public snapshot. It is not a configured remote, subtree, submodule,
@@ -179,10 +189,16 @@ Verification:
 
 ```bash
 cd skill_evolving_agents
-python3 -m unittest tests.test_pipeline_contracts
+python3 -m unittest discover -s tests -p 'test_*.py'
+python3 evaluation/funnel_benchmark.py --out /tmp/funnel-scorecard.json
 cd ..
 git diff --check
 ```
+
+Set `TMPDIR` to a path under the session workspace when the file sandbox blocks
+the platform temporary directory. `evaluation/funnel_benchmark.py` writes
+per-case workspaces to a temporary directory unless `--keep-workspaces` is
+given.
 
 Do not claim perfection. Report benchmark size, confidence, residual failures,
 and limitations.
