@@ -9703,6 +9703,36 @@ class DshAndInventoryRegressionTest(unittest.TestCase):
             )
             self.assertEqual(runner.parse_verifier_response_log(path), payload)
 
+    def test_inventory_candidates_suppress_overlapping_merge_pairs(self) -> None:
+        candidates = [
+            {
+                "skills": ["alpha", "beta"],
+                "score": 0.99,
+                "operation_hint": "merge",
+            },
+            {
+                "skills": ["beta", "gamma"],
+                "score": 0.88,
+                "operation_hint": None,
+            },
+            {
+                "skills": ["delta", "epsilon"],
+                "score": 0.81,
+                "operation_hint": None,
+            },
+        ]
+        selected, suppressed = runner._dedupe_merge_candidates(candidates)
+        self.assertEqual(
+            [row["skills"] for row in selected],
+            [["alpha", "beta"], ["delta", "epsilon"]],
+        )
+        self.assertEqual(len(suppressed), 1)
+        self.assertEqual(suppressed[0]["skills"], ["beta", "gamma"])
+        self.assertEqual(
+            suppressed[0]["suppression_reason"],
+            "overlaps-selected-merge-candidate",
+        )
+
     def test_inventory_merge_candidates_detect_same_method_fingerprint(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             workspace = Path(directory)

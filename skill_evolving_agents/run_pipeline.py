@@ -2167,6 +2167,44 @@ def configure_run_deadline(workspace: Path) -> dict[str, object]:
     return document
 
 
+def _dedupe_merge_candidates(
+    candidates: list[dict[str, object]],
+) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
+    """Keep one review unit per overlapping skill set.
+
+    A duplicate pair can otherwise nominate the same members through a weaker
+    third pair, which produces two merge operations for one duplicate. Prefer
+    an explicit merge candidate, then the higher score.
+    """
+    ordered = sorted(
+        candidates,
+        key=lambda row: (
+            row.get("operation_hint") == "merge",
+            float(row.get("score") or 0),
+            tuple(row.get("skills") or []),
+        ),
+        reverse=True,
+    )
+    selected: list[dict[str, object]] = []
+    suppressed: list[dict[str, object]] = []
+    claimed: set[str] = set()
+    for row in ordered:
+        skills = {str(value) for value in row.get("skills") or [] if value}
+        if claimed & skills:
+            suppressed.append(
+                {
+                    **row,
+                    "decision": "suppressed",
+                    "suppression_reason": "overlaps-selected-merge-candidate",
+                }
+            )
+            continue
+        selected.append(row)
+        if row.get("operation_hint") == "merge":
+            claimed.update(skills)
+    return selected, suppressed
+
+
 def inventory_merge_candidates(
     workspace: Path,
     metadata_path: Path,
@@ -2305,12 +2343,17 @@ def inventory_merge_candidates(
             )
     retirement = inventory_retirement_candidates(workspace, metadata_path)
     candidates.extend(retirement)
+    selected, suppressed = _dedupe_merge_candidates(candidates)
     document = {
         "schema_version": 1,
-        "algorithm": "inventory-maintenance-candidates-v2",
+        "algorithm": "inventory-maintenance-candidates-v3",
         "min_score": min_score,
-        "candidate_count": len(candidates),
-        "candidates": sorted(candidates, key=lambda row: (-float(row["score"]), row["skills"])),
+        "candidate_count": len(selected),
+        "suppressed_candidate_count": len(suppressed),
+        "candidates": sorted(
+            selected, key=lambda row: (-float(row["score"]), row["skills"])
+        ),
+        "suppressed_candidates": suppressed,
     }
     path = workspace / "run/inventory-merge-candidates.json"
     atomic_write_json(path, document)
