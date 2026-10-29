@@ -1,6 +1,6 @@
 # nemoclaw-user-guide
 
-Status: **candidate**, not gold.
+Status: **prior art**, not a candidate and not gold.
 
 - Source: https://github.com/NVIDIA/skills
 - Source directory: `public_skills/others/NVIDIA--skills/skills/nemoclaw-user-guide`

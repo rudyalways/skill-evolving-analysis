@@ -1,6 +1,6 @@
 # analyzing-outlook-pst-for-email-forensics
 
-Status: **candidate**, not gold.
+Status: **prior art**, not a candidate and not gold.
 
 - Source: https://github.com/mukul975/Anthropic-Cybersecurity-Skills
 - Environment: `local_cli`

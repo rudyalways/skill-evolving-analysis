@@ -1,6 +1,6 @@
 # azure-app-onboard-prereq
 
-Status: **candidate**, not gold.
+Status: **prior art**, not a candidate and not gold.
 
 - Source: https://github.com/microsoft/azure-skills
 - Source directory: `public_skills/platforms/microsoft--azure-skills/.github/plugins/azure-skills/skills/azure-app-onboard-prereq`

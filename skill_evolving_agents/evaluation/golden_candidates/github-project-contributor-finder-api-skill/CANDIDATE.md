@@ -1,6 +1,6 @@
 # github-project-contributor-finder-api-skill
 
-Status: **candidate**, not gold.
+Status: **prior art**, not a candidate and not gold.
 
 - Source: https://github.com/browser-act/skills
 - Source directory: `public_skills/others/browser-act--skills/solutions/lead-generation/github-project-contributor-finder-api-skill`

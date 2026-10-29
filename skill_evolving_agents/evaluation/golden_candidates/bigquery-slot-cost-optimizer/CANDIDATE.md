@@ -1,6 +1,6 @@
 # bigquery-slot-cost-optimizer
 
-Status: **candidate**, not gold.
+Status: **prior art**, not a candidate and not gold.
 
 - Source: https://github.com/google/skills
 - Source directory: `public_skills/others/google--skills/skills/cloud/bigquery-slot-cost-optimizer`

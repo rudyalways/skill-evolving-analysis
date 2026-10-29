@@ -1,6 +1,6 @@
 # ai-governance-reviewer-carl-ditzler
 
-Status: **candidate**, not gold.
+Status: **prior art**, not a candidate and not gold.
 
 - Source: https://github.com/lawve-ai/awesome-legal-skills
 - Source directory: `public_skills/others/lawve-ai--awesome-legal-skills/skills/ai-governance-reviewer-carl-ditzler`

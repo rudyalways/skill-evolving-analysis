@@ -1,7 +1,7 @@
-# Golden-skill candidates
+# Prior-art skill references
 
-166 authoritative candidate bundles were copied on 2026-10-29T11:45:00+08:00.
-They are **not gold**. Each bundle carries `metadata.json`, `CANDIDATE.md`,
+166 existing skill bundles were copied as prior art on 2026-10-29T11:45:00+08:00.
+They are **not candidate inputs and not gold**. Each bundle carries `metadata.json`, `CANDIDATE.md`,
 the source skill tree, and an evals placeholder. To promote a bundle:
 
 ## Counts

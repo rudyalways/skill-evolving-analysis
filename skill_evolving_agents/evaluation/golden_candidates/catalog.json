@@ -8,7 +8,7 @@
     "bundle_path": "golden_candidates/es-modelo-111",
     "source_url": "https://github.com/openaccountants/openaccountants",
     "source_license": "AGPL-3.0",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -17,7 +17,10 @@
     "environment_network": "none",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": true
+    "local_first": true,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "facebook-ads-library-search",
@@ -28,7 +31,7 @@
     "bundle_path": "golden_candidates/facebook-ads-library-search",
     "source_url": "https://github.com/browser-act/skills",
     "source_license": "MIT",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -37,7 +40,10 @@
     "environment_network": "required",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "goofish-item-detail",
@@ -48,7 +54,7 @@
     "bundle_path": "golden_candidates/goofish-item-detail",
     "source_url": "https://github.com/browser-act/skills",
     "source_license": "MIT",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -57,7 +63,10 @@
     "environment_network": "required",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "android-performance",
@@ -68,7 +77,7 @@
     "bundle_path": "golden_candidates/android-performance",
     "source_url": "https://github.com/openai/skills",
     "source_license": "unknown",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -77,7 +86,10 @@
     "environment_network": "none",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "datalineage-bigquery-asset-impact-analysis",
@@ -88,7 +100,7 @@
     "bundle_path": "golden_candidates/datalineage-bigquery-asset-impact-analysis",
     "source_url": "https://github.com/google/skills",
     "source_license": "Apache-2.0",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -97,7 +109,10 @@
     "environment_network": "required",
     "environment_auth": "required",
     "environment_payment": "required",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "deepstream-run-mv3dt",
@@ -108,7 +123,7 @@
     "bundle_path": "golden_candidates/deepstream-run-mv3dt",
     "source_url": "https://github.com/NVIDIA/skills",
     "source_license": "Apache-2.0",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -117,7 +132,10 @@
     "environment_network": "optional",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "doca-gpi",
@@ -128,7 +146,7 @@
     "bundle_path": "golden_candidates/doca-gpi",
     "source_url": "https://github.com/NVIDIA/skills",
     "source_license": "Apache-2.0",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -137,7 +155,10 @@
     "environment_network": "optional",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "node-link-and-diagram-layout",
@@ -147,7 +168,7 @@
     "bundle_path": "golden_candidates/node-link-and-diagram-layout",
     "source_url": "https://github.com/openai/skills",
     "source_license": "unknown",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -156,7 +177,10 @@
     "local_first": true,
     "environment_network": "none",
     "environment_auth": "none",
-    "environment_payment": "none"
+    "environment_payment": "none",
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "plugin-eval",
@@ -166,7 +190,7 @@
     "bundle_path": "golden_candidates/plugin-eval",
     "source_url": "https://github.com/openai/skills",
     "source_license": "unknown",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -175,7 +199,10 @@
     "local_first": true,
     "environment_network": "none",
     "environment_auth": "none",
-    "environment_payment": "none"
+    "environment_payment": "none",
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "1688-product-detail",
@@ -186,7 +213,7 @@
     "bundle_path": "golden_candidates/1688-product-detail",
     "source_url": "https://github.com/browser-act/skills",
     "source_license": "MIT",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -195,7 +222,10 @@
     "environment_network": "required",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "airbnb-listing-detail",
@@ -206,7 +236,7 @@
     "bundle_path": "golden_candidates/airbnb-listing-detail",
     "source_url": "https://github.com/browser-act/skills",
     "source_license": "MIT",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -215,7 +245,10 @@
     "environment_network": "required",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "airbnb-search-listing",
@@ -226,7 +259,7 @@
     "bundle_path": "golden_candidates/airbnb-search-listing",
     "source_url": "https://github.com/browser-act/skills",
     "source_license": "MIT",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -235,7 +268,10 @@
     "environment_network": "required",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "agent-platform-troubleshooting",
@@ -246,7 +282,7 @@
     "bundle_path": "golden_candidates/agent-platform-troubleshooting",
     "source_url": "https://github.com/google/skills",
     "source_license": "Apache-2.0",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -255,7 +291,10 @@
     "environment_network": "required",
     "environment_auth": "required",
     "environment_payment": "required",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "connect-recommend",
@@ -266,7 +305,7 @@
     "bundle_path": "golden_candidates/connect-recommend",
     "source_url": "https://github.com/openai/skills",
     "source_license": "unknown",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_signin_and_payment",
@@ -275,7 +314,10 @@
     "environment_network": "required",
     "environment_auth": "required",
     "environment_payment": "required",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "deepstream-sop",
@@ -286,7 +328,7 @@
     "bundle_path": "golden_candidates/deepstream-sop",
     "source_url": "https://github.com/NVIDIA/skills",
     "source_license": "Apache-2.0",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -295,7 +337,10 @@
     "environment_network": "optional",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "doca-argp",
@@ -306,7 +351,7 @@
     "bundle_path": "golden_candidates/doca-argp",
     "source_url": "https://github.com/NVIDIA/skills",
     "source_license": "Apache-2.0",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -315,7 +360,10 @@
     "environment_network": "optional",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "marketplace",
@@ -325,7 +373,7 @@
     "bundle_path": "golden_candidates/marketplace",
     "source_url": "https://github.com/openai/skills",
     "source_license": "unknown",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -334,7 +382,10 @@
     "local_first": true,
     "environment_network": "none",
     "environment_auth": "none",
-    "environment_payment": "none"
+    "environment_payment": "none",
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "plugin-creator",
@@ -344,7 +395,7 @@
     "bundle_path": "golden_candidates/plugin-creator",
     "source_url": "https://github.com/openai/skills",
     "source_license": "unknown",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -353,7 +404,10 @@
     "local_first": true,
     "environment_network": "none",
     "environment_auth": "none",
-    "environment_payment": "none"
+    "environment_payment": "none",
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "ab-individual-return",
@@ -364,7 +418,7 @@
     "bundle_path": "golden_candidates/ab-individual-return",
     "source_url": "https://github.com/openaccountants/openaccountants",
     "source_license": "AGPL-3.0",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -373,7 +427,10 @@
     "environment_network": "none",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": true
+    "local_first": true,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "ae-corporate-tax",
@@ -384,7 +441,7 @@
     "bundle_path": "golden_candidates/ae-corporate-tax",
     "source_url": "https://github.com/openaccountants/openaccountants",
     "source_license": "AGPL-3.0",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -393,7 +450,10 @@
     "environment_network": "none",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": true
+    "local_first": true,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "agent-army",
@@ -404,7 +464,7 @@
     "bundle_path": "golden_candidates/agent-army",
     "source_url": "https://github.com/OneWave-AI/claude-skills",
     "source_license": "MIT",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -413,7 +473,10 @@
     "environment_network": "none",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": true
+    "local_first": true,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "al-sales-tax",
@@ -424,7 +487,7 @@
     "bundle_path": "golden_candidates/al-sales-tax",
     "source_url": "https://github.com/openaccountants/openaccountants",
     "source_license": "AGPL-3.0",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -433,7 +496,10 @@
     "environment_network": "none",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": true
+    "local_first": true,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "albania-vat",
@@ -444,7 +510,7 @@
     "bundle_path": "golden_candidates/albania-vat",
     "source_url": "https://github.com/openaccountants/openaccountants",
     "source_license": "AGPL-3.0",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -453,7 +519,10 @@
     "environment_network": "none",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": true
+    "local_first": true,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "algeria-vat",
@@ -464,7 +533,7 @@
     "bundle_path": "golden_candidates/algeria-vat",
     "source_url": "https://github.com/openaccountants/openaccountants",
     "source_license": "AGPL-3.0",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -473,7 +542,10 @@
     "environment_network": "none",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": true
+    "local_first": true,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "audit",
@@ -484,7 +556,7 @@
     "bundle_path": "golden_candidates/audit",
     "source_url": "https://github.com/openai/skills",
     "source_license": "unknown",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -493,7 +565,10 @@
     "environment_network": "required",
     "environment_auth": "required",
     "environment_payment": "none",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "azure-compute",
@@ -504,7 +579,7 @@
     "bundle_path": "golden_candidates/azure-compute",
     "source_url": "https://github.com/microsoft/azure-skills",
     "source_license": "MIT",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -513,7 +588,10 @@
     "environment_network": "required",
     "environment_auth": "required",
     "environment_payment": "required",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "bigquery-observability",
@@ -524,7 +602,7 @@
     "bundle_path": "golden_candidates/bigquery-observability",
     "source_url": "https://github.com/google/skills",
     "source_license": "Apache-2.0",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -533,7 +611,10 @@
     "environment_network": "required",
     "environment_auth": "required",
     "environment_payment": "required",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "bigquery-optimization",
@@ -544,7 +625,7 @@
     "bundle_path": "golden_candidates/bigquery-optimization",
     "source_url": "https://github.com/google/skills",
     "source_license": "Apache-2.0",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -553,7 +634,10 @@
     "environment_network": "required",
     "environment_auth": "required",
     "environment_payment": "required",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "bigquery-slot-cost-optimizer",
@@ -564,7 +648,7 @@
     "bundle_path": "golden_candidates/bigquery-slot-cost-optimizer",
     "source_url": "https://github.com/google/skills",
     "source_license": "Apache-2.0",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -573,7 +657,10 @@
     "environment_network": "required",
     "environment_auth": "required",
     "environment_payment": "required",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "cost-optimization",
@@ -584,7 +671,7 @@
     "bundle_path": "golden_candidates/cost-optimization",
     "source_url": "https://github.com/microsoft/azure-skills",
     "source_license": "MIT",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -593,7 +680,10 @@
     "environment_network": "required",
     "environment_auth": "required",
     "environment_payment": "required",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "google-mobile-ads-validate",
@@ -603,7 +693,7 @@
     "bundle_path": "golden_candidates/google-mobile-ads-validate",
     "source_url": "https://github.com/google/skills",
     "source_license": "Apache-2.0",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -612,7 +702,10 @@
     "local_first": false,
     "environment_network": "required",
     "environment_auth": "required",
-    "environment_payment": "none"
+    "environment_payment": "none",
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "au-medicare-levy",
@@ -623,7 +716,7 @@
     "bundle_path": "golden_candidates/au-medicare-levy",
     "source_url": "https://github.com/openaccountants/openaccountants",
     "source_license": "AGPL-3.0",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -632,7 +725,10 @@
     "environment_network": "none",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": true
+    "local_first": true,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "ca-form-3853-coverage",
@@ -643,7 +739,7 @@
     "bundle_path": "golden_candidates/ca-form-3853-coverage",
     "source_url": "https://github.com/openaccountants/openaccountants",
     "source_license": "AGPL-3.0",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -652,7 +748,10 @@
     "environment_network": "none",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": true
+    "local_first": true,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "azure-app-onboard-prereq",
@@ -663,7 +762,7 @@
     "bundle_path": "golden_candidates/azure-app-onboard-prereq",
     "source_url": "https://github.com/microsoft/azure-skills",
     "source_license": "MIT",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -672,7 +771,10 @@
     "environment_network": "required",
     "environment_auth": "required",
     "environment_payment": "required",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "azure-diagnostics",
@@ -683,7 +785,7 @@
     "bundle_path": "golden_candidates/azure-diagnostics",
     "source_url": "https://github.com/microsoft/azure-skills",
     "source_license": "MIT",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -692,7 +794,10 @@
     "environment_network": "required",
     "environment_auth": "required",
     "environment_payment": "required",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "azure-reliability",
@@ -703,7 +808,7 @@
     "bundle_path": "golden_candidates/azure-reliability",
     "source_url": "https://github.com/microsoft/azure-skills",
     "source_license": "MIT",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -712,7 +817,10 @@
     "environment_network": "required",
     "environment_auth": "required",
     "environment_payment": "required",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "building-identity-governance-lifecycle-process",
@@ -723,7 +831,7 @@
     "bundle_path": "golden_candidates/building-identity-governance-lifecycle-process",
     "source_url": "https://github.com/mukul975/Anthropic-Cybersecurity-Skills",
     "source_license": "Apache-2.0",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -732,7 +840,10 @@
     "environment_network": "optional",
     "environment_auth": "required",
     "environment_payment": "none",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "cloud-databases-onboarding",
@@ -743,7 +854,7 @@
     "bundle_path": "golden_candidates/cloud-databases-onboarding",
     "source_url": "https://github.com/google/skills",
     "source_license": "Apache-2.0",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -752,7 +863,10 @@
     "environment_network": "required",
     "environment_auth": "required",
     "environment_payment": "required",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "google-cloud-recipe-onboarding",
@@ -763,7 +877,7 @@
     "bundle_path": "golden_candidates/google-cloud-recipe-onboarding",
     "source_url": "https://github.com/google/skills",
     "source_license": "Apache-2.0",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -772,7 +886,10 @@
     "environment_network": "required",
     "environment_auth": "required",
     "environment_payment": "required",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "ai-governance-reviewer-carl-ditzler",
@@ -783,7 +900,7 @@
     "bundle_path": "golden_candidates/ai-governance-reviewer-carl-ditzler",
     "source_url": "https://github.com/lawve-ai/awesome-legal-skills",
     "source_license": "NOASSERTION",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -792,7 +909,10 @@
     "environment_network": "none",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": true
+    "local_first": true,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "al-income-tax",
@@ -803,7 +923,7 @@
     "bundle_path": "golden_candidates/al-income-tax",
     "source_url": "https://github.com/openaccountants/openaccountants",
     "source_license": "AGPL-3.0",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -812,7 +932,10 @@
     "environment_network": "none",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": true
+    "local_first": true,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "ambiguity-report",
@@ -823,7 +946,7 @@
     "bundle_path": "golden_candidates/ambiguity-report",
     "source_url": "https://github.com/lawve-ai/awesome-legal-skills",
     "source_license": "NOASSERTION",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -832,7 +955,10 @@
     "environment_network": "none",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": true
+    "local_first": true,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "ambiguity-stress-test",
@@ -843,7 +969,7 @@
     "bundle_path": "golden_candidates/ambiguity-stress-test",
     "source_url": "https://github.com/lawve-ai/awesome-legal-skills",
     "source_license": "NOASSERTION",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -852,7 +978,10 @@
     "environment_network": "none",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": true
+    "local_first": true,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "analyse-dpa-fournisseur-hugo-salard",
@@ -862,7 +991,7 @@
     "bundle_path": "golden_candidates/analyse-dpa-fournisseur-hugo-salard",
     "source_url": "https://github.com/lawve-ai/awesome-legal-skills",
     "source_license": "NOASSERTION",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -871,7 +1000,10 @@
     "local_first": true,
     "environment_network": "none",
     "environment_auth": "none",
-    "environment_payment": "none"
+    "environment_payment": "none",
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "judicial-first-impression",
@@ -882,7 +1014,7 @@
     "bundle_path": "golden_candidates/judicial-first-impression",
     "source_url": "https://github.com/lawve-ai/awesome-legal-skills",
     "source_license": "NOASSERTION",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -891,7 +1023,10 @@
     "environment_network": "none",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": true
+    "local_first": true,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "doca-structured-tools-contract",
@@ -902,7 +1037,7 @@
     "bundle_path": "golden_candidates/doca-structured-tools-contract",
     "source_url": "https://github.com/NVIDIA/skills",
     "source_license": "Apache-2.0",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -911,7 +1046,10 @@
     "environment_network": "optional",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "nemo-fabric-build-adapter",
@@ -922,7 +1060,7 @@
     "bundle_path": "golden_candidates/nemo-fabric-build-adapter",
     "source_url": "https://github.com/NVIDIA/skills",
     "source_license": "Apache-2.0",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -931,7 +1069,10 @@
     "environment_network": "optional",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "nemoclaw-user-get-started",
@@ -942,7 +1083,7 @@
     "bundle_path": "golden_candidates/nemoclaw-user-get-started",
     "source_url": "https://github.com/openai/skills",
     "source_license": "unknown",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -951,7 +1092,10 @@
     "environment_network": "optional",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "nemoclaw-user-guide",
@@ -962,7 +1106,7 @@
     "bundle_path": "golden_candidates/nemoclaw-user-guide",
     "source_url": "https://github.com/NVIDIA/skills",
     "source_license": "Apache-2.0",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -971,7 +1115,10 @@
     "environment_network": "optional",
     "environment_auth": "required",
     "environment_payment": "none",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "rtvi-cv-scaffold-vss-service",
@@ -982,7 +1129,7 @@
     "bundle_path": "golden_candidates/rtvi-cv-scaffold-vss-service",
     "source_url": "https://github.com/NVIDIA/skills",
     "source_license": "Apache-2.0",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -991,7 +1138,10 @@
     "environment_network": "optional",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "amazon-listing-competitor-analysis-skill",
@@ -1002,7 +1152,7 @@
     "bundle_path": "golden_candidates/amazon-listing-competitor-analysis-skill",
     "source_url": "https://github.com/browser-act/skills",
     "source_license": "MIT",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -1011,7 +1161,10 @@
     "environment_network": "required",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "amazon-product-api-skill",
@@ -1022,7 +1175,7 @@
     "bundle_path": "golden_candidates/amazon-product-api-skill",
     "source_url": "https://github.com/browser-act/skills",
     "source_license": "MIT",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -1031,7 +1184,10 @@
     "environment_network": "required",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "amazon-product-search-api-skill",
@@ -1042,7 +1198,7 @@
     "bundle_path": "golden_candidates/amazon-product-search-api-skill",
     "source_url": "https://github.com/browser-act/skills",
     "source_license": "MIT",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -1051,7 +1207,10 @@
     "environment_network": "required",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "browser-act",
@@ -1062,7 +1221,7 @@
     "bundle_path": "golden_candidates/browser-act",
     "source_url": "https://github.com/browser-act/skills",
     "source_license": "MIT",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -1071,7 +1230,10 @@
     "environment_network": "required",
     "environment_auth": "required",
     "environment_payment": "none",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "business-contact-social-links-skill",
@@ -1082,7 +1244,7 @@
     "bundle_path": "golden_candidates/business-contact-social-links-skill",
     "source_url": "https://github.com/browser-act/skills",
     "source_license": "MIT",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -1091,7 +1253,10 @@
     "environment_network": "required",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "adobe-create-social-variations",
@@ -1102,7 +1267,7 @@
     "bundle_path": "golden_candidates/adobe-create-social-variations",
     "source_url": "https://github.com/openai/skills",
     "source_license": "unknown",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -1111,7 +1276,10 @@
     "environment_network": "optional",
     "environment_auth": "none",
     "environment_payment": "required",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "adobe-design-from-template",
@@ -1122,7 +1290,7 @@
     "bundle_path": "golden_candidates/adobe-design-from-template",
     "source_url": "https://github.com/openai/skills",
     "source_license": "unknown",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -1131,7 +1299,10 @@
     "environment_network": "optional",
     "environment_auth": "none",
     "environment_payment": "required",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "bigquery-troubleshooting",
@@ -1142,7 +1313,7 @@
     "bundle_path": "golden_candidates/bigquery-troubleshooting",
     "source_url": "https://github.com/google/skills",
     "source_license": "Apache-2.0",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -1151,7 +1322,10 @@
     "environment_network": "required",
     "environment_auth": "required",
     "environment_payment": "required",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "canva-bulk-create",
@@ -1162,7 +1336,7 @@
     "bundle_path": "golden_candidates/canva-bulk-create",
     "source_url": "https://github.com/openai/skills",
     "source_license": "unknown",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_signin",
@@ -1171,7 +1345,10 @@
     "environment_network": "required",
     "environment_auth": "required",
     "environment_payment": "none",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "canva-edit-design",
@@ -1182,7 +1359,7 @@
     "bundle_path": "golden_candidates/canva-edit-design",
     "source_url": "https://github.com/openai/skills",
     "source_license": "unknown",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_signin",
@@ -1191,7 +1368,10 @@
     "environment_network": "required",
     "environment_auth": "required",
     "environment_payment": "none",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "docx",
@@ -1201,7 +1381,7 @@
     "bundle_path": "golden_candidates/docx",
     "source_url": "https://github.com/anthropics/skills",
     "source_license": "unknown",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -1210,7 +1390,10 @@
     "local_first": true,
     "environment_network": "none",
     "environment_auth": "none",
-    "environment_payment": "none"
+    "environment_payment": "none",
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "hatch-pet",
@@ -1220,7 +1403,7 @@
     "bundle_path": "golden_candidates/hatch-pet",
     "source_url": "https://github.com/openai/skills",
     "source_license": "unknown",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -1229,7 +1412,10 @@
     "local_first": true,
     "environment_network": "none",
     "environment_auth": "none",
-    "environment_payment": "none"
+    "environment_payment": "none",
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "imagegen",
@@ -1239,7 +1425,7 @@
     "bundle_path": "golden_candidates/imagegen",
     "source_url": "https://github.com/openai/skills",
     "source_license": "unknown",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -1248,7 +1434,10 @@
     "local_first": true,
     "environment_network": "none",
     "environment_auth": "none",
-    "environment_payment": "none"
+    "environment_payment": "none",
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "internal-comms",
@@ -1258,7 +1447,7 @@
     "bundle_path": "golden_candidates/internal-comms",
     "source_url": "https://github.com/anthropics/skills",
     "source_license": "unknown",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -1267,7 +1456,10 @@
     "local_first": true,
     "environment_network": "none",
     "environment_auth": "none",
-    "environment_payment": "none"
+    "environment_payment": "none",
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "pptx",
@@ -1277,7 +1469,7 @@
     "bundle_path": "golden_candidates/pptx",
     "source_url": "https://github.com/anthropics/skills",
     "source_license": "unknown",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -1286,7 +1478,10 @@
     "local_first": true,
     "environment_network": "none",
     "environment_auth": "none",
-    "environment_payment": "none"
+    "environment_payment": "none",
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "detecting-container-drift-at-runtime",
@@ -1297,7 +1492,7 @@
     "bundle_path": "golden_candidates/detecting-container-drift-at-runtime",
     "source_url": "https://github.com/mukul975/Anthropic-Cybersecurity-Skills",
     "source_license": "Apache-2.0",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -1306,7 +1501,10 @@
     "environment_network": "optional",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "goofish-search-list",
@@ -1317,7 +1515,7 @@
     "bundle_path": "golden_candidates/goofish-search-list",
     "source_url": "https://github.com/browser-act/skills",
     "source_license": "MIT",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -1326,7 +1524,10 @@
     "environment_network": "required",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "adobe-create-mockups",
@@ -1337,7 +1538,7 @@
     "bundle_path": "golden_candidates/adobe-create-mockups",
     "source_url": "https://github.com/openai/skills",
     "source_license": "unknown",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -1346,7 +1547,10 @@
     "environment_network": "optional",
     "environment_auth": "none",
     "environment_payment": "required",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "adobe-edit-quick-cut",
@@ -1357,7 +1561,7 @@
     "bundle_path": "golden_candidates/adobe-edit-quick-cut",
     "source_url": "https://github.com/openai/skills",
     "source_license": "unknown",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -1366,7 +1570,10 @@
     "environment_network": "optional",
     "environment_auth": "none",
     "environment_payment": "required",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "adobe-retouch-portraits",
@@ -1377,7 +1584,7 @@
     "bundle_path": "golden_candidates/adobe-retouch-portraits",
     "source_url": "https://github.com/openai/skills",
     "source_license": "unknown",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -1386,7 +1593,10 @@
     "environment_network": "optional",
     "environment_auth": "none",
     "environment_payment": "required",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "ai-act-knowledge",
@@ -1397,7 +1607,7 @@
     "bundle_path": "golden_candidates/ai-act-knowledge",
     "source_url": "https://github.com/lawve-ai/awesome-legal-skills",
     "source_license": "NOASSERTION",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -1406,7 +1616,10 @@
     "environment_network": "none",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": true
+    "local_first": true,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "design-export-repair",
@@ -1417,7 +1630,7 @@
     "bundle_path": "golden_candidates/design-export-repair",
     "source_url": "https://github.com/OneWave-AI/claude-skills",
     "source_license": "MIT",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -1426,7 +1639,10 @@
     "environment_network": "none",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": true
+    "local_first": true,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "implementing-canary-tokens-for-network-intrusion",
@@ -1437,7 +1653,7 @@
     "bundle_path": "golden_candidates/implementing-canary-tokens-for-network-intrusion",
     "source_url": "https://github.com/mukul975/Anthropic-Cybersecurity-Skills",
     "source_license": "Apache-2.0",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -1446,7 +1662,10 @@
     "environment_network": "required",
     "environment_auth": "required",
     "environment_payment": "required",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "isds-arbitrators",
@@ -1457,7 +1676,7 @@
     "bundle_path": "golden_candidates/isds-arbitrators",
     "source_url": "https://github.com/lawve-ai/awesome-legal-skills",
     "source_license": "NOASSERTION",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -1466,7 +1685,10 @@
     "environment_network": "none",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": true
+    "local_first": true,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "isds-research",
@@ -1477,7 +1699,7 @@
     "bundle_path": "golden_candidates/isds-research",
     "source_url": "https://github.com/lawve-ai/awesome-legal-skills",
     "source_license": "NOASSERTION",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -1486,7 +1708,10 @@
     "environment_network": "none",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": true
+    "local_first": true,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "mandarinat",
@@ -1497,7 +1722,7 @@
     "bundle_path": "golden_candidates/mandarinat",
     "source_url": "https://github.com/lawve-ai/awesome-legal-skills",
     "source_license": "NOASSERTION",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -1506,7 +1731,10 @@
     "environment_network": "none",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": true
+    "local_first": true,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "faceless-channel",
@@ -1517,7 +1745,7 @@
     "bundle_path": "golden_candidates/faceless-channel",
     "source_url": "https://github.com/openai/skills",
     "source_license": "unknown",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -1526,7 +1754,10 @@
     "environment_network": "none",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": true
+    "local_first": true,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "figma-create-new-file",
@@ -1537,7 +1768,7 @@
     "bundle_path": "golden_candidates/figma-create-new-file",
     "source_url": "https://github.com/openai/skills",
     "source_license": "unknown",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -1546,7 +1777,10 @@
     "environment_network": "required",
     "environment_auth": "required",
     "environment_payment": "none",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "google-slides",
@@ -1557,7 +1791,7 @@
     "bundle_path": "golden_candidates/google-slides",
     "source_url": "https://github.com/openai/skills",
     "source_license": "unknown",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -1566,7 +1800,10 @@
     "environment_network": "none",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": true
+    "local_first": true,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "openai-docs",
@@ -1577,7 +1814,7 @@
     "bundle_path": "golden_candidates/openai-docs",
     "source_url": "https://github.com/openai/skills",
     "source_license": "unknown",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -1586,7 +1823,10 @@
     "environment_network": "none",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": true
+    "local_first": true,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "pdf",
@@ -1597,7 +1837,7 @@
     "bundle_path": "golden_candidates/pdf",
     "source_url": "https://github.com/anthropics/skills",
     "source_license": "unknown",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -1606,7 +1846,10 @@
     "environment_network": "none",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": true
+    "local_first": true,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "theme-factory",
@@ -1616,7 +1859,7 @@
     "bundle_path": "golden_candidates/theme-factory",
     "source_url": "https://github.com/anthropics/skills",
     "source_license": "unknown",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -1625,7 +1868,10 @@
     "local_first": true,
     "environment_network": "none",
     "environment_auth": "none",
-    "environment_payment": "none"
+    "environment_payment": "none",
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "twilio-cli-reference",
@@ -1636,7 +1882,7 @@
     "bundle_path": "golden_candidates/twilio-cli-reference",
     "source_url": "https://github.com/openai/skills",
     "source_license": "unknown",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -1645,7 +1891,10 @@
     "environment_network": "required",
     "environment_auth": "required",
     "environment_payment": "none",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "analyzing-lnk-file-and-jump-list-artifacts",
@@ -1656,7 +1905,7 @@
     "bundle_path": "golden_candidates/analyzing-lnk-file-and-jump-list-artifacts",
     "source_url": "https://github.com/mukul975/Anthropic-Cybersecurity-Skills",
     "source_license": "Apache-2.0",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -1665,7 +1914,10 @@
     "environment_network": "optional",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "at-svs-contributions",
@@ -1676,7 +1928,7 @@
     "bundle_path": "golden_candidates/at-svs-contributions",
     "source_url": "https://github.com/openaccountants/openaccountants",
     "source_license": "AGPL-3.0",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -1685,7 +1937,10 @@
     "environment_network": "none",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": true
+    "local_first": true,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "doca-bench",
@@ -1696,7 +1951,7 @@
     "bundle_path": "golden_candidates/doca-bench",
     "source_url": "https://github.com/NVIDIA/skills",
     "source_license": "Apache-2.0",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -1705,7 +1960,10 @@
     "environment_network": "optional",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "doca-comm-channel-admin",
@@ -1716,7 +1974,7 @@
     "bundle_path": "golden_candidates/doca-comm-channel-admin",
     "source_url": "https://github.com/NVIDIA/skills",
     "source_license": "Apache-2.0",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -1725,7 +1983,10 @@
     "environment_network": "optional",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "pr-labeling",
@@ -1735,7 +1996,7 @@
     "bundle_path": "golden_candidates/pr-labeling",
     "source_url": "https://github.com/vercel-labs/skills",
     "source_license": "MIT",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -1744,7 +2005,10 @@
     "local_first": true,
     "environment_network": "none",
     "environment_auth": "none",
-    "environment_payment": "none"
+    "environment_payment": "none",
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "template-skill",
@@ -1754,7 +2018,7 @@
     "bundle_path": "golden_candidates/template-skill",
     "source_url": "https://github.com/anthropics/skills",
     "source_license": "unknown",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -1763,7 +2027,10 @@
     "local_first": true,
     "environment_network": "none",
     "environment_auth": "none",
-    "environment_payment": "none"
+    "environment_payment": "none",
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "github-project-contributor-finder-api-skill",
@@ -1774,7 +2041,7 @@
     "bundle_path": "golden_candidates/github-project-contributor-finder-api-skill",
     "source_url": "https://github.com/browser-act/skills",
     "source_license": "MIT",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -1783,7 +2050,10 @@
     "environment_network": "required",
     "environment_auth": "required",
     "environment_payment": "none",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "implementing-zero-trust-with-hashicorp-boundary",
@@ -1794,7 +2064,7 @@
     "bundle_path": "golden_candidates/implementing-zero-trust-with-hashicorp-boundary",
     "source_url": "https://github.com/mukul975/Anthropic-Cybersecurity-Skills",
     "source_license": "Apache-2.0",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -1803,7 +2073,10 @@
     "environment_network": "optional",
     "environment_auth": "required",
     "environment_payment": "none",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "matter-plan-builder-scott-margetts",
@@ -1814,7 +2087,7 @@
     "bundle_path": "golden_candidates/matter-plan-builder-scott-margetts",
     "source_url": "https://github.com/lawve-ai/awesome-legal-skills",
     "source_license": "NOASSERTION",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -1823,7 +2096,10 @@
     "environment_network": "none",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": true
+    "local_first": true,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "risk-and-issues-manager-scott-margetts",
@@ -1834,7 +2110,7 @@
     "bundle_path": "golden_candidates/risk-and-issues-manager-scott-margetts",
     "source_url": "https://github.com/lawve-ai/awesome-legal-skills",
     "source_license": "NOASSERTION",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -1843,7 +2119,10 @@
     "environment_network": "none",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": true
+    "local_first": true,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "academy-guide",
@@ -1854,7 +2133,7 @@
     "bundle_path": "golden_candidates/academy-guide",
     "source_url": "https://github.com/anthropics/skills",
     "source_license": "unknown",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -1863,7 +2142,10 @@
     "environment_network": "none",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": true
+    "local_first": true,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "azure-prepare",
@@ -1874,7 +2156,7 @@
     "bundle_path": "golden_candidates/azure-prepare",
     "source_url": "https://github.com/microsoft/azure-skills",
     "source_license": "MIT",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -1883,7 +2165,10 @@
     "environment_network": "required",
     "environment_auth": "required",
     "environment_payment": "required",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "build-chatgpt-app",
@@ -1894,7 +2179,7 @@
     "bundle_path": "golden_candidates/build-chatgpt-app",
     "source_url": "https://github.com/openai/skills",
     "source_license": "unknown",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -1903,7 +2188,10 @@
     "environment_network": "none",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": true
+    "local_first": true,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "building-ai-agent-on-cloudflare",
@@ -1914,7 +2202,7 @@
     "bundle_path": "golden_candidates/building-ai-agent-on-cloudflare",
     "source_url": "https://github.com/openai/skills",
     "source_license": "unknown",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -1923,7 +2211,10 @@
     "environment_network": "none",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": true
+    "local_first": true,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "discernment-nudge",
@@ -1933,7 +2224,7 @@
     "bundle_path": "golden_candidates/discernment-nudge",
     "source_url": "https://github.com/anthropics/skills",
     "source_license": "unknown",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -1942,7 +2233,10 @@
     "local_first": true,
     "environment_network": "none",
     "environment_auth": "none",
-    "environment_payment": "none"
+    "environment_payment": "none",
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "eve",
@@ -1952,7 +2246,7 @@
     "bundle_path": "golden_candidates/eve",
     "source_url": "https://github.com/openai/skills",
     "source_license": "unknown",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -1961,7 +2255,10 @@
     "local_first": false,
     "environment_network": "none",
     "environment_auth": "none",
-    "environment_payment": "none"
+    "environment_payment": "none",
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "openai-api-troubleshooting",
@@ -1971,7 +2268,7 @@
     "bundle_path": "golden_candidates/openai-api-troubleshooting",
     "source_url": "https://github.com/openai/skills",
     "source_license": "unknown",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -1980,7 +2277,10 @@
     "local_first": true,
     "environment_network": "none",
     "environment_auth": "none",
-    "environment_payment": "none"
+    "environment_payment": "none",
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "xlsx",
@@ -1990,7 +2290,7 @@
     "bundle_path": "golden_candidates/xlsx",
     "source_url": "https://github.com/anthropics/skills",
     "source_license": "unknown",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -1999,7 +2299,10 @@
     "local_first": true,
     "environment_network": "none",
     "environment_auth": "none",
-    "environment_payment": "none"
+    "environment_payment": "none",
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "global-ad-platforms",
@@ -2010,7 +2313,7 @@
     "bundle_path": "golden_candidates/global-ad-platforms",
     "source_url": "https://github.com/openaccountants/openaccountants",
     "source_license": "AGPL-3.0",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -2019,7 +2322,10 @@
     "environment_network": "none",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": true
+    "local_first": true,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "implementing-log-forwarding-with-fluentd",
@@ -2030,7 +2336,7 @@
     "bundle_path": "golden_candidates/implementing-log-forwarding-with-fluentd",
     "source_url": "https://github.com/mukul975/Anthropic-Cybersecurity-Skills",
     "source_license": "Apache-2.0",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -2039,7 +2345,10 @@
     "environment_network": "optional",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "doca-flow-dpa-provider",
@@ -2050,7 +2359,7 @@
     "bundle_path": "golden_candidates/doca-flow-dpa-provider",
     "source_url": "https://github.com/NVIDIA/skills",
     "source_license": "Apache-2.0",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -2059,7 +2368,10 @@
     "environment_network": "optional",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "gke-ai-troubleshooting-tpu-dynamic-slices-monitoring",
@@ -2070,7 +2382,7 @@
     "bundle_path": "golden_candidates/gke-ai-troubleshooting-tpu-dynamic-slices-monitoring",
     "source_url": "https://github.com/google/skills",
     "source_license": "Apache-2.0",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -2079,7 +2391,10 @@
     "environment_network": "required",
     "environment_auth": "required",
     "environment_payment": "required",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "amazon-best-selling-products-finder-api-skill",
@@ -2090,7 +2405,7 @@
     "bundle_path": "golden_candidates/amazon-best-selling-products-finder-api-skill",
     "source_url": "https://github.com/browser-act/skills",
     "source_license": "MIT",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -2099,7 +2414,10 @@
     "environment_network": "required",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "benchmarking-kubernetes-with-kube-bench",
@@ -2110,7 +2428,7 @@
     "bundle_path": "golden_candidates/benchmarking-kubernetes-with-kube-bench",
     "source_url": "https://github.com/mukul975/Anthropic-Cybersecurity-Skills",
     "source_license": "Apache-2.0",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -2119,7 +2437,10 @@
     "environment_network": "required",
     "environment_auth": "required",
     "environment_payment": "none",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "crm-data-cleanup",
@@ -2130,7 +2451,7 @@
     "bundle_path": "golden_candidates/crm-data-cleanup",
     "source_url": "https://github.com/OneWave-AI/claude-skills",
     "source_license": "MIT",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_signin",
@@ -2139,7 +2460,10 @@
     "environment_network": "required",
     "environment_auth": "required",
     "environment_payment": "required",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "csv-excel-merger",
@@ -2150,7 +2474,7 @@
     "bundle_path": "golden_candidates/csv-excel-merger",
     "source_url": "https://github.com/OneWave-AI/claude-skills",
     "source_license": "MIT",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -2159,7 +2483,10 @@
     "environment_network": "none",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": true
+    "local_first": true,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "data-manager-api-event-ingestion",
@@ -2170,7 +2497,7 @@
     "bundle_path": "golden_candidates/data-manager-api-event-ingestion",
     "source_url": "https://github.com/google/skills",
     "source_license": "Apache-2.0",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -2179,7 +2506,10 @@
     "environment_network": "required",
     "environment_auth": "required",
     "environment_payment": "required",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "dbt-sf-to-bq-translator",
@@ -2190,7 +2520,7 @@
     "bundle_path": "golden_candidates/dbt-sf-to-bq-translator",
     "source_url": "https://github.com/google/skills",
     "source_license": "Apache-2.0",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -2199,7 +2529,10 @@
     "environment_network": "required",
     "environment_auth": "required",
     "environment_payment": "required",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "deepstream-generate-pipeline",
@@ -2210,7 +2543,7 @@
     "bundle_path": "golden_candidates/deepstream-generate-pipeline",
     "source_url": "https://github.com/NVIDIA/skills",
     "source_license": "Apache-2.0",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -2219,7 +2552,10 @@
     "environment_network": "optional",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "doca-flow-perf",
@@ -2230,7 +2566,7 @@
     "bundle_path": "golden_candidates/doca-flow-perf",
     "source_url": "https://github.com/NVIDIA/skills",
     "source_license": "Apache-2.0",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -2239,7 +2575,10 @@
     "environment_network": "optional",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "abusing-shadow-credentials-for-privesc",
@@ -2250,7 +2589,7 @@
     "bundle_path": "golden_candidates/abusing-shadow-credentials-for-privesc",
     "source_url": "https://github.com/mukul975/Anthropic-Cybersecurity-Skills",
     "source_license": "Apache-2.0",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -2259,7 +2598,10 @@
     "environment_network": "optional",
     "environment_auth": "required",
     "environment_payment": "none",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "achieving-cmmc-level-2-compliance",
@@ -2270,7 +2612,7 @@
     "bundle_path": "golden_candidates/achieving-cmmc-level-2-compliance",
     "source_url": "https://github.com/mukul975/Anthropic-Cybersecurity-Skills",
     "source_license": "Apache-2.0",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -2279,7 +2621,10 @@
     "environment_network": "optional",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "acquiring-disk-image-with-dd-and-dcfldd",
@@ -2289,7 +2634,7 @@
     "bundle_path": "golden_candidates/acquiring-disk-image-with-dd-and-dcfldd",
     "source_url": "https://github.com/mukul975/Anthropic-Cybersecurity-Skills",
     "source_license": "Apache-2.0",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -2298,7 +2643,10 @@
     "local_first": false,
     "environment_network": "optional",
     "environment_auth": "none",
-    "environment_payment": "none"
+    "environment_payment": "none",
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "analyzing-android-malware-with-apktool",
@@ -2308,7 +2656,7 @@
     "bundle_path": "golden_candidates/analyzing-android-malware-with-apktool",
     "source_url": "https://github.com/mukul975/Anthropic-Cybersecurity-Skills",
     "source_license": "Apache-2.0",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -2317,7 +2665,10 @@
     "local_first": false,
     "environment_network": "optional",
     "environment_auth": "none",
-    "environment_payment": "none"
+    "environment_payment": "none",
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "analyzing-cyber-kill-chain",
@@ -2327,7 +2678,7 @@
     "bundle_path": "golden_candidates/analyzing-cyber-kill-chain",
     "source_url": "https://github.com/mukul975/Anthropic-Cybersecurity-Skills",
     "source_license": "Apache-2.0",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -2336,7 +2687,10 @@
     "local_first": false,
     "environment_network": "optional",
     "environment_auth": "none",
-    "environment_payment": "none"
+    "environment_payment": "none",
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "analyzing-indicators-of-compromise",
@@ -2346,7 +2700,7 @@
     "bundle_path": "golden_candidates/analyzing-indicators-of-compromise",
     "source_url": "https://github.com/mukul975/Anthropic-Cybersecurity-Skills",
     "source_license": "Apache-2.0",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -2355,7 +2709,10 @@
     "local_first": false,
     "environment_network": "optional",
     "environment_auth": "none",
-    "environment_payment": "none"
+    "environment_payment": "none",
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "analyzing-linux-audit-logs-for-intrusion",
@@ -2365,7 +2722,7 @@
     "bundle_path": "golden_candidates/analyzing-linux-audit-logs-for-intrusion",
     "source_url": "https://github.com/mukul975/Anthropic-Cybersecurity-Skills",
     "source_license": "Apache-2.0",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -2374,7 +2731,10 @@
     "local_first": false,
     "environment_network": "optional",
     "environment_auth": "required",
-    "environment_payment": "none"
+    "environment_payment": "none",
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "analyzing-macro-malware-in-office-documents",
@@ -2384,7 +2744,7 @@
     "bundle_path": "golden_candidates/analyzing-macro-malware-in-office-documents",
     "source_url": "https://github.com/mukul975/Anthropic-Cybersecurity-Skills",
     "source_license": "Apache-2.0",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -2393,7 +2753,10 @@
     "local_first": false,
     "environment_network": "optional",
     "environment_auth": "none",
-    "environment_payment": "none"
+    "environment_payment": "none",
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "analyzing-malware-behavior-with-cuckoo-sandbox",
@@ -2403,7 +2766,7 @@
     "bundle_path": "golden_candidates/analyzing-malware-behavior-with-cuckoo-sandbox",
     "source_url": "https://github.com/mukul975/Anthropic-Cybersecurity-Skills",
     "source_license": "Apache-2.0",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -2412,7 +2775,10 @@
     "local_first": false,
     "environment_network": "optional",
     "environment_auth": "none",
-    "environment_payment": "none"
+    "environment_payment": "none",
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "analyzing-memory-dumps-with-volatility",
@@ -2422,7 +2788,7 @@
     "bundle_path": "golden_candidates/analyzing-memory-dumps-with-volatility",
     "source_url": "https://github.com/mukul975/Anthropic-Cybersecurity-Skills",
     "source_license": "Apache-2.0",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -2431,7 +2797,10 @@
     "local_first": false,
     "environment_network": "optional",
     "environment_auth": "required",
-    "environment_payment": "none"
+    "environment_payment": "none",
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "analyzing-network-traffic-for-incidents",
@@ -2441,7 +2810,7 @@
     "bundle_path": "golden_candidates/analyzing-network-traffic-for-incidents",
     "source_url": "https://github.com/mukul975/Anthropic-Cybersecurity-Skills",
     "source_license": "Apache-2.0",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -2450,7 +2819,10 @@
     "local_first": false,
     "environment_network": "optional",
     "environment_auth": "none",
-    "environment_payment": "none"
+    "environment_payment": "none",
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "analyzing-outlook-pst-for-email-forensics",
@@ -2460,7 +2832,7 @@
     "bundle_path": "golden_candidates/analyzing-outlook-pst-for-email-forensics",
     "source_url": "https://github.com/mukul975/Anthropic-Cybersecurity-Skills",
     "source_license": "Apache-2.0",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -2469,7 +2841,10 @@
     "local_first": false,
     "environment_network": "optional",
     "environment_auth": "none",
-    "environment_payment": "none"
+    "environment_payment": "none",
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "analyzing-powershell-empire-artifacts",
@@ -2479,7 +2854,7 @@
     "bundle_path": "golden_candidates/analyzing-powershell-empire-artifacts",
     "source_url": "https://github.com/mukul975/Anthropic-Cybersecurity-Skills",
     "source_license": "Apache-2.0",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -2488,7 +2863,10 @@
     "local_first": false,
     "environment_network": "optional",
     "environment_auth": "none",
-    "environment_payment": "none"
+    "environment_payment": "none",
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "analyzing-prefetch-files-for-execution-history",
@@ -2498,7 +2876,7 @@
     "bundle_path": "golden_candidates/analyzing-prefetch-files-for-execution-history",
     "source_url": "https://github.com/mukul975/Anthropic-Cybersecurity-Skills",
     "source_license": "Apache-2.0",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -2507,7 +2885,10 @@
     "local_first": false,
     "environment_network": "optional",
     "environment_auth": "none",
-    "environment_payment": "none"
+    "environment_payment": "none",
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "opposing-counsel-review",
@@ -2518,7 +2899,7 @@
     "bundle_path": "golden_candidates/opposing-counsel-review",
     "source_url": "https://github.com/lawve-ai/awesome-legal-skills",
     "source_license": "NOASSERTION",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -2527,7 +2908,10 @@
     "environment_network": "none",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "azure-compliance",
@@ -2538,7 +2922,7 @@
     "bundle_path": "golden_candidates/azure-compliance",
     "source_url": "https://github.com/microsoft/azure-skills",
     "source_license": "MIT",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -2547,7 +2931,10 @@
     "environment_network": "required",
     "environment_auth": "required",
     "environment_payment": "required",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "azure-enterprise-infra-planner",
@@ -2558,7 +2945,7 @@
     "bundle_path": "golden_candidates/azure-enterprise-infra-planner",
     "source_url": "https://github.com/microsoft/azure-skills",
     "source_license": "MIT",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -2567,7 +2954,10 @@
     "environment_network": "required",
     "environment_auth": "required",
     "environment_payment": "required",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "azure-kubernetes",
@@ -2578,7 +2968,7 @@
     "bundle_path": "golden_candidates/azure-kubernetes",
     "source_url": "https://github.com/microsoft/azure-skills",
     "source_license": "MIT",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -2587,7 +2977,10 @@
     "environment_network": "required",
     "environment_auth": "required",
     "environment_payment": "required",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "azure-kusto-irql",
@@ -2598,7 +2991,7 @@
     "bundle_path": "golden_candidates/azure-kusto-irql",
     "source_url": "https://github.com/microsoft/azure-skills",
     "source_license": "MIT",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -2607,7 +3000,10 @@
     "environment_network": "required",
     "environment_auth": "required",
     "environment_payment": "required",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "deep-security-scan",
@@ -2617,7 +3013,7 @@
     "bundle_path": "golden_candidates/deep-security-scan",
     "source_url": "https://github.com/openai/skills",
     "source_license": "unknown",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -2626,7 +3022,10 @@
     "local_first": false,
     "environment_network": "none",
     "environment_auth": "none",
-    "environment_payment": "none"
+    "environment_payment": "none",
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "propose-security-hardening",
@@ -2636,7 +3035,7 @@
     "bundle_path": "golden_candidates/propose-security-hardening",
     "source_url": "https://github.com/openai/skills",
     "source_license": "unknown",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -2645,7 +3044,10 @@
     "local_first": false,
     "environment_network": "none",
     "environment_auth": "none",
-    "environment_payment": "none"
+    "environment_payment": "none",
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "public-equity-investing",
@@ -2655,7 +3057,7 @@
     "bundle_path": "golden_candidates/public-equity-investing",
     "source_url": "https://github.com/openai/skills",
     "source_license": "unknown",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -2664,7 +3066,10 @@
     "local_first": false,
     "environment_network": "none",
     "environment_auth": "none",
-    "environment_payment": "none"
+    "environment_payment": "none",
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "abusing-dpapi-for-credential-access",
@@ -2675,7 +3080,7 @@
     "bundle_path": "golden_candidates/abusing-dpapi-for-credential-access",
     "source_url": "https://github.com/mukul975/Anthropic-Cybersecurity-Skills",
     "source_license": "Apache-2.0",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -2684,7 +3089,10 @@
     "environment_network": "optional",
     "environment_auth": "required",
     "environment_payment": "none",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "ai-coding-guardrails",
@@ -2695,7 +3103,7 @@
     "bundle_path": "golden_candidates/ai-coding-guardrails",
     "source_url": "https://github.com/OneWave-AI/claude-skills",
     "source_license": "MIT",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -2704,7 +3112,10 @@
     "environment_network": "none",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": true
+    "local_first": true,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "amazon-asin-lookup-api-skill",
@@ -2715,7 +3126,7 @@
     "bundle_path": "golden_candidates/amazon-asin-lookup-api-skill",
     "source_url": "https://github.com/browser-act/skills",
     "source_license": "MIT",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -2724,7 +3135,10 @@
     "environment_network": "required",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "amazon-buy-box-monitor-api-skill",
@@ -2735,7 +3149,7 @@
     "bundle_path": "golden_candidates/amazon-buy-box-monitor-api-skill",
     "source_url": "https://github.com/browser-act/skills",
     "source_license": "MIT",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -2744,7 +3158,10 @@
     "environment_network": "required",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "amazon-reviews-api-skill",
@@ -2755,7 +3172,7 @@
     "bundle_path": "golden_candidates/amazon-reviews-api-skill",
     "source_url": "https://github.com/browser-act/skills",
     "source_license": "MIT",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -2764,7 +3181,10 @@
     "environment_network": "required",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "archeologue-gallica",
@@ -2775,7 +3195,7 @@
     "bundle_path": "golden_candidates/archeologue-gallica",
     "source_url": "https://github.com/lawve-ai/awesome-legal-skills",
     "source_license": "NOASSERTION",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -2784,7 +3204,10 @@
     "environment_network": "none",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": true
+    "local_first": true,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "bi-measure-builder",
@@ -2795,7 +3218,7 @@
     "bundle_path": "golden_candidates/bi-measure-builder",
     "source_url": "https://github.com/OneWave-AI/claude-skills",
     "source_license": "MIT",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -2804,7 +3227,10 @@
     "environment_network": "optional",
     "environment_auth": "required",
     "environment_payment": "none",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "agent-platform-alert-configuration",
@@ -2815,7 +3241,7 @@
     "bundle_path": "golden_candidates/agent-platform-alert-configuration",
     "source_url": "https://github.com/google/skills",
     "source_license": "Apache-2.0",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -2824,7 +3250,10 @@
     "environment_network": "required",
     "environment_auth": "required",
     "environment_payment": "required",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "agent-platform-deploy",
@@ -2835,7 +3264,7 @@
     "bundle_path": "golden_candidates/agent-platform-deploy",
     "source_url": "https://github.com/google/skills",
     "source_license": "Apache-2.0",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -2844,7 +3273,10 @@
     "environment_network": "required",
     "environment_auth": "required",
     "environment_payment": "required",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "agent-platform-eval-flywheel",
@@ -2855,7 +3287,7 @@
     "bundle_path": "golden_candidates/agent-platform-eval-flywheel",
     "source_url": "https://github.com/google/skills",
     "source_license": "Apache-2.0",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -2864,7 +3296,10 @@
     "environment_network": "required",
     "environment_auth": "required",
     "environment_payment": "required",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "agent-platform-inference",
@@ -2875,7 +3310,7 @@
     "bundle_path": "golden_candidates/agent-platform-inference",
     "source_url": "https://github.com/google/skills",
     "source_license": "Apache-2.0",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -2884,7 +3319,10 @@
     "environment_network": "required",
     "environment_auth": "required",
     "environment_payment": "required",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "airunway-aks-setup",
@@ -2895,7 +3333,7 @@
     "bundle_path": "golden_candidates/airunway-aks-setup",
     "source_url": "https://github.com/microsoft/azure-skills",
     "source_license": "MIT",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -2904,7 +3342,10 @@
     "environment_network": "required",
     "environment_auth": "required",
     "environment_payment": "required",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "algorithmic-art",
@@ -2914,7 +3355,7 @@
     "bundle_path": "golden_candidates/algorithmic-art",
     "source_url": "https://github.com/anthropics/skills",
     "source_license": "unknown",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -2923,7 +3364,10 @@
     "local_first": true,
     "environment_network": "none",
     "environment_auth": "none",
-    "environment_payment": "none"
+    "environment_payment": "none",
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "application-design-center-design-deploy",
@@ -2934,7 +3378,7 @@
     "bundle_path": "golden_candidates/application-design-center-design-deploy",
     "source_url": "https://github.com/google/skills",
     "source_license": "Apache-2.0",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -2943,7 +3387,10 @@
     "environment_network": "required",
     "environment_auth": "required",
     "environment_payment": "required",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "data-manager-api-setup",
@@ -2953,7 +3400,7 @@
     "bundle_path": "golden_candidates/data-manager-api-setup",
     "source_url": "https://github.com/google/skills",
     "source_license": "Apache-2.0",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -2962,7 +3409,10 @@
     "local_first": false,
     "environment_network": "required",
     "environment_auth": "required",
-    "environment_payment": "none"
+    "environment_payment": "none",
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "google-mobile-ads-android-migrate-to-next-gen",
@@ -2972,7 +3422,7 @@
     "bundle_path": "golden_candidates/google-mobile-ads-android-migrate-to-next-gen",
     "source_url": "https://github.com/google/skills",
     "source_license": "Apache-2.0",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -2981,7 +3431,10 @@
     "local_first": false,
     "environment_network": "required",
     "environment_auth": "required",
-    "environment_payment": "none"
+    "environment_payment": "none",
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "mixpanelyst",
@@ -2991,7 +3444,7 @@
     "bundle_path": "golden_candidates/mixpanelyst",
     "source_url": "https://github.com/openai/skills",
     "source_license": "unknown",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -3000,7 +3453,10 @@
     "local_first": true,
     "environment_network": "none",
     "environment_auth": "none",
-    "environment_payment": "none"
+    "environment_payment": "none",
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "skill-creator",
@@ -3010,7 +3466,7 @@
     "bundle_path": "golden_candidates/skill-creator",
     "source_url": "https://github.com/anthropics/skills",
     "source_license": "unknown",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -3019,7 +3475,10 @@
     "local_first": true,
     "environment_network": "none",
     "environment_auth": "none",
-    "environment_payment": "none"
+    "environment_payment": "none",
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "web-artifacts-builder",
@@ -3029,7 +3488,7 @@
     "bundle_path": "golden_candidates/web-artifacts-builder",
     "source_url": "https://github.com/anthropics/skills",
     "source_license": "unknown",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -3038,7 +3497,10 @@
     "local_first": true,
     "environment_network": "none",
     "environment_auth": "none",
-    "environment_payment": "none"
+    "environment_payment": "none",
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "zotero",
@@ -3049,7 +3511,7 @@
     "bundle_path": "golden_candidates/zotero",
     "source_url": "https://github.com/openai/skills",
     "source_license": "unknown",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -3058,7 +3520,10 @@
     "environment_network": "required",
     "environment_auth": "required",
     "environment_payment": "none",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "amazon-alexa-qa",
@@ -3069,7 +3534,7 @@
     "bundle_path": "golden_candidates/amazon-alexa-qa",
     "source_url": "https://github.com/browser-act/skills",
     "source_license": "MIT",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -3078,7 +3543,10 @@
     "environment_network": "required",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "database-schema-designer",
@@ -3089,7 +3557,7 @@
     "bundle_path": "golden_candidates/database-schema-designer",
     "source_url": "https://github.com/OneWave-AI/claude-skills",
     "source_license": "MIT",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -3098,7 +3566,10 @@
     "environment_network": "none",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": true
+    "local_first": true,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "x-dm-auto-chat",
@@ -3109,7 +3580,7 @@
     "bundle_path": "golden_candidates/x-dm-auto-chat",
     "source_url": "https://github.com/browser-act/skills",
     "source_license": "MIT",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -3118,7 +3589,10 @@
     "environment_network": "required",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "azure-cloud-migrate",
@@ -3129,7 +3603,7 @@
     "bundle_path": "golden_candidates/azure-cloud-migrate",
     "source_url": "https://github.com/microsoft/azure-skills",
     "source_license": "MIT",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -3138,7 +3612,10 @@
     "environment_network": "required",
     "environment_auth": "required",
     "environment_payment": "required",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "data-manager-api-audience-ingestion",
@@ -3149,7 +3626,7 @@
     "bundle_path": "golden_candidates/data-manager-api-audience-ingestion",
     "source_url": "https://github.com/google/skills",
     "source_license": "Apache-2.0",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -3158,7 +3635,10 @@
     "environment_network": "required",
     "environment_auth": "required",
     "environment_payment": "required",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "doca-aes-gcm",
@@ -3169,7 +3649,7 @@
     "bundle_path": "golden_candidates/doca-aes-gcm",
     "source_url": "https://github.com/NVIDIA/skills",
     "source_license": "Apache-2.0",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -3178,7 +3658,10 @@
     "environment_network": "optional",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "doca-compress",
@@ -3189,7 +3672,7 @@
     "bundle_path": "golden_candidates/doca-compress",
     "source_url": "https://github.com/NVIDIA/skills",
     "source_license": "Apache-2.0",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -3198,7 +3681,10 @@
     "environment_network": "optional",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "ima-sdk-client-side",
@@ -3208,7 +3694,7 @@
     "bundle_path": "golden_candidates/ima-sdk-client-side",
     "source_url": "https://github.com/google/skills",
     "source_license": "Apache-2.0",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -3217,7 +3703,10 @@
     "local_first": false,
     "environment_network": "required",
     "environment_auth": "required",
-    "environment_payment": "none"
+    "environment_payment": "none",
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "divorce-ct-stephane-boghossian",
@@ -3228,7 +3717,7 @@
     "bundle_path": "golden_candidates/divorce-ct-stephane-boghossian",
     "source_url": "https://github.com/lawve-ai/awesome-legal-skills",
     "source_license": "NOASSERTION",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "no_signin",
@@ -3237,7 +3726,10 @@
     "environment_network": "none",
     "environment_auth": "none",
     "environment_payment": "none",
-    "local_first": true
+    "local_first": true,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "adobe-batch-edit-photos",
@@ -3248,7 +3740,7 @@
     "bundle_path": "golden_candidates/adobe-batch-edit-photos",
     "source_url": "https://github.com/openai/skills",
     "source_license": "unknown",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -3257,7 +3749,10 @@
     "environment_network": "optional",
     "environment_auth": "none",
     "environment_payment": "required",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   },
   {
     "skill_id": "azure-validate",
@@ -3268,7 +3763,7 @@
     "bundle_path": "golden_candidates/azure-validate",
     "source_url": "https://github.com/microsoft/azure-skills",
     "source_license": "MIT",
-    "review_status": "candidate",
+    "review_status": "prior_art",
     "gold": false,
     "tasks": 0,
     "access_bucket": "needs_app_or_env",
@@ -3277,6 +3772,9 @@
     "environment_network": "required",
     "environment_auth": "required",
     "environment_payment": "required",
-    "local_first": false
+    "local_first": false,
+    "artifact_role": "prior_art_reference",
+    "candidate_input": false,
+    "golden_candidate": false
   }
 ]

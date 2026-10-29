@@ -1,6 +1,6 @@
 # bi-measure-builder
 
-Status: **candidate**, not gold.
+Status: **prior art**, not a candidate and not gold.
 
 - Source: https://github.com/OneWave-AI/claude-skills
 - Source directory: `public_skills/others/OneWave-AI--claude-skills/bi-measure-builder`

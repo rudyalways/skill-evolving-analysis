@@ -1,6 +1,6 @@
 # data-manager-api-audience-ingestion
 
-Status: **candidate**, not gold.
+Status: **prior art**, not a candidate and not gold.
 
 - Source: https://github.com/google/skills
 - Source directory: `public_skills/others/google--skills/skills/ads/data-manager-api-audience-ingestion`

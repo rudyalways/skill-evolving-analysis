@@ -1,6 +1,6 @@
 # building-identity-governance-lifecycle-process
 
-Status: **candidate**, not gold.
+Status: **prior art**, not a candidate and not gold.
 
 - Source: https://github.com/mukul975/Anthropic-Cybersecurity-Skills
 - Source directory: `public_skills/others/mukul975--Anthropic-Cybersecurity-Skills/skills/building-identity-governance-lifecycle-process`

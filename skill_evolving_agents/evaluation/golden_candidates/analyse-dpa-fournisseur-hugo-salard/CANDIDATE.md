@@ -1,6 +1,6 @@
 # analyse-dpa-fournisseur-hugo-salard
 
-Status: **candidate**, not gold.
+Status: **prior art**, not a candidate and not gold.
 
 - Source: https://github.com/lawve-ai/awesome-legal-skills
 - Environment: `local_cli`

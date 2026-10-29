@@ -71,19 +71,22 @@
     "notes": "Heuristic classification; verify against the source skill before use."
   },
   "review": {
-    "status": "candidate",
+    "status": "prior_art",
     "gold": false,
     "reviewers": [],
     "required_roles": [
       "domain_expert",
       "user_advocate"
     ],
-    "notes": "Local-first candidate; normalization, verification, evals, and review pending."
+    "notes": "Existing implementation retained as prior art only; not candidate input and not a golden label."
   },
   "bundle": {
     "source_skill_md": "SKILL.md",
     "skipped_files": [],
     "tasks": 0,
     "gold_ready": false
-  }
+  },
+  "artifact_role": "prior_art_reference",
+  "candidate_input": false,
+  "golden_candidate": false
 }

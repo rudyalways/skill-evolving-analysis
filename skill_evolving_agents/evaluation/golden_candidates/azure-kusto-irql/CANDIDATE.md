@@ -1,6 +1,6 @@
 # azure-kusto-irql
 
-Status: **candidate**, not gold.
+Status: **prior art**, not a candidate and not gold.
 
 - Source: https://github.com/microsoft/azure-skills
 - Source directory: `public_skills/platforms/microsoft--azure-skills/.github/plugins/azure-kusto-graph-skills/skills/azure-kusto-irql`

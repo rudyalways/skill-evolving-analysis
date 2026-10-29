@@ -1,4 +1,4 @@
-# Golden-skill candidate catalog
+# Prior-art skill catalog
 
 Retrieved: 2026-10-29T11:45:00+08:00
 

@@ -1,6 +1,6 @@
 # implementing-canary-tokens-for-network-intrusion
 
-Status: **candidate**, not gold.
+Status: **prior art**, not a candidate and not gold.
 
 - Source: https://github.com/mukul975/Anthropic-Cybersecurity-Skills
 - Source directory: `public_skills/others/mukul975--Anthropic-Cybersecurity-Skills/skills/implementing-canary-tokens-for-network-intrusion`

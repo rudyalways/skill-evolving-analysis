@@ -1,6 +1,6 @@
 # public-equity-investing
 
-Status: **candidate**, not gold.
+Status: **prior art**, not a candidate and not gold.
 
 - Source: https://github.com/openai/skills
 - Environment: `workspace`

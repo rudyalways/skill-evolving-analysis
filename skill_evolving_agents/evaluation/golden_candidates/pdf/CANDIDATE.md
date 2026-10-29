@@ -1,6 +1,6 @@
 # pdf
 
-Status: **candidate**, not gold.
+Status: **prior art**, not a candidate and not gold.
 
 - Source: https://github.com/anthropics/skills
 - Source directory: `public_skills/anthropic_official/skills/pdf`

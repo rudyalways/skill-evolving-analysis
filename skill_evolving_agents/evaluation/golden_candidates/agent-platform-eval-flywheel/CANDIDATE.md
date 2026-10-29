@@ -1,6 +1,6 @@
 # agent-platform-eval-flywheel
 
-Status: **candidate**, not gold.
+Status: **prior art**, not a candidate and not gold.
 
 - Source: https://github.com/google/skills
 - Source directory: `public_skills/others/google--skills/skills/cloud/agent-platform-eval-flywheel`

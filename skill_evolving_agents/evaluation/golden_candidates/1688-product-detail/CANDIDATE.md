@@ -1,6 +1,6 @@
 # 1688-product-detail
 
-Status: **candidate**, not gold.
+Status: **prior art**, not a candidate and not gold.
 
 - Source: https://github.com/browser-act/skills
 - Source directory: `public_skills/others/browser-act--skills/solutions/ecommerce/1688-product-detail`

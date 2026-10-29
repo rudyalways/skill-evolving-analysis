@@ -1,6 +1,6 @@
 # imagegen
 
-Status: **candidate**, not gold.
+Status: **prior art**, not a candidate and not gold.
 
 - Source: https://github.com/openai/skills
 - Environment: `local_cli`

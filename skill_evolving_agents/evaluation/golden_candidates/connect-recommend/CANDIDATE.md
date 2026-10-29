@@ -1,6 +1,6 @@
 # connect-recommend
 
-Status: **candidate**, not gold.
+Status: **prior art**, not a candidate and not gold.
 
 - Source: https://github.com/openai/skills
 - Source directory: `public_skills/openai_official/plugins/plugins/stripe/skills/connect-recommend`

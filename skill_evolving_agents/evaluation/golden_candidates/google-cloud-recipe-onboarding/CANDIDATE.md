@@ -1,6 +1,6 @@
 # google-cloud-recipe-onboarding
 
-Status: **candidate**, not gold.
+Status: **prior art**, not a candidate and not gold.
 
 - Source: https://github.com/google/skills
 - Source directory: `public_skills/others/google--skills/plugins/cloud/google-cloud-developer/skills/google-cloud-recipe-onboarding`

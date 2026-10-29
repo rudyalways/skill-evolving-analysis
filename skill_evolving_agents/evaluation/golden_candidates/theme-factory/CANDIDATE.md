@@ -1,6 +1,6 @@
 # theme-factory
 
-Status: **candidate**, not gold.
+Status: **prior art**, not a candidate and not gold.
 
 - Source: https://github.com/anthropics/skills
 - Environment: `workspace`

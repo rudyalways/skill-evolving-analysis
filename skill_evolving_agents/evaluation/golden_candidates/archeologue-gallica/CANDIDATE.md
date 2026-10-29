@@ -1,6 +1,6 @@
 # archeologue-gallica
 
-Status: **candidate**, not gold.
+Status: **prior art**, not a candidate and not gold.
 
 - Source: https://github.com/lawve-ai/awesome-legal-skills
 - Source directory: `public_skills/others/lawve-ai--awesome-legal-skills/skills/archeologue-gallica-allison-fiorentino`

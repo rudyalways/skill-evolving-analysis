@@ -1,6 +1,6 @@
 # at-svs-contributions
 
-Status: **candidate**, not gold.
+Status: **prior art**, not a candidate and not gold.
 
 - Source: https://github.com/openaccountants/openaccountants
 - Source directory: `public_skills/others/openaccountants--openaccountants/agent-skills/at-svs-contributions`

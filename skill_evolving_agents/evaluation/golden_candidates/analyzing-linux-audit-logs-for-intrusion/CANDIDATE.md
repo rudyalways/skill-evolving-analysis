@@ -1,6 +1,6 @@
 # analyzing-linux-audit-logs-for-intrusion
 
-Status: **candidate**, not gold.
+Status: **prior art**, not a candidate and not gold.
 
 - Source: https://github.com/mukul975/Anthropic-Cybersecurity-Skills
 - Environment: `workspace`
