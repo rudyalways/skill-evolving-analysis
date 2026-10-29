@@ -76,6 +76,7 @@
     "correction_rate": 0.2,
     "min_keep_going": 2,
     "repetition_similarity": 0.6,
+    "repetition_max_chars": 800,
     "repetition_lookahead": 5,
     "min_repetitions": 2,
     "sentiment_drop": 0.4,
@@ -215,6 +216,7 @@
       "oscillation"
     ],
     "repetition_similarity": 0.6,
+    "repetition_max_chars": 800,
     "min_consecutive": 3,
     "context_before": 1,
     "context_after": 1,

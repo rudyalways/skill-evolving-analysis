@@ -136,6 +136,13 @@ def _analyze_retries(
     for index, event in enumerate(events):
         signature = signatures[index]
         tool = str(event.get("tool") or "").casefold()
+        # Deliberate waits are pacing, not retry oscillation. Monitoring a
+        # deployment with repeated sleep calls must not be treated as an
+        # unchanged action retry.
+        if tool in {"sleep", "wait"}:
+            previous_by_signature[signature] = index
+            previous_by_tool[tool] = index
+            continue
         previous_index = previous_by_signature.get(signature)
         same_action = previous_index is not None
         if previous_index is None and _is_search(event):

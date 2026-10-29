@@ -314,8 +314,13 @@ def _session_findings(
     repeats: list[tuple[int, int, float]] = []
     lookahead = int(signals_config["repetition_lookahead"])
     threshold = float(signals_config["repetition_similarity"])
+    max_chars = int(signals_config.get("repetition_max_chars", 800))
     for left in range(len(turns)):
         for right in range(left + 1, min(len(turns), left + lookahead + 1)):
+            # Long completion reports can be similar without being repeated
+            # user instructions. Only short, instruction-like turns count.
+            if len(texts[left]) > max_chars or len(texts[right]) > max_chars:
+                continue
             similarity = _jaccard(texts[left], texts[right])
             if similarity >= threshold:
                 repeats.append((left, right, similarity))
