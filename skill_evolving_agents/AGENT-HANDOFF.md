@@ -54,10 +54,10 @@ clean worktree based on `origin/main` for isolated work and verification.
 The personal repository baseline is:
 
 ```text
-17c91a3 Enable split metadata and single delete operations
+4866bfe Add stage-addressable golden benchmark and review dashboard
 ```
 
-That commit passed all 215 tests in a clean worktree and the 23-case
+That commit passed all 218 tests in a clean worktree and the 23-case
 deterministic funnel benchmark at 23/23. It includes configurable funnel
 targets, single-session diagnosis controls, novel-versus-idempotent metrics,
 an action-oriented profile, inventory and release helpers, replay support,
@@ -76,7 +76,11 @@ privacy helpers, dashboard extensions, and:
   `accepted_by_operation`), including explicit zero merge/split/delete counts;
 - reference consolidation by source root, deterministic Diagnosis for
   qualified resource findings, exact-replay detection before Diagnosis, an
-  18k verifier evidence cap, and a 150-word Optimize response budget.
+  18k verifier evidence cap, and a 150-word Optimize response budget;
+- a stage-addressable golden benchmark (`evaluation/benchmark_core.py`,
+  `evaluation/cases/`) with six trace cases covering create, update, merge,
+  split, delete, and no-change, validated golden diagnosis/action contracts,
+  pending human-review states, `--require-reviewed`, and an HTML dashboard.
 
 Four fresh/replay trace runs after these changes used 37 DSH calls and 7.75M
 tokens versus 53 calls and 10.87M tokens before (28.7% fewer tokens, about 32%
