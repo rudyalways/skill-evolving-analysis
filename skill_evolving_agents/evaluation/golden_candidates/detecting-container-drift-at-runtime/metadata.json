@@ -1,0 +1,92 @@
+{
+  "schema_version": 1,
+  "skill_id": "detecting-container-drift-at-runtime",
+  "name": "detecting-container-drift-at-runtime",
+  "description": ">- Detects unauthorized runtime drift in containers by monitoring binary execution, filesystem changes, and configuration deviation from the original immutable image, using Falco and Microsoft Defender for Containers. Use when validating immutable-infrastructure controls, hunting for unexpected package installs or binaries written inside a running container, or determining whether a container dive",
+  "domain": "media",
+  "domain_confidence": "heuristic; manual taxonomy review required",
+  "authority": "named_expert",
+  "source": {
+    "repo": "mukul975/Anthropic-Cybersecurity-Skills",
+    "url": "https://github.com/mukul975/Anthropic-Cybersecurity-Skills",
+    "stars": 35197,
+    "forks": null,
+    "pushed_at": "2026-08-31T04:32:44Z",
+    "license": "Apache-2.0",
+    "license_scope": "repository root; per-skill license not independently verified",
+    "source_dir": "public_skills/others/mukul975--Anthropic-Cybersecurity-Skills/skills/detecting-container-drift-at-runtime",
+    "source_file": "public_skills/others/mukul975--Anthropic-Cybersecurity-Skills/skills/detecting-container-drift-at-runtime/SKILL.md",
+    "source_file_modified_at": "2026-10-05T03:28:17.250443+00:00",
+    "retrieved_at": "2026-10-29T11:45:00+08:00"
+  },
+  "methodology": {
+    "selection": "Authoritative vendor or named-expert root; deduplicated by skill name; domain quota and per-root cap.",
+    "authority_basis": "Publisher-owned repository or named expert/organization corpus; popularity is not used as authority.",
+    "normalization_plan": "Extract visible task contract, workflow, verification, failure modes, resources, and provenance from the source skill.",
+    "verification_plan": "Derive artifact checks from the source procedure and task contract; freeze assertions before review.",
+    "task_generation_plan": "Seed normal, edge, missing-auth, tool-failure, near-miss, and negative task cards.",
+    "review": "Two independent reviewers required: domain expert and user advocate.",
+    "benchmark": "Candidate only; not runnable as gold."
+  },
+  "eligibility": "answer",
+  "verification_type": "artifact",
+  "review": {
+    "status": "candidate",
+    "gold": false,
+    "reviewers": [],
+    "required_roles": [
+      "domain_expert",
+      "user_advocate"
+    ],
+    "notes": "Copied from authoritative source; normalization, verification, evals, and review pending."
+  },
+  "bundle": {
+    "source_skill_md": "SKILL.md",
+    "skipped_files": [],
+    "tasks": 0,
+    "gold_ready": false
+  },
+  "access": {
+    "bucket": "needs_app_or_env",
+    "sign_in_required": false,
+    "payment_required": false,
+    "additional_app_or_env": [
+      "install"
+    ],
+    "human_intervention": [
+      "install_or_provision_env",
+      "admin_setup",
+      "manual_review"
+    ],
+    "evidence": [
+      "source_root=mukul975/Anthropic-Cybersecurity-Skills",
+      "specialized runtime or lab"
+    ],
+    "confidence": "medium",
+    "review_required": true,
+    "notes": "Heuristic classification; verify against the source skill before use."
+  },
+  "environment": {
+    "category": "lab_vm",
+    "network": "optional",
+    "auth": "none",
+    "payment": "none",
+    "runtime": [
+      "filesystem"
+    ],
+    "dependency_level": "high",
+    "human_setup": [
+      "install_or_provision_env",
+      "admin_setup",
+      "manual_review"
+    ],
+    "evidence": [
+      "lab source=mukul975/Anthropic-Cybersecurity-Skills",
+      "access=needs_app_or_env"
+    ],
+    "confidence": "low",
+    "review_required": true,
+    "notes": "Heuristic environment classification; verify against the source skill."
+  },
+  "local_first": false
+}

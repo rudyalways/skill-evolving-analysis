@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "skill_id": "xlsx",
+  "name": "xlsx",
+  "description": "Use this skill any time a spreadsheet file is the primary input or output. This means any task where the user wants to: open, read, edit, or fix an existing .xlsx, .xlsm, .xltx, .csv, or .tsv file (e.g., adding columns, computing formulas, formatting, charting, cleaning messy data); create a new spreadsheet from scratch or from other data sources; or convert between tabular file formats. Trigger e",
+  "domain": "project",
+  "domain_confidence": "heuristic; manual taxonomy review required",
+  "authority": "official_vendor",
+  "local_first": true,
+  "source": {
+    "repo": "anthropics/skills",
+    "url": "https://github.com/anthropics/skills",
+    "stars": 184552,
+    "forks": 21815,
+    "pushed_at": "2026-10-28T19:20:39Z",
+    "license": "unknown",
+    "license_scope": "repository root; per-skill license not independently verified",
+    "source_dir": "public_skills/anthropic_official/skills/xlsx",
+    "source_file": "public_skills/anthropic_official/skills/xlsx/SKILL.md",
+    "source_file_modified_at": "2026-10-05T03:22:41.787976+00:00",
+    "retrieved_at": "2026-10-29T11:45:00+08:00"
+  },
+  "methodology": {
+    "selection": "Local-first supplement: authoritative root, local/workspace/CLI terms, no cloud/browser/auth/payment terms, deduplicated by name.",
+    "authority_basis": "Publisher-owned repository or named expert/organization corpus; popularity is not used as authority.",
+    "normalization_plan": "Extract visible task contract, workflow, verification, failure modes, resources, and provenance from the source skill.",
+    "verification_plan": "Derive artifact checks from the source procedure and task contract; freeze assertions before review.",
+    "task_generation_plan": "Seed normal, edge, missing-input, tool-failure, near-miss, and negative task cards.",
+    "review": "Two independent reviewers required: domain expert and user advocate.",
+    "benchmark": "Candidate only; not runnable as gold."
+  },
+  "environment": {
+    "category": "local_cli",
+    "network": "none",
+    "auth": "none",
+    "payment": "none",
+    "runtime": [
+      "filesystem",
+      "cli",
+      "python"
+    ],
+    "dependency_level": "low",
+    "human_setup": [
+      "manual_review"
+    ],
+    "evidence": [
+      "no-signin source=anthropics/skills",
+      "access=no_signin"
+    ],
+    "confidence": "low",
+    "review_required": true,
+    "notes": "Heuristic environment classification; verify against the source skill."
+  },
+  "access": {
+    "bucket": "no_signin",
+    "sign_in_required": false,
+    "payment_required": false,
+    "additional_app_or_env": [],
+    "human_intervention": [
+      "manual_review"
+    ],
+    "evidence": [
+      "manual_override=no_signin",
+      "review required"
+    ],
+    "confidence": "medium",
+    "review_required": true,
+    "notes": "Heuristic classification; verify against the source skill before use."
+  },
+  "review": {
+    "status": "candidate",
+    "gold": false,
+    "reviewers": [],
+    "required_roles": [
+      "domain_expert",
+      "user_advocate"
+    ],
+    "notes": "Local-first candidate; normalization, verification, evals, and review pending."
+  },
+  "bundle": {
+    "source_skill_md": "SKILL.md",
+    "skipped_files": [],
+    "tasks": 0,
+    "gold_ready": false
+  }
+}

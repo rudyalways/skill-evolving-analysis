@@ -1,0 +1,83 @@
+# no_signin
+
+Local files, code, analysis, writing, or artifact generation. No account or paid service assumed.
+
+Count: **75**
+
+| Skill | Domain | Source | Confidence |
+|---|---|---|---|
+| [ab-individual-return](../ab-individual-return/CANDIDATE.md) | finance | https://github.com/openaccountants/openaccountants | medium |
+| [academy-guide](../academy-guide/CANDIDATE.md) | project | https://github.com/anthropics/skills | low |
+| [acquiring-disk-image-with-dd-and-dcfldd](../acquiring-disk-image-with-dd-and-dcfldd/CANDIDATE.md) | security | https://github.com/mukul975/Anthropic-Cybersecurity-Skills | medium |
+| [ae-corporate-tax](../ae-corporate-tax/CANDIDATE.md) | finance | https://github.com/openaccountants/openaccountants | medium |
+| [agent-army](../agent-army/CANDIDATE.md) | finance | https://github.com/OneWave-AI/claude-skills | low |
+| [ai-act-knowledge](../ai-act-knowledge/CANDIDATE.md) | office | https://github.com/lawve-ai/awesome-legal-skills | medium |
+| [ai-coding-guardrails](../ai-coding-guardrails/CANDIDATE.md) | software | https://github.com/OneWave-AI/claude-skills | medium |
+| [ai-governance-reviewer-carl-ditzler](../ai-governance-reviewer-carl-ditzler/CANDIDATE.md) | legal | https://github.com/lawve-ai/awesome-legal-skills | medium |
+| [al-income-tax](../al-income-tax/CANDIDATE.md) | legal | https://github.com/openaccountants/openaccountants | medium |
+| [al-sales-tax](../al-sales-tax/CANDIDATE.md) | finance | https://github.com/openaccountants/openaccountants | medium |
+| [albania-vat](../albania-vat/CANDIDATE.md) | finance | https://github.com/openaccountants/openaccountants | medium |
+| [algeria-vat](../algeria-vat/CANDIDATE.md) | finance | https://github.com/openaccountants/openaccountants | medium |
+| [algorithmic-art](../algorithmic-art/CANDIDATE.md) | software | https://github.com/anthropics/skills | medium |
+| [ambiguity-report](../ambiguity-report/CANDIDATE.md) | legal | https://github.com/lawve-ai/awesome-legal-skills | medium |
+| [ambiguity-stress-test](../ambiguity-stress-test/CANDIDATE.md) | legal | https://github.com/lawve-ai/awesome-legal-skills | medium |
+| [analyse-dpa-fournisseur-hugo-salard](../analyse-dpa-fournisseur-hugo-salard/CANDIDATE.md) | legal | https://github.com/lawve-ai/awesome-legal-skills | medium |
+| [analyzing-android-malware-with-apktool](../analyzing-android-malware-with-apktool/CANDIDATE.md) | security | https://github.com/mukul975/Anthropic-Cybersecurity-Skills | medium |
+| [analyzing-cyber-kill-chain](../analyzing-cyber-kill-chain/CANDIDATE.md) | security | https://github.com/mukul975/Anthropic-Cybersecurity-Skills | medium |
+| [analyzing-indicators-of-compromise](../analyzing-indicators-of-compromise/CANDIDATE.md) | security | https://github.com/mukul975/Anthropic-Cybersecurity-Skills | medium |
+| [analyzing-linux-audit-logs-for-intrusion](../analyzing-linux-audit-logs-for-intrusion/CANDIDATE.md) | security | https://github.com/mukul975/Anthropic-Cybersecurity-Skills | medium |
+| [analyzing-macro-malware-in-office-documents](../analyzing-macro-malware-in-office-documents/CANDIDATE.md) | security | https://github.com/mukul975/Anthropic-Cybersecurity-Skills | medium |
+| [analyzing-malware-behavior-with-cuckoo-sandbox](../analyzing-malware-behavior-with-cuckoo-sandbox/CANDIDATE.md) | security | https://github.com/mukul975/Anthropic-Cybersecurity-Skills | medium |
+| [analyzing-memory-dumps-with-volatility](../analyzing-memory-dumps-with-volatility/CANDIDATE.md) | security | https://github.com/mukul975/Anthropic-Cybersecurity-Skills | medium |
+| [analyzing-network-traffic-for-incidents](../analyzing-network-traffic-for-incidents/CANDIDATE.md) | security | https://github.com/mukul975/Anthropic-Cybersecurity-Skills | medium |
+| [analyzing-outlook-pst-for-email-forensics](../analyzing-outlook-pst-for-email-forensics/CANDIDATE.md) | security | https://github.com/mukul975/Anthropic-Cybersecurity-Skills | medium |
+| [analyzing-powershell-empire-artifacts](../analyzing-powershell-empire-artifacts/CANDIDATE.md) | security | https://github.com/mukul975/Anthropic-Cybersecurity-Skills | medium |
+| [analyzing-prefetch-files-for-execution-history](../analyzing-prefetch-files-for-execution-history/CANDIDATE.md) | security | https://github.com/mukul975/Anthropic-Cybersecurity-Skills | medium |
+| [archeologue-gallica](../archeologue-gallica/CANDIDATE.md) | software | https://github.com/lawve-ai/awesome-legal-skills | medium |
+| [at-svs-contributions](../at-svs-contributions/CANDIDATE.md) | other | https://github.com/openaccountants/openaccountants | medium |
+| [au-medicare-levy](../au-medicare-levy/CANDIDATE.md) | healthcare | https://github.com/openaccountants/openaccountants | medium |
+| [build-chatgpt-app](../build-chatgpt-app/CANDIDATE.md) | project | https://github.com/openai/skills | medium |
+| [ca-form-3853-coverage](../ca-form-3853-coverage/CANDIDATE.md) | healthcare | https://github.com/openaccountants/openaccountants | medium |
+| [csv-excel-merger](../csv-excel-merger/CANDIDATE.md) | sales | https://github.com/OneWave-AI/claude-skills | low |
+| [data-manager-api-setup](../data-manager-api-setup/CANDIDATE.md) | software | https://github.com/google/skills | medium |
+| [database-schema-designer](../database-schema-designer/CANDIDATE.md) | support | https://github.com/OneWave-AI/claude-skills | low |
+| [deep-security-scan](../deep-security-scan/CANDIDATE.md) | security | https://github.com/openai/skills | medium |
+| [design-export-repair](../design-export-repair/CANDIDATE.md) | office | https://github.com/OneWave-AI/claude-skills | low |
+| [discernment-nudge](../discernment-nudge/CANDIDATE.md) | project | https://github.com/anthropics/skills | medium |
+| [divorce-ct-stephane-boghossian](../divorce-ct-stephane-boghossian/CANDIDATE.md) | travel | https://github.com/lawve-ai/awesome-legal-skills | medium |
+| [docx](../docx/CANDIDATE.md) | marketing | https://github.com/anthropics/skills | medium |
+| [es-modelo-111](../es-modelo-111/CANDIDATE.md) | data_ai | https://github.com/openaccountants/openaccountants | medium |
+| [eve](../eve/CANDIDATE.md) | project | https://github.com/openai/skills | medium |
+| [faceless-channel](../faceless-channel/CANDIDATE.md) | office | https://github.com/openai/skills | low |
+| [global-ad-platforms](../global-ad-platforms/CANDIDATE.md) | research | https://github.com/openaccountants/openaccountants | medium |
+| [google-mobile-ads-android-migrate-to-next-gen](../google-mobile-ads-android-migrate-to-next-gen/CANDIDATE.md) | software | https://github.com/google/skills | medium |
+| [google-mobile-ads-validate](../google-mobile-ads-validate/CANDIDATE.md) | finance | https://github.com/google/skills | medium |
+| [google-slides](../google-slides/CANDIDATE.md) | office | https://github.com/openai/skills | low |
+| [hatch-pet](../hatch-pet/CANDIDATE.md) | marketing | https://github.com/openai/skills | medium |
+| [ima-sdk-client-side](../ima-sdk-client-side/CANDIDATE.md) | support | https://github.com/google/skills | medium |
+| [imagegen](../imagegen/CANDIDATE.md) | marketing | https://github.com/openai/skills | medium |
+| [internal-comms](../internal-comms/CANDIDATE.md) | marketing | https://github.com/anthropics/skills | medium |
+| [isds-arbitrators](../isds-arbitrators/CANDIDATE.md) | office | https://github.com/lawve-ai/awesome-legal-skills | medium |
+| [isds-research](../isds-research/CANDIDATE.md) | office | https://github.com/lawve-ai/awesome-legal-skills | medium |
+| [judicial-first-impression](../judicial-first-impression/CANDIDATE.md) | legal | https://github.com/lawve-ai/awesome-legal-skills | medium |
+| [mandarinat](../mandarinat/CANDIDATE.md) | office | https://github.com/lawve-ai/awesome-legal-skills | medium |
+| [marketplace](../marketplace/CANDIDATE.md) | ecommerce | https://github.com/openai/skills | medium |
+| [matter-plan-builder-scott-margetts](../matter-plan-builder-scott-margetts/CANDIDATE.md) | project | https://github.com/lawve-ai/awesome-legal-skills | medium |
+| [mixpanelyst](../mixpanelyst/CANDIDATE.md) | software | https://github.com/openai/skills | medium |
+| [node-link-and-diagram-layout](../node-link-and-diagram-layout/CANDIDATE.md) | data_ai | https://github.com/openai/skills | medium |
+| [openai-api-troubleshooting](../openai-api-troubleshooting/CANDIDATE.md) | project | https://github.com/openai/skills | medium |
+| [openai-docs](../openai-docs/CANDIDATE.md) | office | https://github.com/openai/skills | medium |
+| [opposing-counsel-review](../opposing-counsel-review/CANDIDATE.md) | security | https://github.com/lawve-ai/awesome-legal-skills | medium |
+| [pdf](../pdf/CANDIDATE.md) | office | https://github.com/anthropics/skills | low |
+| [plugin-creator](../plugin-creator/CANDIDATE.md) | ecommerce | https://github.com/openai/skills | medium |
+| [plugin-eval](../plugin-eval/CANDIDATE.md) | data_ai | https://github.com/openai/skills | medium |
+| [pptx](../pptx/CANDIDATE.md) | marketing | https://github.com/anthropics/skills | medium |
+| [pr-labeling](../pr-labeling/CANDIDATE.md) | other | https://github.com/vercel-labs/skills | medium |
+| [propose-security-hardening](../propose-security-hardening/CANDIDATE.md) | security | https://github.com/openai/skills | medium |
+| [public-equity-investing](../public-equity-investing/CANDIDATE.md) | security | https://github.com/openai/skills | medium |
+| [risk-and-issues-manager-scott-margetts](../risk-and-issues-manager-scott-margetts/CANDIDATE.md) | project | https://github.com/lawve-ai/awesome-legal-skills | medium |
+| [skill-creator](../skill-creator/CANDIDATE.md) | software | https://github.com/anthropics/skills | medium |
+| [template-skill](../template-skill/CANDIDATE.md) | other | https://github.com/anthropics/skills | medium |
+| [theme-factory](../theme-factory/CANDIDATE.md) | office | https://github.com/anthropics/skills | medium |
+| [web-artifacts-builder](../web-artifacts-builder/CANDIDATE.md) | software | https://github.com/anthropics/skills | medium |
+| [xlsx](../xlsx/CANDIDATE.md) | project | https://github.com/anthropics/skills | medium |

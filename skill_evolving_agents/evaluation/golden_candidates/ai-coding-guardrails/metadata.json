@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "skill_id": "ai-coding-guardrails",
+  "name": "ai-coding-guardrails",
+  "description": "Use when an AI coding agent is writing or refactoring production code and its known failure modes need to be held in check \u2014 over-engineering, silent scope creep, invented APIs, claiming work is done without checking, deleting tests to make them pass. Trigger when the user asks for careful, production-grade, or reviewed code, or when a previous agent run produced confident output that turned out w",
+  "domain": "software",
+  "domain_confidence": "heuristic; manual taxonomy review required",
+  "authority": "named_expert",
+  "source": {
+    "repo": "OneWave-AI/claude-skills",
+    "url": "https://github.com/OneWave-AI/claude-skills",
+    "stars": 394,
+    "forks": 62,
+    "pushed_at": "2026-10-20T01:13:20Z",
+    "license": "MIT",
+    "license_scope": "repository root; per-skill license not independently verified",
+    "source_dir": "public_skills/others/OneWave-AI--claude-skills/ai-coding-guardrails",
+    "source_file": "public_skills/others/OneWave-AI--claude-skills/ai-coding-guardrails/SKILL.md",
+    "source_file_modified_at": "2026-10-05T03:28:21.626125+00:00",
+    "retrieved_at": "2026-10-29T11:45:00+08:00"
+  },
+  "methodology": {
+    "selection": "Authoritative vendor or named-expert root; deduplicated by skill name; domain quota and per-root cap.",
+    "authority_basis": "Publisher-owned repository or named expert/organization corpus; popularity is not used as authority.",
+    "normalization_plan": "Extract visible task contract, workflow, verification, failure modes, resources, and provenance from the source skill.",
+    "verification_plan": "Derive artifact checks from the source procedure and task contract; freeze assertions before review.",
+    "task_generation_plan": "Seed normal, edge, missing-auth, tool-failure, near-miss, and negative task cards.",
+    "review": "Two independent reviewers required: domain expert and user advocate.",
+    "benchmark": "Candidate only; not runnable as gold."
+  },
+  "eligibility": "execute",
+  "verification_type": "artifact",
+  "review": {
+    "status": "candidate",
+    "gold": false,
+    "reviewers": [],
+    "required_roles": [
+      "domain_expert",
+      "user_advocate"
+    ],
+    "notes": "Copied from authoritative source; normalization, verification, evals, and review pending."
+  },
+  "bundle": {
+    "source_skill_md": "SKILL.md",
+    "skipped_files": [],
+    "tasks": 0,
+    "gold_ready": false
+  },
+  "access": {
+    "bucket": "no_signin",
+    "sign_in_required": false,
+    "payment_required": false,
+    "additional_app_or_env": [],
+    "human_intervention": [
+      "manual_review"
+    ],
+    "evidence": [
+      "manual_override=no_signin",
+      "review required"
+    ],
+    "confidence": "medium",
+    "review_required": true,
+    "notes": "Heuristic classification; verify against the source skill before use."
+  },
+  "environment": {
+    "category": "local_cli",
+    "network": "none",
+    "auth": "none",
+    "payment": "none",
+    "runtime": [
+      "filesystem",
+      "cli",
+      "python"
+    ],
+    "dependency_level": "low",
+    "human_setup": [
+      "manual_review"
+    ],
+    "evidence": [
+      "no-signin source=OneWave-AI/claude-skills",
+      "access=no_signin"
+    ],
+    "confidence": "low",
+    "review_required": true,
+    "notes": "Heuristic environment classification; verify against the source skill."
+  },
+  "local_first": true
+}

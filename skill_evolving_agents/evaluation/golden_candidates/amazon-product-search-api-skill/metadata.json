@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "skill_id": "amazon-product-search-api-skill",
+  "name": "amazon-product-search-api-skill",
+  "description": "This skill is designed to help users automatically extract product data from Amazon search results. The Agent should proactively apply this skill when users request searching for products related to keywords, finding best-selling items from specific brands, monitoring product prices and availability on Amazon, extracting product listings for market research, collecting product ratings and review c",
+  "domain": "marketing",
+  "domain_confidence": "heuristic; manual taxonomy review required",
+  "authority": "named_expert",
+  "source": {
+    "repo": "browser-act/skills",
+    "url": "https://github.com/browser-act/skills",
+    "stars": 6296,
+    "forks": 332,
+    "pushed_at": "2026-08-24T14:56:52Z",
+    "license": "MIT",
+    "license_scope": "repository root; per-skill license not independently verified",
+    "source_dir": "public_skills/others/browser-act--skills/solutions/ecommerce/amazon-product-search-api-skill",
+    "source_file": "public_skills/others/browser-act--skills/solutions/ecommerce/amazon-product-search-api-skill/SKILL.md",
+    "source_file_modified_at": "2026-10-05T03:28:37.851519+00:00",
+    "retrieved_at": "2026-10-29T11:45:00+08:00"
+  },
+  "methodology": {
+    "selection": "Authoritative vendor or named-expert root; deduplicated by skill name; domain quota and per-root cap.",
+    "authority_basis": "Publisher-owned repository or named expert/organization corpus; popularity is not used as authority.",
+    "normalization_plan": "Extract visible task contract, workflow, verification, failure modes, resources, and provenance from the source skill.",
+    "verification_plan": "Derive tool_state checks from the source procedure and task contract; freeze assertions before review.",
+    "task_generation_plan": "Seed normal, edge, missing-auth, tool-failure, near-miss, and negative task cards.",
+    "review": "Two independent reviewers required: domain expert and user advocate.",
+    "benchmark": "Candidate only; not runnable as gold."
+  },
+  "eligibility": "execute",
+  "verification_type": "tool_state",
+  "review": {
+    "status": "candidate",
+    "gold": false,
+    "reviewers": [],
+    "required_roles": [
+      "domain_expert",
+      "user_advocate"
+    ],
+    "notes": "Copied from authoritative source; normalization, verification, evals, and review pending."
+  },
+  "bundle": {
+    "source_skill_md": "SKILL.md",
+    "skipped_files": [],
+    "tasks": 0,
+    "gold_ready": false
+  },
+  "access": {
+    "bucket": "needs_app_or_env",
+    "sign_in_required": false,
+    "payment_required": false,
+    "additional_app_or_env": [
+      "browser"
+    ],
+    "human_intervention": [
+      "install_or_provision_env",
+      "admin_setup",
+      "manual_review"
+    ],
+    "evidence": [
+      "source_root=browser-act/skills",
+      "specialized runtime or lab"
+    ],
+    "confidence": "medium",
+    "review_required": true,
+    "notes": "Heuristic classification; verify against the source skill before use."
+  },
+  "environment": {
+    "category": "browser_public",
+    "network": "required",
+    "auth": "none",
+    "payment": "none",
+    "runtime": [
+      "filesystem",
+      "browser"
+    ],
+    "dependency_level": "medium",
+    "human_setup": [
+      "install_or_provision_env",
+      "admin_setup",
+      "manual_review"
+    ],
+    "evidence": [
+      "browser source=browser-act/skills",
+      "access=needs_app_or_env"
+    ],
+    "confidence": "low",
+    "review_required": true,
+    "notes": "Heuristic environment classification; verify against the source skill."
+  },
+  "local_first": false
+}

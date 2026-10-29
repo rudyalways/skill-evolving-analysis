@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "skill_id": "adobe-batch-edit-photos",
+  "name": "adobe-batch-edit-photos",
+  "description": "> Apply consistent photo adjustments across a set of images so they look like they were edited together. Use this skill whenever the user says \"make my photos look cohesive\", \"give all these the same style\", \"apply a warm and golden feel to all of these\", \"make this cinematic\", \"match the look across my photos\", \"edit all my travel photos the same way\", \"batch edit these\", \"make these consistent\",",
+  "domain": "travel",
+  "domain_confidence": "heuristic; manual taxonomy review required",
+  "authority": "official_vendor",
+  "source": {
+    "repo": "openai/skills",
+    "url": "https://github.com/openai/skills",
+    "stars": 28376,
+    "forks": 1964,
+    "pushed_at": "2026-10-28T17:31:41Z",
+    "license": "unknown",
+    "license_scope": "repository root; per-skill license not independently verified",
+    "source_dir": "public_skills/openai_official/plugins/plugins/adobe/skills/adobe-batch-edit-photos",
+    "source_file": "public_skills/openai_official/plugins/plugins/adobe/skills/adobe-batch-edit-photos/SKILL.md",
+    "source_file_modified_at": "2026-10-05T03:22:45.370601+00:00",
+    "retrieved_at": "2026-10-29T11:45:00+08:00"
+  },
+  "methodology": {
+    "selection": "Authoritative vendor or named-expert root; deduplicated by skill name; domain quota and per-root cap.",
+    "authority_basis": "Publisher-owned repository or named expert/organization corpus; popularity is not used as authority.",
+    "normalization_plan": "Extract visible task contract, workflow, verification, failure modes, resources, and provenance from the source skill.",
+    "verification_plan": "Derive semantic checks from the source procedure and task contract; freeze assertions before review.",
+    "task_generation_plan": "Seed normal, edge, missing-auth, tool-failure, near-miss, and negative task cards.",
+    "review": "Two independent reviewers required: domain expert and user advocate.",
+    "benchmark": "Candidate only; not runnable as gold."
+  },
+  "eligibility": "answer",
+  "verification_type": "semantic",
+  "review": {
+    "status": "candidate",
+    "gold": false,
+    "reviewers": [],
+    "required_roles": [
+      "domain_expert",
+      "user_advocate"
+    ],
+    "notes": "Copied from authoritative source; normalization, verification, evals, and review pending."
+  },
+  "bundle": {
+    "source_skill_md": "SKILL.md",
+    "skipped_files": [],
+    "tasks": 0,
+    "gold_ready": false
+  },
+  "access": {
+    "bucket": "needs_app_or_env",
+    "sign_in_required": false,
+    "payment_required": true,
+    "additional_app_or_env": [
+      "adobe"
+    ],
+    "human_intervention": [
+      "install_or_provision_env",
+      "admin_setup",
+      "manual_review"
+    ],
+    "evidence": [
+      "keyword=adobe"
+    ],
+    "confidence": "low",
+    "review_required": true,
+    "notes": "Heuristic classification; verify against the source skill before use."
+  },
+  "environment": {
+    "category": "desktop_app",
+    "network": "optional",
+    "auth": "none",
+    "payment": "required",
+    "runtime": [
+      "filesystem",
+      "desktop_app"
+    ],
+    "dependency_level": "high",
+    "human_setup": [
+      "install_or_provision_env",
+      "admin_setup",
+      "manual_review",
+      "billing"
+    ],
+    "evidence": [
+      "desktop app keyword",
+      "access=needs_app_or_env"
+    ],
+    "confidence": "low",
+    "review_required": true,
+    "notes": "Heuristic environment classification; verify against the source skill."
+  },
+  "local_first": false
+}

@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "skill_id": "mandarinat",
+  "name": "mandarinat",
+  "description": "Assistant acad\u00e9mique pour enseignants-chercheurs en droit. Six t\u00e2ches : (1) recherche juridique approfondie avec accent doctrinal, (2) relecture de documents avec v\u00e9rification des r\u00e9f\u00e9rences, commentaires Word, d\u00e9tection d'indices de plagiat/IA et coh\u00e9rence argumentative, (3) cr\u00e9ation de sujets et corrig\u00e9s d'exercices juridiques universitaires, (4) mise \u00e0 jour de cours, ouvrages et documents jurid",
+  "domain": "office",
+  "domain_confidence": "heuristic; manual taxonomy review required",
+  "authority": "named_expert",
+  "source": {
+    "repo": "lawve-ai/awesome-legal-skills",
+    "url": "https://github.com/lawve-ai/awesome-legal-skills",
+    "stars": 907,
+    "forks": 122,
+    "pushed_at": "2026-10-19T16:51:56Z",
+    "license": "NOASSERTION",
+    "license_scope": "repository root; per-skill license not independently verified",
+    "source_dir": "public_skills/others/lawve-ai--awesome-legal-skills/skills/mandarinat-christophe-quezel-ambrunaz",
+    "source_file": "public_skills/others/lawve-ai--awesome-legal-skills/skills/mandarinat-christophe-quezel-ambrunaz/SKILL.md",
+    "source_file_modified_at": "2026-10-05T03:39:30.420482+00:00",
+    "retrieved_at": "2026-10-29T11:45:00+08:00"
+  },
+  "methodology": {
+    "selection": "Authoritative vendor or named-expert root; deduplicated by skill name; domain quota and per-root cap.",
+    "authority_basis": "Publisher-owned repository or named expert/organization corpus; popularity is not used as authority.",
+    "normalization_plan": "Extract visible task contract, workflow, verification, failure modes, resources, and provenance from the source skill.",
+    "verification_plan": "Derive semantic checks from the source procedure and task contract; freeze assertions before review.",
+    "task_generation_plan": "Seed normal, edge, missing-auth, tool-failure, near-miss, and negative task cards.",
+    "review": "Two independent reviewers required: domain expert and user advocate.",
+    "benchmark": "Candidate only; not runnable as gold."
+  },
+  "eligibility": "answer",
+  "verification_type": "semantic",
+  "review": {
+    "status": "candidate",
+    "gold": false,
+    "reviewers": [],
+    "required_roles": [
+      "domain_expert",
+      "user_advocate"
+    ],
+    "notes": "Copied from authoritative source; normalization, verification, evals, and review pending."
+  },
+  "bundle": {
+    "source_skill_md": "SKILL.md",
+    "skipped_files": [],
+    "tasks": 0,
+    "gold_ready": false
+  },
+  "access": {
+    "bucket": "no_signin",
+    "sign_in_required": false,
+    "payment_required": false,
+    "additional_app_or_env": [],
+    "human_intervention": [
+      "manual_review"
+    ],
+    "evidence": [
+      "source_root=lawve-ai/awesome-legal-skills",
+      "knowledge/artifact skill"
+    ],
+    "confidence": "medium",
+    "review_required": true,
+    "notes": "Heuristic classification; verify against the source skill before use."
+  },
+  "environment": {
+    "category": "workspace",
+    "network": "none",
+    "auth": "none",
+    "payment": "none",
+    "runtime": [
+      "filesystem"
+    ],
+    "dependency_level": "none",
+    "human_setup": [
+      "manual_review"
+    ],
+    "evidence": [
+      "no-signin source=lawve-ai/awesome-legal-skills",
+      "access=no_signin"
+    ],
+    "confidence": "medium",
+    "review_required": true,
+    "notes": "Heuristic environment classification; verify against the source skill."
+  },
+  "local_first": true
+}

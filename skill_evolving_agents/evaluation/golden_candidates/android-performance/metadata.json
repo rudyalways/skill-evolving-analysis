@@ -1,0 +1,92 @@
+{
+  "schema_version": 1,
+  "skill_id": "android-performance",
+  "name": "android-performance",
+  "description": "Gather and interpret Android performance evidence on an adb target using Simpleperf CPU profiles, Perfetto or Compose traces, gfxinfo frame data, dumpsys meminfo snapshots, Java heap dumps, and native allocation traces. Use when asked to profile an Android app flow, find CPU-heavy functions, diagnose jank, capture startup or frame timing evidence, compare before/after performance, explain what cod",
+  "domain": "data_ai",
+  "domain_confidence": "heuristic; manual taxonomy review required",
+  "authority": "official_vendor",
+  "source": {
+    "repo": "openai/skills",
+    "url": "https://github.com/openai/skills",
+    "stars": 28376,
+    "forks": 1964,
+    "pushed_at": "2026-10-28T17:31:41Z",
+    "license": "unknown",
+    "license_scope": "repository root; per-skill license not independently verified",
+    "source_dir": "public_skills/openai_official/plugins/plugins/test-android-apps/skills/android-performance",
+    "source_file": "public_skills/openai_official/plugins/plugins/test-android-apps/skills/android-performance/SKILL.md",
+    "source_file_modified_at": "2026-10-05T03:22:45.803529+00:00",
+    "retrieved_at": "2026-10-29T11:45:00+08:00"
+  },
+  "methodology": {
+    "selection": "Authoritative vendor or named-expert root; deduplicated by skill name; domain quota and per-root cap.",
+    "authority_basis": "Publisher-owned repository or named expert/organization corpus; popularity is not used as authority.",
+    "normalization_plan": "Extract visible task contract, workflow, verification, failure modes, resources, and provenance from the source skill.",
+    "verification_plan": "Derive artifact checks from the source procedure and task contract; freeze assertions before review.",
+    "task_generation_plan": "Seed normal, edge, missing-auth, tool-failure, near-miss, and negative task cards.",
+    "review": "Two independent reviewers required: domain expert and user advocate.",
+    "benchmark": "Candidate only; not runnable as gold."
+  },
+  "eligibility": "answer",
+  "verification_type": "artifact",
+  "review": {
+    "status": "candidate",
+    "gold": false,
+    "reviewers": [],
+    "required_roles": [
+      "domain_expert",
+      "user_advocate"
+    ],
+    "notes": "Copied from authoritative source; normalization, verification, evals, and review pending."
+  },
+  "bundle": {
+    "source_skill_md": "SKILL.md",
+    "skipped_files": [],
+    "tasks": 0,
+    "gold_ready": false
+  },
+  "access": {
+    "bucket": "needs_app_or_env",
+    "sign_in_required": false,
+    "payment_required": false,
+    "additional_app_or_env": [],
+    "human_intervention": [
+      "install_or_provision_env",
+      "admin_setup",
+      "manual_review"
+    ],
+    "evidence": [
+      "manual_override=needs_app_or_env",
+      "review required"
+    ],
+    "confidence": "medium",
+    "review_required": true,
+    "notes": "Heuristic classification; verify against the source skill before use."
+  },
+  "environment": {
+    "category": "local_cli",
+    "network": "none",
+    "auth": "none",
+    "payment": "none",
+    "runtime": [
+      "filesystem",
+      "cli",
+      "python"
+    ],
+    "dependency_level": "low",
+    "human_setup": [
+      "install_or_provision_env",
+      "admin_setup",
+      "manual_review"
+    ],
+    "evidence": [
+      "local CLI keyword",
+      "access=needs_app_or_env"
+    ],
+    "confidence": "low",
+    "review_required": true,
+    "notes": "Heuristic environment classification; verify against the source skill."
+  },
+  "local_first": false
+}

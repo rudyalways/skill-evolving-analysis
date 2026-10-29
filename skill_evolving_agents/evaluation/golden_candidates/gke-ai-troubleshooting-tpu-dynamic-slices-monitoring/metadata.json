@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "skill_id": "gke-ai-troubleshooting-tpu-dynamic-slices-monitoring",
+  "name": "gke-ai-troubleshooting-tpu-dynamic-slices-monitoring",
+  "description": ">- Monitors, troubleshoots, and manages GKE TPU Dynamic Slices custom resources. Use when checking TPU slice lifecycle states, troubleshooting slice provisioning failures, validating single-slice or multi-slice (JobSet) workload manifests, or safely patching stuck finalizers and disabling the slice controller. Don't use for generic GKE cluster node pool creation or standard non-TPU workload manage",
+  "domain": "research",
+  "domain_confidence": "heuristic; manual taxonomy review required",
+  "authority": "official_vendor",
+  "source": {
+    "repo": "google/skills",
+    "url": "https://github.com/google/skills",
+    "stars": 21652,
+    "forks": 1842,
+    "pushed_at": "2026-10-28T13:33:51Z",
+    "license": "Apache-2.0",
+    "license_scope": "repository root; per-skill license not independently verified",
+    "source_dir": "public_skills/others/google--skills/skills/cloud/gke-ai-troubleshooting-tpu-dynamic-slices-monitoring",
+    "source_file": "public_skills/others/google--skills/skills/cloud/gke-ai-troubleshooting-tpu-dynamic-slices-monitoring/SKILL.md",
+    "source_file_modified_at": "2026-10-05T03:28:30.114502+00:00",
+    "retrieved_at": "2026-10-29T11:45:00+08:00"
+  },
+  "methodology": {
+    "selection": "Authoritative vendor or named-expert root; deduplicated by skill name; domain quota and per-root cap.",
+    "authority_basis": "Publisher-owned repository or named expert/organization corpus; popularity is not used as authority.",
+    "normalization_plan": "Extract visible task contract, workflow, verification, failure modes, resources, and provenance from the source skill.",
+    "verification_plan": "Derive semantic checks from the source procedure and task contract; freeze assertions before review.",
+    "task_generation_plan": "Seed normal, edge, missing-auth, tool-failure, near-miss, and negative task cards.",
+    "review": "Two independent reviewers required: domain expert and user advocate.",
+    "benchmark": "Candidate only; not runnable as gold."
+  },
+  "eligibility": "answer",
+  "verification_type": "semantic",
+  "review": {
+    "status": "candidate",
+    "gold": false,
+    "reviewers": [],
+    "required_roles": [
+      "domain_expert",
+      "user_advocate"
+    ],
+    "notes": "Copied from authoritative source; normalization, verification, evals, and review pending."
+  },
+  "bundle": {
+    "source_skill_md": "SKILL.md",
+    "skipped_files": [],
+    "tasks": 0,
+    "gold_ready": false
+  },
+  "access": {
+    "bucket": "needs_app_or_env",
+    "sign_in_required": true,
+    "payment_required": true,
+    "additional_app_or_env": [
+      "cluster",
+      "cloud"
+    ],
+    "human_intervention": [
+      "install_or_provision_env",
+      "admin_setup",
+      "manual_review"
+    ],
+    "evidence": [
+      "source_root=google/skills",
+      "cloud tenant required"
+    ],
+    "confidence": "medium",
+    "review_required": true,
+    "notes": "Heuristic classification; verify against the source skill before use."
+  },
+  "environment": {
+    "category": "cloud_tenant",
+    "network": "required",
+    "auth": "required",
+    "payment": "required",
+    "runtime": [
+      "filesystem",
+      "cloud_cli"
+    ],
+    "dependency_level": "high",
+    "human_setup": [
+      "install_or_provision_env",
+      "admin_setup",
+      "manual_review",
+      "create_account",
+      "mfa",
+      "billing"
+    ],
+    "evidence": [
+      "cloud source=google/skills",
+      "access=needs_app_or_env"
+    ],
+    "confidence": "low",
+    "review_required": true,
+    "notes": "Heuristic environment classification; verify against the source skill."
+  },
+  "local_first": false
+}

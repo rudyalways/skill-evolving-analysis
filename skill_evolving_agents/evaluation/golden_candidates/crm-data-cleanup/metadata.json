@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "skill_id": "crm-data-cleanup",
+  "name": "crm-data-cleanup",
+  "description": "Cleans up CRM data from HubSpot, Salesforce, Pipedrive, Zoho, Close, Attio, or any CRM CSV export. Finds duplicate contacts and companies with fuzzy matching (not just exact email), normalizes emails, phones to E.164, names, domains, states, and countries, flags stale, invalid, role, and test records, finds broken contact-company associations, and produces a reviewable merge plan plus import-ready",
+  "domain": "sales",
+  "domain_confidence": "heuristic; manual taxonomy review required",
+  "authority": "named_expert",
+  "source": {
+    "repo": "OneWave-AI/claude-skills",
+    "url": "https://github.com/OneWave-AI/claude-skills",
+    "stars": 394,
+    "forks": 62,
+    "pushed_at": "2026-10-20T01:13:20Z",
+    "license": "MIT",
+    "license_scope": "repository root; per-skill license not independently verified",
+    "source_dir": "public_skills/others/OneWave-AI--claude-skills/crm-data-cleanup",
+    "source_file": "public_skills/others/OneWave-AI--claude-skills/crm-data-cleanup/SKILL.md",
+    "source_file_modified_at": "2026-10-05T03:28:21.644943+00:00",
+    "retrieved_at": "2026-10-29T11:45:00+08:00"
+  },
+  "methodology": {
+    "selection": "Authoritative vendor or named-expert root; deduplicated by skill name; domain quota and per-root cap.",
+    "authority_basis": "Publisher-owned repository or named expert/organization corpus; popularity is not used as authority.",
+    "normalization_plan": "Extract visible task contract, workflow, verification, failure modes, resources, and provenance from the source skill.",
+    "verification_plan": "Derive artifact checks from the source procedure and task contract; freeze assertions before review.",
+    "task_generation_plan": "Seed normal, edge, missing-auth, tool-failure, near-miss, and negative task cards.",
+    "review": "Two independent reviewers required: domain expert and user advocate.",
+    "benchmark": "Candidate only; not runnable as gold."
+  },
+  "eligibility": "execute",
+  "verification_type": "artifact",
+  "review": {
+    "status": "candidate",
+    "gold": false,
+    "reviewers": [],
+    "required_roles": [
+      "domain_expert",
+      "user_advocate"
+    ],
+    "notes": "Copied from authoritative source; normalization, verification, evals, and review pending."
+  },
+  "bundle": {
+    "source_skill_md": "SKILL.md",
+    "skipped_files": [],
+    "tasks": 0,
+    "gold_ready": false
+  },
+  "access": {
+    "bucket": "needs_signin",
+    "sign_in_required": true,
+    "payment_required": true,
+    "additional_app_or_env": [],
+    "human_intervention": [
+      "create_account",
+      "mfa",
+      "session",
+      "manual_review"
+    ],
+    "evidence": [
+      "manual_override=needs_signin",
+      "review required"
+    ],
+    "confidence": "medium",
+    "review_required": true,
+    "notes": "Heuristic classification; verify against the source skill before use."
+  },
+  "environment": {
+    "category": "http_auth",
+    "network": "required",
+    "auth": "required",
+    "payment": "required",
+    "runtime": [
+      "filesystem"
+    ],
+    "dependency_level": "medium",
+    "human_setup": [
+      "create_account",
+      "mfa",
+      "session",
+      "manual_review",
+      "billing"
+    ],
+    "evidence": [
+      "auth/payment flag",
+      "access=needs_signin"
+    ],
+    "confidence": "low",
+    "review_required": true,
+    "notes": "Heuristic environment classification; verify against the source skill."
+  },
+  "local_first": false
+}
