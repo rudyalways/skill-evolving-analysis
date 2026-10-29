@@ -54,10 +54,10 @@ clean worktree based on `origin/main` for isolated work and verification.
 The personal repository baseline is:
 
 ```text
-43dacac Separate draft targets from reviewed gold labels
+0142ac7 Add golden-skill benchmark vertical slice
 ```
 
-That commit passed all 219 tests in a clean worktree and the 23-case
+That commit passed all 228 tests in a clean worktree and the 23-case
 deterministic funnel benchmark at 23/23. It includes configurable funnel
 targets, single-session diagnosis controls, novel-versus-idempotent metrics,
 an action-oriented profile, inventory and release helpers, replay support,
@@ -82,7 +82,14 @@ privacy helpers, dashboard extensions, and:
   split, delete, and no-change, validated golden diagnosis/action contracts,
   pending human-review states, `--require-reviewed`, `--require-gold`, and an
   HTML dashboard. Agent-authored labels are `draft`; two independent reviewers
-  covering domain-expert and user-advocate roles are required for `gold`.
+  covering domain-expert and user-advocate roles are required for `gold`;
+- a golden-skill benchmark vertical slice under `evaluation/golden_skills/`
+  and `evaluation/skill_benchmark/`: a draft report-publishing skill, generated
+  tasks with auth/timeout/conflict variants, an in-memory CMS, a multi-turn user
+  simulator, deterministic reference and incomplete agents, verification from
+  the skill section, and recovery feedback. The reference agent passes 10/10;
+  the incomplete agent recovers 9/9 after feedback; the auth case refuses with
+  zero tool calls. The skill is synthetic and pending review.
 
 Four fresh/replay trace runs after these changes used 37 DSH calls and 7.75M
 tokens versus 53 calls and 10.87M tokens before (28.7% fewer tokens, about 32%
