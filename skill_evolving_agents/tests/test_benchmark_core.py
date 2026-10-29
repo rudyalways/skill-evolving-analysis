@@ -66,6 +66,23 @@ class BenchmarkCoreTest(unittest.TestCase):
             )
         )
 
+    def test_require_gold_blocks_draft_labels(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            report = benchmark.run_suite(
+                self.cases,
+                Path(directory),
+                self.profile,
+                require_gold=True,
+            )
+        self.assertEqual(report["overall"]["failed"], 6)
+        self.assertEqual(report["overall"]["label_grades"], {"draft": 6})
+        self.assertTrue(
+            all(
+                any("required gold review" in failure for failure in case["failures"])
+                for case in report["cases"]
+            )
+        )
+
     def test_dashboard_reports_cases_and_review_state(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             report = benchmark.run_suite(
@@ -78,7 +95,9 @@ class BenchmarkCoreTest(unittest.TestCase):
         self.assertIn("golden-update-retry-guard", text)
         self.assertIn("golden-split-two-jobs", text)
         self.assertIn("Review pending", text)
-        self.assertIn("pending", text)
+        self.assertIn("Draft labels", text)
+        self.assertIn("Label grade", text)
+        self.assertIn("draft", text)
 
 
 if __name__ == "__main__":

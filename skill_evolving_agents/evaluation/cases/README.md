@@ -23,20 +23,36 @@ evidence.
 
 ## Review
 
-Every case starts as `"status": "pending"`. A reviewer should inspect the trace,
-diagnosis, and targeted action, then edit the case:
+Every case starts as `"status": "pending"` and with
+`"labeling.origin": "agent_synthetic"`. These are **draft hypotheses authored by
+the coding agent**, not validated human-need ground truth. The runner assigns:
+
+- `draft` — not approved, or approved by one reviewer;
+- `silver` — one reviewer;
+- `gold` — two independent reviewers covering the required roles
+  (`domain_expert`, `user_advocate`);
+- `rejected` — explicitly rejected.
+
+To approve, inspect the trace, diagnosis, and targeted action, then add
+reviewers:
 
 ```json
 "review": {
   "status": "approved",
   "reviewer": "name",
+  "reviewers": [
+    {"name": "domain reviewer", "role": "domain_expert"},
+    {"name": "user reviewer", "role": "user_advocate"}
+  ],
+  "required_roles": ["domain_expert", "user_advocate"],
   "notes": "Why this decision is correct."
 }
 ```
 
-Use `--require-reviewed` to make pending or rejected cases fail the run. The
-normal run still executes pending cases so they can be inspected, but the
-scorecard and dashboard report them separately.
+Use `--require-reviewed` to require approval, or `--require-gold` to require
+two independent reviewers with the required roles. A normal run still executes
+draft cases for inspection, but the scorecard and dashboard mark them as draft
+and warn that they are not ground truth.
 
 ## Run
 

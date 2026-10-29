@@ -6,14 +6,22 @@
   "review": {
     "status": "pending",
     "reviewer": null,
-    "notes": "Confirm post-creation non-use and content/label subsumption before deletion."
+    "notes": "Confirm post-creation non-use and content/label subsumption before deletion.",
+    "reviewers": [],
+    "required_roles": [
+      "domain_expert",
+      "user_advocate"
+    ]
   },
   "cluster": "golden-delete-retired-reference",
   "sessions": [
     {
       "id": "golden-delete",
       "turns": [
-        {"user": "Use the current owner index.", "assistant": "Used the current owner index."}
+        {
+          "user": "Use the current owner index.",
+          "assistant": "Used the current owner index."
+        }
       ]
     }
   ],
@@ -27,7 +35,9 @@
           "description": "A retired reference duplicates the current owner reference.",
           "confidence": 0.95,
           "reasoning": "The current owner reference contains all of the retired skill's labels and content.",
-          "evidence": ["post-creation non-use with full content and label subsumption"]
+          "evidence": [
+            "post-creation non-use with full content and label subsumption"
+          ]
         }
       ]
     },
@@ -38,7 +48,19 @@
     }
   },
   "expect": {
-    "operation_types": ["delete"],
-    "diagnosis_gap_types": ["form/reference"]
+    "operation_types": [
+      "delete"
+    ],
+    "diagnosis_gap_types": [
+      "form/reference"
+    ]
+  },
+  "labeling": {
+    "origin": "agent_synthetic",
+    "author": "coding_agent",
+    "evidence": "constructed from contract examples, no real user interview or domain review",
+    "confidence": "draft",
+    "requires_domain_expert": true,
+    "requires_user_advocate": true
   }
 }

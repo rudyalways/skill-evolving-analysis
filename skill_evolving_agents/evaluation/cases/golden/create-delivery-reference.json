@@ -6,7 +6,12 @@
   "review": {
     "status": "pending",
     "reviewer": null,
-    "notes": "Check that a durable reference index is the minimum sufficient operation."
+    "notes": "Check that a durable reference index is the minimum sufficient operation.",
+    "reviewers": [],
+    "required_roles": [
+      "domain_expert",
+      "user_advocate"
+    ]
   },
   "cluster": "golden-create-delivery-reference",
   "sessions": [
@@ -16,7 +21,12 @@
         {
           "user": "Check the delivery policy before the release.",
           "assistant": "Read the delivery policy and applied it.",
-          "tools": [{"name": "exec", "arguments": "sed -n '1,220p' docs/operations/delivery.md"}]
+          "tools": [
+            {
+              "name": "exec",
+              "arguments": "sed -n '1,220p' docs/operations/delivery.md"
+            }
+          ]
         }
       ]
     },
@@ -26,7 +36,12 @@
         {
           "user": "Read the same delivery policy for this service.",
           "assistant": "Read the delivery policy and applied it.",
-          "tools": [{"name": "exec", "arguments": "sed -n '1,220p' docs/operations/delivery.md"}]
+          "tools": [
+            {
+              "name": "exec",
+              "arguments": "sed -n '1,220p' docs/operations/delivery.md"
+            }
+          ]
         }
       ]
     },
@@ -36,7 +51,12 @@
         {
           "user": "Confirm the delivery policy again before publishing.",
           "assistant": "Read the delivery policy and applied it.",
-          "tools": [{"name": "exec", "arguments": "sed -n '1,220p' docs/operations/delivery.md"}]
+          "tools": [
+            {
+              "name": "exec",
+              "arguments": "sed -n '1,220p' docs/operations/delivery.md"
+            }
+          ]
         }
       ]
     }
@@ -51,7 +71,9 @@
           "description": "A reusable delivery-policy index with a runtime freshness check is missing.",
           "confidence": 0.95,
           "reasoning": "Three independent sessions read the same source before release work.",
-          "evidence": ["repeated read of docs/operations/delivery.md across three sessions"]
+          "evidence": [
+            "repeated read of docs/operations/delivery.md across three sessions"
+          ]
         }
       ]
     },
@@ -59,18 +81,46 @@
       "op": "create",
       "skill": "delivery-policy-reference",
       "description": "Consult a durable navigational index for docs/operations/delivery.md before release work.",
-      "sections": ["overview", "when_to_use", "workflow", "verification"],
-      "resources": ["references", "evals"]
+      "sections": [
+        "overview",
+        "when_to_use",
+        "workflow",
+        "verification"
+      ],
+      "resources": [
+        "references",
+        "evals"
+      ]
     }
   },
   "expect": {
-    "findings_any": ["resource-references-opportunity"],
+    "findings_any": [
+      "resource-references-opportunity"
+    ],
     "admitted": true,
-    "operation_types": ["create"],
-    "diagnosis_gap_types": ["form/reference"],
+    "operation_types": [
+      "create"
+    ],
+    "diagnosis_gap_types": [
+      "form/reference"
+    ],
     "resource_decisions": [
-      {"resource": "references", "decision": "use"},
-      {"resource": "evals", "decision": "use"}
+      {
+        "resource": "references",
+        "decision": "use"
+      },
+      {
+        "resource": "evals",
+        "decision": "use"
+      }
     ]
+  },
+  "labeling": {
+    "origin": "agent_synthetic",
+    "author": "coding_agent",
+    "evidence": "constructed from contract examples, no real user interview or domain review",
+    "confidence": "draft",
+    "requires_domain_expert": true,
+    "requires_user_advocate": true
   }
 }

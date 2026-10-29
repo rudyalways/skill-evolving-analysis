@@ -6,7 +6,12 @@
   "review": {
     "status": "pending",
     "reviewer": null,
-    "notes": "Review the diagnosis and targeted update before using this as a pass label."
+    "notes": "Review the diagnosis and targeted update before using this as a pass label.",
+    "reviewers": [],
+    "required_roles": [
+      "domain_expert",
+      "user_advocate"
+    ]
   },
   "cluster": "golden-update-retry-guard",
   "sessions": [
@@ -75,5 +80,13 @@
         "decision": "use"
       }
     ]
+  },
+  "labeling": {
+    "origin": "agent_synthetic",
+    "author": "coding_agent",
+    "evidence": "constructed from contract examples, no real user interview or domain review",
+    "confidence": "draft",
+    "requires_domain_expert": true,
+    "requires_user_advocate": true
   }
 }

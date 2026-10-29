@@ -6,14 +6,22 @@
   "review": {
     "status": "pending",
     "reviewer": null,
-    "notes": "Confirm release promotion and retention decisions are independent jobs."
+    "notes": "Confirm release promotion and retention decisions are independent jobs.",
+    "reviewers": [],
+    "required_roles": [
+      "domain_expert",
+      "user_advocate"
+    ]
   },
   "cluster": "golden-split-two-jobs",
   "sessions": [
     {
       "id": "golden-split",
       "turns": [
-        {"user": "Prepare the release promotion and then classify expired records for retention.", "assistant": "Completed the release handoff and the retention classification."}
+        {
+          "user": "Prepare the release promotion and then classify expired records for retention.",
+          "assistant": "Completed the release handoff and the retention classification."
+        }
       ]
     }
   ],
@@ -27,7 +35,9 @@
           "description": "One handbook conflates independent release and retention workflows.",
           "confidence": 0.94,
           "reasoning": "Each job has its own inputs, terminal state, and correctness check.",
-          "evidence": ["two independent jobs in one source skill"]
+          "evidence": [
+            "two independent jobs in one source skill"
+          ]
         }
       ]
     },
@@ -38,21 +48,52 @@
         {
           "skill": "release-handbook",
           "description": "Own release promotion handoff checks.",
-          "sections": ["overview", "when_to_use", "workflow", "verification"],
-          "resources": ["evals"]
+          "sections": [
+            "overview",
+            "when_to_use",
+            "workflow",
+            "verification"
+          ],
+          "resources": [
+            "evals"
+          ]
         },
         {
           "skill": "retention-handbook",
           "description": "Own retention and purge decisions.",
-          "sections": ["overview", "when_to_use", "workflow", "verification"],
-          "resources": ["evals"]
+          "sections": [
+            "overview",
+            "when_to_use",
+            "workflow",
+            "verification"
+          ],
+          "resources": [
+            "evals"
+          ]
         }
       ]
     }
   },
   "expect": {
-    "operation_types": ["split"],
-    "diagnosis_gap_types": ["job/methodology"],
-    "resource_decisions": [{"resource": "evals", "decision": "use"}]
+    "operation_types": [
+      "split"
+    ],
+    "diagnosis_gap_types": [
+      "job/methodology"
+    ],
+    "resource_decisions": [
+      {
+        "resource": "evals",
+        "decision": "use"
+      }
+    ]
+  },
+  "labeling": {
+    "origin": "agent_synthetic",
+    "author": "coding_agent",
+    "evidence": "constructed from contract examples, no real user interview or domain review",
+    "confidence": "draft",
+    "requires_domain_expert": true,
+    "requires_user_advocate": true
   }
 }

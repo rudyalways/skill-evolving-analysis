@@ -100,10 +100,12 @@ fixed workflow position. Move or add workflow stages without rewriting the
 stage cases. Golden actions are compiled into valid Goal documents and checked
 against `common/pipeline_contracts.py`; invalid labels fail before review.
 
-Every case carries a review state. The default is `pending`; use
-`--require-reviewed` to make unapproved cases fail. The generated HTML dashboard
-shows pass/fail, review state, failure reasons, and each case's golden diagnosis
-and action.
+Every case carries a review state and a label grade. Agent-authored cases start
+as `draft` and are not treated as human-need ground truth. Two independent
+reviewers with domain-expert and user-advocate roles are required for `gold`;
+`--require-gold` enforces that grade, while `--require-reviewed` enforces at
+least one approval. The generated HTML dashboard shows pass/fail, review state,
+label grade, failure reasons, and each case's proposed diagnosis and action.
 
 See `evaluation/cases/README.md` for the case schema, review workflow, and
 commands.

@@ -6,14 +6,22 @@
   "review": {
     "status": "pending",
     "reviewer": null,
-    "notes": "Approve only if both source skills truly cover the same navigation capability."
+    "notes": "Approve only if both source skills truly cover the same navigation capability.",
+    "reviewers": [],
+    "required_roles": [
+      "domain_expert",
+      "user_advocate"
+    ]
   },
   "cluster": "golden-merge-reference-skills",
   "sessions": [
     {
       "id": "golden-merge",
       "turns": [
-        {"user": "Find the durable owner index for this service.", "assistant": "Located the owner index and reported it."}
+        {
+          "user": "Find the durable owner index for this service.",
+          "assistant": "Located the owner index and reported it."
+        }
       ]
     }
   ],
@@ -27,27 +35,58 @@
           "description": "The two reference skills duplicate one navigation capability.",
           "confidence": 0.93,
           "reasoning": "Both inventories point to the same owner index and use the same freshness procedure.",
-          "evidence": ["duplicate create evidence and near-identical navigation instructions"]
+          "evidence": [
+            "duplicate create evidence and near-identical navigation instructions"
+          ]
         }
       ]
     },
     "action": {
       "op": "merge",
-      "sources": ["reliability-reference", "handoff-reference"],
+      "sources": [
+        "reliability-reference",
+        "handoff-reference"
+      ],
       "into": {
         "skill": "reliability-owner-reference",
         "description": "Own the shared owner and handoff navigation index for reliability work.",
-        "sections": ["overview", "when_to_use", "workflow", "verification"],
-        "resources": ["references", "evals"]
+        "sections": [
+          "overview",
+          "when_to_use",
+          "workflow",
+          "verification"
+        ],
+        "resources": [
+          "references",
+          "evals"
+        ]
       }
     }
   },
   "expect": {
-    "operation_types": ["merge"],
-    "diagnosis_gap_types": ["form/reference"],
+    "operation_types": [
+      "merge"
+    ],
+    "diagnosis_gap_types": [
+      "form/reference"
+    ],
     "resource_decisions": [
-      {"resource": "references", "decision": "use"},
-      {"resource": "evals", "decision": "use"}
+      {
+        "resource": "references",
+        "decision": "use"
+      },
+      {
+        "resource": "evals",
+        "decision": "use"
+      }
     ]
+  },
+  "labeling": {
+    "origin": "agent_synthetic",
+    "author": "coding_agent",
+    "evidence": "constructed from contract examples, no real user interview or domain review",
+    "confidence": "draft",
+    "requires_domain_expert": true,
+    "requires_user_advocate": true
   }
 }

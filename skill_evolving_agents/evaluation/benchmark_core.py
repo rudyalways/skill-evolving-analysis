@@ -46,7 +46,32 @@ DEFAULT_PROFILE = AGENTS / "profiles/action-oriented-local-service.json"
 RESOURCE_KINDS = ("scripts", "references", "assets", "agents", "evals")
 OPERATION_KINDS = ("create", "update", "merge", "split", "delete", "no_change")
 REVIEW_STATES = ("pending", "approved", "rejected")
+LABEL_GRADES = ("draft", "silver", "gold", "rejected")
 SECTIONS = ("overview", "when_to_use", "workflow", "verification")
+
+
+def label_grade(case: dict[str, Any]) -> str:
+    """Separate agent-authored drafts from independently reviewed labels."""
+    review = case.get("review") or {}
+    if review.get("status") == "rejected":
+        return "rejected"
+    if review.get("status") != "approved":
+        return "draft"
+    reviewers = [
+        row for row in review.get("reviewers") or []
+        if isinstance(row, dict)
+    ]
+    roles = {
+        str(row.get("role") or "") for row in reviewers
+    }
+    required = {
+        str(value) for value in review.get("required_roles") or []
+    }
+    if len(reviewers) >= 2 and (not required or required <= roles):
+        return "gold"
+    if len(reviewers) >= 1 or review.get("reviewer"):
+        return "silver"
+    return "draft"
 
 
 def _read_json(path: Path) -> Any:
@@ -446,7 +471,7 @@ def register_adapter(stage: str, handler) -> None:
 
 def run_case(
     case: dict[str, Any], root: Path, profile: dict[str, Any],
-    *, require_reviewed: bool = False,
+    *, require_reviewed: bool = False, require_gold: bool = False,
 ) -> dict[str, Any]:
     stage = str(case.get("stage") or "")
     if case.get("golden"):
@@ -467,12 +492,20 @@ def run_case(
         }
     result["stage"] = str(result.get("stage") or stage)
     result["review"] = case.get("review") or {"status": "pending"}
+    result["label_grade"] = label_grade(case)
+    result["labeling"] = case.get("labeling") or {}
     result["case_file"] = case.get("case_file")
     if require_reviewed and result["review"].get("status") != "approved":
         result["passed"] = False
         result["failures"] = list(result.get("failures") or []) + [
             "review: required approval, status is "
             + str(result["review"].get("status") or "pending")
+        ]
+    if require_gold and result["label_grade"] != "gold":
+        result["passed"] = False
+        result["failures"] = list(result.get("failures") or []) + [
+            "label: required gold review, grade is "
+            + str(result["label_grade"])
         ]
     return result
 
@@ -483,6 +516,7 @@ def run_suite(
     profile: dict[str, Any],
     *,
     require_reviewed: bool = False,
+    require_gold: bool = False,
     stage: str | None = None,
     split: str | None = None,
 ) -> dict[str, Any]:
@@ -492,7 +526,13 @@ def run_suite(
         and (split is None or case.get("split") == split)
     ]
     results = [
-        run_case(case, root, profile, require_reviewed=require_reviewed)
+        run_case(
+            case,
+            root,
+            profile,
+            require_reviewed=require_reviewed,
+            require_gold=require_gold,
+        )
         for case in selected
     ]
     return _aggregate(results)
@@ -501,6 +541,7 @@ def run_suite(
 def _summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
     passed = sum(bool(row.get("passed")) for row in rows)
     reviews = Counter(str((row.get("review") or {}).get("status") or "pending") for row in rows)
+    grades = Counter(str(row.get("label_grade") or "draft") for row in rows)
     return {
         "cases": len(rows),
         "passed": passed,
@@ -509,6 +550,7 @@ def _summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
         "review_pending": reviews.get("pending", 0),
         "review_approved": reviews.get("approved", 0),
         "review_rejected": reviews.get("rejected", 0),
+        "label_grades": dict(sorted(grades.items())),
         "failure_reasons": dict(sorted(Counter(
             str(reason).split(":", 1)[0]
             for row in rows for reason in row.get("failures") or []
@@ -577,7 +619,7 @@ def render_dashboard(report: dict[str, Any], path: Path) -> Path:
         golden = (row.get("observed") or {}).get("golden") or {}
         details.append(
             "<details>"
-            f"<summary>{_esc(row.get('case_id'))} — {status} / {_esc(review_status)}</summary>"
+            f"<summary>{_esc(row.get('case_id'))} — {status} / {_esc(review_status)} / {_esc(row.get('label_grade') or 'draft')}</summary>"
             f"<h3>Failures</h3><pre>{_esc(json.dumps(row.get('failures') or [], indent=2))}</pre>"
             f"<h3>Golden diagnosis</h3><pre>{_esc(json.dumps(golden.get('diagnosis'), indent=2))}</pre>"
             f"<h3>Golden action</h3><pre>{_esc(json.dumps(golden.get('goal'), indent=2))}</pre>"
@@ -608,19 +650,21 @@ summary {{ cursor: pointer; font-weight: 600; }}
 </style></head><body>
 <h1>Skill evolution benchmark</h1>
 <p class="muted">Generated {_esc(report.get('generated_at'))} · stage-addressable cases</p>
+{('<p class="bad"><b>Draft labels:</b> these targets were authored by the coding agent and are not validated human-need ground truth. Approve with two independent reviewers before treating them as gold.</p>') if (summary.get('label_grades') or {}).get('draft') else ''}
 <div class="cards">
   <div class="card"><span>Cases</span><b>{_esc(summary.get('cases'))}</b></div>
   <div class="card"><span>Passed</span><b>{_esc(summary.get('passed'))}</b></div>
   <div class="card"><span>Failed</span><b>{_esc(summary.get('failed'))}</b></div>
   <div class="card"><span>Review pending</span><b>{_esc(review['pending'])}</b></div>
   <div class="card"><span>Approved</span><b>{_esc(review['approved'])}</b></div>
+  <div class="card"><span>Gold labels</span><b>{_esc((summary.get('label_grades') or {}).get('gold', 0))}</b></div>
 </div>
 <h2>By stage</h2>
 <table><thead><tr><th>Stage</th><th>Cases</th><th>Passed</th><th>Failed</th><th>Pending review</th></tr></thead>
 <tbody>{stage_rows or '<tr><td colspan="5">No cases.</td></tr>'}</tbody></table>
 <h2>Cases</h2>
-<table><thead><tr><th>Case</th><th>Stage</th><th>Split</th><th>Status</th><th>Review</th><th>Failures</th></tr></thead>
-<tbody>{''.join(case_rows) or '<tr><td colspan="6">No cases.</td></tr>'}</tbody></table>
+<table><thead><tr><th>Case</th><th>Stage</th><th>Split</th><th>Status</th><th>Review</th><th>Label grade</th><th>Failures</th></tr></thead>
+<tbody>{''.join(case_rows) or '<tr><td colspan="7">No cases.</td></tr>'}</tbody></table>
 <h2>Review details</h2>
 {''.join(details) or '<p>No case details.</p>'}
 </body></html>
@@ -637,6 +681,11 @@ def main() -> None:
     parser.add_argument("--stage", help="run one stage only")
     parser.add_argument("--split", choices=("calibration", "heldout"))
     parser.add_argument("--require-reviewed", action="store_true")
+    parser.add_argument(
+        "--require-gold",
+        action="store_true",
+        help="fail unless two independent reviewers with required roles approved",
+    )
     parser.add_argument("--out", type=Path)
     parser.add_argument("--dashboard", type=Path)
     parser.add_argument("--keep-workspaces", type=Path)
@@ -654,6 +703,7 @@ def main() -> None:
             root,
             profile,
             require_reviewed=args.require_reviewed,
+            require_gold=args.require_gold,
             stage=args.stage,
             split=args.split,
         )
