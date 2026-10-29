@@ -4,6 +4,9 @@ This document lists candidate sources for **reusable knowledge** and **expert
 procedure** benchmarks. It is a source catalogue, not a label set. A source is
 not ground truth merely because it is official, popular, or well written.
 
+See [benchmark-design.md](benchmark-design.md) for the golden-skill, simulator,
+multi-turn trace, and internal-stage labeling design.
+
 ## 1. Two independent questions
 
 Every source must be scored on two dimensions:
