@@ -1,0 +1,118 @@
+{
+  "schema_version": 1,
+  "skill_id": "report-publishing",
+  "title": "Publish a research report to a CMS",
+  "visible": {
+    "description": "Turn a research brief into a published report page in a content management system, with a concise title, required sections, a source link, a cover image, and correct metadata.",
+    "when_to_use": [
+      "A user asks for a report to be published on a website or CMS.",
+      "The report must include findings, sources, and a cover image.",
+      "A test account or API token is available for the CMS."
+    ],
+    "inputs": [
+      "topic",
+      "audience",
+      "required_points",
+      "cms_base_url",
+      "auth_token (when the CMS requires authentication)"
+    ]
+  },
+  "workflow": [
+    "Confirm that a CMS endpoint and authorization are available.",
+    "Inspect existing pages to avoid duplicate titles and slugs.",
+    "Create a draft with a unique lowercase hyphenated slug and a title of at most 60 characters.",
+    "Upload a cover image with alt text.",
+    "Add Summary, Method, Findings, and Sources sections; include every required point and at least one source URL.",
+    "Publish the draft.",
+    "Read the public page back and confirm status, title, slug, metadata, sections, source, and image.",
+    "If publishing times out, retry once; if authorization is missing, stop and escalate."
+  ],
+  "verification": [
+    {
+      "id": "published",
+      "type": "field_equals",
+      "field": "status",
+      "value": "published"
+    },
+    {
+      "id": "title_length",
+      "type": "max_length",
+      "field": "title",
+      "max": 60
+    },
+    {
+      "id": "title_present",
+      "type": "non_empty",
+      "field": "title"
+    },
+    {
+      "id": "slug_format",
+      "type": "regex",
+      "field": "slug",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    {
+      "id": "description_length",
+      "type": "length_between",
+      "field": "metadata.description",
+      "min": 50,
+      "max": 160
+    },
+    {
+      "id": "sections",
+      "type": "contains_all",
+      "field": "body",
+      "values": [
+        "Summary",
+        "Method",
+        "Findings",
+        "Sources"
+      ]
+    },
+    {
+      "id": "source_link",
+      "type": "contains",
+      "field": "body",
+      "value": "https://"
+    },
+    {
+      "id": "cover_image",
+      "type": "media_present"
+    },
+    {
+      "id": "unique_title",
+      "type": "unique_field",
+      "field": "title"
+    },
+    {
+      "id": "required_points",
+      "type": "contains_all_task_points"
+    }
+  ],
+  "resources": [
+    "references",
+    "evals"
+  ],
+  "source": {
+    "origin": "synthetic",
+    "raw_request_id": null,
+    "raw_request_path": null,
+    "trace_ids": [],
+    "authority_sources": [
+      "Google Search Central: https://developers.google.com/search/docs",
+      "W3C WCAG: https://www.w3.org/WAI/standards-guidelines/wcag/",
+      "schema.org Article: https://schema.org/Article",
+      "CMS API documentation (environment-specific)"
+    ],
+    "redaction_notes": "No raw user request attached. Synthetic benchmark seed; review required before gold."
+  },
+  "review": {
+    "status": "pending",
+    "reviewers": [],
+    "required_roles": [
+      "domain_expert",
+      "user_advocate"
+    ],
+    "notes": "Draft golden skill for the first vertical slice; not approved gold."
+  }
+}

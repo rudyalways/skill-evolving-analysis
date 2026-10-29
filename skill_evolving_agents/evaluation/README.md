@@ -115,3 +115,13 @@ commands.
 Benchmark source and design notes are maintained privately until they are
 privacy-reviewed for publication. Public benchmark cases must cite their
 sources and record review provenance.
+
+## Golden-skill benchmark slice
+
+The first executable golden-skill benchmark lives under
+`evaluation/skill_benchmark/` with the draft skill at
+`evaluation/golden_skills/report-publishing/`. It generates related tasks,
+drives a multi-turn user simulator, executes a sandbox CMS, and verifies the
+published page with the skill's verification section.
+
+See `evaluation/skill_benchmark/README.md`.
