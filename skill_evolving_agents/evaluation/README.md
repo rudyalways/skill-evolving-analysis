@@ -109,3 +109,12 @@ label grade, failure reasons, and each case's proposed diagnosis and action.
 
 See `evaluation/cases/README.md` for the case schema, review workflow, and
 commands.
+
+## Source selection
+
+Before writing labels, use the source registry at
+[`docs/public/benchmark-source-registry.md`](../docs/public/benchmark-source-registry.md).
+It separates authority from agent eligibility, records experience-based reuse
+signals, and lists books, official manuals, museum/heritage references, and
+validation benchmarks. Aviation, rail, medicine, and other safety-critical
+sources are reference and refusal cases, not execution targets.
