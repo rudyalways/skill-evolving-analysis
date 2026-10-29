@@ -29,14 +29,29 @@ golden skill
   calls.
 - `__main__.py` — CLI.
 
-## Golden skill
+## Golden skill bundle
 
-`evaluation/golden_skills/report-publishing/`
+`evaluation/golden_skills/report-publishing/` is a directory bundle, not a
+single JSON record:
 
 - `SKILL.md` — human-readable skill.
 - `skill.json` — visible/workflow/verification sections, source provenance,
   review state.
+- `evals/tasks.json` — frozen task cards.
+- `environment/` — sandbox description.
+- `simulator/personas.json` — user persona.
+- `scripts/` — optional helpers; none required here.
+- `references/` — source references.
 - Status: **draft / synthetic / pending review**. It is not gold.
+
+Validate the directory contract:
+
+```bash
+python3 -m evaluation.skill_benchmark.bundle \
+  evaluation/golden_skills/report-publishing
+```
+
+Use `--require-gold` to reject draft or synthetic bundles.
 
 ## Run
 

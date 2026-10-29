@@ -115,5 +115,42 @@ class SkillBenchmarkTest(unittest.TestCase):
         self.assertIn("report-publishing", encoded)
 
 
+    def test_bundle_contract_is_valid_but_not_gold(self) -> None:
+        from evaluation.skill_benchmark.bundle import validate_bundle
+
+        report = validate_bundle(SKILL_ROOT)
+        self.assertTrue(report.valid, report.failures)
+        self.assertFalse(report.gold_ready)
+        self.assertTrue(any("synthetic" in warning for warning in report.warnings))
+        self.assertTrue(any("approved" in warning for warning in report.warnings))
+
+    def test_require_gold_rejects_draft_bundle(self) -> None:
+        from evaluation.skill_benchmark.bundle import validate_bundle
+
+        report = validate_bundle(SKILL_ROOT, require_gold=True)
+        self.assertFalse(report.valid)
+        self.assertIn("bundle is not gold-ready", report.failures)
+
+    def test_bundle_requires_skill_md(self) -> None:
+        import shutil
+        from evaluation.skill_benchmark.bundle import validate_bundle
+
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory) / "report-publishing"
+            shutil.copytree(SKILL_ROOT, target)
+            (target / "SKILL.md").unlink()
+            report = validate_bundle(target)
+        self.assertFalse(report.valid)
+        self.assertIn("missing SKILL.md", report.failures)
+
+    def test_frozen_task_cards_are_used(self) -> None:
+        from evaluation.skill_benchmark.tasks import load_task_cards
+
+        tasks = load_task_cards(SKILL_ROOT, 10)
+        self.assertEqual(len(tasks), 10)
+        self.assertEqual(tasks[0].task_id, "report-publishing-001")
+        self.assertTrue(any(not task.auth for task in tasks))
+
+
 if __name__ == "__main__":
     unittest.main()

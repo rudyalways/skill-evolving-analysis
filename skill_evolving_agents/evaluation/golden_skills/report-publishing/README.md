@@ -1,11 +1,22 @@
 # Report-publishing golden skill
 
-First vertical slice for the skill-seeded benchmark.
+Status: **draft / synthetic / pending review**.
 
-- `skill.json` — machine-readable visible/workflow/verification sections,
-  source provenance, and review state.
-- `SKILL.md` — human-readable skill.
-- `source.json` is embedded in `skill.json` for this slice.
+This bundle is the first executable vertical slice.
 
-Status: **draft**, synthetic, pending domain-expert and user-advocate review.
-The task generator and simulator live under `evaluation/skill_benchmark/`.
+```text
+report-publishing/
+  SKILL.md
+  skill.json
+  evals/tasks.json
+  environment/README.md
+  simulator/personas.json
+  scripts/README.md
+  references/README.md
+```
+
+It publishes a report to a CMS with a concise title, required sections, source
+link, cover image, and verified metadata.
+
+Not gold yet: no raw request is attached, the CMS is in-memory, and no domain
+expert or user advocate has approved it.

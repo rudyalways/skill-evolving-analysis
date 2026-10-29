@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import json
 import re
+from pathlib import Path
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
@@ -90,6 +92,26 @@ class Task:
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "Task":
+        allowed = {
+            "task_id",
+            "topic",
+            "audience",
+            "required_points",
+            "request",
+            "expected",
+            "auth",
+            "suggested_title",
+            "seed_slug",
+            "seed_title",
+            "seed_body",
+            "faults",
+            "seed",
+        }
+        values = {key: data[key] for key in allowed if key in data}
+        return cls(**values)
+
 
 def _variant(index: int, scenario: dict[str, Any]) -> str:
     cycle = [
@@ -174,3 +196,16 @@ def generate_tasks(count: int = 10) -> list[Task]:
             )
         )
     return tasks
+
+
+def load_task_cards(root: Path | str, count: int | None = None) -> list[Task]:
+    """Load frozen task cards from a skill bundle, or generate defaults."""
+    path = Path(root) / "evals" / "tasks.json"
+    if not path.exists():
+        tasks = generate_tasks(count or 10)
+        return tasks[:count] if count is not None else tasks
+    data = json.loads(path.read_text())
+    if not isinstance(data, list):
+        raise ValueError(f"{path} must contain a list")
+    tasks = [Task.from_dict(row) for row in data if isinstance(row, dict)]
+    return tasks[:count] if count is not None else tasks

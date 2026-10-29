@@ -11,7 +11,7 @@ from .agent import IncompleteAgent, ReferenceAgent
 from .cms import CMS
 from .golden import GoldenSkill
 from .simulator import Simulator
-from .tasks import Task, generate_tasks
+from .tasks import Task, load_task_cards
 
 
 AGENTS = {
@@ -82,7 +82,7 @@ def run_benchmark(
     agent_name: str = "reference",
 ) -> dict[str, Any]:
     skill = GoldenSkill.load(skill_root)
-    tasks = generate_tasks(count)
+    tasks = load_task_cards(skill.root, count)
     traces = [
         run_task(skill, task, agent_name=agent_name)
         for task in tasks

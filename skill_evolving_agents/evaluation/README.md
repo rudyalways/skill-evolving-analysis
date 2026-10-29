@@ -119,9 +119,11 @@ sources and record review provenance.
 ## Golden-skill benchmark slice
 
 The first executable golden-skill benchmark lives under
-`evaluation/skill_benchmark/` with the draft skill at
-`evaluation/golden_skills/report-publishing/`. It generates related tasks,
-drives a multi-turn user simulator, executes a sandbox CMS, and verifies the
-published page with the skill's verification section.
+`evaluation/skill_benchmark/` with the draft bundle at
+`evaluation/golden_skills/report-publishing/`. Each golden skill is a directory
+with `SKILL.md`, `skill.json`, frozen `evals/tasks.json`, environment notes,
+simulator personas, optional scripts, and references. The runner drives a
+multi-turn user simulator, executes a sandbox CMS, and verifies the published
+page with the skill's verification section.
 
 See `evaluation/skill_benchmark/README.md`.

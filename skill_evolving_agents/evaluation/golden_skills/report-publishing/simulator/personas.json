@@ -1,0 +1,8 @@
+[
+  {
+    "id": "content-lead",
+    "style": "direct",
+    "goal": "Get a compliant report page published and verified.",
+    "constraints": ["do not invent sources", "do not bypass authentication"]
+  }
+]

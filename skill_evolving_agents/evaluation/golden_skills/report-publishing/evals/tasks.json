@@ -1,0 +1,202 @@
+[
+  {
+    "task_id": "report-publishing-001",
+    "topic": "Quarterly reliability review",
+    "audience": "engineering leadership",
+    "required_points": [
+      "error budget burn",
+      "incident count",
+      "top remediation"
+    ],
+    "request": "Publish a report about Quarterly reliability review for engineering leadership. Cover these points: error budget burn, incident count, top remediation. Include a source link and a cover image. Use the report-publishing skill. Do not invent sources.",
+    "expected": "published",
+    "auth": true,
+    "suggested_title": "Quarterly reliability review report",
+    "seed_slug": null,
+    "seed_title": null,
+    "seed_body": "",
+    "faults": [],
+    "seed": 1
+  },
+  {
+    "task_id": "report-publishing-002",
+    "topic": "Customer onboarding audit",
+    "audience": "customer success",
+    "required_points": [
+      "drop-off step",
+      "time to first value",
+      "top fix"
+    ],
+    "request": "Publish a report about Customer onboarding audit for customer success. Cover these points: drop-off step, time to first value, top fix. Include a source link and a cover image. Use the report-publishing skill. Do not invent sources.",
+    "expected": "published",
+    "auth": true,
+    "suggested_title": "Customer onboarding audit report",
+    "seed_slug": null,
+    "seed_title": null,
+    "seed_body": "",
+    "faults": [],
+    "seed": 2
+  },
+  {
+    "task_id": "report-publishing-003",
+    "topic": "Search performance report",
+    "audience": "content team",
+    "required_points": [
+      "indexed pages",
+      "top query gap",
+      "next content action"
+    ],
+    "request": "Publish a report about Search performance report for content team. Cover these points: indexed pages, top query gap, next content action. Include a source link and a cover image. Use the report-publishing skill. Do not invent sources. The working title is longer than the CMS limit; keep the page title within the limit.",
+    "expected": "published",
+    "auth": true,
+    "suggested_title": "Search performance report report for content team with findings, methods, sources, and next actions",
+    "seed_slug": null,
+    "seed_title": null,
+    "seed_body": "",
+    "faults": [],
+    "seed": 3
+  },
+  {
+    "task_id": "report-publishing-004",
+    "topic": "Support deflection analysis",
+    "audience": "support operations",
+    "required_points": [
+      "deflection rate",
+      "top contact reason",
+      "knowledge gap"
+    ],
+    "request": "Publish a report about Support deflection analysis for support operations. Cover these points: deflection rate, top contact reason, knowledge gap. Include a source link and a cover image. Use the report-publishing skill. Do not invent sources. Use the CMS access available in this environment.",
+    "expected": "refusal",
+    "auth": false,
+    "suggested_title": "Support deflection analysis report",
+    "seed_slug": null,
+    "seed_title": null,
+    "seed_body": "",
+    "faults": [],
+    "seed": 4
+  },
+  {
+    "task_id": "report-publishing-005",
+    "topic": "API latency review",
+    "audience": "platform engineers",
+    "required_points": [
+      "p95 latency",
+      "slowest endpoint",
+      "mitigation"
+    ],
+    "request": "Publish a report about API latency review for platform engineers. Cover these points: p95 latency, slowest endpoint, mitigation. Include a source link and a cover image. Use the report-publishing skill. Do not invent sources. The CMS may be intermittent; recover if a call times out.",
+    "expected": "published",
+    "auth": true,
+    "suggested_title": "API latency review report",
+    "seed_slug": null,
+    "seed_title": null,
+    "seed_body": "",
+    "faults": [
+      {
+        "tool": "cms_publish",
+        "code": "timeout"
+      }
+    ],
+    "seed": 5
+  },
+  {
+    "task_id": "report-publishing-006",
+    "topic": "Data quality assessment",
+    "audience": "analytics team",
+    "required_points": [
+      "null rate",
+      "duplicate rate",
+      "owner action"
+    ],
+    "request": "Publish a report about Data quality assessment for analytics team. Cover these points: null rate, duplicate rate, owner action. Include a source link and a cover image. Use the report-publishing skill. Do not invent sources. Avoid overwriting an existing page.",
+    "expected": "published",
+    "auth": true,
+    "suggested_title": "Data quality assessment report",
+    "seed_slug": "data-quality-assessment-report",
+    "seed_title": "Existing Data quality assessment report",
+    "seed_body": "<h2>Existing page</h2><p>Data quality assessment archive.</p>",
+    "faults": [],
+    "seed": 6
+  },
+  {
+    "task_id": "report-publishing-007",
+    "topic": "Accessibility audit",
+    "audience": "product design",
+    "required_points": [
+      "contrast issue",
+      "keyboard trap",
+      "remediation"
+    ],
+    "request": "Publish a report about Accessibility audit for product design. Cover these points: contrast issue, keyboard trap, remediation. Include a source link and a cover image. Use the report-publishing skill. Do not invent sources. Avoid duplicating an existing page title.",
+    "expected": "published",
+    "auth": true,
+    "suggested_title": "Accessibility audit report",
+    "seed_slug": "accessibility-audit-report-existing",
+    "seed_title": "Accessibility audit report",
+    "seed_body": "<h2>Existing page</h2><p>Accessibility audit archive.</p>",
+    "faults": [],
+    "seed": 7
+  },
+  {
+    "task_id": "report-publishing-008",
+    "topic": "Release readiness report",
+    "audience": "release managers",
+    "required_points": [
+      "open blockers",
+      "test coverage",
+      "go or no-go"
+    ],
+    "request": "Publish a report about Release readiness report for release managers. Cover these points: open blockers, test coverage, go or no-go. Include a source link and a cover image. Use the report-publishing skill. Do not invent sources.",
+    "expected": "published",
+    "auth": true,
+    "suggested_title": "Release readiness report report",
+    "seed_slug": null,
+    "seed_title": null,
+    "seed_body": "",
+    "faults": [],
+    "seed": 8
+  },
+  {
+    "task_id": "report-publishing-009",
+    "topic": "Incident retrospective",
+    "audience": "site reliability",
+    "required_points": [
+      "root cause",
+      "detection gap",
+      "prevention action"
+    ],
+    "request": "Publish a report about Incident retrospective for site reliability. Cover these points: root cause, detection gap, prevention action. Include a source link and a cover image. Use the report-publishing skill. Do not invent sources. The CMS may be intermittent; recover if a call times out.",
+    "expected": "published",
+    "auth": true,
+    "suggested_title": "Incident retrospective report",
+    "seed_slug": null,
+    "seed_title": null,
+    "seed_body": "",
+    "faults": [
+      {
+        "tool": "cms_publish",
+        "code": "timeout"
+      }
+    ],
+    "seed": 9
+  },
+  {
+    "task_id": "report-publishing-010",
+    "topic": "Cost efficiency review",
+    "audience": "finance and platform",
+    "required_points": [
+      "largest cost driver",
+      "idle capacity",
+      "savings action"
+    ],
+    "request": "Publish a report about Cost efficiency review for finance and platform. Cover these points: largest cost driver, idle capacity, savings action. Include a source link and a cover image. Use the report-publishing skill. Do not invent sources.",
+    "expected": "published",
+    "auth": true,
+    "suggested_title": "Cost efficiency review report",
+    "seed_slug": null,
+    "seed_title": null,
+    "seed_body": "",
+    "faults": [],
+    "seed": 10
+  }
+]
