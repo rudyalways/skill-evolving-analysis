@@ -54,10 +54,10 @@ clean worktree based on `origin/main` for isolated work and verification.
 The personal repository baseline is:
 
 ```text
-0142ac7 Add golden-skill benchmark vertical slice
+18de1d6 Make golden skills directory bundles
 ```
 
-That commit passed all 228 tests in a clean worktree and the 23-case
+That commit passed all 232 tests in a clean worktree and the 23-case
 deterministic funnel benchmark at 23/23. It includes configurable funnel
 targets, single-session diagnosis controls, novel-versus-idempotent metrics,
 an action-oriented profile, inventory and release helpers, replay support,
@@ -89,7 +89,10 @@ privacy helpers, dashboard extensions, and:
   simulator, deterministic reference and incomplete agents, verification from
   the skill section, and recovery feedback. The reference agent passes 10/10;
   the incomplete agent recovers 9/9 after feedback; the auth case refuses with
-  zero tool calls. The skill is synthetic and pending review.
+  zero tool calls. Golden skills are directory bundles with `SKILL.md`,
+  `skill.json`, frozen `evals/tasks.json`, environment notes, simulator
+  personas, optional scripts/references, and a `--require-gold` validator. The
+  current report-publishing skill is synthetic and pending review.
 
 Four fresh/replay trace runs after these changes used 37 DSH calls and 7.75M
 tokens versus 53 calls and 10.87M tokens before (28.7% fewer tokens, about 32%
