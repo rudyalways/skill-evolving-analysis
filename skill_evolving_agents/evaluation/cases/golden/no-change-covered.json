@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "case_id": "golden-no-change-covered",
+  "stage": "goal",
+  "split": "calibration",
+  "review": {
+    "status": "pending",
+    "reviewer": null,
+    "notes": "Confirm the existing skill already covers the observed request."
+  },
+  "cluster": "golden-no-change-covered",
+  "sessions": [
+    {
+      "id": "golden-no-change",
+      "turns": [
+        {"user": "Summarize the current backup schedule.", "assistant": "The weekly backup schedule is documented in the runbook."}
+      ]
+    }
+  ],
+  "golden": {
+    "reasoning": "The existing operations reference already owns the requested backup schedule, so another edit would restate current guidance.",
+    "diagnosis": {
+      "decision": "no_change",
+      "gaps": []
+    },
+    "action": {
+      "op": "no_change",
+      "reason": "The recalled operations reference already satisfies the request."
+    }
+  },
+  "expect": {
+    "operation_types": [],
+    "diagnosis_gap_types": []
+  }
+}

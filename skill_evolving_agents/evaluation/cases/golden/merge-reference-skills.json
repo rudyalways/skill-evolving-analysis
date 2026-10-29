@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "case_id": "golden-merge-reference-skills",
+  "stage": "goal",
+  "split": "heldout",
+  "review": {
+    "status": "pending",
+    "reviewer": null,
+    "notes": "Approve only if both source skills truly cover the same navigation capability."
+  },
+  "cluster": "golden-merge-reference-skills",
+  "sessions": [
+    {
+      "id": "golden-merge",
+      "turns": [
+        {"user": "Find the durable owner index for this service.", "assistant": "Located the owner index and reported it."}
+      ]
+    }
+  ],
+  "golden": {
+    "reasoning": "Two reference skills duplicate the same navigation surface, so one merged owner preserves both source locators and removes the duplicate activation boundary.",
+    "diagnosis": {
+      "decision": "change",
+      "gaps": [
+        {
+          "type": "form/reference",
+          "description": "The two reference skills duplicate one navigation capability.",
+          "confidence": 0.93,
+          "reasoning": "Both inventories point to the same owner index and use the same freshness procedure.",
+          "evidence": ["duplicate create evidence and near-identical navigation instructions"]
+        }
+      ]
+    },
+    "action": {
+      "op": "merge",
+      "sources": ["reliability-reference", "handoff-reference"],
+      "into": {
+        "skill": "reliability-owner-reference",
+        "description": "Own the shared owner and handoff navigation index for reliability work.",
+        "sections": ["overview", "when_to_use", "workflow", "verification"],
+        "resources": ["references", "evals"]
+      }
+    }
+  },
+  "expect": {
+    "operation_types": ["merge"],
+    "diagnosis_gap_types": ["form/reference"],
+    "resource_decisions": [
+      {"resource": "references", "decision": "use"},
+      {"resource": "evals", "decision": "use"}
+    ]
+  }
+}

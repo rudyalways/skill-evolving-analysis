@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "case_id": "golden-create-delivery-reference",
+  "stage": "goal",
+  "split": "calibration",
+  "review": {
+    "status": "pending",
+    "reviewer": null,
+    "notes": "Check that a durable reference index is the minimum sufficient operation."
+  },
+  "cluster": "golden-create-delivery-reference",
+  "sessions": [
+    {
+      "id": "golden-reference-a",
+      "turns": [
+        {
+          "user": "Check the delivery policy before the release.",
+          "assistant": "Read the delivery policy and applied it.",
+          "tools": [{"name": "exec", "arguments": "sed -n '1,220p' docs/operations/delivery.md"}]
+        }
+      ]
+    },
+    {
+      "id": "golden-reference-b",
+      "turns": [
+        {
+          "user": "Read the same delivery policy for this service.",
+          "assistant": "Read the delivery policy and applied it.",
+          "tools": [{"name": "exec", "arguments": "sed -n '1,220p' docs/operations/delivery.md"}]
+        }
+      ]
+    },
+    {
+      "id": "golden-reference-c",
+      "turns": [
+        {
+          "user": "Confirm the delivery policy again before publishing.",
+          "assistant": "Read the delivery policy and applied it.",
+          "tools": [{"name": "exec", "arguments": "sed -n '1,220p' docs/operations/delivery.md"}]
+        }
+      ]
+    }
+  ],
+  "golden": {
+    "reasoning": "The same long policy document was read across independent sessions and no skill owns a compact navigational index for it.",
+    "diagnosis": {
+      "decision": "change",
+      "gaps": [
+        {
+          "type": "form/reference",
+          "description": "A reusable delivery-policy index with a runtime freshness check is missing.",
+          "confidence": 0.95,
+          "reasoning": "Three independent sessions read the same source before release work.",
+          "evidence": ["repeated read of docs/operations/delivery.md across three sessions"]
+        }
+      ]
+    },
+    "action": {
+      "op": "create",
+      "skill": "delivery-policy-reference",
+      "description": "Consult a durable navigational index for docs/operations/delivery.md before release work.",
+      "sections": ["overview", "when_to_use", "workflow", "verification"],
+      "resources": ["references", "evals"]
+    }
+  },
+  "expect": {
+    "findings_any": ["resource-references-opportunity"],
+    "admitted": true,
+    "operation_types": ["create"],
+    "diagnosis_gap_types": ["form/reference"],
+    "resource_decisions": [
+      {"resource": "references", "decision": "use"},
+      {"resource": "evals", "decision": "use"}
+    ]
+  }
+}

@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "case_id": "golden-update-retry-guard",
+  "stage": "goal",
+  "split": "calibration",
+  "review": {
+    "status": "pending",
+    "reviewer": null,
+    "notes": "Review the diagnosis and targeted update before using this as a pass label."
+  },
+  "cluster": "golden-update-retry-guard",
+  "sessions": [
+    {
+      "id": "golden-update-retry",
+      "turns": [
+        {
+          "user": "Watch the deployment and report the terminal state.",
+          "assistant": "The deployment is still building."
+        },
+        {
+          "user": "Keep going; the same unchanged status is still being polled.",
+          "assistant": "The deployment is still building."
+        },
+        {
+          "user": "Continue until the terminal state and record the final result.",
+          "assistant": "The deployment reached SUCCESS."
+        }
+      ]
+    }
+  ],
+  "golden": {
+    "reasoning": "The retry owner exists, but it does not make timing-only deltas distinct from an unchanged observation, so the bounded watch can spend its budget on no-op sleeps.",
+    "diagnosis": {
+      "decision": "change",
+      "gaps": [
+        {
+          "type": "job/verification",
+          "description": "The bounded watch does not distinguish an unchanged deployment state from timing-only output changes.",
+          "confidence": 0.9,
+          "reasoning": "Repeated polling observed the same state while the agent waited for a terminal outcome.",
+          "evidence": [
+            "repeated unchanged deployment status before terminal SUCCESS"
+          ]
+        }
+      ]
+    },
+    "action": {
+      "op": "update",
+      "skill": "retry-guard",
+      "goal": "Require the observation comparison to ignore timing-only deltas and stop on an unchanged terminal state.",
+      "facet": "workflow",
+      "sections": [
+        "workflow",
+        "verification"
+      ],
+      "resources": [
+        "evals"
+      ]
+    }
+  },
+  "expect": {
+    "findings_any": [
+      "keep-going-loop"
+    ],
+    "admitted": true,
+    "operation_types": [
+      "update"
+    ],
+    "diagnosis_gap_types": [
+      "job/verification"
+    ],
+    "resource_decisions": [
+      {
+        "resource": "evals",
+        "decision": "use"
+      }
+    ]
+  }
+}

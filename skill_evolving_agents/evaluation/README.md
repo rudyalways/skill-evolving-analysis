@@ -85,3 +85,25 @@ add unseen cases before treating it as a generalization claim. The runner does
 not start the embedding service or a hosted agent: it measures the semantic
 decision policy with labeled scores and the deterministic boundaries that
 decide whether those paid stages should run.
+
+# Stage-addressable golden benchmark
+
+`benchmark_core.py` is the reusable stage runner. It separates:
+
+1. stage contract validation,
+2. targeted behavioral labels,
+3. golden diagnosis and action review,
+4. optional end-to-end composition.
+
+Cases live under `evaluation/cases/` and are addressed by `stage`, not by a
+fixed workflow position. Move or add workflow stages without rewriting the
+stage cases. Golden actions are compiled into valid Goal documents and checked
+against `common/pipeline_contracts.py`; invalid labels fail before review.
+
+Every case carries a review state. The default is `pending`; use
+`--require-reviewed` to make unapproved cases fail. The generated HTML dashboard
+shows pass/fail, review state, failure reasons, and each case's golden diagnosis
+and action.
+
+See `evaluation/cases/README.md` for the case schema, review workflow, and
+commands.

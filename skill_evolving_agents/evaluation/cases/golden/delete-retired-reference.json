@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "case_id": "golden-delete-retired-reference",
+  "stage": "goal",
+  "split": "heldout",
+  "review": {
+    "status": "pending",
+    "reviewer": null,
+    "notes": "Confirm post-creation non-use and content/label subsumption before deletion."
+  },
+  "cluster": "golden-delete-retired-reference",
+  "sessions": [
+    {
+      "id": "golden-delete",
+      "turns": [
+        {"user": "Use the current owner index.", "assistant": "Used the current owner index."}
+      ]
+    }
+  ],
+  "golden": {
+    "reasoning": "The retired reference has no post-creation recall and is fully subsumed by the current owner reference, so retaining it adds a duplicate activation surface.",
+    "diagnosis": {
+      "decision": "change",
+      "gaps": [
+        {
+          "type": "form/reference",
+          "description": "A retired reference duplicates the current owner reference.",
+          "confidence": 0.95,
+          "reasoning": "The current owner reference contains all of the retired skill's labels and content.",
+          "evidence": ["post-creation non-use with full content and label subsumption"]
+        }
+      ]
+    },
+    "action": {
+      "op": "delete",
+      "skill": "retired-owner-reference",
+      "reason": "Post-creation non-use and full subsumption by the current owner reference."
+    }
+  },
+  "expect": {
+    "operation_types": ["delete"],
+    "diagnosis_gap_types": ["form/reference"]
+  }
+}
