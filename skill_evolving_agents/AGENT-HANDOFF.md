@@ -54,10 +54,10 @@ clean worktree based on `origin/main` for isolated work and verification.
 The personal repository baseline is:
 
 ```text
-18de1d6 Make golden skills directory bundles
+5ab4ec2e Reach funnel targets by filtering detector false positives
 ```
 
-That commit passed all 232 tests in a clean worktree and the 23-case
+That commit passed all 234 tests in a clean worktree and the 23-case
 deterministic funnel benchmark at 23/23. It includes configurable funnel
 targets, single-session diagnosis controls, novel-versus-idempotent metrics,
 an action-oriented profile, inventory and release helpers, replay support,
@@ -92,7 +92,13 @@ privacy helpers, dashboard extensions, and:
   zero tool calls. Golden skills are directory bundles with `SKILL.md`,
   `skill.json`, frozen `evals/tasks.json`, environment notes, simulator
   personas, optional scripts/references, and a `--require-gold` validator. The
-  current report-publishing skill is synthetic and pending review.
+  current report-publishing skill is synthetic and pending review;
+- detector precision for the action funnel: deliberate `sleep`/`wait` calls are
+  excluded from retry-oscillation, and long completion-style texts are excluded
+  from repeated-instruction detection. An action-oriented 74-turn run against a
+  13-skill inventory met all six funnel targets: 4 selected, 4 diagnosed,
+  2 changed, 2 accepted, action/proposal rates 0.5, proposal acceptance 1.0.
+  The run took 224s with 10 agent calls.
 
 Four fresh/replay trace runs after these changes used 37 DSH calls and 7.75M
 tokens versus 53 calls and 10.87M tokens before (28.7% fewer tokens, about 32%
