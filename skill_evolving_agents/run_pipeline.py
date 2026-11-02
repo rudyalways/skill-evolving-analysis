@@ -5043,6 +5043,27 @@ def _goal_scope(
             recall_selection = (
                 ACTIVE_EXECUTION_CONFIG.get("phases", {}).get("recall", {})
             )
+            reflection_context: list[dict[str, object]] = []
+            reflection_path = (
+                private / "traces/derived/signals/reflection-bank.jsonl"
+            )
+            if reflection_path.is_file():
+                finding_session = str(finding_data.get("session_id") or "")
+                finding_id = str(finding_data.get("signal_id") or "")
+                for line in reflection_path.read_text().splitlines():
+                    try:
+                        entry = json.loads(line)
+                    except ValueError:
+                        continue
+                    if not isinstance(entry, dict):
+                        continue
+                    if entry.get("status") != "validated":
+                        continue
+                    if (
+                        entry.get("session_id") == finding_session
+                        or entry.get("finding_id") == finding_id
+                    ):
+                        reflection_context.append(entry)
             if recall_selection.get("kind") == "embedding-service":
                 embedding_config = {
                     **recall_selection,
@@ -5081,25 +5102,6 @@ def _goal_scope(
                     taxonomy_path
                 )
                 recall_config = recall_skills_mod.load_config(recall_config_path)
-                reflection_context: list[dict[str, object]] = []
-                reflection_path = (
-                    private / "traces/derived/signals/reflection-bank.jsonl"
-                )
-                if reflection_path.is_file():
-                    finding_session = str(finding_data.get("session_id") or "")
-                    finding_id = str(finding_data.get("signal_id") or "")
-                    for line in reflection_path.read_text().splitlines():
-                        try:
-                            entry = json.loads(line)
-                        except ValueError:
-                            continue
-                        if not isinstance(entry, dict):
-                            continue
-                        if (
-                            entry.get("session_id") == finding_session
-                            or entry.get("finding_id") == finding_id
-                        ):
-                            reflection_context.append(entry)
                 matching_data = recall_skills_mod.recall(
                     diagnosis,
                     metadata,

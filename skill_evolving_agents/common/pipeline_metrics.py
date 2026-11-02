@@ -846,6 +846,17 @@ def collect_phase_metrics(
         isinstance(operation, dict) and operation.get("accepted") is True
         for operation in operations
     )
+    proposal_scopes = sum(
+        isinstance(scope, dict)
+        and int(scope.get("operation_count") or 0) > 0
+        for scope in scopes
+    )
+    accepted_scopes = sum(
+        isinstance(scope, dict)
+        and scope.get("disposition") != "no_change"
+        and int(scope.get("operation_count") or 0) > 0
+        for scope in scopes
+    )
     resource_decisions = _read_jsonl(
         signal_root / "resource-opportunity-decisions.jsonl"
     )
@@ -904,20 +915,20 @@ def collect_phase_metrics(
         "action_scope_rate": _rate(changed_scopes, selected),
         "action_given_goal_rate": _rate(changed_scopes, len(scopes)),
         "novel_action_scope_rate": _rate(changed_scopes, novel_goal_scopes),
-        "proposal_rate": _rate(len(operations), selected),
-        "proposal_given_goal_rate": _rate(len(operations), len(scopes)),
-        "novel_proposal_rate": _rate(len(operations), novel_goal_scopes),
-        "final_acceptance_rate": _rate(accepted, selected),
-        "acceptance_given_goal_rate": _rate(accepted, len(scopes)),
-        "novel_final_acceptance_rate": _rate(accepted, novel_goal_scopes),
+        "proposal_rate": _rate(proposal_scopes, selected),
+        "proposal_given_goal_rate": _rate(proposal_scopes, len(scopes)),
+        "novel_proposal_rate": _rate(proposal_scopes, novel_goal_scopes),
+        "final_acceptance_rate": _rate(accepted_scopes, selected),
+        "acceptance_given_goal_rate": _rate(accepted_scopes, len(scopes)),
+        "novel_final_acceptance_rate": _rate(accepted_scopes, novel_goal_scopes),
         "actionable_action_scope_rate": _rate(
             changed_scopes, len(actionable_diagnoses)
         ),
         "actionable_proposal_rate": _rate(
-            len(operations), len(actionable_diagnoses)
+            proposal_scopes, len(actionable_diagnoses)
         ),
         "actionable_final_acceptance_rate": _rate(
-            accepted, len(actionable_diagnoses)
+            accepted_scopes, len(actionable_diagnoses)
         ),
         "diagnosis_no_gap_scopes": diagnosis_no_gap_scopes,
         "proposal_acceptance_rate": _rate(accepted, len(operations)),

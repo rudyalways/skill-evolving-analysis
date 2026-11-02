@@ -32,6 +32,7 @@ skills that appear as:
 | `user_correction` | correction-heavy turns | behavior change + verification | user frustration only |
 | `repeated_instruction` | repeated user asks | short instruction-like texts + changed behavior | long completion reports |
 | `unresolved_loop` | keep-going/retry | loop + eventual terminal state | deliberate sleep/wait |
+| `negative_drift` | repeated negative outcomes | explicit negative evidence | one-off failure |
 | `no_change` | no gap / already applied | diagnosis/evidence proof | forced edit |
 
 ## Reflection bank
@@ -74,8 +75,9 @@ Cues are extracted from:
 
 Cue text alone is not a finding. The functional-reflection detector requires a
 changed action and a later successful check. Observed cues are restricted to
-reasoning-pivot categories (`reconsider`, `error_awareness`, `uncertainty`,
-`pivot`); generic verbs such as “verify access” are not reflection cues.
+reasoning-pivot categories (`reconsider`, `error_awareness`); generic verbs
+such as “verify access” and prose pivots such as “instead” in final summaries
+are not reflection cues.
 
 ## Reasoning bank
 
@@ -117,8 +119,9 @@ Recall queries include:
 - evidence quotes.
 
 Documents are section-aware: head plus a sample of every `##` section. Lexical
-matches are merged with embedding matches. Reflection-bank entries matching the
-finding/session are added to the query context. Matching records
+matches are merged with embedding matches. Reflection-bank entries with
+`status: validated` matching the finding/session are added to the query context;
+observed cues stay in the bank for analysis but are not retrieved as experience. Matching records
 `query_context`, `reflection_context_entries`, `document_strategy`,
 `truncated_documents`, and `hybrid_lexical`.
 

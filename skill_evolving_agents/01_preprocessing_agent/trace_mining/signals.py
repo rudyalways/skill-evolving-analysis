@@ -903,6 +903,7 @@ SCENARIOS = {
     "keep-going-loop": "unresolved_loop",
     "method-retry-oscillation": "retry_oscillation",
     "cut-unresolved_repeat": "unresolved_loop",
+    "negative-drift": "negative_drift",
     "resource-references-opportunity": "reference_reuse",
     "resource-assets-opportunity": "asset_reuse",
 }
@@ -955,7 +956,7 @@ def reflection_candidates(turns: list[dict[str, Any]]) -> list[dict[str, Any]]:
         # verification or diagnosis verbs ("verify access").
         markers = [
             name for name, pattern in patterns.items()
-            if name in {"reconsider", "error_awareness", "uncertainty", "pivot"}
+            if name in {"reconsider", "error_awareness"}
             and pattern.search(text)
         ]
         if not markers:
