@@ -1,0 +1,2 @@
+# The core pipeline and its test suite intentionally use only Python's standard library.
+# Optional embedding-service dependencies are locked separately.

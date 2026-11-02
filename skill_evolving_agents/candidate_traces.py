@@ -194,6 +194,7 @@ def create_run(
     if str(script_dir) not in sys.path:
         sys.path.insert(0, str(script_dir))
     import run_pipeline
+    from common import inventory_store
 
     workspace = runs / run_id
     if replace and workspace.is_dir():
@@ -216,7 +217,9 @@ def create_run(
                     dirs_exist_ok=True,
                 )
     else:
-        skills_pool = candidate_skills or pool.parent / CANDIDATE_SKILLS.name
+        inventory_root = pool.parent
+        active_inventory = inventory_store.resolve(inventory_root)
+        skills_pool = candidate_skills or active_inventory / CANDIDATE_SKILLS.name
         copied_skills: list[str] = []
         invalid_candidate_skills: list[dict[str, object]] = []
         if skills_pool.is_dir():
