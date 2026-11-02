@@ -686,7 +686,20 @@ def collect_phase_metrics(
     hybrid_lexical_scopes = 0
     truncated_document_scopes = 0
     lexical_only_candidates = 0
+    applicable_recall_scopes = 0
+    applicable_recall_candidates = 0
+    no_gap_recall_scopes = 0
+    missed_applicable_scopes: list[str] = []
     for path in matching_files:
+        diagnosis = _read_json(path.parent / "diagnosis.json")
+        has_gap = isinstance(diagnosis, dict) and bool(
+            (diagnosis.get("skill_capabilities_missing") or [])
+            or (diagnosis.get("newly_detected_skill_capabilites_missing") or [])
+        )
+        if has_gap:
+            applicable_recall_scopes += 1
+        else:
+            no_gap_recall_scopes += 1
         document = _read_json(path)
         matching_meta = (
             document.get("matching") if isinstance(document, dict) else {}
@@ -720,6 +733,11 @@ def collect_phase_metrics(
             if numeric:
                 top_scores.append(max(numeric))
         matched_scopes += scope_has_match
+        if has_gap:
+            if scope_has_match:
+                applicable_recall_candidates += 1
+            else:
+                missed_applicable_scopes.append(path.parent.name)
 
     pipeline_summary = _read_json(workspace / "run/pipeline-summary.json")
     scopes = (
@@ -1031,9 +1049,10 @@ def collect_phase_metrics(
         warnings.append("all verification outcomes are structural; no replay was available")
     if isinstance(reduction, dict) and float(reduction.get("min_super_score") or 0) == 0:
         warnings.append("min_super_score is zero, so the edit quality gate is inactive")
-    if matching_files and matched_scopes < len(matching_files):
+    if applicable_recall_scopes and applicable_recall_candidates < applicable_recall_scopes:
         warnings.append(
-            f"{len(matching_files) - matched_scopes}/{len(matching_files)} scopes had no recalled skill"
+            f"{applicable_recall_scopes - applicable_recall_candidates}/"
+            f"{applicable_recall_scopes} actionable scopes had no recalled skill"
         )
     missed_targets = [
         name
@@ -1116,6 +1135,13 @@ def collect_phase_metrics(
                 "scopes": len(matching_files),
                 "scopes_with_candidates": matched_scopes,
                 "candidate_coverage": _rate(matched_scopes, len(matching_files)),
+                "applicable_scopes": applicable_recall_scopes,
+                "applicable_scopes_with_candidates": applicable_recall_candidates,
+                "applicable_candidate_coverage": _rate(
+                    applicable_recall_candidates, applicable_recall_scopes
+                ),
+                "no_gap_scopes": no_gap_recall_scopes,
+                "missed_applicable_scopes": sorted(missed_applicable_scopes),
                 "query_context": dict(sorted(query_context_counts.items())),
                 "hybrid_lexical_scopes": hybrid_lexical_scopes,
                 "truncated_document_scopes": truncated_document_scopes,
@@ -1343,6 +1369,15 @@ def aggregate_phase_metrics(runs_root: Path) -> dict[str, Any]:
                 "scopes": recall_scopes,
                 "scopes_with_candidates": recall_candidates,
                 "candidate_coverage": _rate(recall_candidates, recall_scopes),
+                "applicable_scopes": total("recall", "applicable_scopes"),
+                "applicable_scopes_with_candidates": total(
+                    "recall", "applicable_scopes_with_candidates"
+                ),
+                "applicable_candidate_coverage": _rate(
+                    total("recall", "applicable_scopes_with_candidates"),
+                    total("recall", "applicable_scopes"),
+                ),
+                "no_gap_scopes": total("recall", "no_gap_scopes"),
                 "query_context": mapping_total("recall", "query_context"),
                 "hybrid_lexical_scopes": total("recall", "hybrid_lexical_scopes"),
                 "truncated_document_scopes": total(
