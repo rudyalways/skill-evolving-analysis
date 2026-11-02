@@ -54,10 +54,10 @@ clean worktree based on `origin/main` for isolated work and verification.
 The personal repository baseline is:
 
 ```text
-5cfefabb Add trace scenarios, reflection bank, and reasoning bank
+a5102fba Use reflection bank in recall
 ```
 
-That commit passed all 255 tests in a clean worktree and the 23-case
+That commit passed all 258 tests in a clean worktree and the 23-case
 deterministic funnel benchmark at 23/23. It includes configurable funnel
 targets, single-session diagnosis controls, novel-versus-idempotent metrics,
 an action-oriented profile, inventory and release helpers, replay support,
@@ -137,7 +137,10 @@ privacy helpers, dashboard extensions, and:
   reflection still requires an action change plus successful verification.
   Scenarios cover failure recovery, reasoning pivot, correction, unresolved
   loop, verified workflow, reference/asset reuse, completion contract, critical
-  path, and no-change cases.
+  path, and no-change cases;
+- reflection recall: observed reasoning cues are stored as unvalidated entries,
+  restricted to reasoning-pivot categories, and session-matched entries are
+  added to recall queries. Matching records `reflection_context_entries`.
 
 Four fresh/replay trace runs after these changes used 37 DSH calls and 7.75M
 tokens versus 53 calls and 10.87M tokens before (28.7% fewer tokens, about 32%
