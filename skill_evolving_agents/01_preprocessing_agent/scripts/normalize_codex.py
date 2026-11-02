@@ -718,6 +718,16 @@ def normalize(
             "outcome": {
                 "status": turn["status"],
                 "error": candidate["error"],
+                **(
+                    {
+                        "external_evaluation": turn["external_evaluation"],
+                        "external_evaluation_source": turn.get(
+                            "external_evaluation_source"
+                        ),
+                    }
+                    if "external_evaluation" in turn
+                    else {}
+                ),
             },
             "tool_summary": {
                 "count": len(turn["tools"]),

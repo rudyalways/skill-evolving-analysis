@@ -333,6 +333,60 @@ def _observation_excerpt(observation: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _outcome_provenance(trajectory: dict[str, Any]) -> dict[str, Any]:
+    """Separate session completion, tool execution, local checks, and external task evaluation."""
+    outcome = trajectory.get("outcome") or {}
+    events = trajectory.get("events") or []
+    status = str(outcome.get("status") or "unknown")
+    verify_events = [
+        event for event in events
+        if str(event.get("phase") or "").casefold() in {"verify", "test", "check"}
+    ]
+    if verify_events:
+        local = (
+            "passed"
+            if verify_events[-1].get("status") == "completed"
+            else "failed"
+        )
+    else:
+        local = "unknown"
+    raw_external = outcome.get("external_evaluation")
+    if isinstance(raw_external, dict):
+        external = str(raw_external.get("status") or "unknown")
+        external_source = raw_external.get("source")
+    elif raw_external is None:
+        external = "unknown"
+        external_source = None
+    else:
+        external = str(raw_external)
+        external_source = outcome.get("external_evaluation_source")
+    tools = [event for event in events if event.get("status") in {"completed", "failed"}]
+    if any(event.get("status") == "failed" for event in tools):
+        tool_execution = "failed"
+    elif tools:
+        tool_execution = "completed"
+    else:
+        tool_execution = "unknown"
+    if local == "passed":
+        success_basis = "local_verification"
+    elif status == "completed":
+        success_basis = "session_completion_only"
+    else:
+        success_basis = "unknown"
+    return {
+        "session_status": status,
+        "session_completed": status == "completed",
+        "tool_execution": tool_execution,
+        "local_verification": local,
+        "external_evaluation": external,
+        "external_evaluation_source": external_source,
+        "task_accepted": (
+            external == "passed" if external in {"passed", "failed"} else None
+        ),
+        "success_basis": success_basis,
+    }
+
+
 def _finding(
     detector: str,
     trajectory: dict[str, Any],
@@ -387,6 +441,7 @@ def _finding(
             "event_count": len(events),
             "quality": quality,
             "lesson": lesson,
+            "provenance": _outcome_provenance(trajectory),
             "distinct_windows": 1,
             "occurrence_count": 1,
         },
@@ -445,31 +500,54 @@ def _phase_workflow(
 def _failure_recovery(
     trajectory: dict[str, Any], turn_path: str
 ) -> list[dict[str, Any]]:
+    """Extract bounded failure -> related repair -> revalidation chains.
+
+    A completed patch or import is not recovery. Recovery requires a related
+    repair and a later revalidation of the failed action or a verification
+    event. Multiple independent failure chains are retained.
+    """
     events = trajectory["events"]
+    findings: list[dict[str, Any]] = []
+    used_sequences: set[int] = set()
+    max_window = 16
+    max_chain = 6
     for index, failed in enumerate(events):
-        if failed["status"] != "failed":
+        if failed.get("status") != "failed":
+            continue
+        failed_sequence = int(failed.get("sequence") or 0)
+        if failed_sequence in used_sequences:
             continue
         failed_action = _normalized_action(failed)
-        recovered = next(
-            (
-                event
-                for event in events[index + 1 :]
-                if event["status"] == "completed"
-                and _normalized_action(event) != failed_action
-            ),
-            None,
-        )
-        if recovered is None:
+        repairs: list[dict[str, Any]] = []
+        revalidation: dict[str, Any] | None = None
+        for event in events[index + 1 : index + max_window + 1]:
+            if event.get("status") != "completed":
+                continue
+            if _is_revalidation(failed, event):
+                if repairs:
+                    revalidation = event
+                    break
+                # A same-action success without a repair is a retry, not a
+                # failure-recovery lesson.
+                continue
+            if _normalized_action(event) != failed_action:
+                repairs.append(event)
+        if revalidation is None:
             continue
-        evidence = [failed, recovered]
+        evidence = [failed, *repairs, revalidation]
+        if len(evidence) > max_chain:
+            evidence = [failed, *repairs[-(max_chain - 2):], revalidation]
+        sequences = {int(event.get("sequence") or 0) for event in evidence}
+        if sequences & used_sequences:
+            continue
         quality = _quality(
             evidence,
-            success_dependency=0.95,
-            surprise=0.9,
+            success_dependency=min(0.95, 0.55 + 0.08 * len(repairs)),
+            surprise=min(0.92, 0.62 + 0.05 * len(repairs)),
             reusability=0.85,
-            evidence_quality=0.95,
+            evidence_quality=min(0.95, 0.6 + 0.08 * len(repairs)),
         )
-        return [
+        findings.append(
             _finding(
                 "method-failure-recovery",
                 trajectory,
@@ -480,12 +558,40 @@ def _failure_recovery(
                 {
                     "kind": "failure_recovery",
                     "failed_action": failed_action,
-                    "recovery_action": _normalized_action(recovered),
-                    "rule": "After this failure signature, change the action rather than retrying unchanged.",
+                    "repair_actions": [_normalized_action(event) for event in repairs],
+                    "revalidation_action": _normalized_action(revalidation),
+                    "verified_recovery": True,
+                    "chain_length": len(evidence),
+                    "rule": (
+                        "After this failure signature, apply the related repair and "
+                        "revalidate the original action; patch application alone is "
+                        "not recovery."
+                    ),
                 },
             )
-        ]
-    return []
+        )
+        used_sequences.update(sequences)
+        if len(findings) >= 4:
+            break
+    return findings
+
+
+def _is_revalidation(failed: dict[str, Any], event: dict[str, Any]) -> bool:
+    if event.get("status") != "completed":
+        return False
+    if _normalized_action(event) == _normalized_action(failed):
+        return True
+    phase = str(event.get("phase") or "").casefold()
+    tool = str(event.get("tool") or "").casefold()
+    if phase in {"verify", "test", "check"}:
+        return True
+    if tool in {"pytest", "test", "check", "verify"}:
+        return True
+    if tool == str(failed.get("tool") or "").casefold():
+        return _text_similarity(
+            event.get("arguments_preview"), failed.get("arguments_preview")
+        ) >= 0.5
+    return False
 
 
 def _retry_oscillation(

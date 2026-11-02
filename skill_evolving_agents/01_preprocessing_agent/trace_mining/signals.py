@@ -615,6 +615,29 @@ def _reference_is_directory(source: str) -> bool:
     return bool(source) and "." not in basename
 
 
+def _same_learning_target(
+    left: dict[str, Any], right: dict[str, Any]
+) -> bool:
+    """Containment is not enough: compare the lesson target and failure signature."""
+    left_kind = str(left.get("kind") or left.get("lesson", {}).get("kind") or "")
+    right_kind = str(right.get("kind") or right.get("lesson", {}).get("kind") or "")
+    if left_kind != right_kind:
+        return False
+    left_failure = str(
+        left.get("failure_signature")
+        or left.get("lesson", {}).get("failed_action")
+        or ""
+    )
+    right_failure = str(
+        right.get("failure_signature")
+        or right.get("lesson", {}).get("failed_action")
+        or ""
+    )
+    if left_failure and right_failure:
+        return left_failure == right_failure
+    return True
+
+
 def _select_findings(
     findings: list[dict[str, Any]], detector_config: dict[str, Any]
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
@@ -697,6 +720,9 @@ def _select_findings(
                 kept
                 for kept in deduplicated
                 if row["session_id"] == kept["session_id"]
+                and _same_learning_target(
+                    row_features, kept.get("features") or {}
+                )
                 and (
                     (
                         row_events
@@ -747,6 +773,7 @@ def _select_findings(
                     "disposition": "deduplicated",
                     "reason": "overlapping-evidence",
                     "selected_representative": duplicate["signal_id"],
+                    "same_learning_target": True,
                 }
             )
             continue

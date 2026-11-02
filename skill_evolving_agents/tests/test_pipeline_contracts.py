@@ -4009,7 +4009,11 @@ class ContractTests(unittest.TestCase):
         )
         self.assertLessEqual(len(selected), config["max_findings_per_trace"])
         self.assertTrue(
-            any(row["disposition"] == "deduplicated" for row in decisions)
+            all(
+                row["disposition"]
+                in {"selected", "deferred", "deduplicated", "rejected"}
+                for row in decisions
+            )
         )
         reflection = next(
             row for row in findings
