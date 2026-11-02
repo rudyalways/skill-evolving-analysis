@@ -54,10 +54,10 @@ clean worktree based on `origin/main` for isolated work and verification.
 The personal repository baseline is:
 
 ```text
-940a3f53 Separate actionable recall coverage from no-gap scopes
+5cfefabb Add trace scenarios, reflection bank, and reasoning bank
 ```
 
-That commit passed all 248 tests in a clean worktree and the 23-case
+That commit passed all 255 tests in a clean worktree and the 23-case
 deterministic funnel benchmark at 23/23. It includes configurable funnel
 targets, single-session diagnosis controls, novel-versus-idempotent metrics,
 an action-oriented profile, inventory and release helpers, replay support,
@@ -130,7 +130,14 @@ privacy helpers, dashboard extensions, and:
 - recall coverage split: raw scope coverage remains visible, while applicable
   coverage counts only scopes with a diagnosed gap. Warnings are emitted only
   for missed applicable scopes. On the 74-turn target and 32-turn geo runs the
-  raw coverage is 0.6 but applicable coverage is 1.0 with no missed scopes.
+  raw coverage is 0.6 but applicable coverage is 1.0 with no missed scopes;
+- trace scenarios and banks: preprocessing records `scenario-coverage.json`,
+  `reflection-bank.jsonl`, and `reasoning-bank.jsonl`. Reflection cues are
+  limited to assistant reasoning text (not tool output), and functional
+  reflection still requires an action change plus successful verification.
+  Scenarios cover failure recovery, reasoning pivot, correction, unresolved
+  loop, verified workflow, reference/asset reuse, completion contract, critical
+  path, and no-change cases.
 
 Four fresh/replay trace runs after these changes used 37 DSH calls and 7.75M
 tokens versus 53 calls and 10.87M tokens before (28.7% fewer tokens, about 32%
