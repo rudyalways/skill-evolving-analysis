@@ -148,6 +148,44 @@ class FailureRecoveryIssueTest(unittest.TestCase):
         self.assertEqual([row["signal_id"] for row in selected], ["sig-a"])
         self.assertTrue(any(row["disposition"] == "deduplicated" for row in decisions))
 
+    def test_larger_same_target_candidate_replaces_smaller(self) -> None:
+        config = json.loads((AGENTS / "common/preprocessing-config.json").read_text())
+        detector_config = config["signals"]
+        detector_config["_methodology"] = config["methodology"]
+        common = {
+            "detector": "method-failure-recovery",
+            "severity": "high",
+            "confidence": 0.9,
+            "routing": "skill_evolution",
+            "session_id": "session-a",
+            "trace_ids": ["codex:session-a:turn-a"],
+            "evidence": [{"trace_id": "codex:session-a:turn-a"}],
+            "features": {
+                "candidate_source": "methodology",
+                "kind": "failure_recovery",
+                "method_fingerprint": "same",
+                "quality": {"value": 0.5},
+            },
+        }
+        small = {
+            **common,
+            "signal_id": "sig-a",
+            "features": {**common["features"], "event_sequences": [1, 2]},
+        }
+        large = {
+            **common,
+            "signal_id": "sig-b",
+            "features": {**common["features"], "event_sequences": [1, 2, 3, 4]},
+        }
+        selected, decisions = signals._select_findings(
+            [small, large], detector_config
+        )
+        self.assertEqual([row["signal_id"] for row in selected], ["sig-b"])
+        superseded = next(
+            row for row in decisions if row["finding_id"] == "sig-a"
+        )
+        self.assertEqual(superseded["reason"], "superseded-by-larger-evidence")
+
     def test_different_learning_targets_are_not_deduplicated(self) -> None:
         config = json.loads((AGENTS / "common/preprocessing-config.json").read_text())
         detector_config = config["signals"]

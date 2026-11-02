@@ -711,68 +711,84 @@ def _select_findings(
         config.get("deduplicate_overlap_threshold", 0.8)
     )
     deduplicated: list[dict[str, Any]] = []
-    for row in sorted(eligible, key=_rank_key):
+
+    def is_duplicate(
+        row: dict[str, Any],
+        row_features: dict[str, Any],
+        kept: dict[str, Any],
+    ) -> bool:
+        if row["session_id"] != kept["session_id"]:
+            return False
+        if not _same_learning_target(
+            row_features, kept.get("features") or {}
+        ):
+            return False
+        if (
+            row_features.get("candidate_source") == "resource_opportunity"
+            or (kept.get("features") or {}).get("candidate_source")
+            == "resource_opportunity"
+        ):
+            return False
         trace_ids = set(row["trace_ids"])
+        row_events = set(row_features.get("event_sequences") or [])
+        kept_features = kept.get("features") or {}
+        kept_events = set(kept_features.get("event_sequences") or [])
+        if row_features.get("candidate_source") in {
+            "methodology",
+            "methodology_consolidated",
+        }:
+            if not row_events or not kept_events:
+                return False
+            return (
+                len(row_events & kept_events)
+                / min(len(row_events), len(kept_events))
+                >= float(
+                    methodology_config.get(
+                        "event_overlap_threshold", overlap_threshold
+                    )
+                )
+            )
+        return (
+            len(trace_ids & set(kept["trace_ids"]))
+            / min(len(trace_ids), len(kept["trace_ids"]))
+            >= overlap_threshold
+        )
+
+    for row in sorted(eligible, key=_rank_key):
         row_features = row.get("features") or {}
         row_events = set(row_features.get("event_sequences") or [])
         duplicate = next(
             (
-                kept
-                for kept in deduplicated
-                if row["session_id"] == kept["session_id"]
-                and _same_learning_target(
-                    row_features, kept.get("features") or {}
-                )
-                and (
-                    (
-                        row_events
-                        and set((kept.get("features") or {}).get("event_sequences") or [])
-                        and len(
-                            row_events
-                            & set(
-                                (kept.get("features") or {}).get(
-                                    "event_sequences"
-                                )
-                                or []
-                            )
-                        )
-                        / min(
-                            len(row_events),
-                            len(
-                                set(
-                                    (kept.get("features") or {}).get(
-                                        "event_sequences"
-                                    )
-                                    or []
-                                )
-                            ),
-                        )
-                        >= float(
-                            methodology_config.get(
-                                "event_overlap_threshold", overlap_threshold
-                            )
-                        )
-                    )
-                    if row_features.get("candidate_source")
-                    in {"methodology", "methodology_consolidated"}
-                    else len(trace_ids & set(kept["trace_ids"]))
-                    / min(len(trace_ids), len(kept["trace_ids"]))
-                    >= overlap_threshold
-                )
-                and not (
-                    row_features.get("candidate_source") == "resource_opportunity"
-                    or (kept.get("features") or {}).get("candidate_source")
-                    == "resource_opportunity"
-                )
+                (index, kept)
+                for index, kept in enumerate(deduplicated)
+                if is_duplicate(row, row_features, kept)
             ),
             None,
         )
         if duplicate is not None:
+            index, kept = duplicate
+            kept_events = set(
+                (kept.get("features") or {}).get("event_sequences") or []
+            )
+            # Same learning target, but the new candidate contains strictly
+            # more evidence. Keep the larger representative rather than
+            # silently deleting the new information.
+            if row_events and kept_events and row_events > kept_events:
+                decisions[kept["signal_id"]].update(
+                    {
+                        "disposition": "deduplicated",
+                        "reason": "superseded-by-larger-evidence",
+                        "selected_representative": row["signal_id"],
+                        "same_learning_target": True,
+                    }
+                )
+                deduplicated[index] = row
+                continue
             decisions[row["signal_id"]].update(
                 {
                     "disposition": "deduplicated",
                     "reason": "overlapping-evidence",
-                    "selected_representative": duplicate["signal_id"],
+                    "selected_representative": kept["signal_id"],
                     "same_learning_target": True,
                 }
             )
