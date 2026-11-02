@@ -625,11 +625,13 @@ def _same_learning_target(
         return False
     left_failure = str(
         left.get("failure_signature")
+        or left.get("lesson", {}).get("failure_signature")
         or left.get("lesson", {}).get("failed_action")
         or ""
     )
     right_failure = str(
         right.get("failure_signature")
+        or right.get("lesson", {}).get("failure_signature")
         or right.get("lesson", {}).get("failed_action")
         or ""
     )

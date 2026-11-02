@@ -15,6 +15,7 @@ class FakeEmbeddingProvider:
 
     def search(self, queries, documents, top_k):
         self.queries = list(queries)
+        self.documents = dict(documents)
         return {
             "results": [{"matches": []} for _ in queries],
             "model_revision": "fake",
@@ -80,6 +81,40 @@ class RecallImprovementTest(unittest.TestCase):
                     if row["skill"] == "chart-helper"
                 )["retrieval"],
                 "lexical",
+            )
+
+    def test_section_aware_document_keeps_late_sections(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "skills"
+            skill = root / "long-skill"
+            skill.mkdir(parents=True)
+            (skill / "SKILL.md").write_text(
+                "x" * 1500
+                + "\n## Chart compatibility\n"
+                + "Use c:tx/c:rich and showVal for nested category labels.\n"
+            )
+            provider = FakeEmbeddingProvider()
+            with patch.object(runner, "ACTIVE_EMBEDDING_PROVIDER", provider):
+                result = runner.embedding_recall(
+                    {"skill_capabilities_missing": []},
+                    {"skills_metadata": [{"skill": "long-skill"}]},
+                    ["long-skill"],
+                    {
+                        "skills_root": str(root),
+                        "document_max_chars": 800,
+                        "top_k": 5,
+                        "minimum_score": 0.3,
+                        "algorithm": "test",
+                    },
+                    None,
+                )
+            self.assertIn(
+                "Chart compatibility",
+                provider.documents["long-skill"],
+            )
+            self.assertEqual(
+                result["matching"]["document_strategy"],
+                "head+section-samples",
             )
 
     def test_truncated_documents_are_reported(self) -> None:

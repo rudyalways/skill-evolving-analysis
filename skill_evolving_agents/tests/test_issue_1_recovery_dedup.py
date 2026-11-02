@@ -26,7 +26,14 @@ assert signals_spec.loader is not None
 signals_spec.loader.exec_module(signals)
 
 
-def event(sequence: int, status: str, phase: str, tool: str, arguments: str):
+def event(
+    sequence: int,
+    status: str,
+    phase: str,
+    tool: str,
+    arguments: str,
+    target: str = "script.py",
+):
     return {
         "sequence": sequence,
         "status": status,
@@ -34,7 +41,7 @@ def event(sequence: int, status: str, phase: str, tool: str, arguments: str):
         "tool": tool,
         "arguments_preview": arguments,
         "result_preview": "failed" if status == "failed" else "ok",
-        "targets": ["script.py"],
+        "targets": [target],
     }
 
 
@@ -103,6 +110,21 @@ class FailureRecoveryIssueTest(unittest.TestCase):
         self.assertEqual(
             provenance["external_evaluation_source"], "officeval"
         )
+
+    def test_unrelated_repair_is_not_part_of_the_chain(self) -> None:
+        rows = [
+            event(1, "failed", "execute", "exec", "run chart.py", "chart.py"),
+            event(2, "completed", "modify", "edit", "fix unrelated.py", "unrelated.py"),
+            event(3, "completed", "modify", "edit", "fix chart.py", "chart.py"),
+            event(4, "completed", "verify", "exec", "run chart.py", "chart.py"),
+        ]
+        findings = methodology._failure_recovery(trajectory(rows), "turn")
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(
+            findings[0]["features"]["event_sequences"], [1, 3, 4]
+        )
+        self.assertTrue(findings[0]["features"]["lesson"]["failure_signature"])
+        self.assertTrue(findings[0]["features"]["lesson"]["verification_signature"])
 
     def test_multiple_independent_failure_chains_are_kept(self) -> None:
         rows = [

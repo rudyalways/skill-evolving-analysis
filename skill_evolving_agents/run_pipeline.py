@@ -966,6 +966,38 @@ def recalled_skill_evidence(
     }
 
 
+def _bounded_skill_document(
+    text: str, metadata: dict[str, object], max_chars: int
+) -> str:
+    """Keep the head and a sample of every section, not only the first page."""
+    metadata_text = json.dumps(metadata, ensure_ascii=False, sort_keys=True)
+    if len(text) <= max_chars:
+        return text + "\n" + metadata_text
+    parts = [
+        part for part in re.split(r"(?m)(?=^## )", text)
+        if part.strip()
+    ]
+    if not parts:
+        return text[:max_chars] + "\n" + metadata_text
+    share = max(160, max_chars // max(1, len(parts)))
+    selected: list[str] = []
+    used = 0
+    for part in parts:
+        snippet = part[:share].rstrip()
+        if not snippet:
+            continue
+        if used + len(snippet) > max_chars:
+            remaining = max_chars - used
+            if remaining <= 0:
+                break
+            snippet = snippet[:remaining]
+        selected.append(snippet)
+        used += len(snippet)
+        if used >= max_chars:
+            break
+    return "\n".join(selected) + "\n" + metadata_text
+
+
 def _recall_finding_context(finding: dict[str, object] | None) -> str:
     """Build recall context from the finding, not only the diagnosis labels."""
     if not isinstance(finding, dict):
@@ -1025,8 +1057,10 @@ def embedding_recall(
         text = path.read_text() if path.is_file() else ""
         if len(text) > document_max_chars:
             truncated_documents.append(name)
-        documents[name] = text[:document_max_chars] + "\n" + json.dumps(
-            metadata_by_name.get(name, {}), ensure_ascii=False, sort_keys=True
+        documents[name] = _bounded_skill_document(
+            text,
+            metadata_by_name.get(name, {}),
+            document_max_chars,
         )
     context = _recall_finding_context(finding)
     names = sorted(queries_by_cluster) or ["cut"]
@@ -1098,6 +1132,7 @@ def embedding_recall(
         "matching": {
             "strategy": str(config["algorithm"]),
             "query_context": "diagnosis+finding" if context else "diagnosis",
+            "document_strategy": "head+section-samples",
             "truncated_documents": truncated_documents,
             "hybrid_lexical": bool(finding),
             "config_version": 1,

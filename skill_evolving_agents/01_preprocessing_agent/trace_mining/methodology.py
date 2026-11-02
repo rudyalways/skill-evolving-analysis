@@ -497,6 +497,22 @@ def _phase_workflow(
     ]
 
 
+def _failure_signature(value: str) -> str:
+    return hashlib.sha256(value.encode()).hexdigest()[:24]
+
+
+def _repair_related(
+    failed: dict[str, Any], event: dict[str, Any]
+) -> bool:
+    """Prefer repairs that touch the failed target or a modification phase."""
+    failed_targets = {str(value) for value in failed.get("targets") or [] if value}
+    event_targets = {str(value) for value in event.get("targets") or [] if value}
+    if failed_targets and event_targets and not (failed_targets & event_targets):
+        return False
+    phase = str(event.get("phase") or "").casefold()
+    return phase in {"modify", "execute", "inspect"} or not phase
+
+
 def _failure_recovery(
     trajectory: dict[str, Any], turn_path: str
 ) -> list[dict[str, Any]]:
@@ -530,7 +546,10 @@ def _failure_recovery(
                 # A same-action success without a repair is a retry, not a
                 # failure-recovery lesson.
                 continue
-            if _normalized_action(event) != failed_action:
+            if (
+                _normalized_action(event) != failed_action
+                and _repair_related(failed, event)
+            ):
                 repairs.append(event)
         if revalidation is None:
             continue
@@ -547,6 +566,13 @@ def _failure_recovery(
             reusability=0.85,
             evidence_quality=min(0.95, 0.6 + 0.08 * len(repairs)),
         )
+        failed_signature = _failure_signature(failed_action)
+        verification_signature = _failure_signature(
+            _normalized_action(revalidation)
+        )
+        chain_id = _failure_signature(
+            f"{failed_sequence}:{revalidation.get('sequence')}"
+        )
         findings.append(
             _finding(
                 "method-failure-recovery",
@@ -558,8 +584,11 @@ def _failure_recovery(
                 {
                     "kind": "failure_recovery",
                     "failed_action": failed_action,
+                    "failure_signature": failed_signature,
                     "repair_actions": [_normalized_action(event) for event in repairs],
                     "revalidation_action": _normalized_action(revalidation),
+                    "verification_signature": verification_signature,
+                    "chain_id": chain_id,
                     "verified_recovery": True,
                     "chain_length": len(evidence),
                     "rule": (
