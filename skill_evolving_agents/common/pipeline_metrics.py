@@ -851,11 +851,13 @@ def collect_phase_metrics(
         and int(scope.get("operation_count") or 0) > 0
         for scope in scopes
     )
-    accepted_scopes = sum(
-        isinstance(scope, dict)
-        and scope.get("disposition") != "no_change"
-        and int(scope.get("operation_count") or 0) > 0
-        for scope in scopes
+    accepted_scopes = len(
+        {
+            str(operation.get("scope") or f"unscoped-{index}")
+            for index, operation in enumerate(operations)
+            if isinstance(operation, dict)
+            and operation.get("accepted") is True
+        }
     )
     resource_decisions = _read_jsonl(
         signal_root / "resource-opportunity-decisions.jsonl"
