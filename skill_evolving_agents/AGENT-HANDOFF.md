@@ -54,7 +54,7 @@ clean worktree based on `origin/main` for isolated work and verification.
 The personal repository baseline is:
 
 ```text
-d52e561f Complete issue 1 recovery and recall hardening
+cd574257 Measure action against actionable diagnoses
 ```
 
 That commit passed all 248 tests in a clean worktree and the 23-case
@@ -122,7 +122,11 @@ privacy helpers, dashboard extensions, and:
 - issue 1 hardening: repair events must share a target or be modification
   events, failure and verification signatures are stored for stable identity,
   recall documents keep a sample of every skill section, and external
-  evaluation is accepted from either the normalized turn or candidate.
+  evaluation is accepted from either the normalized turn or candidate;
+- actionable funnel targets: action and proposal rates are evaluated over
+  diagnoses that actually found a capability gap, while raw rates and
+  `diagnosis_no_gap_scopes` remain visible. No-gap scopes are not coerced into
+  edits.
 
 Four fresh/replay trace runs after these changes used 37 DSH calls and 7.75M
 tokens versus 53 calls and 10.87M tokens before (28.7% fewer tokens, about 32%
