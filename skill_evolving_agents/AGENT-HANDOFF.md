@@ -54,10 +54,10 @@ clean worktree based on `origin/main` for isolated work and verification.
 The personal repository baseline is:
 
 ```text
-a5102fba Use reflection bank in recall
+33322e94 Keep funnel rates scope-based
 ```
 
-That commit passed all 258 tests in a clean worktree and the 23-case
+That commit passed all 259 tests in a clean worktree and the 23-case
 deterministic funnel benchmark at 23/23. It includes configurable funnel
 targets, single-session diagnosis controls, novel-versus-idempotent metrics,
 an action-oriented profile, inventory and release helpers, replay support,
@@ -141,6 +141,10 @@ privacy helpers, dashboard extensions, and:
 - reflection recall: observed reasoning cues are stored as unvalidated entries,
   restricted to reasoning-pivot categories, and session-matched entries are
   added to recall queries. Matching records `reflection_context_entries`.
+  Observed reflections stay analysis-only; recall uses validated entries;
+- scope-based funnel rates: proposal and acceptance rates count scopes, not
+  operations, so a scope with multiple accepted operations cannot produce a
+  rate above 1.0.
 
 Four fresh/replay trace runs after these changes used 37 DSH calls and 7.75M
 tokens versus 53 calls and 10.87M tokens before (28.7% fewer tokens, about 32%
