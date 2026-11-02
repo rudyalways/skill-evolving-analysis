@@ -46,3 +46,11 @@ skill_evolving_agents/workspace/manual_skill_creator_baseline/
 skill_evolving_agents/workspace/quarantine/
 skill_evolving_agents/workspace/verifier-benchmark.*/
 skill_evolving_agents/workspace/operation-coverage.json
+
+# Generated local state and artifacts
+artifacts/
+raw_request.md
+skill_evolving_agents/workspace/metrics.sqlite-shm
+skill_evolving_agents/workspace/metrics.sqlite-wal
+skill_evolving_agents/workspace/active-inventory.json
+skill_evolving_agents/workspace/inventory_releases/

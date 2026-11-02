@@ -105,15 +105,29 @@ def _initialize(connection: sqlite3.Connection) -> None:
     )
 
 
+def workspace_root(workspace: Path) -> Path:
+    """Return the workspace container for a run, or the workspace itself."""
+    resolved = workspace.resolve()
+    if resolved.parent.name == "runs":
+        return resolved.parent.parent
+    if (resolved / "runs").is_dir():
+        return resolved
+    return resolved
+
+
+def shared_metrics_path(workspace: Path) -> Path:
+    return workspace_root(workspace) / "metrics.sqlite"
+
+
 def _databases(workspace: Path) -> list[Path]:
     local = workspace / "logs/metrics.sqlite"
-    shared = workspace.parents[1] / "metrics.sqlite"
+    shared = shared_metrics_path(workspace)
     return [local] if local == shared else [local, shared]
 
 
 def clear_shared_run(workspace: Path) -> None:
     """Remove stale cross-run rows when a run id is intentionally recreated."""
-    shared = workspace.resolve().parents[1] / "metrics.sqlite"
+    shared = shared_metrics_path(workspace)
     if not shared.is_file():
         return
     with _LOCK, sqlite3.connect(shared, timeout=30) as connection:
@@ -132,7 +146,7 @@ def replace_shared_run(workspace: Path) -> None:
     """Replace one shared run with its authoritative local timing rows."""
     workspace = workspace.resolve()
     local = workspace / "logs/metrics.sqlite"
-    shared = workspace.parents[1] / "metrics.sqlite"
+    shared = shared_metrics_path(workspace)
     if not local.is_file():
         clear_shared_run(workspace)
         return

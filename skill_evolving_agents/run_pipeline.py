@@ -9497,7 +9497,13 @@ def write_pipeline_summary(workspace: Path, clusters: list[str]) -> Path:
 
 def update_operation_coverage(workspace: Path) -> Path:
     """Aggregate real-run mutation evidence for convergence decisions."""
-    workspace_root = workspace.parents[1]
+    resolved = workspace.resolve()
+    if resolved.parent.name == "runs":
+        workspace_root = resolved.parent.parent
+    elif (resolved / "runs").is_dir():
+        workspace_root = resolved
+    else:
+        workspace_root = resolved
     runs_root = workspace_root / "runs"
     kinds = ("create", "update", "delete", "merge", "split")
     coverage: dict[str, dict[str, object]] = {
