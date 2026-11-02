@@ -54,7 +54,7 @@ clean worktree based on `origin/main` for isolated work and verification.
 The personal repository baseline is:
 
 ```text
-cd574257 Measure action against actionable diagnoses
+940a3f53 Separate actionable recall coverage from no-gap scopes
 ```
 
 That commit passed all 248 tests in a clean worktree and the 23-case
@@ -126,7 +126,11 @@ privacy helpers, dashboard extensions, and:
 - actionable funnel targets: action and proposal rates are evaluated over
   diagnoses that actually found a capability gap, while raw rates and
   `diagnosis_no_gap_scopes` remain visible. No-gap scopes are not coerced into
-  edits.
+  edits;
+- recall coverage split: raw scope coverage remains visible, while applicable
+  coverage counts only scopes with a diagnosed gap. Warnings are emitted only
+  for missed applicable scopes. On the 74-turn target and 32-turn geo runs the
+  raw coverage is 0.6 but applicable coverage is 1.0 with no missed scopes.
 
 Four fresh/replay trace runs after these changes used 37 DSH calls and 7.75M
 tokens versus 53 calls and 10.87M tokens before (28.7% fewer tokens, about 32%
