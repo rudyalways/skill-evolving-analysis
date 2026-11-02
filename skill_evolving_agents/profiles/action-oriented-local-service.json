@@ -11,8 +11,8 @@
   "funnel_targets": {
     "diagnosis_rate": 1.0,
     "goal_decision_rate": 1.0,
-    "novel_action_scope_rate": 0.5,
-    "novel_proposal_rate": 0.5,
+    "actionable_action_scope_rate": 0.5,
+    "actionable_proposal_rate": 0.5,
     "novel_final_acceptance_rate": 0.2,
     "proposal_acceptance_rate": 0.4
   },

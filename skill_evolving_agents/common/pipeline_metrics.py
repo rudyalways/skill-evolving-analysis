@@ -649,6 +649,12 @@ def collect_phase_metrics(
         len(value.get("newly_detected_skill_capabilites_missing") or [])
         for value in diagnoses
     )
+    actionable_diagnoses = [
+        value for value in diagnoses
+        if (value.get("skill_capabilities_missing") or [])
+        or (value.get("newly_detected_skill_capabilites_missing") or [])
+    ]
+    diagnosis_no_gap_scopes = len(diagnoses) - len(actionable_diagnoses)
     diagnosis_spans = [
         row for row in spans if row.get("phase") == "label-traces-cluster"
     ]
@@ -880,6 +886,16 @@ def collect_phase_metrics(
         "final_acceptance_rate": _rate(accepted, selected),
         "acceptance_given_goal_rate": _rate(accepted, len(scopes)),
         "novel_final_acceptance_rate": _rate(accepted, novel_goal_scopes),
+        "actionable_action_scope_rate": _rate(
+            changed_scopes, len(actionable_diagnoses)
+        ),
+        "actionable_proposal_rate": _rate(
+            len(operations), len(actionable_diagnoses)
+        ),
+        "actionable_final_acceptance_rate": _rate(
+            accepted, len(actionable_diagnoses)
+        ),
+        "diagnosis_no_gap_scopes": diagnosis_no_gap_scopes,
         "proposal_acceptance_rate": _rate(accepted, len(operations)),
     }
     consumer_targets = {
@@ -892,6 +908,9 @@ def collect_phase_metrics(
         "final_acceptance_rate",
         "acceptance_given_goal_rate",
         "novel_final_acceptance_rate",
+        "actionable_action_scope_rate",
+        "actionable_proposal_rate",
+        "actionable_final_acceptance_rate",
         "proposal_acceptance_rate",
     }
     target_evaluation = {}
