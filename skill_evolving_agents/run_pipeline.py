@@ -966,8 +966,32 @@ def recalled_skill_evidence(
     }
 
 
+def _recall_finding_context(finding: dict[str, object] | None) -> str:
+    """Build recall context from the finding, not only the diagnosis labels."""
+    if not isinstance(finding, dict):
+        return ""
+    features = finding.get("features") if isinstance(finding.get("features"), dict) else {}
+    lesson = features.get("lesson") if isinstance(features.get("lesson"), dict) else {}
+    parts: list[str] = [
+        str(finding.get("detector") or ""),
+        str(finding.get("signal_id") or ""),
+        str(features.get("failure_signature") or ""),
+        str(features.get("task") or ""),
+    ]
+    for key in ("kind", "rule", "decision_rule", "failure_guard", "failed_action"):
+        parts.append(str(lesson.get(key) or ""))
+    for row in (finding.get("evidence") or [])[:3]:
+        if isinstance(row, dict):
+            parts.append(str(row.get("quote") or "")[:600])
+    return " ".join(part for part in parts if part).strip()[:3000]
+
+
 def embedding_recall(
-    diagnosis: dict, metadata: dict, skill_dirs: list[str], config: dict
+    diagnosis: dict,
+    metadata: dict,
+    skill_dirs: list[str],
+    config: dict,
+    finding: dict[str, object] | None = None,
 ) -> dict:
     """Recall skills semantically and normalize results to label-matching/v1."""
     queries_by_cluster: dict[str, list[dict]] = {}
@@ -981,6 +1005,7 @@ def embedding_recall(
             cluster = str(row.get("cluster") or row.get("signal_id") or "cut")
             queries_by_cluster.setdefault(cluster, []).append(row)
     documents = {}
+    truncated_documents: list[str] = []
     skills_root = Path(config["skills_root"])
     records = (
         metadata.get("skills_metadata")
@@ -998,14 +1023,26 @@ def embedding_recall(
     for name in skill_dirs:
         path = skills_root / name / "SKILL.md"
         text = path.read_text() if path.is_file() else ""
+        if len(text) > document_max_chars:
+            truncated_documents.append(name)
         documents[name] = text[:document_max_chars] + "\n" + json.dumps(
             metadata_by_name.get(name, {}), ensure_ascii=False, sort_keys=True
         )
+    context = _recall_finding_context(finding)
     names = sorted(queries_by_cluster) or ["cut"]
-    queries = [
-        json.dumps(queries_by_cluster.get(name, []), ensure_ascii=False, sort_keys=True)
-        for name in names
-    ]
+    queries = []
+    for name in names:
+        rows = [dict(row) for row in queries_by_cluster.get(name, [])]
+        if context:
+            for row in rows:
+                row["finding_context"] = context
+        queries.append(
+            json.dumps(
+                rows or ([{"finding_context": context}] if context else []),
+                ensure_ascii=False,
+                sort_keys=True,
+            )
+        )
     provider = ACTIVE_EMBEDDING_PROVIDER or EmbeddingProvider(
         config, INSTALL_ROOT / "services/embedding_api/server.py"
     )
@@ -1033,10 +1070,36 @@ def embedding_recall(
             for row in result.get("matches") or []
             if float(row.get("score", -1)) >= float(config.get("minimum_score", 0.3))
         ]
+        if finding:
+            lexical = lexical_inventory_fallback(
+                diagnosis,
+                finding,
+                metadata,
+                skills_root,
+                limit=3,
+            )
+            by_skill = {str(row.get("skill")): row for row in matches}
+            for row in lexical:
+                skill = str(row.get("skill"))
+                if skill in by_skill:
+                    kept = by_skill[skill]
+                    if float(row.get("score") or 0) > float(kept.get("score") or 0):
+                        kept["score"] = row.get("score")
+                    kept["matches"] = list(kept.get("matches") or []) + list(
+                        row.get("matches") or []
+                    )
+                    kept["retrieval"] = "embedding+lexical"
+                else:
+                    row = dict(row)
+                    row["retrieval"] = "lexical"
+                    matches.append(row)
         clusters.append({"cluster": name, "labels": [], "skills": matches})
     return {
         "matching": {
             "strategy": str(config["algorithm"]),
+            "query_context": "diagnosis+finding" if context else "diagnosis",
+            "truncated_documents": truncated_documents,
+            "hybrid_lexical": bool(finding),
             "config_version": 1,
             "config_sha256": str(
                 ACTIVE_EXECUTION_CONFIG.get("config_digest", "")
@@ -4943,7 +5006,11 @@ def _goal_scope(
                 }
                 try:
                     matching_data = embedding_recall(
-                        diagnosis, metadata, skill_dirs, embedding_config
+                        diagnosis,
+                        metadata,
+                        skill_dirs,
+                        embedding_config,
+                        finding_data,
                     )
                 except (EmbeddingServiceError, KeyError, OSError, ValueError) as error:
                     if recall_selection.get("on_error", "fallback") != "fallback":

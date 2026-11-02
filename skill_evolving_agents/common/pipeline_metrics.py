@@ -9,7 +9,7 @@ import sys
 import threading
 import time
 import uuid
-from collections import defaultdict
+from collections import Counter, defaultdict
 from contextlib import contextmanager
 from datetime import UTC, datetime
 from pathlib import Path
@@ -676,8 +676,23 @@ def collect_phase_metrics(
     matching_files = list((workspace / "run").glob("*/label-matching.json"))
     matched_scopes = 0
     top_scores: list[float] = []
+    query_context_counts: Counter[str] = Counter()
+    hybrid_lexical_scopes = 0
+    truncated_document_scopes = 0
+    lexical_only_candidates = 0
     for path in matching_files:
         document = _read_json(path)
+        matching_meta = (
+            document.get("matching") if isinstance(document, dict) else {}
+        )
+        if isinstance(matching_meta, dict):
+            query_context_counts[
+                str(matching_meta.get("query_context") or "unknown")
+            ] += 1
+            if matching_meta.get("hybrid_lexical"):
+                hybrid_lexical_scopes += 1
+            if matching_meta.get("truncated_documents"):
+                truncated_document_scopes += 1
         clusters = document.get("clusters") if isinstance(document, dict) else []
         scope_has_match = False
         for cluster in clusters or []:
@@ -686,6 +701,9 @@ def collect_phase_metrics(
             skills = cluster.get("skills") or []
             if skills:
                 scope_has_match = True
+            for skill in skills:
+                if isinstance(skill, dict) and skill.get("retrieval") == "lexical":
+                    lexical_only_candidates += 1
             numeric = [
                 float(skill["score"])
                 for skill in skills
@@ -1079,6 +1097,10 @@ def collect_phase_metrics(
                 "scopes": len(matching_files),
                 "scopes_with_candidates": matched_scopes,
                 "candidate_coverage": _rate(matched_scopes, len(matching_files)),
+                "query_context": dict(sorted(query_context_counts.items())),
+                "hybrid_lexical_scopes": hybrid_lexical_scopes,
+                "truncated_document_scopes": truncated_document_scopes,
+                "lexical_only_candidates": lexical_only_candidates,
                 "mean_top_match_score": (
                     round(sum(top_scores) / len(top_scores), 6)
                     if top_scores
@@ -1245,6 +1267,16 @@ def aggregate_phase_metrics(runs_root: Path) -> dict[str, Any]:
             for report in reports
         )
 
+    def mapping_total(phase: str, key: str) -> dict[str, int]:
+        counts: Counter[str] = Counter()
+        for report in reports:
+            values = (((report.get("phases") or {}).get(phase) or {}).get(key))
+            if not isinstance(values, dict):
+                continue
+            for name, count in values.items():
+                counts[str(name)] += int(count or 0)
+        return dict(counts)
+
     def operation_total(phase: str, key: str) -> dict[str, int]:
         counts = _operation_counts()
         for report in reports:
@@ -1292,6 +1324,12 @@ def aggregate_phase_metrics(runs_root: Path) -> dict[str, Any]:
                 "scopes": recall_scopes,
                 "scopes_with_candidates": recall_candidates,
                 "candidate_coverage": _rate(recall_candidates, recall_scopes),
+                "query_context": mapping_total("recall", "query_context"),
+                "hybrid_lexical_scopes": total("recall", "hybrid_lexical_scopes"),
+                "truncated_document_scopes": total(
+                    "recall", "truncated_document_scopes"
+                ),
+                "lexical_only_candidates": total("recall", "lexical_only_candidates"),
                 "precision": None,
             },
             "goal": {
