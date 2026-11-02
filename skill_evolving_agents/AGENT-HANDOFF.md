@@ -54,10 +54,10 @@ clean worktree based on `origin/main` for isolated work and verification.
 The personal repository baseline is:
 
 ```text
-5ef2a846 Fix issue 1 recovery chains and target-aware dedup
+a3376453 Improve skill recall with finding context and lexical hybrid
 ```
 
-That commit passed all 243 tests in a clean worktree and the 23-case
+That commit passed all 245 tests in a clean worktree and the 23-case
 deterministic funnel benchmark at 23/23. It includes configurable funnel
 targets, single-session diagnosis controls, novel-versus-idempotent metrics,
 an action-oriented profile, inventory and release helpers, replay support,
@@ -109,7 +109,13 @@ privacy helpers, dashboard extensions, and:
   dedup compares learning target and failure signature instead of containment
   alone. Findings expose separate session, tool, local-verification, and
   external-evaluation provenance; absent external evaluation remains unknown.
-  Added six regression tests in `tests/test_issue_1_recovery_dedup.py`.
+  Added six regression tests in `tests/test_issue_1_recovery_dedup.py`;
+- recall improvement: embedding recall queries include the finding's failure
+  signature, lesson, evidence, and task context in addition to diagnosis labels;
+  lexical inventory matches are merged with embedding matches; matching records
+  query context, hybrid usage, and truncated documents; phase metrics expose
+  recall query/truncation observability. This addresses the recall-side gap
+  without lowering creation gates.
 
 Four fresh/replay trace runs after these changes used 37 DSH calls and 7.75M
 tokens versus 53 calls and 10.87M tokens before (28.7% fewer tokens, about 32%
