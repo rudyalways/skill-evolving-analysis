@@ -54,10 +54,10 @@ clean worktree based on `origin/main` for isolated work and verification.
 The personal repository baseline is:
 
 ```text
-ba258d61 Make verified recovery actionable
+353f004e Count accepted scopes from publications
 ```
 
-That commit passed all 262 tests in a clean worktree and the 23-case
+That commit passed all 263 tests in a clean worktree and the 23-case
 deterministic funnel benchmark at 23/23. It includes configurable funnel
 targets, single-session diagnosis controls, novel-versus-idempotent metrics,
 an action-oriented profile, inventory and release helpers, replay support,
@@ -149,7 +149,9 @@ privacy helpers, dashboard extensions, and:
   `[7,8,9,10]` as `failure_recovery` alongside the full workflow, and publishes
   `openpyxl-chart-rendering` as a provisional skill. Verified recovery uses a
   dedicated mining/operation value floor; generated skill descriptions are
-  bounded to the 60-character format budget before optimize.
+  bounded to the 60-character format budget before optimize;
+- accepted-scope accounting: final acceptance counts publication-accepted
+  scopes only. A changed scope whose operation was rejected is not accepted.
 
 Four fresh/replay trace runs after these changes used 37 DSH calls and 7.75M
 tokens versus 53 calls and 10.87M tokens before (28.7% fewer tokens, about 32%
