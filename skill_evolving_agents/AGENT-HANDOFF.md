@@ -54,10 +54,10 @@ clean worktree based on `origin/main` for isolated work and verification.
 The personal repository baseline is:
 
 ```text
-33322e94 Keep funnel rates scope-based
+ba258d61 Make verified recovery actionable
 ```
 
-That commit passed all 259 tests in a clean worktree and the 23-case
+That commit passed all 262 tests in a clean worktree and the 23-case
 deterministic funnel benchmark at 23/23. It includes configurable funnel
 targets, single-session diagnosis controls, novel-versus-idempotent metrics,
 an action-oriented profile, inventory and release helpers, replay support,
@@ -144,7 +144,12 @@ privacy helpers, dashboard extensions, and:
   Observed reflections stay analysis-only; recall uses validated entries;
 - scope-based funnel rates: proposal and acceptance rates count scopes, not
   operations, so a scope with multiple accepted operations cannot produce a
-  rate above 1.0.
+  rate above 1.0;
+- actual OfficeVal 094 replay: the original Hermes trace now selects evidence
+  `[7,8,9,10]` as `failure_recovery` alongside the full workflow, and publishes
+  `openpyxl-chart-rendering` as a provisional skill. Verified recovery uses a
+  dedicated mining/operation value floor; generated skill descriptions are
+  bounded to the 60-character format budget before optimize.
 
 Four fresh/replay trace runs after these changes used 37 DSH calls and 7.75M
 tokens versus 53 calls and 10.87M tokens before (28.7% fewer tokens, about 32%
