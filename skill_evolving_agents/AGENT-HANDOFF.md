@@ -54,10 +54,10 @@ clean worktree based on `origin/main` for isolated work and verification.
 The personal repository baseline is:
 
 ```text
-254428e3 Preserve larger same-target candidates
+d52e561f Complete issue 1 recovery and recall hardening
 ```
 
-That commit passed all 246 tests in a clean worktree and the 23-case
+That commit passed all 248 tests in a clean worktree and the 23-case
 deterministic funnel benchmark at 23/23. It includes configurable funnel
 targets, single-session diagnosis controls, novel-versus-idempotent metrics,
 an action-oriented profile, inventory and release helpers, replay support,
@@ -118,7 +118,11 @@ privacy helpers, dashboard extensions, and:
   without lowering creation gates;
 - dedup replacement: when a later candidate has the same learning target and a
   strict superset of evidence, it replaces the smaller representative instead
-  of being dropped. The decision records `superseded-by-larger-evidence`.
+  of being dropped. The decision records `superseded-by-larger-evidence`;
+- issue 1 hardening: repair events must share a target or be modification
+  events, failure and verification signatures are stored for stable identity,
+  recall documents keep a sample of every skill section, and external
+  evaluation is accepted from either the normalized turn or candidate.
 
 Four fresh/replay trace runs after these changes used 37 DSH calls and 7.75M
 tokens versus 53 calls and 10.87M tokens before (28.7% fewer tokens, about 32%
