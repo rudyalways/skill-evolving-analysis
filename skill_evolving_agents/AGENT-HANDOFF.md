@@ -54,10 +54,10 @@ clean worktree based on `origin/main` for isolated work and verification.
 The personal repository baseline is:
 
 ```text
-a3376453 Improve skill recall with finding context and lexical hybrid
+254428e3 Preserve larger same-target candidates
 ```
 
-That commit passed all 245 tests in a clean worktree and the 23-case
+That commit passed all 246 tests in a clean worktree and the 23-case
 deterministic funnel benchmark at 23/23. It includes configurable funnel
 targets, single-session diagnosis controls, novel-versus-idempotent metrics,
 an action-oriented profile, inventory and release helpers, replay support,
@@ -115,7 +115,10 @@ privacy helpers, dashboard extensions, and:
   lexical inventory matches are merged with embedding matches; matching records
   query context, hybrid usage, and truncated documents; phase metrics expose
   recall query/truncation observability. This addresses the recall-side gap
-  without lowering creation gates.
+  without lowering creation gates;
+- dedup replacement: when a later candidate has the same learning target and a
+  strict superset of evidence, it replaces the smaller representative instead
+  of being dropped. The decision records `superseded-by-larger-evidence`.
 
 Four fresh/replay trace runs after these changes used 37 DSH calls and 7.75M
 tokens versus 53 calls and 10.87M tokens before (28.7% fewer tokens, about 32%
