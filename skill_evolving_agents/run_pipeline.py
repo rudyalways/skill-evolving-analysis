@@ -998,7 +998,10 @@ def _bounded_skill_document(
     return "\n".join(selected) + "\n" + metadata_text
 
 
-def _recall_finding_context(finding: dict[str, object] | None) -> str:
+def _recall_finding_context(
+    finding: dict[str, object] | None,
+    reflections: list[dict[str, object]] | None = None,
+) -> str:
     """Build recall context from the finding, not only the diagnosis labels."""
     if not isinstance(finding, dict):
         return ""
@@ -1015,6 +1018,12 @@ def _recall_finding_context(finding: dict[str, object] | None) -> str:
     for row in (finding.get("evidence") or [])[:3]:
         if isinstance(row, dict):
             parts.append(str(row.get("quote") or "")[:600])
+    for row in (reflections or [])[:3]:
+        if not isinstance(row, dict):
+            continue
+        parts.append(str(row.get("rule") or ""))
+        parts.append(str(row.get("reflection_quote") or ""))
+        parts.extend(str(value) for value in row.get("cue_phrases") or [])
     return " ".join(part for part in parts if part).strip()[:3000]
 
 
@@ -1024,6 +1033,7 @@ def embedding_recall(
     skill_dirs: list[str],
     config: dict,
     finding: dict[str, object] | None = None,
+    reflections: list[dict[str, object]] | None = None,
 ) -> dict:
     """Recall skills semantically and normalize results to label-matching/v1."""
     queries_by_cluster: dict[str, list[dict]] = {}
@@ -1062,7 +1072,7 @@ def embedding_recall(
             metadata_by_name.get(name, {}),
             document_max_chars,
         )
-    context = _recall_finding_context(finding)
+    context = _recall_finding_context(finding, reflections)
     names = sorted(queries_by_cluster) or ["cut"]
     queries = []
     for name in names:
@@ -1132,6 +1142,7 @@ def embedding_recall(
         "matching": {
             "strategy": str(config["algorithm"]),
             "query_context": "diagnosis+finding" if context else "diagnosis",
+            "reflection_context_entries": len(reflections or []),
             "document_strategy": "head+section-samples",
             "truncated_documents": truncated_documents,
             "hybrid_lexical": bool(finding),
@@ -5046,6 +5057,7 @@ def _goal_scope(
                         skill_dirs,
                         embedding_config,
                         finding_data,
+                        reflection_context,
                     )
                 except (EmbeddingServiceError, KeyError, OSError, ValueError) as error:
                     if recall_selection.get("on_error", "fallback") != "fallback":
@@ -5069,6 +5081,25 @@ def _goal_scope(
                     taxonomy_path
                 )
                 recall_config = recall_skills_mod.load_config(recall_config_path)
+                reflection_context: list[dict[str, object]] = []
+                reflection_path = (
+                    private / "traces/derived/signals/reflection-bank.jsonl"
+                )
+                if reflection_path.is_file():
+                    finding_session = str(finding_data.get("session_id") or "")
+                    finding_id = str(finding_data.get("signal_id") or "")
+                    for line in reflection_path.read_text().splitlines():
+                        try:
+                            entry = json.loads(line)
+                        except ValueError:
+                            continue
+                        if not isinstance(entry, dict):
+                            continue
+                        if (
+                            entry.get("session_id") == finding_session
+                            or entry.get("finding_id") == finding_id
+                        ):
+                            reflection_context.append(entry)
                 matching_data = recall_skills_mod.recall(
                     diagnosis,
                     metadata,

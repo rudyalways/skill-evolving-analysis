@@ -36,7 +36,7 @@ skills that appear as:
 
 ## Reflection bank
 
-Each selected finding with reflection cues or a recovery lesson is written to:
+Observed reasoning cues and validated reflection findings are written to:
 
 ```text
 traces/derived/signals/reflection-bank.jsonl
@@ -54,9 +54,14 @@ Entry fields:
   "cue_phrases": ["wait", "another approach"],
   "reflection_quote": "...",
   "rule": "...",
+  "status": "observed" | "validated",
+  "validated": false,
   "verified_recovery": false
 }
 ```
+
+Observed entries are *not* skills. They preserve the quote and cue so recall
+can use the reasoning context without treating it as validated experience.
 
 Cues are extracted from:
 
@@ -68,7 +73,9 @@ Cues are extracted from:
 - error awareness, uncertainty, diagnosis, and verification markers.
 
 Cue text alone is not a finding. The functional-reflection detector requires a
-changed action and a later successful check.
+changed action and a later successful check. Observed cues are restricted to
+reasoning-pivot categories (`reconsider`, `error_awareness`, `uncertainty`,
+`pivot`); generic verbs such as “verify access” are not reflection cues.
 
 ## Reasoning bank
 
@@ -110,8 +117,10 @@ Recall queries include:
 - evidence quotes.
 
 Documents are section-aware: head plus a sample of every `##` section. Lexical
-matches are merged with embedding matches. Matching records `query_context`,
-`document_strategy`, `truncated_documents`, and `hybrid_lexical`.
+matches are merged with embedding matches. Reflection-bank entries matching the
+finding/session are added to the query context. Matching records
+`query_context`, `reflection_context_entries`, `document_strategy`,
+`truncated_documents`, and `hybrid_lexical`.
 
 ## External methods considered
 

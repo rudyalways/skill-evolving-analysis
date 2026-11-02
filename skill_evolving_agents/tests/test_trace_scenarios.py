@@ -104,6 +104,20 @@ class ScenarioAndReflectionTest(unittest.TestCase):
         self.assertEqual(len(entries), 1)
         self.assertIn("reconsider", entries[0]["marker_categories"])
 
+    def test_observed_reflection_candidates_are_unvalidated(self) -> None:
+        turns = [
+            {
+                "trace_id": "codex:s:t",
+                "session_id": "s",
+                "assistant": {"text": "No, wait, let me think about another approach."},
+            }
+        ]
+        entries = signals.reflection_candidates(turns)
+        self.assertEqual(len(entries), 1)
+        self.assertFalse(entries[0]["validated"])
+        self.assertEqual(entries[0]["status"], "observed")
+        self.assertIn("reconsider", entries[0]["marker_categories"])
+
     def test_reflection_bank_ignores_tool_output_cues(self) -> None:
         row = finding(
             "method-critical-path",

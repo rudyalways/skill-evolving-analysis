@@ -943,6 +943,52 @@ def _assistant_reasoning_text(finding: dict[str, Any]) -> str:
     return " ".join(parts).strip()
 
 
+def reflection_candidates(turns: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Record observed reasoning cues without claiming they are validated."""
+    patterns = _methodology_miner().REFLECTION_PATTERNS
+    entries: list[dict[str, Any]] = []
+    for turn in turns:
+        text = str((turn.get("assistant") or {}).get("text") or "")
+        if not text:
+            continue
+        # Observed candidates are for reasoning pivots, not generic
+        # verification or diagnosis verbs ("verify access").
+        markers = [
+            name for name, pattern in patterns.items()
+            if name in {"reconsider", "error_awareness", "uncertainty", "pivot"}
+            and pattern.search(text)
+        ]
+        if not markers:
+            continue
+        cue_phrases = [
+            match.group(0)
+            for pattern in patterns.values()
+            for match in pattern.finditer(text)
+        ][:8]
+        entries.append(
+            {
+                "schema_version": 1,
+                "reflection_id": f"observed-{turn.get('trace_id')}",
+                "finding_id": None,
+                "detector": "observed-reasoning-cue",
+                "scenario": "reasoning_cue",
+                "session_id": turn.get("session_id"),
+                "trace_id": turn.get("trace_id"),
+                "marker_categories": markers,
+                "cue_phrases": cue_phrases,
+                "reflection_quote": text[:600],
+                "rule": "",
+                "status": "observed",
+                "validated": False,
+                "verified_recovery": False,
+                "confidence": None,
+            }
+        )
+        if len(entries) >= 200:
+            break
+    return entries
+
+
 def reflection_bank_entries(findings: list[dict[str, Any]]) -> list[dict[str, Any]]:
     entries = []
     patterns = _methodology_miner().REFLECTION_PATTERNS
@@ -970,6 +1016,8 @@ def reflection_bank_entries(findings: list[dict[str, Any]]) -> list[dict[str, An
                     lesson.get("reflection_quote") or reasoning_text[:600]
                 ),
                 "rule": lesson.get("rule") or "",
+                "status": "validated",
+                "validated": True,
                 "verified_recovery": bool(lesson.get("verified_recovery")),
                 "confidence": finding.get("confidence"),
             }
@@ -1077,7 +1125,10 @@ def run(
     for finding in findings:
         features = finding.setdefault("features", {})
         features.setdefault("scenario", _scenario_for(finding))
-    reflections = reflection_bank_entries(findings)
+    observed_reflections = reflection_candidates(
+        [turn for rows in sessions.values() for turn in rows]
+    )
+    reflections = observed_reflections + reflection_bank_entries(findings)
     reasoning = reasoning_bank_entries(findings)
     patterns = _patterns(findings)
     selected, selection_decisions = _select_findings(

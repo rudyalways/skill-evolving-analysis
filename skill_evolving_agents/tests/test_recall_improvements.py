@@ -24,6 +24,20 @@ class FakeEmbeddingProvider:
 
 
 class RecallImprovementTest(unittest.TestCase):
+    def test_reflection_bank_entries_reach_recall_context(self) -> None:
+        context = runner._recall_finding_context(
+            {"features": {"lesson": {"kind": "ordered_workflow"}}},
+            [
+                {
+                    "rule": "Change the action after the failed observation.",
+                    "reflection_quote": "Wait, that failed.",
+                    "cue_phrases": ["wait"],
+                }
+            ],
+        )
+        self.assertIn("Change the action", context)
+        self.assertIn("Wait, that failed.", context)
+
     def test_finding_context_is_included_in_recall_query(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / "skills"
@@ -81,6 +95,32 @@ class RecallImprovementTest(unittest.TestCase):
                     if row["skill"] == "chart-helper"
                 )["retrieval"],
                 "lexical",
+            )
+
+    def test_reflection_entries_are_counted_in_recall(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "skills"
+            skill = root / "chart-helper"
+            skill.mkdir(parents=True)
+            (skill / "SKILL.md").write_text("Chart labels.\n")
+            provider = FakeEmbeddingProvider()
+            with patch.object(runner, "ACTIVE_EMBEDDING_PROVIDER", provider):
+                result = runner.embedding_recall(
+                    {"skill_capabilities_missing": []},
+                    {"skills_metadata": [{"skill": "chart-helper"}]},
+                    ["chart-helper"],
+                    {
+                        "skills_root": str(root),
+                        "document_max_chars": 800,
+                        "top_k": 5,
+                        "minimum_score": 0.3,
+                        "algorithm": "test",
+                    },
+                    {"features": {"lesson": {"kind": "ordered_workflow"}}},
+                    [{"rule": "Wait and change action.", "reflection_quote": "Wait."}],
+                )
+            self.assertEqual(
+                result["matching"]["reflection_context_entries"], 1
             )
 
     def test_section_aware_document_keeps_late_sections(self) -> None:
