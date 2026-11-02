@@ -1,0 +1,4 @@
+interface:
+  display_name: "Feishu Cli Device Auth"
+  short_description: "Complete Feishu/Lark CLI login through the terminal-led device-authorization…"
+  default_prompt: "Use $feishu-cli-device-auth for this request."

@@ -1,0 +1,42 @@
+{
+  "skill_name": "reliability-workstream-handoff-reference",
+  "evals": [
+    {
+      "id": 1,
+      "kind": "should_apply",
+      "prompt": "Before I decide whether this release can be promoted, check the reliability workstream handoff policy for the production promotion constraints and tell me exactly where that rule lives.",
+      "expected_output": "The agent consults the navigational index, recomputes the source SHA-256 at runtime, recognizes the index as unindexed or refreshes it on a digest mismatch, reads only the governing range, and answers with the freshness status plus the verbatim heading and line range.",
+      "expectations": [
+        "The agent opens references/reliability-workstream-handoff-index.md and resolves docs/operations/reliability_workstreams/handoff_prompts.md from the repository root.",
+        "The agent recomputes the SHA-256 digest at runtime and compares it with the recorded value, explicitly handling the unindexed or mismatch state.",
+        "Only the governing range is read, and the reply reports the freshness status with the governing heading and line range."
+      ],
+      "files": ["references/reliability-workstream-handoff-index.md"],
+      "source_trace_ids": ["sig-d3f3514e3dfad6c9dbebee41"]
+    },
+    {
+      "id": 2,
+      "kind": "should_apply",
+      "prompt": "You looked up the workstream handoff rules earlier in this conversation. Now tell me what the admission rule says for a new workstream owner.",
+      "expected_output": "The agent reuses the compact index rather than rereading the whole policy document, confirms freshness with a runtime digest check, and cites the governing admission heading and line range.",
+      "expectations": [
+        "The earlier retrieval does not exempt the agent from the runtime freshness check.",
+        "The answer cites the governing heading and line range and uses only that range."
+      ],
+      "files": ["references/reliability-workstream-handoff-index.md"],
+      "source_trace_ids": ["sig-d3f3514e3dfad6c9dbebee41"]
+    },
+    {
+      "id": 3,
+      "kind": "should_not_apply",
+      "prompt": "Summarize the pagination section of our public API reference so I can update the developer portal.",
+      "expected_output": "The reliability workstream index is not consulted because the request is about unrelated API documentation.",
+      "expectations": [
+        "The agent does not open references/reliability-workstream-handoff-index.md.",
+        "The agent does not compute a digest of docs/operations/reliability_workstreams/handoff_prompts.md."
+      ],
+      "files": [],
+      "source_trace_ids": []
+    }
+  ]
+}

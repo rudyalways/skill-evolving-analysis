@@ -1,0 +1,43 @@
+{
+  "skill_name": "openpyxl-chart-rendering",
+  "evals": [
+    {
+      "id": 1,
+      "kind": "should_apply",
+      "prompt": "Style every series line in this openpyxl bar chart blue at 2.25 pt. The current code crashes because the line is assigned as a dict.",
+      "expected_output": "The dict assignment is replaced with LineProperties(solidFill=..., w=28575), and the full generate-plus-LibreOffice-render command exits 0 with a non-empty render artifact.",
+      "expectations": [
+        "The series line is a LineProperties instance passed through GraphicalProperties.ln, not a dict.",
+        "The workbook is regenerated from source rather than patched in place.",
+        "The original LibreOffice render command is rerun and exits 0.",
+        "A non-empty rendered artifact exists and the styled line is visible."
+      ],
+      "files": [],
+      "source_trace_ids": ["sig-c855005bde5f1c87886872c6"]
+    },
+    {
+      "id": 2,
+      "kind": "should_apply",
+      "prompt": "I already patched out.xlsx with the corrected line color. Just confirm that the file is fine so we can finish.",
+      "expected_output": "The original generation command and the full render command are rerun; the patched file alone is not accepted as verification.",
+      "expectations": [
+        "Completion is not claimed from the already-patched file alone.",
+        "The original generation command is rerun and exits 0.",
+        "The full LibreOffice render command is rerun and exits 0 with a non-empty artifact."
+      ],
+      "files": [],
+      "source_trace_ids": ["sig-c855005bde5f1c87886872c6"]
+    },
+    {
+      "id": 3,
+      "kind": "should_not_apply",
+      "prompt": "Make the header row bold, freeze the top row, and add an autofilter to this worksheet.",
+      "expected_output": "The chart-rendering workflow is not selected; ordinary worksheet formatting is used.",
+      "expectations": [
+        "No chart styling, typed drawing object, or LibreOffice chart render step is introduced."
+      ],
+      "files": [],
+      "source_trace_ids": []
+    }
+  ]
+}

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Live State Handoff Reconciliation"
+  short_description: "Author parallel-workstream handoff prompts only after re-resolving live…"
+  default_prompt: "Use $live-state-handoff-reconciliation for this request."

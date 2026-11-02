@@ -1,0 +1,71 @@
+{
+  "skill_name": "feishu-cli-device-auth",
+  "evals": [
+    {
+      "id": 1,
+      "kind": "should_apply",
+      "prompt": "lark-cli auth status says the user is not authorized. Start the Feishu login, give me the QR code, and wait for me to approve.",
+      "expected_output": "The agent runs lark-cli auth login, captures the verification URL and user_code, renders a QR image at a local PNG path, presents the image and code, and leaves the login process waiting for approval.",
+      "expectations": [
+        "The login flow is started with lark-cli auth login and the app-configuration and permission prompts are answered.",
+        "The verification URL and user_code are captured from CLI output.",
+        "A QR image is rendered with lark-cli auth qrcode to a local PNG path and shown with the user code.",
+        "The login process remains running while the user approves rather than being restarted or abandoned."
+      ],
+      "files": [],
+      "source_trace_ids": ["sig-e1dcfa0f9559d31670612a2d"]
+    },
+    {
+      "id": 2,
+      "kind": "should_apply",
+      "prompt": "The Feishu consent page opened but there is no button I can act on. Reloading it still shows the same scope-authorization page, so we are stuck.",
+      "expected_output": "The agent stops the stalled login process and starts a fresh lark-cli auth login, then renders a new QR code and user code for the new flow.",
+      "expectations": [
+        "The stalled login process is stopped.",
+        "A fresh lark-cli auth login is started instead of retrying the old verification URL.",
+        "A new QR image and user code are produced for the new flow.",
+        "The agent does not keep clicking or reloading the scope-authorization page as the authorization path."
+      ],
+      "files": [],
+      "source_trace_ids": ["sig-e1dcfa0f9559d31670612a2d"]
+    },
+    {
+      "id": 3,
+      "kind": "should_apply",
+      "prompt": "While inspecting the Feishu consent screen, clicking an element fails because its accessibility handle is stale or missing. What should happen before retrying?",
+      "expected_output": "The agent refreshes the accessibility state and re-resolves the element before any retry.",
+      "expectations": [
+        "The stale or missing accessibility handle is recognized as the cause of the failed element action.",
+        "The accessibility state is refreshed and the element is re-resolved before retrying.",
+        "The failure is not retried against the old handle."
+      ],
+      "files": [],
+      "source_trace_ids": []
+    },
+    {
+      "id": 4,
+      "kind": "should_not_apply",
+      "prompt": "Check whether Feishu CLI is signed in, then read the requested document. auth status already reports a valid user session with the needed scopes.",
+      "expected_output": "The existing valid session is used and the original document task proceeds; no new device login or QR code is started.",
+      "expectations": [
+        "The already-authenticated session is not replaced.",
+        "No lark-cli auth login or QR rendering is started.",
+        "The original task proceeds after confirming the identity and scopes."
+      ],
+      "files": [],
+      "source_trace_ids": []
+    },
+    {
+      "id": 5,
+      "kind": "should_not_apply",
+      "prompt": "This Feishu task should run as our configured bot application, not as my user account.",
+      "expected_output": "The bot/app identity is used and the user device-authorization flow is not started.",
+      "expectations": [
+        "The user device-authorization flow is not started.",
+        "The configured bot or app token is used as the intended identity."
+      ],
+      "files": [],
+      "source_trace_ids": []
+    }
+  ]
+}

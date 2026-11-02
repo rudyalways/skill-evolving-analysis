@@ -1,0 +1,4 @@
+interface:
+  display_name: "Scheduled Monitoring Automation"
+  short_description: "Create and verify a durable scheduled monitoring automation from a bounded…"
+  default_prompt: "Use $scheduled-monitoring-automation for this request."

@@ -1,0 +1,50 @@
+{
+  "skill_name": "batch-doc-variant-publishing",
+  "evals": [
+    {
+      "id": 1,
+      "kind": "should_apply",
+      "prompt": "Publish these three localized XML drafts as separate documents: drafts/en.xml, drafts/fr.xml, and drafts/de.xml. The German draft has an extra outer document wrapper around the normal root. Create all three and tell me their titles.",
+      "expected_output": "All three drafts validate, the German draft's extra wrapper is removed and re-validated, three documents are created in sequence with short yields, each session is polled to exit_code 0, and each token is fetched with a title matching its draft.",
+      "expectations": [
+        "Every draft is parse-validated before the first create runs.",
+        "The German draft is normalized to the single accepted root and re-validated.",
+        "Creates run sequentially with a short yield and no stdout redirect.",
+        "Each returned token is fetched and its title matches the draft title.",
+        "The final count reports three verified documents for three drafts."
+      ],
+      "files": [],
+      "source_trace_ids": [
+        "sig-35085ae112bab413d8fb0ea3"
+      ]
+    },
+    {
+      "id": 2,
+      "kind": "should_apply",
+      "prompt": "My batch create command was `docs create drafts/en.xml --yield 60s > out.txt`, but out.txt is zero bytes and I have no document URL. How should I publish this draft?",
+      "expected_output": "The empty zero-byte result is treated as a lost URL, not a success; the create is rerun with a short yield such as 1s without a redirect, the returned session is polled until exit_code 0, and the token is fetched to verify the title.",
+      "expectations": [
+        "The zero-byte file and empty output are not accepted as a successful create.",
+        "The rerun uses a short yield and does not redirect stdout.",
+        "The returned session is polled until exit_code 0 before success is claimed.",
+        "The created token is fetched and its title verified."
+      ],
+      "files": [],
+      "source_trace_ids": [
+        "sig-35085ae112bab413d8fb0ea3"
+      ]
+    },
+    {
+      "id": 3,
+      "kind": "should_not_apply",
+      "prompt": "Edit the introduction paragraph in my existing document and fix one typo. There is only one document and it is already published.",
+      "expected_output": "The batch publishing workflow is not selected; this is a single-document edit of an existing document.",
+      "expectations": [
+        "No batch draft validation or multi-document create sequence is used.",
+        "The skill is not selected for an existing single document."
+      ],
+      "files": [],
+      "source_trace_ids": []
+    }
+  ]
+}

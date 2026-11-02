@@ -1,0 +1,4 @@
+interface:
+  display_name: "Reliability Workstream Handoff Reference"
+  short_description: "Consult a durable navigational index for the reliability workstream handoff…"
+  default_prompt: "Use $reliability-workstream-handoff-reference for this request."

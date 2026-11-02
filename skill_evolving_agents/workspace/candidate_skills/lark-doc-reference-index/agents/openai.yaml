@@ -1,0 +1,4 @@
+interface:
+  display_name: "Lark Doc Reference Index"
+  short_description: "Consult a durable navigational index for the lark-doc skill documentation…"
+  default_prompt: "Use $lark-doc-reference-index for this request."

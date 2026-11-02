@@ -1,0 +1,55 @@
+{
+  "skill_name": "lark-doc-navigation-reference",
+  "evals": [
+    {
+      "id": 1,
+      "kind": "should_apply",
+      "prompt": "I need to edit an existing Feishu docx and must use the exact docs +update flags for replacing a block. Use the lark-doc navigation index instead of reading the whole skill again, and tell me which section governs.",
+      "expected_output": "The index is consulted, the recorded digest is recomputed and matches, and the answer cites the governing lark-doc-update.md heading with a line range.",
+      "expectations": [
+        "The freshness status is reported as matched after recomputing sha256.",
+        "The governing heading and reference file are cited.",
+        "Only the mapped line range is read rather than the full SKILL.md or all references."
+      ],
+      "files": ["references/lark-doc-index.md"],
+      "source_trace_ids": ["sig-5b9fa5ac67cd21a99558fc07"]
+    },
+    {
+      "id": 2,
+      "kind": "should_apply",
+      "prompt": "The lark-doc navigation index is recorded, but its sha256 for references/lark-doc-fetch.md no longer matches the live file. I still need the correct read-scope flag. Refresh the index and then answer.",
+      "expected_output": "The changed digest is detected, headings are re-extracted, the topic map and digest ledger are refreshed, and the answer cites the current fetch scope heading and range.",
+      "expectations": [
+        "A digest mismatch triggers a heading re-extraction instead of reuse of recorded line numbers.",
+        "The index is updated with the newly computed digest and supported routes only.",
+        "The freshness status is reported as refreshed and the cited range is from the refreshed map."
+      ],
+      "files": ["references/lark-doc-index.md"],
+      "source_trace_ids": ["sig-5b9fa5ac67cd21a99558fc07"]
+    },
+    {
+      "id": 3,
+      "kind": "should_not_apply",
+      "prompt": "Summarize the main argument of this local PDF and list its three strongest claims.",
+      "expected_output": "The lark-doc navigation index is not selected because the task is unrelated to Feishu/Lark docx or wiki content.",
+      "expectations": [
+        "The lark-doc navigation workflow is not selected.",
+        "No lark-doc source locator or digest check is performed."
+      ],
+      "files": [],
+      "source_trace_ids": []
+    },
+    {
+      "id": 4,
+      "kind": "should_not_apply",
+      "prompt": "Earlier in this conversation you already quoted the lark-doc update safety rule and I only need that same quoted wording restated. Do not re-check freshness.",
+      "expected_output": "The navigation index is not consulted because the governing answer is already present in the conversation and no freshness check is needed.",
+      "expectations": [
+        "The skill does not open the index or recompute digests.",
+        "The response relies on the already-cited wording rather than a new navigation pass."
+      ],
+      "files": [],
+      "source_trace_ids": []
+    }
+  ]
+}

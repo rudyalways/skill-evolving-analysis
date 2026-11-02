@@ -1,0 +1,4 @@
+interface:
+  display_name: "Openpyxl Chart Rendering"
+  short_description: "Build and style openpyxl charts with typed drawing objects, repairing…"
+  default_prompt: "Use $openpyxl-chart-rendering for this request."

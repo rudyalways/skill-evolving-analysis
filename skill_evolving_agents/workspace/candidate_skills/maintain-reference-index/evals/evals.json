@@ -1,0 +1,68 @@
+{
+  "skill_name": "maintain-reference-index",
+  "evals": [
+    {
+      "id": 1,
+      "kind": "should_apply",
+      "prompt": "We have read docs/operations/reliability_workstreams/p0_coordination_guide.md three times in this session, and now we need the escalation section again. Find it without dumping the whole guide into context.",
+      "expected_output": "A compact index with heading, line range, and locator rows plus a stored fingerprint, followed by retrieval from the escalation section's line anchor.",
+      "expectations": [
+        "The source is indexed once with one row per heading and a fingerprint block.",
+        "The lookup opens only the located line range rather than the whole document.",
+        "The index contains no copied source excerpts or section summaries."
+      ],
+      "files": ["references/navigational-index-template.md"],
+      "source_trace_ids": ["sig-4536919c9977a651e6e487a0"]
+    },
+    {
+      "id": 2,
+      "kind": "should_apply",
+      "prompt": "A long reference guide was consulted earlier in this task. Before opening it again, follow the reference-index procedure so we can go straight to the relevant section.",
+      "expected_output": "The stored fingerprint is recomputed and compared before the index is used, and the lookup returns a source anchor.",
+      "expectations": [
+        "The freshness check compares the stored fingerprint with the current path, size, modification time, and SHA-256 hash.",
+        "A matching fingerprint leads to an index lookup instead of a full read.",
+        "A mismatch triggers re-indexing before any answer relies on the table."
+      ],
+      "files": ["references/freshness-check.md"],
+      "source_trace_ids": ["sig-4536919c9977a651e6e487a0"]
+    },
+    {
+      "id": 3,
+      "kind": "should_apply",
+      "prompt": "The indexed guide was edited and its stored hash no longer matches. Repair the index and then use it to locate the deployment section.",
+      "expected_output": "The changed sections and shifted line ranges are re-indexed, a new fingerprint is stored, and the deployment section is located from the repaired table.",
+      "expectations": [
+        "The mismatch is detected by the fingerprint comparison before lookup.",
+        "Affected headings and shifted line ranges are updated, with a new check timestamp.",
+        "The updated index is consulted only after the fingerprint is rewritten."
+      ],
+      "files": ["references/freshness-check.md"],
+      "source_trace_ids": ["sig-4536919c9977a651e6e487a0"]
+    },
+    {
+      "id": 4,
+      "kind": "should_not_apply",
+      "prompt": "Read this two-paragraph README at ./README.md once and summarize what it says.",
+      "expected_output": "The README is read directly; no navigational index or fingerprint is created.",
+      "expectations": [
+        "No reference-index file or fingerprint is produced for the one-off read.",
+        "The document is summarized from its actual text rather than from an index."
+      ],
+      "files": [],
+      "source_trace_ids": []
+    },
+    {
+      "id": 5,
+      "kind": "should_not_apply",
+      "prompt": "Quote the full license text from LICENSE exactly, from beginning to end.",
+      "expected_output": "The license is read and quoted verbatim; no index is used as a substitute for the source.",
+      "expectations": [
+        "The source text is quoted directly, not located through an index.",
+        "No excerpt is copied into an index file."
+      ],
+      "files": [],
+      "source_trace_ids": []
+    }
+  ]
+}

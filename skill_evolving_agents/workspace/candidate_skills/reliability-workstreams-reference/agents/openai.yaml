@@ -1,0 +1,4 @@
+interface:
+  display_name: "Reliability Workstreams Reference"
+  short_description: "Record and consult a durable section-level index for…"
+  default_prompt: "Use $reliability-workstreams-reference for this request."

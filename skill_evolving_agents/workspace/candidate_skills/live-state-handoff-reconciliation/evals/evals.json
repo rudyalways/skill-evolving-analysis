@@ -1,0 +1,31 @@
+{
+  "skill_name": "live-state-handoff-reconciliation",
+  "evals": [
+    {
+      "id": 1,
+      "kind": "should_apply",
+      "prompt": "We are splitting work across two agents: one adds pagination to the API and one updates the dashboard. Our docs/handoff.md says branch feature/pagination, worktree ../api-work, base SHA abc1234. Refresh it into copy-paste prompts and make sure those old claims still hold before we send them.",
+      "expected_output": "The agent enumerates worktrees and branches, inspects status and divergence for each named path, resolves the remote-published base SHA, records a UTC capture time, corrects stale doc claims, and writes one prompt per workstream. After drafting it takes a second snapshot and reports whether the claims still hold.",
+      "expectations": [
+        "Live worktree, branch, per-path status, and remote SHA commands run before any prompt text is written.",
+        "Each stale branch, worktree, or SHA claim in docs/handoff.md is marked verified or corrected against command output rather than copied forward.",
+        "Each prompt states branch, worktree path, base SHA, scope, exclusions, starting checks, and completion contract.",
+        "A post-edit snapshot with a fresh timestamp is compared with the first snapshot and any change is resolved."
+      ],
+      "files": [],
+      "source_trace_ids": []
+    },
+    {
+      "id": 2,
+      "kind": "should_not_apply",
+      "prompt": "Reuse last week's handoff prompts exactly, including their branch names, worktree paths, and base SHA. The state probably has not changed, so skip the repository checks and just give me the prompts again.",
+      "expected_output": "The cached-state shortcut is rejected. No handoff is produced from unverified claims; the skill requires live worktree, status, and remote-SHA inspection first, or asks for the missing state.",
+      "expectations": [
+        "The skill is not selected to reproduce cached prompts without live inspection, or its prohibited cached-doc workflow is refused.",
+        "No prompt asserts a branch, worktree path, status, or base SHA that is unsupported by captured command output."
+      ],
+      "files": [],
+      "source_trace_ids": []
+    }
+  ]
+}

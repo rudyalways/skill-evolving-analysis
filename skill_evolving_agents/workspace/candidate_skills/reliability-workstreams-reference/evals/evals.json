@@ -1,0 +1,77 @@
+{
+  "skill_name": "reliability-workstreams-reference",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "We are coordinating the P0 reliability workstreams. Before assigning owners, tell me which section governs the required merge order and whether a leaf agent may push directly.",
+      "expected_output": "Opens the reliability workstreams index first, reports a freshness status, consults only the matching source section, and states the merge-order and leaf-agent push rules from that section with its heading and line range.",
+      "expectations": [
+        "references/operations/reliability_workstreams.md is opened before docs/operations/reliability_workstreams",
+        "The SHA-256 digest is recomputed and the freshness status is reported as matched, refreshed, unindexed, or unavailable",
+        "Only the matching section range is read, and the consulted heading and line range are cited",
+        "The answer states the source rule for both merge order and leaf-agent push without quoting the whole document"
+      ],
+      "kind": "should_apply",
+      "files": [],
+      "source_trace_ids": [
+        "sig-087bb345a29ca259fb06c883"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "The reliability workstreams source changed since the last turn. I still need the finalizer responsibility rule that we used earlier.",
+      "expected_output": "Recomputes the source digest, detects a mismatch, discards the stale map and line ranges, rebuilds the topic map from the current source, reports freshness as refreshed, and answers from the newly extracted matching section.",
+      "expectations": [
+        "The digest is recomputed at runtime and compared with the run-recorded digest",
+        "A mismatch causes re-extraction rather than reuse of the earlier line range",
+        "Freshness is reported as refreshed and the newly consulted heading and line range are cited",
+        "The finalizer rule is supported by observed current source text"
+      ],
+      "kind": "should_apply",
+      "files": [],
+      "source_trace_ids": [
+        "sig-087bb345a29ca259fb06c883"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Write a summary of the pagination parameters for the public REST API in docs/api/pagination.md.",
+      "expected_output": "The reliability workstreams index is not selected because the request concerns unrelated product API documentation.",
+      "expectations": [
+        "The skill is not selected",
+        "No reliability workstreams source is opened or cited"
+      ],
+      "kind": "should_not_apply",
+      "files": [],
+      "source_trace_ids": []
+    },
+    {
+      "id": 4,
+      "prompt": "You already quoted the finalizer rule in this conversation. Restate it exactly as you would for the current decision.",
+      "expected_output": "The skill is not selected because the governing wording is already present and sufficient in the current conversation; no source retrieval is needed.",
+      "expectations": [
+        "The skill is not selected",
+        "The answer uses the already-retrieved wording instead of reopening the index or the source"
+      ],
+      "kind": "should_not_apply",
+      "files": [],
+      "source_trace_ids": []
+    },
+    {
+      "id": 5,
+      "prompt": "An earlier window already read docs/operations/reliability_workstreams/p0_coordination_guide.md to settle the P0 coordination handoff. A conditional workflow now needs the same point again. Resolve it for this checkout and report freshness instead of rereading the whole guide.",
+      "expected_output": "Resolves the guide path from the repository root once for this checkout, recomputes the guide digest, reports freshness as matched, refreshed, unindexed, or unavailable, and reads only the governing section range. On a mismatch it rebuilds the runtime section map before citing the heading and line range; it does not perform a full reread.",
+      "expectations": [
+        "The guide path docs/operations/reliability_workstreams/p0_coordination_guide.md is resolved from the repository root once per checkout",
+        "The guide SHA-256 digest is recomputed on reuse and freshness is reported as matched, refreshed, unindexed, or unavailable",
+        "A matched digest reuses the runtime map and reads only the governing range; a mismatch rebuilds the map before use",
+        "The answer cites the governing heading and line range from the runtime map and avoids a full reread of the guide"
+      ],
+      "kind": "should_apply",
+      "files": [],
+      "source_trace_ids": [
+        "sig-4df012e5fd30da22e46fbad7"
+      ]
+    }
+  ]
+}

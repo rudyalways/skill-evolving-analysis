@@ -1,0 +1,4 @@
+interface:
+  display_name: "Maintain Reference Index"
+  short_description: "Build a compact heading-and-line index for a long reference guide, store a…"
+  default_prompt: "Use $maintain-reference-index for this request."

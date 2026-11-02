@@ -1,0 +1,4 @@
+interface:
+  display_name: "Batch Doc Variant Publishing"
+  short_description: "Publish several localized or copied document variants from local XML drafts by…"
+  default_prompt: "Use $batch-doc-variant-publishing for this request."

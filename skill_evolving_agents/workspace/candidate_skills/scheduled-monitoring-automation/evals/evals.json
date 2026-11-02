@@ -1,0 +1,55 @@
+{
+  "skill_name": "scheduled-monitoring-automation",
+  "evals": [
+    {
+      "id": 1,
+      "kind": "should_apply",
+      "prompt": "Check the staging deploy every 15 minutes and report back, but stop after 6:15 AM UTC on October 28, 2026.",
+      "expected_output": "An ACTIVE automation whose persisted rrule is one bounded rule containing FREQ=MINUTELY, INTERVAL=15, and UNTIL=20261028T061500Z, plus a prompt that includes the scope and a final stop-and-report step, confirmed by reading the record back.",
+      "expectations": [
+        "The recurrence is sent as a string, not an object.",
+        "The stored rrule contains FREQ=MINUTELY;INTERVAL=15;UNTIL=20261028T061500Z.",
+        "The persisted record is read back and its ACTIVE status, rrule, and prompt are reported as observed values."
+      ],
+      "files": [],
+      "source_trace_ids": ["sig-936497d29974243ef2f82346"]
+    },
+    {
+      "id": 2,
+      "kind": "should_not_apply",
+      "prompt": "Is the build still running? Let me know once it finishes.",
+      "expected_output": "A single status check or poll, with no durable scheduled automation created.",
+      "expectations": [
+        "No recurring automation is created for a one-off status check.",
+        "The response does not claim a persisted schedule was verified."
+      ],
+      "files": [],
+      "source_trace_ids": []
+    },
+    {
+      "id": 3,
+      "kind": "should_apply",
+      "prompt": "Set up the monitoring every 30 minutes until 2026-11-01 09:00 America/New_York, and keep it going until then.",
+      "expected_output": "The automation is created with a single string rrule ending at the UTC equivalent of the New York deadline; if the host rejects an object-shaped rrule, it is retried as a string and the persisted record is read back.",
+      "expectations": [
+        "An object-shaped rrule is rejected and the request is retried with a rule string.",
+        "The UNTIL value is the absolute UTC conversion of the America/New_York deadline.",
+        "The final persisted rrule and ACTIVE status are reported after read-back."
+      ],
+      "files": [],
+      "source_trace_ids": ["sig-936497d29974243ef2f82346"]
+    },
+    {
+      "id": 4,
+      "kind": "should_not_apply",
+      "prompt": "Keep checking the queue forever and tell me whenever it grows.",
+      "expected_output": "The open-ended request is not turned into a durable scheduled automation without a deadline or stopping condition.",
+      "expectations": [
+        "No automation is created without an absolute deadline or stopping condition.",
+        "The missing stopping point is surfaced before any schedule is persisted."
+      ],
+      "files": [],
+      "source_trace_ids": []
+    }
+  ]
+}
