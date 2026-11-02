@@ -1006,19 +1006,28 @@ def mine_trajectory(
     if use("method-completion-contract"):
         findings.extend(_completion_contract(trajectory, turn_path))
     minimum = float(config.get("min_value_score", 0.08))
+    recovery_minimum = float(
+        config.get("min_failure_recovery_value", minimum)
+    )
     maximum_obviousness = float(config.get("max_obviousness", 0.55))
     maximum_specificity = float(config.get("max_task_specificity", 0.65))
-    return [
-        finding
-        for finding in findings
-        if (
-            float(finding["features"]["quality"]["value"]) >= minimum
-            and float(finding["features"]["quality"]["obviousness"])
-            <= maximum_obviousness
-            and float(finding["features"]["quality"]["task_specificity"])
-            <= maximum_specificity
+
+    def passes(finding: dict[str, Any]) -> bool:
+        quality = finding["features"]["quality"]
+        features = finding["features"]
+        threshold = (
+            recovery_minimum
+            if finding.get("detector") == "method-failure-recovery"
+            and (features.get("lesson") or {}).get("verified_recovery") is True
+            else minimum
         )
-    ]
+        return (
+            float(quality["value"]) >= threshold
+            and float(quality["obviousness"]) <= maximum_obviousness
+            and float(quality["task_specificity"]) <= maximum_specificity
+        )
+
+    return [finding for finding in findings if passes(finding)]
 
 
 def consolidate_cross_task(

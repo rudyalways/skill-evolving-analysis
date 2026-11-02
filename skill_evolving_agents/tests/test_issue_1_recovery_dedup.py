@@ -111,6 +111,27 @@ class FailureRecoveryIssueTest(unittest.TestCase):
             provenance["external_evaluation_source"], "officeval"
         )
 
+    def test_verified_recovery_survives_general_value_gate(self) -> None:
+        rows = [
+            event(1, "failed", "execute", "exec", "run script.py"),
+            event(2, "completed", "modify", "edit", "fix script.py"),
+            event(3, "completed", "verify", "exec", "run script.py"),
+        ]
+        config = json.loads((AGENTS / "common/preprocessing-config.json").read_text())[
+            "methodology"
+        ]
+        config["min_value_score"] = 0.3
+        config["min_failure_recovery_value"] = 0.05
+        findings = methodology.mine_trajectory(trajectory(rows), "turn", config)
+        detectors = [row["detector"] for row in findings]
+        self.assertIn("method-failure-recovery", detectors)
+        recovery = next(
+            row for row in findings if row["detector"] == "method-failure-recovery"
+        )
+        self.assertGreaterEqual(
+            recovery["features"]["quality"]["value"], 0.05
+        )
+
     def test_unrelated_repair_is_not_part_of_the_chain(self) -> None:
         rows = [
             event(1, "failed", "execute", "exec", "run chart.py", "chart.py"),

@@ -142,7 +142,8 @@
       "obviousness": 1.0,
       "task_specificity": 1.0,
       "redundancy": 1.0
-    }
+    },
+    "min_failure_recovery_value": 0.05
   },
   "resource_opportunities": {
     "enabled": true,

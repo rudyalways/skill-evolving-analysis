@@ -3476,6 +3476,20 @@ def _maximum_existing_skill_similarity(workspace: Path, op: dict) -> float:
     return maximum
 
 
+def bounded_skill_description(value: object, max_chars: int = 60) -> str:
+    """Keep a skill description within the system-prompt budget."""
+    text = " ".join(str(value or "").split())
+    if len(text) <= max_chars:
+        return text
+    for separator in (". ", "? ", "! "):
+        if separator in text:
+            sentence = text.split(separator, 1)[0].strip()
+            if 0 < len(sentence) <= max_chars:
+                return sentence + separator.strip()
+    clipped = text[: max_chars - 1].rsplit(" ", 1)[0].strip(" ,;:-")
+    return (clipped or text[: max_chars - 1]).rstrip(".") + "."
+
+
 def enforce_creation_policy(
     workspace: Path, cluster: str, goal: dict, op: dict
 ) -> None:
@@ -3493,12 +3507,20 @@ def enforce_creation_policy(
         quality = features.get("quality") or {}
         value = float(quality.get("value") or 0)
         minimum_value = float(policy.get("min_methodology_value", 0.08))
-        if value < minimum_value:
+        methodology_policy = config.get("methodology") or {}
+        verified_recovery = bool(
+            (features.get("lesson") or {}).get("verified_recovery")
+            and finding.get("detector") == "method-failure-recovery"
+        )
+        recovery_minimum = float(
+            methodology_policy.get("min_failure_recovery_value", minimum_value)
+        )
+        if value < (recovery_minimum if verified_recovery else minimum_value):
             raise pipeline_contracts.ContractError(
                 f"{cluster} proposes methodology below the utility gate: "
-                f"value={value}, minimum={minimum_value}"
+                f"value={value}, minimum="
+                f"{recovery_minimum if verified_recovery else minimum_value}"
             )
-        methodology_policy = config.get("methodology") or {}
         obviousness = float(quality.get("obviousness") or 0)
         task_specificity = float(quality.get("task_specificity") or 0)
         if obviousness > float(
@@ -8990,6 +9012,19 @@ def fanout_operations(
                 workspace, run_id, cluster, cluster_goal
             )
             continue
+        descriptions_changed = False
+        for op in operations:
+            for skill in op.get("skills") or []:
+                if not isinstance(skill, dict) or not skill.get("description"):
+                    continue
+                bounded = bounded_skill_description(skill["description"])
+                if bounded != skill["description"]:
+                    skill["description"] = bounded
+                    descriptions_changed = True
+        if descriptions_changed:
+            atomic_write_json(cluster_goal, goal)
+            goal = pipeline_contracts.validate_goal(cluster_goal)
+            operations = (goal.get("action") or {}).get("ops") or []
         for op_index, op in enumerate(operations, start=1):
             op_goal = materialize_op_goal(
                 workspace,
