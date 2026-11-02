@@ -612,6 +612,12 @@ def collect_phase_metrics(
     signal_root = workspace / "traces/derived/signals"
     findings = _read_jsonl(signal_root / "findings.jsonl")
     decisions = _read_jsonl(signal_root / "selection-decisions.jsonl")
+    scenario_coverage = _read_json(signal_root / "scenario-coverage.json")
+    scenarios = (
+        scenario_coverage.get("scenarios") or {}
+        if isinstance(scenario_coverage, dict)
+        else {}
+    )
     selected = sum(row.get("disposition") == "selected" for row in decisions)
     dispositions: dict[str, int] = defaultdict(int)
     for row in decisions:
@@ -1093,6 +1099,17 @@ def collect_phase_metrics(
         },
         "phases": {
             "mining": {
+                "scenarios": dict(sorted(
+                    (str(name), int(value)) for name, value in scenarios.items()
+                )),
+                "reflections": (
+                    int(scenario_coverage.get("reflections") or 0)
+                    if isinstance(scenario_coverage, dict) else 0
+                ),
+                "reasoning_entries": (
+                    int(scenario_coverage.get("reasoning_entries") or 0)
+                    if isinstance(scenario_coverage, dict) else 0
+                ),
                 "turns": turn_count,
                 "findings": len(findings),
                 "selected": selected,

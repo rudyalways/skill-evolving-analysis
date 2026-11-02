@@ -27,8 +27,9 @@ RETRYABLE_ERROR = re.compile(
 )
 REFLECTION_PATTERNS = {
     "reconsider": re.compile(
-        r"\b(wait|hold on|actually|let me reconsider|rethink|think again|"
-        r"reconsider|try again)\b",
+        r"\b(wait|hold on|actually|let me think|let me reconsider|rethink|"
+        r"think again|reconsider|try again|on second thought|not quite|"
+        r"no[, ]+wait|no[, ]+let me|hmm)\b",
         re.IGNORECASE,
     ),
     "error_awareness": re.compile(
@@ -41,7 +42,7 @@ REFLECTION_PATTERNS = {
         re.IGNORECASE,
     ),
     "pivot": re.compile(
-        r"\b(instead|different approach|alternative|rather than|start over)\b",
+        r"\b(instead|different approach|another approach|alternative|rather than|start over)\b",
         re.IGNORECASE,
     ),
     "diagnosis": re.compile(
@@ -727,6 +728,12 @@ def _reflection_decision(
                 {
                     "kind": "functional_reflection",
                     "marker_categories": markers,
+                    "reflection_quote": str(observation.get("text") or "")[:600],
+                    "cue_phrases": [
+                        match.group(0)
+                        for pattern in REFLECTION_PATTERNS.values()
+                        for match in pattern.finditer(str(observation.get("text") or ""))
+                    ][:8],
                     "preceding_failure": preceding_failure,
                     "acquired_evidence": acquired_evidence,
                     "action_before": _normalized_action(previous),

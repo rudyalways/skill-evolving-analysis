@@ -890,6 +890,120 @@ def _select_findings(
     ]
 
 
+SCENARIOS = {
+    "method-failure-recovery": "failure_recovery",
+    "method-functional-reflection": "reasoning_pivot",
+    "method-phase-workflow": "verified_workflow",
+    "method-knowledge-acquisition": "knowledge_acquisition",
+    "method-critical-path": "critical_path",
+    "method-direction-pivot": "direction_pivot",
+    "method-completion-contract": "completion_contract",
+    "repeated-instructions": "repeated_instruction",
+    "correction-heavy": "user_correction",
+    "keep-going-loop": "unresolved_loop",
+    "method-retry-oscillation": "retry_oscillation",
+    "cut-unresolved_repeat": "unresolved_loop",
+    "resource-references-opportunity": "reference_reuse",
+    "resource-assets-opportunity": "asset_reuse",
+}
+
+
+def _scenario_for(finding: dict[str, Any]) -> str:
+    return SCENARIOS.get(str(finding.get("detector") or ""), "other")
+
+
+def _assistant_reasoning_text(finding: dict[str, Any]) -> str:
+    """Extract only assistant reasoning text from evidence quotes.
+
+    Evidence quotes are JSON blobs. Scanning the whole blob makes tool output
+    such as "verify" look like a reflection cue, so this deliberately ignores
+    events and result previews.
+    """
+    parts: list[str] = []
+    for row in finding.get("evidence") or []:
+        if not isinstance(row, dict):
+            continue
+        quote = row.get("quote")
+        if not isinstance(quote, str) or not quote.strip():
+            continue
+        try:
+            value = json.loads(quote)
+        except (TypeError, ValueError):
+            parts.append(quote)
+            continue
+        if isinstance(value, dict):
+            observations = value.get("assistant_observations") or []
+            for observation in observations:
+                if isinstance(observation, dict):
+                    text = observation.get("text")
+                    if isinstance(text, str) and text.strip():
+                        parts.append(text)
+                elif isinstance(observation, str) and observation.strip():
+                    parts.append(observation)
+    return " ".join(parts).strip()
+
+
+def reflection_bank_entries(findings: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    entries = []
+    patterns = _methodology_miner().REFLECTION_PATTERNS
+    for finding in findings:
+        features = finding.get("features") or {}
+        lesson = features.get("lesson") or {}
+        reasoning_text = _assistant_reasoning_text(finding)
+        markers = lesson.get("marker_categories") or [
+            name for name, pattern in patterns.items()
+            if pattern.search(reasoning_text)
+        ]
+        if not markers and lesson.get("kind") not in {"functional_reflection", "failure_recovery"}:
+            continue
+        entries.append(
+            {
+                "schema_version": 1,
+                "reflection_id": f"reflection-{finding['signal_id']}",
+                "finding_id": finding["signal_id"],
+                "detector": finding["detector"],
+                "scenario": _scenario_for(finding),
+                "session_id": finding.get("session_id"),
+                "marker_categories": markers,
+                "cue_phrases": lesson.get("cue_phrases") or [],
+                "reflection_quote": (
+                    lesson.get("reflection_quote") or reasoning_text[:600]
+                ),
+                "rule": lesson.get("rule") or "",
+                "verified_recovery": bool(lesson.get("verified_recovery")),
+                "confidence": finding.get("confidence"),
+            }
+        )
+    return entries
+
+
+def reasoning_bank_entries(findings: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    entries = []
+    for finding in findings:
+        features = finding.get("features") or {}
+        lesson = features.get("lesson") or {}
+        if not lesson:
+            continue
+        entries.append(
+            {
+                "schema_version": 1,
+                "reasoning_id": f"reasoning-{finding['signal_id']}",
+                "finding_id": finding["signal_id"],
+                "detector": finding["detector"],
+                "scenario": _scenario_for(finding),
+                "session_id": finding.get("session_id"),
+                "confidence": finding.get("confidence"),
+                "lesson_kind": lesson.get("kind"),
+                "rule": lesson.get("rule") or lesson.get("decision_rule") or "",
+                "failure_signature": lesson.get("failure_signature"),
+                "verification_signature": lesson.get("verification_signature"),
+                "verified_recovery": bool(lesson.get("verified_recovery")),
+                "evidence_count": len(finding.get("evidence") or []),
+            }
+        )
+    return entries
+
+
 def _patterns(findings: list[dict[str, Any]]) -> list[dict[str, Any]]:
     grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for finding in findings:
@@ -960,6 +1074,11 @@ def run(
     )
     findings.extend(resource_findings)
     findings.sort(key=lambda row: (row["detector"], row["signal_id"]))
+    for finding in findings:
+        features = finding.setdefault("features", {})
+        features.setdefault("scenario", _scenario_for(finding))
+    reflections = reflection_bank_entries(findings)
+    reasoning = reasoning_bank_entries(findings)
     patterns = _patterns(findings)
     selected, selection_decisions = _select_findings(
         findings, detector_config
@@ -969,6 +1088,27 @@ def run(
     )
     (root / "patterns.jsonl").write_text(
         "".join(json.dumps(row, sort_keys=True) + "\n" for row in patterns)
+    )
+    (root / "reflection-bank.jsonl").write_text(
+        "".join(json.dumps(row, sort_keys=True) + "\n" for row in reflections)
+    )
+    (root / "reasoning-bank.jsonl").write_text(
+        "".join(json.dumps(row, sort_keys=True) + "\n" for row in reasoning)
+    )
+    scenario_counts = Counter(_scenario_for(row) for row in findings)
+    (root / "scenario-coverage.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "scenarios": dict(sorted(scenario_counts.items())),
+                "findings": len(findings),
+                "reflections": len(reflections),
+                "reasoning_entries": len(reasoning),
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n"
     )
     (root / "selected-manifest.jsonl").write_text(
         "".join(
