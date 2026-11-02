@@ -54,10 +54,10 @@ clean worktree based on `origin/main` for isolated work and verification.
 The personal repository baseline is:
 
 ```text
-5ab4ec2e Reach funnel targets by filtering detector false positives
+2f8614c9 Fix workspace-relative metrics and coverage paths
 ```
 
-That commit passed all 234 tests in a clean worktree and the 23-case
+That commit passed all 237 tests in a clean worktree and the 23-case
 deterministic funnel benchmark at 23/23. It includes configurable funnel
 targets, single-session diagnosis controls, novel-versus-idempotent metrics,
 an action-oriented profile, inventory and release helpers, replay support,
@@ -98,7 +98,11 @@ privacy helpers, dashboard extensions, and:
   from repeated-instruction detection. An action-oriented 74-turn run against a
   13-skill inventory met all six funnel targets: 4 selected, 4 diagnosed,
   2 changed, 2 accepted, action/proposal rates 0.5, proposal acceptance 1.0.
-  The run took 224s with 10 agent calls.
+  The run took 224s with 10 agent calls;
+- workspace path safety: shared metrics and operation-coverage paths now resolve
+  the workspace container explicitly instead of assuming `parents[1]`. This
+  prevents temporary workspaces from escaping to the filesystem root. Added
+  `tests/test_workspace_paths.py` and ignored generated local state/artifacts.
 
 Four fresh/replay trace runs after these changes used 37 DSH calls and 7.75M
 tokens versus 53 calls and 10.87M tokens before (28.7% fewer tokens, about 32%
