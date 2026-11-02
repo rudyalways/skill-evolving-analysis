@@ -54,10 +54,10 @@ clean worktree based on `origin/main` for isolated work and verification.
 The personal repository baseline is:
 
 ```text
-2f8614c9 Fix workspace-relative metrics and coverage paths
+5ef2a846 Fix issue 1 recovery chains and target-aware dedup
 ```
 
-That commit passed all 237 tests in a clean worktree and the 23-case
+That commit passed all 243 tests in a clean worktree and the 23-case
 deterministic funnel benchmark at 23/23. It includes configurable funnel
 targets, single-session diagnosis controls, novel-versus-idempotent metrics,
 an action-oriented profile, inventory and release helpers, replay support,
@@ -102,7 +102,14 @@ privacy helpers, dashboard extensions, and:
 - workspace path safety: shared metrics and operation-coverage paths now resolve
   the workspace container explicitly instead of assuming `parents[1]`. This
   prevents temporary workspaces from escaping to the filesystem root. Added
-  `tests/test_workspace_paths.py` and ignored generated local state/artifacts.
+  `tests/test_workspace_paths.py` and ignored generated local state/artifacts;
+- issue 1 recovery fixes: `_failure_recovery` now requires a bounded
+  failure -> related repair -> revalidation chain, retains multiple independent
+  chains, and does not treat a successful patch/import as recovery. Candidate
+  dedup compares learning target and failure signature instead of containment
+  alone. Findings expose separate session, tool, local-verification, and
+  external-evaluation provenance; absent external evaluation remains unknown.
+  Added six regression tests in `tests/test_issue_1_recovery_dedup.py`.
 
 Four fresh/replay trace runs after these changes used 37 DSH calls and 7.75M
 tokens versus 53 calls and 10.87M tokens before (28.7% fewer tokens, about 32%
