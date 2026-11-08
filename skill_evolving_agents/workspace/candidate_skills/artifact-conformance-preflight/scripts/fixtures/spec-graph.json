@@ -1,0 +1,18 @@
+{
+  "spec_revision": "task-rev-graph",
+  "invariants": [
+    {
+      "id": "graph-reachability",
+      "class": "graph_structure",
+      "objects_path": "graph",
+      "nodes_path": "nodes",
+      "edges_path": "edges",
+      "node_id_field": "id",
+      "edge_source_field": "source",
+      "edge_target_field": "target",
+      "entry_node": "Start",
+      "terminal_nodes": ["End"],
+      "expected_source": "task statement, every node reachable from Start and every edge target a node except the declared terminal End"
+    }
+  ]
+}

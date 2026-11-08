@@ -1,210 +1,199 @@
 {
   "skills_metadata": [
     {
-      "skill": "audit-project-ui",
-      "description": "Frontend UI audit and repair skill: it diagnoses page and shell defects, implements fixes in the shared page framework, and verifies the deployed revision through live browser and first-viewport evidence.",
+      "skill": "ada-plan-view-accessibility",
+      "description": "Accessibility rule auditing and constraint-driven repair of plan-view bathroom layouts, checked against a named ADA-derived rule checklist.",
       "skill_types": [
         {
-          "type": "domain/frontend",
-          "weight": 0.95
+          "type": "job/verification/audit",
+          "weight": 0.9
         },
         {
-          "type": "job/verification/browser-check",
-          "weight": 0.9
+          "type": "domain/frontend/accessibility",
+          "weight": 0.85
         },
         {
           "type": "form/technique/checklist",
           "weight": 0.7
         },
         {
-          "type": "artifact/code-change",
+          "type": "form/pattern/constraint",
           "weight": 0.6
         }
       ],
-      "unmatched_skill_types": [],
-      "lifecycle": {
-        "status": "stable",
-        "origin_run_id": "legacy-inventory",
-        "origin_finding_id": "legacy-import:audit-project-ui",
-        "origin_session_ids": [
-          "legacy-inventory"
-        ],
-        "confidence": 1.0,
-        "evidence_records": 0,
-        "distinct_windows": 0,
-        "evaluated_at": "2026-10-24T14:12:41.037026+00:00",
-        "evaluation_kind": "legacy_inventory_backfill",
-        "evaluation_baseline_reason": "legacy_inventory_backfill"
-      }
+      "unmatched_skill_types": []
     },
     {
-      "skill": "authored-cli-helper",
-      "description": "Author and validate a repository operational CLI script with a stable machine-readable contract, safe loopback defaults, strict argument handling, and nonzero-on-failure behavior verified by syntax and live-command checks.",
+      "skill": "architectural-dxf-extraction",
+      "description": "Python extraction of DXF plan geometry into machine-checkable JSON, normalized against schemas through a documented workflow.",
       "skill_types": [
         {
-          "weight": 0.3,
-          "type": "job/skill-authoring"
-        },
-        {
-          "weight": 0.25,
-          "type": "form/reference/cli"
-        },
-        {
-          "weight": 0.2,
-          "type": "artifact/code-change"
-        },
-        {
-          "weight": 0.15,
-          "type": "domain/software/typescript"
-        },
-        {
-          "weight": 0.1,
-          "type": "job/verification/test"
-        }
-      ],
-      "unmatched_skill_types": [],
-      "lifecycle": {
-        "status": "evaluated",
-        "origin_run_id": "deep-prep-authored-resources-dsh-05",
-        "origin_finding_id": "sig-f7ccd004139711d75952d9e2",
-        "origin_session_ids": [
-          "01a16c53-bf96-7d62-992e-91c76506a6d8"
-        ],
-        "distinct_sessions": 1,
-        "confidence": 0.94,
-        "evidence_records": 1,
-        "distinct_windows": 1,
-        "evaluated_at": "2026-10-24T22:57:17.135104+00:00",
-        "evaluation_kind": "structural",
-        "content_sha256": "0af0f5bf40c8f5ec3ae57aea7d0682b5299592a779f2b967e93569cce11f99fc"
-      }
-    },
-    {
-      "skill": "batch-doc-variant-publishing",
-      "description": "Publish several localized or copied document variants from local XML drafts by validating every draft, normalizing the XML root, creating documents with a short yield and session polling, then fetching each returned token to confirm its title. Use when a request asks for multiple language versions or multiple copies of a document in one batch.",
-      "skill_types": [
-        {
-          "type": "job/methodology/workflow",
-          "weight": 0.95
-        },
-        {
-          "type": "form/pattern/constraint",
+          "type": "domain/software/python",
           "weight": 0.85
         },
         {
-          "type": "job/verification/evidence",
+          "type": "form/reference/schema",
           "weight": 0.8
         },
         {
           "type": "artifact/document",
-          "weight": 0.75
+          "weight": 0.6
         },
         {
-          "type": "domain/documents",
+          "type": "job/methodology/workflow",
+          "weight": 0.5
+        }
+      ],
+      "unmatched_skill_types": []
+    },
+    {
+      "skill": "artifact-conformance-preflight",
+      "description": "Executed conformance gate for artifacts and exported meshes, combining a task-derived rule checklist, independent-oracle recomputation, and structured evidence output.",
+      "skill_types": [
+        {
+          "type": "job/verification/audit",
+          "weight": 0.9
+        },
+        {
+          "type": "job/verification/eval",
+          "weight": 0.85
+        },
+        {
+          "type": "form/technique/checklist",
+          "weight": 0.8
+        },
+        {
+          "type": "form/reference/schema",
+          "weight": 0.7
+        },
+        {
+          "type": "domain/testing/qa",
+          "weight": 0.6
+        }
+      ],
+      "unmatched_skill_types": []
+    },
+    {
+      "skill": "audit-project-ui",
+      "description": "Review-and-repair of web UI density, layout, and first-viewport behavior, verified through rendered browser checks and accessibility-preserving constraints.",
+      "skill_types": [
+        {
+          "type": "job/verification/browser-check",
+          "weight": 0.85
+        },
+        {
+          "type": "job/reflection/review",
+          "weight": 0.8
+        },
+        {
+          "type": "domain/frontend/css",
+          "weight": 0.7
+        },
+        {
+          "type": "domain/frontend/accessibility",
+          "weight": 0.6
+        },
+        {
+          "type": "form/technique/checklist",
+          "weight": 0.55
+        }
+      ],
+      "unmatched_skill_types": []
+    },
+    {
+      "skill": "authored-cli-helper",
+      "description": "Authoring of a repository-local Node CLI with a strict argument contract, JSON output, safe loopback defaults, and negative-case verification.",
+      "skill_types": [
+        {
+          "type": "form/reference/cli",
+          "weight": 0.9
+        },
+        {
+          "type": "artifact/code-change",
+          "weight": 0.85
+        },
+        {
+          "type": "domain/software/javascript",
+          "weight": 0.8
+        },
+        {
+          "type": "job/verification/test",
           "weight": 0.7
         }
       ],
-      "unmatched_skill_types": [],
-      "lifecycle": {
-        "status": "evaluated",
-        "origin_run_id": "verify-geo2-32t-20261102",
-        "origin_finding_id": "sig-35085ae112bab413d8fb0ea3",
-        "origin_session_ids": [
-          "01a16b4f-1e5f-7191-b5f2-ab990f944acc"
-        ],
-        "distinct_sessions": 1,
-        "confidence": 0.9,
-        "evidence_records": 1,
-        "distinct_windows": 1,
-        "method_fingerprint": "method-v1:da31c8300755ab0892bd31aa",
-        "methodology_value": 0.303,
-        "seeded_from": "trace-deep-prep-01a17ff2-74turns--action-oriented-v1@2026-10-28T14:34",
-        "evaluated_at": "2026-11-02T07:17:21.015014+00:00",
-        "evaluation_kind": "structural",
-        "content_sha256": "736de32c3bea3e96b31e2a4b8ec7a76716c8165bcd8ad2e4ac9c1852f0dcc318"
-      }
+      "unmatched_skill_types": []
+    },
+    {
+      "skill": "batch-doc-variant-publishing",
+      "description": "Ordered batch publishing of localized XML document variants, using a document CLI reference and per-variant fetch verification.",
+      "skill_types": [
+        {
+          "type": "artifact/document",
+          "weight": 0.9
+        },
+        {
+          "type": "domain/documents",
+          "weight": 0.8
+        },
+        {
+          "type": "job/methodology/workflow",
+          "weight": 0.7
+        },
+        {
+          "type": "form/reference/cli",
+          "weight": 0.6
+        }
+      ],
+      "unmatched_skill_types": []
     },
     {
       "skill": "close-implementation-choice",
-      "description": "Answer-closing skill: it forces the final assistant text to select one named implementation option or state a short impossibility note, following a constrained decision workflow and output shape.",
+      "description": "Output-shape discipline that closes a turn on one chosen option or a short impossibility note, following a fixed convention.",
       "skill_types": [
         {
           "type": "job/output-format",
           "weight": 0.9
         },
         {
-          "type": "form/pattern/constraint",
-          "weight": 0.75
+          "type": "form/pattern/convention",
+          "weight": 0.6
         },
         {
-          "type": "job/methodology/workflow",
-          "weight": 0.6
+          "type": "job/reflection/review",
+          "weight": 0.55
         }
       ],
-      "unmatched_skill_types": [],
-      "lifecycle": {
-        "status": "stable",
-        "origin_run_id": "legacy-inventory",
-        "origin_finding_id": "legacy-import:close-implementation-choice",
-        "origin_session_ids": [
-          "legacy-inventory"
-        ],
-        "confidence": 1.0,
-        "evidence_records": 0,
-        "distinct_windows": 0,
-        "evaluated_at": "2026-10-24T14:12:41.037026+00:00",
-        "evaluation_kind": "legacy_inventory_backfill",
-        "evaluation_baseline_reason": "legacy_inventory_backfill"
-      }
+      "unmatched_skill_types": []
     },
     {
       "skill": "content-operations-delivery-plan-reference",
-      "description": "Consult a durable navigational index for owner/docs/architecture/content_operations_phased_delivery_plan.md before answering questions about its authentication, browser automation, owner decisions, MVP sources, or RedNote scope, and refresh the index at runtime when the source digest changes. This is the OOD specialization form/reference/navigational-index and is recommended for taxonomy promotion.",
+      "description": "Navigation-only index and freshness rule that routes a query to the governing section of the content operations delivery plan.",
       "skill_types": [
         {
-          "weight": 0.9,
-          "type": "form/reference/rest"
+          "type": "domain/documents",
+          "weight": 0.8
         },
         {
-          "weight": 0.85,
-          "type": "job/repo-understanding/map"
+          "type": "job/discovery/route",
+          "weight": 0.7
         },
         {
-          "weight": 0.8,
-          "type": "domain/writing/docs"
+          "type": "form/reference/rest",
+          "weight": 0.65
         },
         {
-          "weight": 0.7,
-          "type": "artifact/document"
+          "type": "form/technique/steps",
+          "weight": 0.55
         }
       ],
-      "unmatched_skill_types": [],
-      "lifecycle": {
-        "status": "evaluated",
-        "origin_run_id": "deep-prep-resources-dsh-01",
-        "origin_finding_id": "sig-971d2086d380225853d406ad",
-        "origin_session_ids": [
-          "01a16c53-bf96-7d62-992e-91c76506a6d8"
-        ],
-        "distinct_sessions": 1,
-        "confidence": 0.96,
-        "evidence_records": 3,
-        "distinct_windows": 3,
-        "evaluated_at": "2026-10-24T22:47:21.352760+00:00",
-        "evaluation_kind": "structural",
-        "content_sha256": "92124475461a72882ac55d8a5b33f9fb9d7018e358c6c5ef39e45ab25742f6c4"
-      }
+      "unmatched_skill_types": []
     },
     {
       "skill": "delegated-auth-flow-review",
-      "description": "Read-only authentication security review skill: it bounds a delegated review of a changed login/session/token flow, falsifies suspicions, and returns only evidence-backed regressions with exact file locations.",
+      "description": "Read-only delegated review of changed authentication flows, returning only evidence-backed regressions with exact paths and a checklist-driven falsification method.",
       "skill_types": [
         {
           "type": "domain/security/auth",
-          "weight": 0.95
-        },
-        {
-          "type": "job/verification/audit",
           "weight": 0.9
         },
         {
@@ -213,353 +202,199 @@
         },
         {
           "type": "job/verification/evidence",
-          "weight": 0.8
+          "weight": 0.7
         },
         {
-          "type": "artifact/none",
+          "type": "form/technique/checklist",
           "weight": 0.6
         }
       ],
-      "unmatched_skill_types": [],
-      "lifecycle": {
-        "status": "stable",
-        "origin_run_id": "legacy-inventory",
-        "origin_finding_id": "legacy-import:delegated-auth-flow-review",
-        "origin_session_ids": [
-          "legacy-inventory"
-        ],
-        "confidence": 1.0,
-        "evidence_records": 0,
-        "distinct_windows": 0,
-        "evaluated_at": "2026-10-24T14:12:41.037026+00:00",
-        "evaluation_kind": "legacy_inventory_backfill",
-        "evaluation_baseline_reason": "legacy_inventory_backfill"
-      }
+      "unmatched_skill_types": []
     },
     {
-      "skill": "establish-browser-surface",
-      "description": "Browser pre-flight skill: it inventories and binds a controllable browser surface, navigates and verifies page identity, and requires live artifact evidence before a claimed fix is closed.",
-      "skill_types": [
-        {
-          "type": "job/verification/browser-check",
-          "weight": 0.95
-        },
-        {
-          "type": "job/verification/evidence",
-          "weight": 0.85
-        },
-        {
-          "type": "form/technique/steps",
-          "weight": 0.75
-        },
-        {
-          "type": "job/methodology/workflow",
-          "weight": 0.65
-        }
-      ],
-      "unmatched_skill_types": [],
-      "lifecycle": {
-        "status": "stable",
-        "origin_run_id": "legacy-inventory",
-        "origin_finding_id": "legacy-import:establish-browser-surface",
-        "origin_session_ids": [
-          "legacy-inventory"
-        ],
-        "confidence": 1.0,
-        "evidence_records": 0,
-        "distinct_windows": 0,
-        "evaluated_at": "2026-10-24T14:12:41.037026+00:00",
-        "evaluation_kind": "legacy_inventory_backfill",
-        "evaluation_baseline_reason": "legacy_inventory_backfill"
-      }
-    },
-    {
-      "skill": "feishu-cli-device-auth",
-      "description": "Complete Feishu/Lark CLI login through the terminal-led device-authorization flow: answer CLI prompts, render the verification URL as a QR code or user code, keep the login process waiting, and verify the authenticated session. Use when lark-cli reports missing or expired authorization or a Feishu setup task needs a signed-in CLI; do not drive the browser consent page by clicking or reloading.",
-      "skill_types": [
-        {
-          "weight": 0.95,
-          "type": "domain/security/auth"
-        },
-        {
-          "weight": 0.85,
-          "type": "form/reference/cli"
-        },
-        {
-          "weight": 0.7,
-          "type": "job/discovery/route"
-        },
-        {
-          "weight": 0.65,
-          "type": "form/pattern/constraint"
-        }
-      ],
-      "unmatched_skill_types": [],
-      "lifecycle": {
-        "status": "evaluated",
-        "origin_run_id": "verify-geo2-32t-20261102",
-        "origin_finding_id": "sig-e1dcfa0f9559d31670612a2d",
-        "origin_session_ids": [
-          "01a16b4f-1e5f-7191-b5f2-ab990f944acc"
-        ],
-        "distinct_sessions": 1,
-        "confidence": 0.88,
-        "evidence_records": 1,
-        "distinct_windows": 1,
-        "method_fingerprint": "method-v1:b2e180a819daacdafd284688",
-        "methodology_value": 0.382526,
-        "seeded_from": "trace-deep-prep-01a17ff2-74turns--action-oriented-v1@2026-10-28T14:34",
-        "evaluated_at": "2026-11-02T07:17:05.701846+00:00",
-        "evaluation_kind": "structural",
-        "content_sha256": "2bce480ac769cf514c86918d924fcc5a4dda96ac2edf4b2b199a0530f35fa4be"
-      }
-    },
-    {
-      "skill": "lark-doc-navigation-reference",
-      "description": "Consult a durable navigational index for the lark-doc skill and its references files before repeatedly reading the full skill documents, and rebuild the index at runtime when a recorded sha256 digest changes. Use for Feishu/Lark docx or wiki reading, creation, and editing tasks that need the skill's exact commands, flags, or reference file selection.",
-      "skill_types": [
-        {
-          "weight": 0.95,
-          "type": "form/reference"
-        },
-        {
-          "weight": 0.8,
-          "type": "job/discovery/route"
-        },
-        {
-          "weight": 0.85,
-          "type": "domain/writing/docs"
-        },
-        {
-          "weight": 0.6,
-          "type": "job/methodology/workflow"
-        }
-      ],
-      "unmatched_skill_types": [],
-      "lifecycle": {
-        "status": "evaluated",
-        "origin_run_id": "verify-geo2-32t-20261102",
-        "origin_finding_id": "sig-5b9fa5ac67cd21a99558fc07",
-        "origin_session_ids": [
-          "01a16b4f-1e5f-7191-b5f2-ab990f944acc"
-        ],
-        "distinct_sessions": 1,
-        "confidence": 0.96,
-        "evidence_records": 5,
-        "distinct_windows": 13,
-        "seeded_from": "trace-deep-prep-01a17ff2-74turns--action-oriented-v1@2026-10-28T14:34",
-        "evaluated_at": "2026-11-02T07:19:12.890744+00:00",
-        "evaluation_kind": "structural",
-        "content_sha256": "dc0f534bfe29cfe33873b58093adf8fc4f7851e8dbb9a831712526439d364f12"
-      }
-    },
-    {
-      "skill": "lark-doc-reference-index",
-      "description": "Consult a durable navigational index for the lark-doc skill documentation before rereading its SKILL.md or reference files, and rebuild the index at runtime when the source digest changes.",
-      "skill_types": [
-        {
-          "weight": 0.5,
-          "type": "form/reference"
-        },
-        {
-          "weight": 0.25,
-          "type": "job/verification/evidence"
-        },
-        {
-          "weight": 0.25,
-          "type": "form/technique/checklist"
-        }
-      ],
-      "unmatched_skill_types": [],
-      "lifecycle": {
-        "status": "evaluated",
-        "origin_run_id": "iter-geo-32t-20261102",
-        "origin_finding_id": "sig-5b9fa5ac67cd21a99558fc07",
-        "origin_session_ids": [
-          "01a16b4f-1e5f-7191-b5f2-ab990f944acc"
-        ],
-        "distinct_sessions": 1,
-        "confidence": 0.96,
-        "evidence_records": 5,
-        "distinct_windows": 13,
-        "seeded_from": "trace-deep-prep-01a17ff2-74turns--action-oriented-v1@2026-10-28T14:34",
-        "evaluated_at": "2026-11-02T04:22:13.104791+00:00",
-        "evaluation_kind": "structural",
-        "content_sha256": "b98d1ec40ae4e19d588a11dc437479a18db7aeeda5aa53ff7b69f69fee829044"
-      }
-    },
-    {
-      "skill": "live-state-handoff-reconciliation",
-      "description": "Author parallel-workstream handoff prompts only after re-resolving live repository state: enumerate worktrees and branches, check each named path for uncommitted or diverged state, resolve the published base SHA, and stamp the draft with a current timestamp.",
-      "skill_types": [
-        {
-          "weight": 0.95,
-          "type": "job/methodology"
-        },
-        {
-          "weight": 0.9,
-          "type": "domain/git"
-        },
-        {
-          "weight": 0.75,
-          "type": "form/technique"
-        },
-        {
-          "weight": 0.6,
-          "type": "artifact/document"
-        }
-      ],
-      "unmatched_skill_types": [],
-      "lifecycle": {
-        "status": "evaluated",
-        "origin_run_id": "trace-74turns--action-oriented-13skills-sleepfix-20261029",
-        "origin_finding_id": "sig-f527bec1a1b6c3dee744b34d",
-        "origin_session_ids": [
-          "01a16e0a-bd04-7900-bddf-d208ebdeb342"
-        ],
-        "distinct_sessions": 1,
-        "confidence": 0.9,
-        "evidence_records": 1,
-        "distinct_windows": 1,
-        "method_fingerprint": "method-v1:247d0894c6647f29cd5c858e",
-        "methodology_value": 0.305154,
-        "seeded_from": "trace-deep-prep-01a17ff2-74turns--action-oriented-v1@2026-10-28T14:34",
-        "evaluated_at": "2026-10-29T09:05:00.533388+00:00",
-        "evaluation_kind": "structural",
-        "content_sha256": "924aff1238ff77a46f19f8b2d180da88e7688ec8b2273366f984478b5fae9b79"
-      }
-    },
-    {
-      "skill": "maintain-reference-index",
-      "description": "Build a compact, freshness-checked navigational index of a long, repeatedly consulted guide, then consult the index instead of re-reading the whole source.",
-      "skill_types": [
-        {
-          "type": "form/reference/rest",
-          "weight": 0.9
-        },
-        {
-          "type": "job/methodology/workflow",
-          "weight": 0.75
-        },
-        {
-          "type": "form/technique/steps",
-          "weight": 0.7
-        },
-        {
-          "type": "job/verification/evidence",
-          "weight": 0.6
-        }
-      ],
-      "unmatched_skill_types": [],
-      "lifecycle": {
-        "status": "evaluated",
-        "origin_run_id": "trace-deep-prep-01a17ff2-74turns--action-oriented-v2",
-        "origin_finding_id": "sig-4536919c9977a651e6e487a0",
-        "origin_session_ids": [
-          "01a16e0a-bd04-7900-bddf-d208ebdeb342"
-        ],
-        "distinct_sessions": 1,
-        "confidence": 0.93,
-        "evidence_records": 3,
-        "distinct_windows": 3,
-        "evaluated_at": "2026-10-28T06:39:29.243114+00:00",
-        "evaluation_kind": "structural",
-        "content_sha256": "dfdce1a354483cb4fafb2c2d553f7c55294fec368c0ad326938b357fc09276cc"
-      }
-    },
-    {
-      "skill": "merge-gate-triage",
-      "description": "Merge-gate debugging skill: it classifies a blocked quality gate from its named failure mode, quarantines untracked workspace artifacts, and uses git history and blame to isolate and fix change-independent defects.",
-      "skill_types": [
-        {
-          "type": "job/methodology/debug",
-          "weight": 0.9
-        },
-        {
-          "type": "domain/git",
-          "weight": 0.85
-        },
-        {
-          "type": "domain/cloud-devops/ci",
-          "weight": 0.7
-        },
-        {
-          "type": "job/verification/test",
-          "weight": 0.7
-        },
-        {
-          "type": "form/technique/steps",
-          "weight": 0.65
-        }
-      ],
-      "unmatched_skill_types": [],
-      "lifecycle": {
-        "status": "stable",
-        "origin_run_id": "legacy-inventory",
-        "origin_finding_id": "legacy-import:merge-gate-triage",
-        "origin_session_ids": [
-          "legacy-inventory"
-        ],
-        "confidence": 1.0,
-        "evidence_records": 0,
-        "distinct_windows": 0,
-        "evaluated_at": "2026-10-24T14:12:41.037026+00:00",
-        "evaluation_kind": "legacy_inventory_backfill",
-        "evaluation_baseline_reason": "legacy_inventory_backfill"
-      }
-    },
-    {
-      "skill": "openpyxl-chart-rendering",
-      "description": "Build and style openpyxl charts with typed drawing.",
+      "skill": "derived-aggregate-audit",
+      "description": "Repair of failing derived spreadsheet aggregates by restating the metric, pinning the source population, recomputing independently, and replaying the verifier.",
       "skill_types": [
         {
           "type": "artifact/spreadsheet",
-          "weight": 1.0
-        },
-        {
-          "type": "domain/software/python",
-          "weight": 0.95
-        },
-        {
-          "type": "form/pattern/constraint",
           "weight": 0.9
+        },
+        {
+          "type": "domain/data/analytics",
+          "weight": 0.8
+        },
+        {
+          "type": "job/verification/audit",
+          "weight": 0.8
         },
         {
           "type": "job/methodology/debug",
+          "weight": 0.6
+        },
+        {
+          "type": "form/technique/checklist",
+          "weight": 0.5
+        }
+      ],
+      "unmatched_skill_types": []
+    },
+    {
+      "skill": "establish-browser-surface",
+      "description": "Pre-flight browser surface selection and identity verification, routing to an attached or newly created tab before authenticated work.",
+      "skill_types": [
+        {
+          "type": "job/verification/browser-check",
+          "weight": 0.9
+        },
+        {
+          "type": "job/discovery/route",
           "weight": 0.75
         },
         {
-          "type": "job/verification/evidence",
+          "type": "form/technique/checklist",
           "weight": 0.7
+        },
+        {
+          "type": "domain/frontend",
+          "weight": 0.5
         }
       ],
-      "unmatched_skill_types": [],
-      "lifecycle": {
-        "status": "evaluated",
-        "origin_run_id": "officeval-094-issue1-final",
-        "origin_finding_id": "sig-c855005bde5f1c87886872c6",
-        "origin_session_ids": [
-          "20261002_062216_6ed698"
-        ],
-        "distinct_sessions": 1,
-        "confidence": 0.9,
-        "evidence_records": 1,
-        "distinct_windows": 1,
-        "method_fingerprint": "method-v1:43eb4475681bbb6b8cd728ff",
-        "methodology_value": 0.192735,
-        "seeded_from": "trace-deep-prep-01a17ff2-74turns--action-oriented-v1@2026-10-28T14:34",
-        "evaluated_at": "2026-11-02T09:10:56.567689+00:00",
-        "evaluation_kind": "structural",
-        "content_sha256": "10538eb5555812a618b53bca32887bdefcda9bdb08332c01d61f7824fa55f3dc"
-      }
+      "unmatched_skill_types": []
     },
     {
-      "skill": "operations-quality-reference",
-      "description": "Document-reference skill: it maintains and consults a bounded section-level navigational record with a digest for the repository operations quality document, used before CI, merge-gate, lease, and delivery checklist work.",
+      "skill": "feishu-cli-device-auth",
+      "description": "Terminal-led device authorization for the Lark CLI, using the CLI reference and a stepwise login-and-verification procedure.",
+      "skill_types": [
+        {
+          "type": "domain/security/auth",
+          "weight": 0.9
+        },
+        {
+          "type": "form/reference/cli",
+          "weight": 0.8
+        },
+        {
+          "type": "form/technique/steps",
+          "weight": 0.7
+        },
+        {
+          "type": "binding/unbound",
+          "weight": 0.5
+        }
+      ],
+      "unmatched_skill_types": []
+    },
+    {
+      "skill": "geometric-layout-repair",
+      "description": "DXF-to-JSON architectural layout repair via a bundled Python extraction adapter, a synchronized CAD output, and a round-trip geometry contract gate.",
+      "skill_types": [
+        {
+          "type": "domain/software/python",
+          "weight": 0.8
+        },
+        {
+          "type": "job/verification/audit",
+          "weight": 0.7
+        },
+        {
+          "type": "job/methodology/workflow",
+          "weight": 0.65
+        },
+        {
+          "type": "artifact/document",
+          "weight": 0.6
+        }
+      ],
+      "unmatched_skill_types": []
+    },
+    {
+      "skill": "lark-doc-navigation-reference",
+      "description": "Navigation and freshness index over live lark-doc documentation that routes each Feishu/Lark docx or wiki request to a bounded section.",
       "skill_types": [
         {
           "type": "domain/documents",
+          "weight": 0.8
+        },
+        {
+          "type": "job/discovery/route",
+          "weight": 0.8
+        },
+        {
+          "type": "form/reference/rest",
+          "weight": 0.7
+        },
+        {
+          "type": "domain/writing/docs",
+          "weight": 0.6
+        },
+        {
+          "type": "form/technique/steps",
+          "weight": 0.55
+        }
+      ],
+      "unmatched_skill_types": []
+    },
+    {
+      "skill": "live-state-handoff-reconciliation",
+      "description": "Read-only git worktree, branch, and base-SHA reconciliation before drafting parallel-workstream handoff prompts, with a post-draft freshness recheck.",
+      "skill_types": [
+        {
+          "type": "domain/git",
           "weight": 0.9
+        },
+        {
+          "type": "job/methodology/workflow",
+          "weight": 0.8
+        },
+        {
+          "type": "form/technique/checklist",
+          "weight": 0.7
+        },
+        {
+          "type": "job/reflection/review",
+          "weight": 0.6
+        }
+      ],
+      "unmatched_skill_types": []
+    },
+    {
+      "skill": "maintain-reference-index",
+      "description": "Creation and maintenance of a compact heading-and-line reference index with a fingerprint check that routes later lookups to bounded source ranges.",
+      "skill_types": [
+        {
+          "type": "form/reference/rest",
+          "weight": 0.8
+        },
+        {
+          "type": "job/discovery/route",
+          "weight": 0.7
+        },
+        {
+          "type": "domain/documents",
+          "weight": 0.6
+        },
+        {
+          "type": "job/methodology/workflow",
+          "weight": 0.55
+        }
+      ],
+      "unmatched_skill_types": []
+    },
+    {
+      "skill": "merge-gate-triage",
+      "description": "Debugging triage of a blocked merge or pre-push gate that separates workspace contamination from change-independent defects before fixing and rerunning.",
+      "skill_types": [
+        {
+          "type": "job/methodology/debug",
+          "weight": 0.85
+        },
+        {
+          "type": "job/verification/test",
+          "weight": 0.8
+        },
+        {
+          "type": "domain/git",
+          "weight": 0.75
         },
         {
           "type": "domain/cloud-devops/ci",
@@ -567,342 +402,329 @@
         },
         {
           "type": "form/technique/checklist",
-          "weight": 0.65
-        },
-        {
-          "type": "job/verification/evidence",
-          "weight": 0.55
-        }
-      ],
-      "unmatched_skill_types": [],
-      "lifecycle": {
-        "status": "stable",
-        "origin_run_id": "legacy-inventory",
-        "origin_finding_id": "legacy-import:operations-quality-reference",
-        "origin_session_ids": [
-          "legacy-inventory"
-        ],
-        "confidence": 1.0,
-        "evidence_records": 0,
-        "distinct_windows": 0,
-        "evaluated_at": "2026-10-24T14:12:41.037026+00:00",
-        "evaluation_kind": "legacy_inventory_backfill",
-        "evaluation_baseline_reason": "legacy_inventory_backfill"
-      }
-    },
-    {
-      "skill": "reliability-workstream-handoff-reference",
-      "description": "Consult a durable navigational index for the reliability workstream handoff and promotion policy before answering questions about workstream sequencing, admission or handoff rules, or production promotion constraints, and rebuild the index at runtime when the source digest changes.",
-      "skill_types": [
-        {
-          "type": "form/reference/rest",
-          "weight": 0.9
-        },
-        {
-          "type": "job/repo-understanding/map",
-          "weight": 0.85
-        },
-        {
-          "type": "domain/writing/docs",
-          "weight": 0.8
-        },
-        {
-          "type": "artifact/document",
-          "weight": 0.7
-        }
-      ],
-      "unmatched_skill_types": [],
-      "lifecycle": {
-        "status": "evaluated",
-        "origin_run_id": "trace-deep-prep-01a17ff2-74turns--action-oriented-v2",
-        "origin_finding_id": "sig-d3f3514e3dfad6c9dbebee41",
-        "origin_session_ids": [
-          "01a16e0a-bd04-7900-bddf-d208ebdeb342"
-        ],
-        "distinct_sessions": 1,
-        "confidence": 0.96,
-        "evidence_records": 5,
-        "distinct_windows": 7,
-        "evaluated_at": "2026-10-28T06:40:03.368226+00:00",
-        "evaluation_kind": "structural",
-        "content_sha256": "3b1bab729e463370b356180c617545628bcc248c4cfa0ab631fd0c93b01981e2"
-      }
-    },
-    {
-      "skill": "reliability-workstreams-reference",
-      "description": "Record and consult a durable section-level index for docs/operations/reliability_workstreams instead of re-reading the whole document. Use before P0 workstream coordination, ownership, merge-order, leaf-agent push, or finalizer decisions, and whenever a prior turn already retrieved the document and the current step needs the same rule.",
-      "skill_types": [
-        {
-          "type": "form/reference/rest",
-          "weight": 0.95
-        },
-        {
-          "type": "job/repo-understanding/map",
-          "weight": 0.9
-        },
-        {
-          "type": "job/methodology/workflow",
-          "weight": 0.7
-        },
-        {
-          "type": "artifact/document",
           "weight": 0.6
         }
       ],
-      "unmatched_skill_types": [],
-      "lifecycle": {
-        "status": "evaluated",
-        "origin_run_id": "target-latest-74turns-20261102",
-        "origin_finding_id": "sig-087bb345a29ca259fb06c883",
-        "origin_session_ids": [
-          "01a16e0a-bd04-7900-bddf-d208ebdeb342"
-        ],
-        "distinct_sessions": 1,
-        "confidence": 0.96,
-        "evidence_records": 5,
-        "distinct_windows": 5,
-        "seeded_from": "trace-deep-prep-01a17ff2-74turns--action-oriented-v1@2026-10-28T14:34",
-        "evaluated_at": "2026-11-02T07:02:25.082459+00:00",
-        "evaluation_kind": "structural",
-        "content_sha256": "9bd479cbbb0e2b8c786203bba222aab84defe5a2a5947e42bef2dd6c14f72d08"
-      }
+      "unmatched_skill_types": []
     },
     {
-      "skill": "retry-after-information-gain",
-      "description": "Retry-decision and CI-closure skill: it compares a proposed repeat against the recorded action/state/result triple, builds a failure ledger, fixes shared-boundary causes, and reruns the canonical gate to a full green or documented external block.",
+      "skill": "openpyxl-chart-rendering",
+      "description": "Python openpyxl chart styling with typed drawing objects, repaired from serialization errors and verified by regenerating and rendering the workbook.",
       "skill_types": [
         {
-          "type": "form/technique/loop",
+          "type": "artifact/spreadsheet",
           "weight": 0.9
         },
         {
-          "type": "job/methodology/debug",
+          "type": "domain/software/python",
           "weight": 0.85
         },
         {
+          "type": "job/methodology/debug",
+          "weight": 0.6
+        },
+        {
+          "type": "job/verification/evidence",
+          "weight": 0.6
+        },
+        {
+          "type": "domain/data/dashboard",
+          "weight": 0.5
+        }
+      ],
+      "unmatched_skill_types": []
+    },
+    {
+      "skill": "operations-quality-reference",
+      "description": "Section-level reference index for the engineering quality and delivery document, routing merge-gate, CI, lease, and delivery-checklist work to the governing heading.",
+      "skill_types": [
+        {
+          "type": "domain/documents",
+          "weight": 0.8
+        },
+        {
+          "type": "job/discovery/route",
+          "weight": 0.75
+        },
+        {
+          "type": "form/reference/rest",
+          "weight": 0.7
+        },
+        {
           "type": "domain/cloud-devops/ci",
+          "weight": 0.6
+        },
+        {
+          "type": "form/technique/steps",
+          "weight": 0.55
+        }
+      ],
+      "unmatched_skill_types": []
+    },
+    {
+      "skill": "reliability-workstream-handoff-reference",
+      "description": "Runtime-rebuilt navigation index for the reliability workstream handoff and promotion policy, routing to bounded headings with digest freshness.",
+      "skill_types": [
+        {
+          "type": "domain/documents",
+          "weight": 0.8
+        },
+        {
+          "type": "job/discovery/route",
+          "weight": 0.75
+        },
+        {
+          "type": "form/reference/rest",
+          "weight": 0.7
+        },
+        {
+          "type": "form/technique/steps",
+          "weight": 0.6
+        }
+      ],
+      "unmatched_skill_types": []
+    },
+    {
+      "skill": "reliability-workstreams-reference",
+      "description": "Checkout-scoped navigation index for the reliability workstreams directory and P0 coordination guide, with digest comparison before bounded reads.",
+      "skill_types": [
+        {
+          "type": "domain/documents",
+          "weight": 0.8
+        },
+        {
+          "type": "job/discovery/route",
+          "weight": 0.75
+        },
+        {
+          "type": "form/reference/rest",
+          "weight": 0.7
+        },
+        {
+          "type": "form/technique/steps",
+          "weight": 0.6
+        }
+      ],
+      "unmatched_skill_types": []
+    },
+    {
+      "skill": "repair-budget-checkpoint",
+      "description": "Budget-aware repair loop that emits required artifacts early, checkpoints before each iteration, and reserves a final interval for deterministic verification.",
+      "skill_types": [
+        {
+          "type": "job/methodology/workflow",
+          "weight": 0.85
+        },
+        {
+          "type": "form/technique/checklist",
+          "weight": 0.7
+        },
+        {
+          "type": "form/pattern/constraint",
+          "weight": 0.6
+        },
+        {
+          "type": "job/output-format",
+          "weight": 0.55
+        }
+      ],
+      "unmatched_skill_types": []
+    },
+    {
+      "skill": "retry-after-information-gain",
+      "description": "Information-gain retry decision plus named CI or merge-gate closure, driven by a failure ledger, retry state machine, and full-gate reruns.",
+      "skill_types": [
+        {
+          "type": "job/methodology/debug",
+          "weight": 0.8
+        },
+        {
+          "type": "job/verification/test",
+          "weight": 0.75
+        },
+        {
+          "type": "form/pattern/constraint",
+          "weight": 0.7
+        },
+        {
+          "type": "domain/cloud-devops/ci",
+          "weight": 0.65
+        },
+        {
+          "type": "job/output-format",
+          "weight": 0.5
+        }
+      ],
+      "unmatched_skill_types": []
+    },
+    {
+      "skill": "retry-guard",
+      "description": "Bounded retry and asynchronous watch policy with declared terminal states, backoff, unchanged-observation limits, and independent liveness checks.",
+      "skill_types": [
+        {
+          "type": "job/methodology/workflow",
+          "weight": 0.8
+        },
+        {
+          "type": "form/pattern/constraint",
           "weight": 0.75
         },
         {
           "type": "job/verification/test",
-          "weight": 0.7
+          "weight": 0.6
         },
         {
-          "type": "job/verification/evidence",
-          "weight": 0.65
+          "type": "domain/cloud-devops/ci",
+          "weight": 0.6
+        },
+        {
+          "type": "job/output-format",
+          "weight": 0.55
         }
       ],
-      "unmatched_skill_types": [],
-      "lifecycle": {
-        "status": "stable",
-        "origin_run_id": "legacy-inventory",
-        "origin_finding_id": "legacy-import:retry-after-information-gain",
-        "origin_session_ids": [
-          "legacy-inventory"
-        ],
-        "confidence": 1.0,
-        "evidence_records": 0,
-        "distinct_windows": 0,
-        "evaluated_at": "2026-10-24T14:12:41.037026+00:00",
-        "evaluation_kind": "legacy_inventory_backfill",
-        "evaluation_baseline_reason": "legacy_inventory_backfill"
-      }
+      "unmatched_skill_types": []
     },
     {
-      "skill": "retry-guard",
-      "description": "Retry and bounded-watch skill: it gates repeated tool calls, polls, and waits on information gain, and supervises asynchronous builds, deployments, and sessions through declared terminal states, deadlines, liveness checks, and log escalation.",
+      "skill": "scheduled-monitoring-automation",
+      "description": "Creation and read-back verification of a bounded recurring monitoring automation encoded as one RFC 5545 rule with an absolute deadline.",
       "skill_types": [
-        {
-          "type": "form/technique/loop",
-          "weight": 0.95
-        },
         {
           "type": "job/methodology/workflow",
           "weight": 0.75
         },
         {
           "type": "job/verification/evidence",
-          "weight": 0.65
-        },
-        {
-          "type": "domain/cloud-devops/ci",
-          "weight": 0.6
-        }
-      ],
-      "unmatched_skill_types": [],
-      "lifecycle": {
-        "status": "stable",
-        "origin_run_id": "legacy-inventory",
-        "origin_finding_id": "legacy-import:retry-guard",
-        "origin_session_ids": [
-          "legacy-inventory"
-        ],
-        "confidence": 1.0,
-        "evidence_records": 0,
-        "distinct_windows": 0,
-        "evaluated_at": "2026-10-24T14:12:41.037026+00:00",
-        "evaluation_kind": "legacy_inventory_backfill",
-        "evaluation_baseline_reason": "legacy_inventory_backfill"
-      }
-    },
-    {
-      "skill": "scheduled-monitoring-automation",
-      "description": "Create and verify a durable scheduled monitoring automation from a bounded recurring-monitoring request, including cadence, absolute deadline, single RFC 5545 recurrence rule, and persisted-state confirmation.",
-      "skill_types": [
-        {
-          "type": "job/methodology/workflow",
-          "weight": 0.95
-        },
-        {
-          "type": "domain/ai/agent",
           "weight": 0.7
         },
         {
-          "type": "binding/openai",
+          "type": "form/reference/api",
           "weight": 0.6
         },
         {
-          "type": "form/technique/steps",
-          "weight": 0.55
+          "type": "form/technique/checklist",
+          "weight": 0.6
+        },
+        {
+          "type": "domain/productivity",
+          "weight": 0.5
         }
       ],
-      "unmatched_skill_types": [],
-      "lifecycle": {
-        "status": "evaluated",
-        "origin_run_id": "target-latest-74turns-20261102",
-        "origin_finding_id": "sig-936497d29974243ef2f82346",
-        "origin_session_ids": [
-          "01a16e0a-bd04-7900-bddf-d208ebdeb342"
-        ],
-        "distinct_sessions": 1,
-        "confidence": 0.9,
-        "evidence_records": 1,
-        "distinct_windows": 1,
-        "method_fingerprint": "method-v1:7a9cc1becaa278d2ed9bbb0b",
-        "methodology_value": 0.3515,
-        "seeded_from": "trace-deep-prep-01a17ff2-74turns--action-oriented-v1@2026-10-28T14:34",
-        "evaluated_at": "2026-11-02T04:16:46.237117+00:00",
-        "evaluation_kind": "structural",
-        "content_sha256": "e3639cd5d81ca5236764fe44a05ab77428da338f65088207a13639476ebdb418"
-      }
+      "unmatched_skill_types": []
     },
     {
       "skill": "standing-approval",
-      "description": "Approval-scope skill: it carries an already-granted approval through the remaining reversible prepared steps and stops only at an explicitly reserved irreversible or credential boundary.",
+      "description": "Workflow discipline that carries an existing named approval across prepared reversible steps and stops only at reserved irreversible boundaries.",
       "skill_types": [
-        {
-          "type": "form/pattern/constraint",
-          "weight": 0.85
-        },
         {
           "type": "job/methodology/workflow",
           "weight": 0.8
         },
         {
-          "type": "form/technique/steps",
-          "weight": 0.75
+          "type": "form/pattern/constraint",
+          "weight": 0.7
         },
         {
-          "type": "job/methodology/plan",
+          "type": "job/output-format",
           "weight": 0.6
         }
       ],
-      "unmatched_skill_types": [],
-      "lifecycle": {
-        "status": "evaluated",
-        "origin_run_id": "legacy-inventory",
-        "origin_finding_id": "legacy-import:standing-approval",
-        "origin_session_ids": [
-          "legacy-inventory"
-        ],
-        "confidence": 1.0,
-        "evidence_records": 0,
-        "distinct_windows": 0,
-        "evaluated_at": "2026-10-24T22:36:53.403745+00:00",
-        "evaluation_kind": "structural",
-        "evaluation_baseline_reason": "legacy_inventory_backfill",
-        "content_sha256": "c8f5e8b1115d1f456dca5f30462e9e14331b00ecd8ee4b9cec5f7a230f586c32"
-      }
+      "unmatched_skill_types": []
     },
     {
       "skill": "starter-asset-reuse",
-      "description": "Starter-template reuse skill: it copies and adapts a recorded service-starter configuration contract instead of regenerating equivalent content, preserving defaults and reporting unresolved placeholders.",
+      "description": "Template-reuse convention that copies a captured service or pipeline starter asset and adapts only documented fields under its schema.",
       "skill_types": [
         {
           "type": "form/pattern/convention",
           "weight": 0.75
         },
         {
-          "type": "artifact/code-change",
-          "weight": 0.7
-        },
-        {
           "type": "job/methodology/workflow",
           "weight": 0.7
         },
         {
-          "type": "domain/cloud-devops",
-          "weight": 0.6
+          "type": "form/reference/schema",
+          "weight": 0.65
+        },
+        {
+          "type": "artifact/document",
+          "weight": 0.55
         }
       ],
-      "unmatched_skill_types": [],
-      "lifecycle": {
-        "status": "evaluated",
-        "origin_run_id": "legacy-inventory",
-        "origin_finding_id": "legacy-import:starter-asset-reuse",
-        "origin_session_ids": [
-          "legacy-inventory"
-        ],
-        "confidence": 1.0,
-        "evidence_records": 0,
-        "distinct_windows": 0,
-        "evaluated_at": "2026-10-24T23:04:51.846097+00:00",
-        "evaluation_kind": "structural",
-        "evaluation_baseline_reason": "legacy_inventory_backfill",
-        "content_sha256": "d9199cdaf1e1594041ede1d737ee8e33846dde4502d199f950b513151693bc6a"
-      }
+      "unmatched_skill_types": []
     },
     {
-      "skill": "verify-acceptance-states",
-      "description": "End-to-end acceptance verification skill: it derives an explicit state checklist, drives each state through the running app with the correct actor, captures one labeled artifact per state, and refuses completion from tests alone.",
+      "skill": "threejs-source-mesh-export",
+      "description": "One-command native Three.js mesh export plus independent source-scene reconstruction and bidirectional Chamfer validation over the complete part/link tree.",
       "skill_types": [
         {
-          "type": "job/verification/evidence",
-          "weight": 0.9
+          "type": "domain/software/javascript",
+          "weight": 0.85
         },
         {
           "type": "job/verification/eval",
           "weight": 0.85
         },
         {
-          "type": "job/verification/browser-check",
-          "weight": 0.85
+          "type": "form/technique/checklist",
+          "weight": 0.7
         },
         {
-          "type": "domain/testing/qa",
-          "weight": 0.8
+          "type": "job/methodology/workflow",
+          "weight": 0.6
+        }
+      ],
+      "unmatched_skill_types": []
+    },
+    {
+      "skill": "verify-acceptance-states",
+      "description": "End-to-end acceptance verification that drives every user-facing state through the running app, with per-state labeled evidence and a per-role checklist ledger.",
+      "skill_types": [
+        {
+          "type": "job/verification/browser-check",
+          "weight": 0.9
+        },
+        {
+          "type": "job/verification/evidence",
+          "weight": 0.85
         },
         {
           "type": "form/technique/checklist",
           "weight": 0.75
+        },
+        {
+          "type": "domain/testing/qa",
+          "weight": 0.7
+        },
+        {
+          "type": "job/reflection/review",
+          "weight": 0.6
         }
       ],
-      "unmatched_skill_types": [],
-      "lifecycle": {
-        "status": "evaluated",
-        "origin_run_id": "legacy-inventory",
-        "origin_finding_id": "legacy-import:verify-acceptance-states",
-        "origin_session_ids": [
-          "legacy-inventory"
-        ],
-        "confidence": 1.0,
-        "evidence_records": 0,
-        "distinct_windows": 0,
-        "evaluated_at": "2026-10-24T22:37:01.035110+00:00",
-        "evaluation_kind": "structural",
-        "evaluation_baseline_reason": "legacy_inventory_backfill",
-        "content_sha256": "0be4284b7a3eed5c9e2203ac0f2b5c66efc0f209b72e3cd32a9b4dc64548e7b5"
-      }
+      "unmatched_skill_types": []
+    },
+    {
+      "skill": "verify-artifact-against-ground-truth",
+      "description": "Record-level verification of an enumerated artifact by keyed diff against an independently derived expected set, with cause repair and replay.",
+      "skill_types": [
+        {
+          "type": "job/verification/audit",
+          "weight": 0.85
+        },
+        {
+          "type": "job/verification/evidence",
+          "weight": 0.8
+        },
+        {
+          "type": "form/technique/checklist",
+          "weight": 0.7
+        },
+        {
+          "type": "artifact/document",
+          "weight": 0.55
+        }
+      ],
+      "unmatched_skill_types": []
     }
   ]
 }

@@ -182,6 +182,41 @@ class RecallImprovementTest(unittest.TestCase):
                 result["matching"]["truncated_documents"], ["long-skill"]
             )
 
+    def test_objective_failure_prioritizes_activated_skill(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "skills"
+            for name in ("generic-audit", "source-export"):
+                skill = root / name
+                skill.mkdir(parents=True)
+                (skill / "SKILL.md").write_text(f"{name} guidance\n")
+            provider = FakeEmbeddingProvider()
+            with patch.object(runner, "ACTIVE_EMBEDDING_PROVIDER", provider):
+                result = runner.embedding_recall(
+                    {"skill_capabilities_missing": [{
+                        "cluster": "failure",
+                        "description": "geometry mismatch",
+                    }]},
+                    {"skills_metadata": [
+                        {"skill": "generic-audit"},
+                        {"skill": "source-export"},
+                    ]},
+                    ["generic-audit", "source-export"],
+                    {
+                        "skills_root": str(root),
+                        "document_max_chars": 800,
+                        "top_k": 5,
+                        "minimum_score": 0.3,
+                        "algorithm": "test",
+                    },
+                    {"features": {"lesson": {
+                        "kind": "objective_verifier_failure",
+                        "attributed_skills": ["source-export"],
+                    }}},
+                )
+            first = result["clusters"][0]["skills"][0]
+            self.assertEqual(first["skill"], "source-export")
+            self.assertEqual(first["retrieval"], "objective-failure-attribution")
+
 
 if __name__ == "__main__":
     unittest.main()

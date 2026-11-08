@@ -1581,6 +1581,206 @@ class ContractTests(unittest.TestCase):
                     "already applied", goal["action"]["reason"].lower()
                 )
 
+    def test_host_goal_validation_repairs_once_and_keeps_failure_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory) / "workspace/runs/goal-repair"
+            worker = Path(directory) / "worker"
+            goal = worker / "run/sig-a/evolve-goal.json"
+            write_json(
+                goal,
+                {
+                    "schema_version": 1,
+                    "signal_id": "sig-a",
+                    "action": {"ops": [{"op": "create", "skill": "broken"}]},
+                },
+            )
+            prompts: list[str] = []
+
+            def repair_session(
+                stage, session_worker, prompt, auth, model, install, suffix,
+                metadata=None, **kwargs
+            ):
+                self.assertEqual(stage, "goal")
+                self.assertEqual(session_worker, worker)
+                self.assertTrue((metadata or {}).get("contract_repair"))
+                self.assertNotIn("one_action.py", prompt)
+                self.assertIn("$.goal: must be an object", prompt)
+                self.assertIn("audit the entire candidate", prompt)
+                self.assertIn("operation skill identity", prompt)
+                prompts.append(prompt)
+                write_json(goal, valid_goal())
+
+            previous = runner.ACTIVE_EXECUTION_CONFIG
+            runner.ACTIVE_EXECUTION_CONFIG = {
+                "phases": {"goal": {"contract_repair_attempts": 1}}
+            }
+            try:
+                with patch.object(
+                    runner, "run_session", side_effect=repair_session
+                ):
+                    document = runner._validate_goal_with_bounded_repair(
+                        workspace, worker, goal, "sig-a", {}, None, True
+                    )
+            finally:
+                runner.ACTIVE_EXECUTION_CONFIG = previous
+
+            self.assertEqual(document["action"]["ops"][0]["op"], "update")
+            self.assertEqual(len(prompts), 1)
+            failed = json.loads(
+                (
+                    workspace
+                    / "run/failures/goal/sig-a/attempt-1.json"
+                ).read_text()
+            )
+            self.assertEqual(failed["status"], "failed")
+            self.assertEqual(failed["error"]["kind"], "contract_invalid")
+            self.assertIn('"signal_id": "sig-a"', failed["candidate_snapshot"])
+            passed = json.loads(
+                (
+                    workspace
+                    / "run/validation/goal/sig-a/attempt-2.json"
+                ).read_text()
+            )
+            self.assertEqual(passed["status"], "passed")
+            self.assertEqual(passed["validator"], "host.goal-contract-v1")
+
+    def test_goal_contract_repair_preserves_required_skill_fields(self) -> None:
+        before = valid_goal()
+        skill = before["action"]["ops"][0]["skills"][0]
+        skill["resource_plan"] = [{
+            "resource": "scripts",
+            "decision": "use",
+            "reason": "Required producer.",
+            "confidence": 0.9,
+        }]
+        after = json.loads(json.dumps(before))
+        repaired = after["action"]["ops"][0]["skills"][0]
+        repaired["goal"] = ""
+        repaired.pop("skill")
+        repaired["resource_plan"] = []
+        repaired["sections"][0]["goal"] = "Repaired wording."
+
+        changed = runner._preserve_goal_repair_invariants(before, after)
+
+        self.assertTrue(changed)
+        self.assertEqual(repaired["goal"], skill["goal"])
+        self.assertEqual(repaired["skill"], skill["skill"])
+        self.assertEqual(repaired["resource_plan"], skill["resource_plan"])
+        self.assertEqual(repaired["sections"][0]["goal"], "Repaired wording.")
+
+    def test_failed_goal_is_not_reported_as_no_change(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory) / "workspace/runs/failed-goal"
+            write_json(
+                workspace / "run/status/goal/sig-a.json",
+                {
+                    "stage": "goal",
+                    "item": "sig-a",
+                    "state": "failed",
+                    "error": "$.goal: must be an object",
+                },
+            )
+            metrics = runner.pipeline_metrics.collect_phase_metrics(workspace)
+            self.assertEqual(metrics["execution"]["status"], "failed")
+            self.assertEqual(metrics["execution"]["failed_phases"], ["goal"])
+            self.assertEqual(
+                metrics["execution"]["change_disposition"], "no_change"
+            )
+            self.assertEqual(metrics["phases"]["goal"]["failed_scopes"], 1)
+            self.assertEqual(
+                metrics["phases"]["goal"]["run_disposition"], "failed"
+            )
+            self.assertEqual(metrics["funnel"]["run_disposition"], "failed")
+
+    def test_goal_contract_repair_is_bounded_and_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory) / "workspace/runs/goal-repair-fails"
+            worker = Path(directory) / "worker"
+            goal = worker / "run/sig-a/evolve-goal.json"
+            write_json(goal, {"action": {"ops": []}})
+            calls = 0
+
+            def ineffective_repair(*args, **kwargs):
+                nonlocal calls
+                calls += 1
+                write_json(goal, {"action": {"ops": []}})
+
+            previous = runner.ACTIVE_EXECUTION_CONFIG
+            runner.ACTIVE_EXECUTION_CONFIG = {
+                "phases": {"goal": {"contract_repair_attempts": 1}}
+            }
+            try:
+                with (
+                    patch.object(
+                        runner, "run_session", side_effect=ineffective_repair
+                    ),
+                    self.assertRaises(runner.pipeline_contracts.ContractError),
+                ):
+                    runner._validate_goal_with_bounded_repair(
+                        workspace, worker, goal, "sig-a", {}, None, True
+                    )
+            finally:
+                runner.ACTIVE_EXECUTION_CONFIG = previous
+
+            self.assertEqual(calls, 1)
+            first = json.loads(
+                (
+                    workspace
+                    / "run/failures/goal/sig-a/attempt-1.json"
+                ).read_text()
+            )
+            second = json.loads(
+                (
+                    workspace
+                    / "run/failures/goal/sig-a/attempt-2.json"
+                ).read_text()
+            )
+            self.assertEqual(first["status"], "failed")
+            self.assertEqual(second["status"], "failed")
+            self.assertFalse(
+                (
+                    workspace
+                    / "run/validation/goal/sig-a/attempt-3.json"
+                ).exists()
+            )
+
+    def test_goal_validation_receipt_schema_accepts_and_rejects_contracts(self) -> None:
+        valid = {
+            "schema_version": 1,
+            "stage": "goal",
+            "item": "sig-a",
+            "attempt": 1,
+            "status": "passed",
+            "validator": "host.goal-contract-v1",
+            "candidate": {
+                "path": "/worker/run/sig-a/evolve-goal.json",
+                "present": True,
+                "sha256": "a" * 64,
+                "bytes": 128,
+            },
+            "at": "2026-11-06T09:00:00+00:00",
+        }
+        runner._assert_goal_validation_receipt(valid)
+        runner._assert_goal_validation_receipt({**valid, "attempt": 3})
+
+        with self.assertRaisesRegex(RuntimeError, "violates schema"):
+            runner._assert_goal_validation_receipt({**valid, "attempt": 4})
+
+        missing_error = {**valid, "status": "failed"}
+        with self.assertRaisesRegex(RuntimeError, "violates schema"):
+            runner._assert_goal_validation_receipt(missing_error)
+
+        invalid_hash = {
+            **valid,
+            "candidate": {**valid["candidate"], "sha256": "not-a-digest"},
+        }
+        with self.assertRaisesRegex(RuntimeError, "violates schema"):
+            runner._assert_goal_validation_receipt(invalid_hash)
+
+        unknown_field = {**valid, "unexpected": True}
+        with self.assertRaisesRegex(RuntimeError, "violates schema"):
+            runner._assert_goal_validation_receipt(unknown_field)
+
     def test_pipeline_timings_write_local_global_and_chrome_outputs(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             workspace = Path(directory) / "workspace/runs/timed-run"
@@ -2244,8 +2444,12 @@ class ContractTests(unittest.TestCase):
             )
             self.assertEqual(report["policy"]["max_ops_per_skill"], 5)
             self.assertEqual(report["policy"]["min_super_score"], 0.0)
-            self.assertEqual(report["policy"]["retry_budget"], 0)
-            self.assertEqual(report["policy"]["max_attempts"], 1)
+            self.assertEqual(
+                report["policy"]["retry_budget"], runner.RETRY_BUDGET
+            )
+            self.assertEqual(
+                report["policy"]["max_attempts"], runner.RETRY_BUDGET + 1
+            )
             dropped = next(
                 row for row in report["edits"] if row["decision"] == "below_gate"
             )
@@ -3182,6 +3386,8 @@ class ContractTests(unittest.TestCase):
         self.assertIn("Do not open the checker", prompt)
         self.assertIn('{"id", "target"}', prompt)
         self.assertIn("description: >", runner.OPTIMIZE_AVOIDANCE)
+        self.assertIn("Begin writing within the first quarter", runner.OPTIMIZE_AVOIDANCE)
+        self.assertIn("never install packages", runner.OPTIMIZE_AVOIDANCE)
         avoid = runner.instruction("optimize", runner.OPTIMIZE_AVOIDANCE)
         self.assertIn("frontmatter description contains angle brackets", avoid)
         self.assertIn("scored 0.99 and still failed", avoid)
@@ -3221,6 +3427,83 @@ class ContractTests(unittest.TestCase):
             self.assertIn("candidate/evals/evals.json", bundle)
             self.assertIn("duplicate/subsumption check", bundle)
             self.assertIn("other-skill", bundle)
+
+    def test_update_description_goal_is_a_versioned_verification_claim(self) -> None:
+        op = {
+            "op": "update",
+            "skills": [
+                {
+                    "skill": "example",
+                    "goal": "Add workbook structure validation.",
+                    "facet": "verification",
+                    "description_goal": "Mention pivot structure and domain checks.",
+                    "sections": [{"section": "overview", "goal": "Add checks."}],
+                    "dirs": [],
+                }
+            ],
+        }
+        requirements = runner._verification_requirements(op, "example", [])
+        self.assertEqual(
+            requirements["description"],
+            "Mention pivot structure and domain checks.",
+        )
+        self.assertEqual(contracts.claim_count({"requirements": requirements}), 2)
+
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            raw = workspace / "target/raw_skills/example"
+            candidate = workspace / "target/to_be_improved_skills/example"
+            raw.mkdir(parents=True)
+            candidate.mkdir(parents=True)
+            (raw / "SKILL.md").write_text(
+                "---\nname: example\ndescription: Validate numeric values.\n---\n\n"
+                "## Overview\nBefore\n"
+            )
+            (candidate / "SKILL.md").write_text(
+                "---\nname: example\ndescription: Validate numeric values and pivot structure.\n---\n\n"
+                "## Overview\nAfter\n"
+            )
+            bundle = runner.verifier_evidence_bundle(
+                workspace,
+                {
+                    "skill": "example",
+                    "role": "updated",
+                    "requirements": requirements,
+                },
+            )
+            self.assertIn('"description_change_claimed": true', bundle)
+            self.assertIn('"description_changed": true', bundle)
+            self.assertIn('"frontmatter_and_preamble_unchanged": true', bundle)
+
+    def test_new_goal_requires_description_alignment_for_trigger_change(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "goal.json"
+            goal = valid_goal(
+                {
+                    "op": "update",
+                    "skills": [
+                        {
+                            "skill": "seed",
+                            "goal": "Add a new trigger.",
+                            "facet": "activation",
+                            "sections": [
+                                {
+                                    "section": "when_to_use",
+                                    "goal": "Use for pivot cache validation.",
+                                }
+                            ],
+                        }
+                    ],
+                }
+            )
+            write_json(path, goal)
+            with self.assertRaises(contracts.ContractError):
+                contracts.validate_goal(path)
+            goal["action"]["ops"][0]["skills"][0]["description_goal"] = (
+                "Mention pivot cache validation as an activation trigger."
+            )
+            write_json(path, goal)
+            contracts.validate_goal(path)
 
     def test_verifier_evidence_bundle_honors_character_cap(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -3397,6 +3680,8 @@ class ContractTests(unittest.TestCase):
             self.assertIn('"placeholder":true', resource["content_preview"])
             self.assertEqual(len(resource["sha256"]), 64)
             self.assertIn("placeholder", evidence["instruction"])
+            self.assertIn("byte counts", evidence["instruction"])
+            self.assertIn("truncated relevant content", evidence["instruction"])
 
     def test_verifier_response_parser_reads_json_from_event_stream(self) -> None:
         response = {
@@ -4051,6 +4336,75 @@ class ContractTests(unittest.TestCase):
             {"method-phase-workflow"},
         )
 
+    def test_successful_excessive_effort_requires_skill_attribution_and_threshold(self) -> None:
+        config = json.loads(
+            (AGENTS / "common/preprocessing-config.json").read_text()
+        )["methodology"]
+        events = [
+            {
+                "sequence": index,
+                "tool": "execute",
+                "phase": "execute",
+                "status": "completed",
+                "arguments_preview": "{}",
+                "result_preview": f"probe {index}",
+                "targets": [],
+            }
+            for index in range(1, 66)
+        ]
+        events.append(
+            {
+                "sequence": 66,
+                "tool": "skillsbench_objective_verifier",
+                "phase": "execute",
+                "status": "completed",
+                "arguments_preview": "{}",
+                "result_preview": json.dumps(
+                    {
+                        "reward": 1.0,
+                        "tool_calls": 65,
+                        "activated_skills": ["scene-export"],
+                    }
+                ),
+                "targets": [],
+            }
+        )
+        trajectory = {
+            "trace_id": "acp:heldout:turn-1",
+            "session_id": "heldout",
+            "task": {"text": "Export a scene"},
+            "outcome": {"status": "completed", "error": None},
+            "events": events,
+            "phases": runner.normalizer.phase_rows(events),
+            "assistant_observations": [],
+        }
+
+        findings = methodology.mine_trajectory(
+            trajectory, "traces/derived/normalized/turns/heldout.json", config
+        )
+        finding = next(
+            row
+            for row in findings
+            if row["detector"] == "method-successful-excessive-effort"
+        )
+        lesson = finding["features"]["lesson"]
+        self.assertEqual(lesson["attributed_skills"], ["scene-export"])
+        self.assertEqual(lesson["tool_calls"], 65)
+
+        below = json.loads(json.dumps(trajectory))
+        below["events"][-1]["result_preview"] = json.dumps(
+            {
+                "reward": 1.0,
+                "tool_calls": 59,
+                "activated_skills": ["scene-export"],
+            }
+        )
+        self.assertFalse(
+            methodology._successful_excessive_effort(
+                below, "traces/derived/normalized/turns/heldout.json", config
+            )
+        )
+
     def test_resource_script_opportunity_requires_guarded_repetition(self) -> None:
         config = json.loads(
             (AGENTS / "common/preprocessing-config.json").read_text()
@@ -4165,6 +4519,385 @@ class ContractTests(unittest.TestCase):
                     "equivalent-existing-script" in row.get("reason_codes", [])
                     for row in duplicate_decisions
                 )
+            )
+
+    def test_cad_tool_churn_emits_extraction_script_opportunity(self) -> None:
+        config = json.loads(
+            (AGENTS / "common/preprocessing-config.json").read_text()
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            root = workspace / "traces/derived"
+            trajectories = root / "normalized/task_trajectories"
+            trajectories.mkdir(parents=True)
+            events = []
+            for index in range(15):
+                failed = index in {2, 7, 12}
+                result = (
+                    "Traceback TypeError while reading ezdxf ARC fixture bbox; "
+                    "Command failed"
+                    if failed
+                    else "FIXTURE-LAV ARC bbox POLYLINE clearance geometry"
+                )
+                events.append(
+                    {
+                        "sequence": index + 1,
+                        "status": "completed",
+                        "tool": "execute",
+                        "result_preview": result,
+                    }
+                )
+            events.append(
+                {
+                    "sequence": 100,
+                    "status": "failed",
+                    "tool": "skillsbench_objective_verifier",
+                    "result_preview": "Agent prompt exceeded wall-clock budget 900s",
+                }
+            )
+            write_json(
+                trajectories / "cad.json",
+                {
+                    "trace_id": "acp:cad-timeout",
+                    "session_id": "cad-session",
+                    "events": events,
+                    "provenance": {
+                        "turn_path": "traces/derived/normalized/turns/cad.json"
+                    },
+                },
+            )
+            findings, decisions = resource_opportunities.analyze(
+                workspace, root, config
+            )
+        finding = next(
+            row
+            for row in findings
+            if row["detector"] == "resource-cad-extraction-opportunity"
+        )
+        self.assertEqual(
+            finding["features"]["resource_family"],
+            "architectural-dxf-extraction",
+        )
+        self.assertEqual(finding["features"]["distinct_windows"], 3)
+        self.assertEqual(finding["features"]["failure_count"], 3)
+        self.assertEqual(len(finding["evidence"]), 1)
+        self.assertIn("window 1:", finding["evidence"][0]["quote"])
+        self.assertIn("window 3:", finding["evidence"][0]["quote"])
+        self.assertTrue(
+            any(
+                row.get("reason_codes")
+                == ["qualified-cad-extraction-script-opportunity"]
+                for row in decisions
+            )
+        )
+
+    def test_cad_tool_churn_requires_timeout_and_repeated_failures(self) -> None:
+        config = json.loads(
+            (AGENTS / "common/preprocessing-config.json").read_text()
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            root = workspace / "traces/derived"
+            trajectories = root / "normalized/task_trajectories"
+            trajectories.mkdir(parents=True)
+            write_json(
+                trajectories / "cad.json",
+                {
+                    "trace_id": "acp:cad-success",
+                    "session_id": "cad-session",
+                    "events": [
+                        {
+                            "sequence": index,
+                            "status": "completed",
+                            "tool": "execute",
+                            "result_preview": "ezdxf ARC bbox POLYLINE geometry",
+                        }
+                        for index in range(20)
+                    ],
+                    "provenance": {
+                        "turn_path": "traces/derived/normalized/turns/cad.json"
+                    },
+                },
+            )
+            findings, decisions = resource_opportunities.analyze(
+                workspace, root, config
+            )
+        self.assertFalse(
+            any(
+                row["detector"] == "resource-cad-extraction-opportunity"
+                for row in findings
+            )
+        )
+        self.assertTrue(
+            any(
+                "insufficient-cad-tool-churn-evidence"
+                in row.get("reason_codes", [])
+                for row in decisions
+            )
+        )
+
+    def test_cad_extractor_discovered_but_not_executed_emits_adoption_gap(self) -> None:
+        config = json.loads(
+            (AGENTS / "common/preprocessing-config.json").read_text()
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            script = (
+                workspace
+                / "candidate_skills/geometric-layout-repair/scripts/extract_architectural_dxf.py"
+            )
+            script.parent.mkdir(parents=True)
+            script.write_text(
+                "import ezdxf\n"
+                "def extract(layer_schema):\n"
+                "    return {'layer inventory': {}, 'fixture_bbox': []}\n"
+            )
+            root = workspace / "traces/derived"
+            trajectories = root / "normalized/task_trajectories"
+            trajectories.mkdir(parents=True)
+            events = [
+                {
+                    "sequence": 1,
+                    "status": "completed",
+                    "tool": "read_file",
+                    "result_preview": (
+                        "/skills/geometric-layout-repair/scripts/"
+                        "extract_architectural_dxf.py"
+                    ),
+                }
+            ]
+            for index in range(15):
+                events.append(
+                    {
+                        "sequence": index + 2,
+                        "status": "completed",
+                        "tool": "execute",
+                        "result_preview": (
+                            "Traceback TypeError ezdxf Vec3 ARC fixture bbox; "
+                            "Command failed"
+                            if index in {2, 7, 12}
+                            else "ezdxf POLYLINE fixture bbox turning clearance"
+                        ),
+                    }
+                )
+            events.append(
+                {
+                    "sequence": 99,
+                    "status": "failed",
+                    "tool": "skillsbench_objective_verifier",
+                    "result_preview": '{"reward": 0.0, "tool_calls": 263}',
+                }
+            )
+            write_json(
+                trajectories / "cad.json",
+                {
+                    "trace_id": "acp:cad-adoption",
+                    "session_id": "cad-session",
+                    "events": events,
+                    "provenance": {
+                        "turn_path": "traces/derived/normalized/turns/cad.json"
+                    },
+                },
+            )
+            findings, decisions = resource_opportunities.analyze(
+                workspace, root, config
+            )
+        finding = next(
+            row
+            for row in findings
+            if row["detector"]
+            == "resource-cad-extraction-adoption-opportunity"
+        )
+        self.assertTrue(finding["features"]["extractor_discovered"])
+        self.assertFalse(finding["features"]["extractor_execution_observed"])
+        self.assertEqual(finding["features"]["distinct_windows"], 3)
+        self.assertIn("task-root adapter", finding["features"]["script_contract"]["allowed_artifact"])
+        self.assertIn("first 40 lines", finding["features"]["script_contract"]["allowed_artifact"])
+        self.assertIn("turning_circle_diameter_min", finding["features"]["script_contract"]["allowed_artifact"])
+        self.assertIn("type/canonical/aliases", finding["features"]["script_contract"]["allowed_artifact"])
+        self.assertIn("POINT", finding["features"]["script_contract"]["allowed_artifact"])
+        self.assertIn("interior room candidate", finding["features"]["script_contract"]["allowed_artifact"])
+        self.assertIn("fixture primitives", finding["features"]["script_contract"]["allowed_artifact"])
+        self.assertIn("turning_space.status=no_fit", finding["features"]["script_contract"]["allowed_artifact"])
+        self.assertIn("sys.executable", finding["features"]["script_contract"]["allowed_artifact"])
+        self.assertIn("invokes extract_task_root.py directly", finding["features"]["script_contract"]["allowed_artifact"])
+        self.assertTrue(
+            any(
+                row.get("reason_codes")
+                == ["extractor-discovered-but-not-executed"]
+                for row in decisions
+            )
+        )
+
+    def test_cad_extractor_adoption_counts_failed_dxf_probe_without_ezdxf_word(self) -> None:
+        config = json.loads(
+            (AGENTS / "common/preprocessing-config.json").read_text()
+        )
+        config["resource_opportunities"]["min_cad_adoption_invocations"] = 6
+        config["resource_opportunities"]["min_cad_adoption_failures"] = 1
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            script = workspace / "candidate_skills/cad/scripts/extract_architectural_dxf.py"
+            script.parent.mkdir(parents=True)
+            script.write_text(
+                "import ezdxf\n"
+                "layer_schema = {}\n"
+                "fixture_bbox = []\n"
+            )
+            root = workspace / "traces/derived"
+            trajectories = root / "normalized/task_trajectories"
+            trajectories.mkdir(parents=True)
+            events = [
+                {
+                    "sequence": 1,
+                    "status": "completed",
+                    "tool": "read_file",
+                    "result_preview": "extract_architectural_dxf.py",
+                }
+            ]
+            for index in range(6):
+                events.append(
+                    {
+                        "sequence": index + 2,
+                        "status": "completed",
+                        "tool": "execute",
+                        "result_preview": (
+                            'DXFAttributeError: Invalid DXF attribute "start" for entity SOLID; '
+                            "Command failed with exit code 1"
+                            if index == 3
+                            else "DXF POLYLINE ARC fixture geometry"
+                        ),
+                    }
+                )
+            events.append(
+                {
+                    "sequence": 99,
+                    "status": "failed",
+                    "tool": "skillsbench_objective_verifier",
+                    "result_preview": '{"reward": 0.0}',
+                }
+            )
+            write_json(
+                trajectories / "cad.json",
+                {
+                    "trace_id": "acp:dxf-adoption",
+                    "session_id": "cad-session",
+                    "events": events,
+                    "provenance": {"turn_path": "turns/cad.json"},
+                },
+            )
+            findings, _decisions = resource_opportunities.analyze(
+                workspace, root, config
+            )
+        finding = next(
+            row
+            for row in findings
+            if row["detector"]
+            == "resource-cad-extraction-adoption-opportunity"
+        )
+        self.assertEqual(finding["features"]["failure_count"], 1)
+
+    def test_cad_extractor_execution_proof_suppresses_adoption_gap(self) -> None:
+        config = json.loads(
+            (AGENTS / "common/preprocessing-config.json").read_text()
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            script = workspace / "candidate_skills/cad/scripts/extract_architectural_dxf.py"
+            script.parent.mkdir(parents=True)
+            script.write_text(
+                "import ezdxf\nlayer_schema = {}\nfixture_bbox = []\n"
+            )
+            root = workspace / "traces/derived"
+            trajectories = root / "normalized/task_trajectories"
+            trajectories.mkdir(parents=True)
+            events = [
+                {
+                    "sequence": 1,
+                    "status": "completed",
+                    "tool": "read_file",
+                    "result_preview": "extract_architectural_dxf.py",
+                },
+                {
+                    "sequence": 2,
+                    "status": "completed",
+                    "tool": "execute",
+                    "result_preview": (
+                        "self-test passed: LINE/POLYLINE/ARC/CIRCLE/SPLINE extracted"
+                    ),
+                },
+            ]
+            events.extend(
+                {
+                    "sequence": index + 3,
+                    "status": "completed",
+                    "tool": "execute",
+                    "result_preview": (
+                        "Traceback TypeError ezdxf fixture bbox Command failed"
+                        if index in {2, 7, 12}
+                        else "ezdxf fixture bbox turning clearance"
+                    ),
+                }
+                for index in range(15)
+            )
+            events.append(
+                {
+                    "sequence": 99,
+                    "status": "failed",
+                    "tool": "skillsbench_objective_verifier",
+                    "result_preview": '{"reward": 0}',
+                }
+            )
+            write_json(
+                trajectories / "cad.json",
+                {
+                    "trace_id": "acp:cad-executed",
+                    "session_id": "cad-session",
+                    "events": events,
+                },
+            )
+            findings, decisions = resource_opportunities.analyze(
+                workspace, root, config
+            )
+        self.assertFalse(
+            any(
+                row["detector"]
+                == "resource-cad-extraction-adoption-opportunity"
+                for row in findings
+            )
+        )
+        self.assertTrue(
+            any(
+                "extractor-execution-observed" in row.get("reason_codes", [])
+                for row in decisions
+            )
+        )
+
+    def test_geometry_validator_does_not_suppress_extraction_opportunity(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            script = (
+                workspace
+                / "target/to_be_improved_skills/geometric-layout-repair/scripts/validate.py"
+            )
+            script.parent.mkdir(parents=True)
+            script.write_text(
+                "import ezdxf\n"
+                "# Validate fixture geometry.\n"
+                + "# unrelated validation details\n" * 30
+                + "# Validate bbox geometry.\n"
+            )
+            self.assertIsNone(
+                resource_opportunities._existing_cad_extraction_script(workspace)
+            )
+            script.write_text(
+                "import ezdxf\n"
+                "def extract(layer_schema):\n"
+                "    return {'entity counts': {}, 'fixture_bbox': []}\n"
+            )
+            self.assertEqual(
+                resource_opportunities._existing_cad_extraction_script(workspace),
+                "target/to_be_improved_skills/geometric-layout-repair/scripts/validate.py",
             )
 
     def test_supporting_resource_opportunities_require_independent_repetition(self) -> None:
@@ -5628,6 +6361,40 @@ class ContractTests(unittest.TestCase):
                 "failed",
             )
 
+    def test_retried_running_phase_records_failed_attempt_boundary(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            initialize_pending_operation(
+                workspace,
+                "finding",
+                valid_goal()["action"]["ops"][0],
+            )
+            runner.mark_operation_phase(
+                workspace, "finding", 1, "optimize", "running"
+            )
+            runner.mark_operation_phase(
+                workspace, "finding", 1, "optimize", "running"
+            )
+            runner.mark_operation_phase(
+                workspace, "finding", 1, "optimize", "completed"
+            )
+            document = json.loads(
+                (workspace / "run/finding/ops/1/changelog.json").read_text()
+            )
+            events = [
+                event
+                for event in document["phase_events"]
+                if event["phase"] == "optimize"
+            ]
+            self.assertEqual(
+                [event["status"] for event in events],
+                ["pending", "failed", "running", "completed"],
+            )
+            self.assertEqual(events[1]["reason"], "superseded-by-retry")
+            contracts.validate_changelog(
+                workspace / "run/finding/ops/1/changelog.json"
+            )
+
     def test_skill_format_names_and_aliases(self) -> None:
         format_path = AGENTS / "common/skill_format.json"
         document = json.loads(format_path.read_text())
@@ -5967,6 +6734,121 @@ class ContractTests(unittest.TestCase):
             self.assertIsNone(aggregate["asset_reuse_rate"])
             runner.remove_transient_skill_artifacts(skill)
             self.assertFalse(cache.exists())
+
+    def test_progressive_disclosure_gate_rejects_catch_all_skill_md(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            skill = Path(directory) / "catch-all"
+            skill.mkdir()
+            skill_text = valid_skill_text(
+                "catch-all",
+                " ".join(["workflow"] * 2600),
+            )
+            (skill / "SKILL.md").write_text(skill_text)
+            issues = runner.progressive_disclosure_issues(skill)
+            self.assertIn(
+                "missing-progressive-disclosure",
+                {row["code"] for row in issues},
+            )
+
+            references = skill / "references"
+            references.mkdir()
+            (references / "mode.md").write_text(" ".join(["detail"] * 1200))
+            self.assertEqual(runner.progressive_disclosure_issues(skill), [])
+
+    def test_candidate_publication_preflight_rejects_oversized_skill_before_verifier(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            skill = workspace / "target/to_be_improved_skills/example"
+            skill.mkdir(parents=True)
+            (skill / "SKILL.md").write_text(
+                valid_skill_text("example", " ".join(["workflow"] * 7000))
+            )
+            op = {"op": "update", "skills": [{"skill": "example"}]}
+            with self.assertRaisesRegex(
+                runner.pipeline_contracts.ContractError,
+                "candidate publication preflight failed",
+            ):
+                runner.validate_candidate_publication_preflight(workspace, op)
+
+    def test_candidate_publication_preflight_aggregates_resource_and_size_defects(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            skill = workspace / "target/to_be_improved_skills/example"
+            (skill / "scripts").mkdir(parents=True)
+            (skill / "scripts/helper.py").write_text("print('ok')\n")
+            (skill / "SKILL.md").write_text(
+                valid_skill_text("example", " ".join(["workflow"] * 7000))
+            )
+            op = {
+                "op": "update",
+                "skills": [{
+                    "skill": "example",
+                    "resource_plan": [{"resource": "scripts", "decision": "use"}],
+                }],
+            }
+            with self.assertRaises(runner.pipeline_contracts.ContractError) as caught:
+                runner.validate_candidate_publication_preflight(workspace, op)
+            message = str(caught.exception)
+            self.assertIn("not discoverable", message)
+            self.assertIn("skill-md-token-cap", message)
+
+    def test_oversized_update_plan_is_reconciled_to_references(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            skill = workspace / "target/to_be_improved_skills/catch-all"
+            skill.mkdir(parents=True)
+            (skill / "SKILL.md").write_text(
+                valid_skill_text("catch-all", " ".join(["workflow"] * 2600))
+            )
+            op = {
+                "op": "update",
+                "skills": [
+                    {
+                        "skill": "catch-all",
+                        "dirs": [],
+                        "resource_plan": resource_plan(),
+                    }
+                ],
+            }
+            self.assertTrue(runner.reconcile_progressive_disclosure_plan(workspace, op))
+            record = op["skills"][0]
+            references = next(
+                row for row in record["resource_plan"] if row["resource"] == "references"
+            )
+            self.assertEqual(references["decision"], "use")
+            self.assertIn("references", {row["dir"] for row in record["dirs"]})
+            reference_dir = next(
+                row for row in record["dirs"] if row["dir"] == "references"
+            )
+            self.assertIn("configured hard token cap", reference_dir["goal"])
+
+    def test_oversized_update_enriches_existing_reference_goal_with_hard_cap(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            skill = workspace / "target/to_be_improved_skills/catch-all"
+            skill.mkdir(parents=True)
+            (skill / "SKILL.md").write_text(
+                valid_skill_text("catch-all", " ".join(["workflow"] * 2600))
+            )
+            op = {
+                "op": "update",
+                "skills": [
+                    {
+                        "skill": "catch-all",
+                        "dirs": [
+                            {
+                                "dir": "references",
+                                "goal": "Document the new invariant class.",
+                            }
+                        ],
+                        "resource_plan": resource_plan("references"),
+                    }
+                ],
+            }
+            self.assertTrue(runner.reconcile_progressive_disclosure_plan(workspace, op))
+            goal = op["skills"][0]["dirs"][0]["goal"]
+            self.assertIn("Document the new invariant class.", goal)
+            self.assertIn("currently 5000 estimated tokens", goal)
 
     def test_resource_usefulness_includes_agents_and_evals_and_gates_authoring_logs(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -6312,6 +7194,27 @@ class ContractTests(unittest.TestCase):
                 judged["feedback"]["action"],
                 {"op": "pass", "to": None},
             )
+
+    def test_publication_gate_blocks_goal_contradiction_even_after_soft_pass(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            operation = Path(directory)
+            verification = valid_verification("seed", {"op": "pass", "to": None})
+            verification["feedback"]["per_skill"][0]["penalties"] = [
+                {"id": "goal_contradiction", "target": "evals/evals.json"},
+                {"id": "heading_level", "target": "Overview"},
+            ]
+            write_json(operation / "verification.json", verification)
+            with patch.object(
+                runner,
+                "CONFIG_PATH",
+                AGENTS / "common/preprocessing-config.json",
+            ):
+                blocking = runner.publication_blocking_penalties(operation)
+            self.assertEqual(blocking, [{
+                "skill": "seed",
+                "id": "goal_contradiction",
+                "target": "evals/evals.json",
+            }])
 
     def test_verification_replay_contract_is_explicit(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -6697,6 +7600,46 @@ class ContractTests(unittest.TestCase):
                 "accepted operation has no completed verification",
             )
             self.assertIsNone(operation["judge_action"])
+
+    def test_skill_publication_normalizes_resource_permissions(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "source"
+            skill = source / "portable"
+            (skill / "scripts/schemas").mkdir(parents=True)
+            (skill / "references").mkdir()
+            (skill / "SKILL.md").write_text(valid_skill_text("portable"))
+            script = skill / "scripts/extract.py"
+            script.write_text("print('ok')\n")
+            schema = skill / "scripts/schemas/output.json"
+            schema.write_text("{}\n")
+            reference = skill / "references/usage.md"
+            reference.write_text("# Usage\n")
+            for path in (skill / "SKILL.md", script, schema, reference):
+                path.chmod(0o600)
+            for path in (skill, skill / "scripts", skill / "scripts/schemas", skill / "references"):
+                path.chmod(0o700)
+
+            copied, invalid = runner.copy_valid_skill_inventory(
+                source, root / "published"
+            )
+
+            self.assertEqual(copied, ["portable"])
+            self.assertEqual(invalid, [])
+            published = root / "published/portable"
+            self.assertEqual((published.stat().st_mode & 0o777), 0o755)
+            self.assertEqual(
+                ((published / "scripts/extract.py").stat().st_mode & 0o777),
+                0o755,
+            )
+            self.assertEqual(
+                ((published / "scripts/schemas/output.json").stat().st_mode & 0o777),
+                0o644,
+            )
+            self.assertEqual(
+                ((published / "references/usage.md").stat().st_mode & 0o777),
+                0o644,
+            )
 
     def test_inventory_summary_reports_seeded_skills_without_trace_selection(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -7395,6 +8338,7 @@ class ContractTests(unittest.TestCase):
                             "skill": "audit",
                             "goal": "Remove stale guidance.",
                             "facet": "workflow",
+                            "description_goal": "Mention stale-guidance cleanup.",
                             "sections": [],
                             "dirs": [],
                             "remove": ["obsolete note"],
@@ -7408,6 +8352,7 @@ class ContractTests(unittest.TestCase):
                             "skill": "audit",
                             "goal": "Remove duplicate guidance.",
                             "facet": "workflow",
+                            "description_goal": "Mention duplicate-guidance cleanup.",
                             "sections": [],
                             "dirs": [],
                             "remove": ["obsolete note", "duplicate note"],
@@ -7419,6 +8364,14 @@ class ContractTests(unittest.TestCase):
         self.assertEqual(
             merged["skills"][0]["remove"],
             ["obsolete note", "duplicate note"],
+        )
+        self.assertIn(
+            "stale-guidance cleanup",
+            merged["skills"][0]["description_goal"],
+        )
+        self.assertIn(
+            "duplicate-guidance cleanup",
+            merged["skills"][0]["description_goal"],
         )
         with tempfile.TemporaryDirectory() as directory:
             workspace = Path(directory)
@@ -7743,6 +8696,10 @@ class ContractTests(unittest.TestCase):
             )
             produced.mkdir(parents=True)
             (produced / "SKILL.md").write_text(valid_skill_text(created))
+            script = produced / "scripts/preflight.py"
+            script.parent.mkdir()
+            script.write_text("print('ok')\n")
+            script.chmod(0o600)
             write_json(
                 worker / "target/to_be_improved_skills_metadata/metadata.json",
                 {
@@ -7787,6 +8744,14 @@ class ContractTests(unittest.TestCase):
                 {"op": "pass"},
                 operation="create",
             )
+            transient = (
+                worker
+                / "target/to_be_improved_skills"
+                / created
+                / "scripts/__pycache__"
+            )
+            transient.mkdir(parents=True)
+            (transient / "preflight.cpython-314.pyc").write_bytes(b"compiled")
             config = json.loads(
                 (AGENTS / "common/preprocessing-config.json").read_text()
             )
@@ -7836,6 +8801,21 @@ class ContractTests(unittest.TestCase):
             self.assertEqual(len(release_id), 64)
             self.assertTrue(
                 (workspace / "run/releases" / release_id / "manifest.json").is_file()
+            )
+            release_skill = (
+                workspace
+                / "run/releases"
+                / release_id
+                / "after/skills"
+                / created
+            )
+            self.assertFalse(any(release_skill.rglob("*.pyc")))
+            self.assertFalse(any(
+                path.name == "__pycache__" for path in release_skill.rglob("*")
+            ))
+            self.assertEqual(
+                (release_skill / "scripts/preflight.py").stat().st_mode & 0o777,
+                0o755,
             )
             active = json.loads(
                 (workspace / "run/releases/active.json").read_text()
@@ -7966,6 +8946,8 @@ class ContractTests(unittest.TestCase):
             ):
                 self.assertEqual(stage, "goal")
                 self.assertIn("--clusters workspace/traces/derived/findings", prompt)
+                self.assertNotIn("one_action.py", prompt)
+                self.assertIn("host validates the frozen candidate bytes", prompt)
                 cluster = suffix.rsplit("-", 1)[-1]
                 barrier.wait(timeout=2)
                 write_json(
@@ -8258,6 +9240,7 @@ class ContractTests(unittest.TestCase):
 
             with (
                 patch.object(runner, "ROOT", root),
+                patch.object(runner, "RETRY_BUDGET", 0),
                 patch.object(runner, "run_session", side_effect=fake_session),
             ):
                 runner.fanout_operations(
@@ -8390,6 +9373,7 @@ class ContractTests(unittest.TestCase):
 
             with (
                 patch.object(runner, "ROOT", root),
+                patch.object(runner, "RETRY_BUDGET", 0),
                 patch.object(runner, "run_session", side_effect=timeout_verification),
             ):
                 runner.fanout_operations(
@@ -8475,8 +9459,14 @@ class ContractTests(unittest.TestCase):
             runner.VERIFIER_SESSION_TIMEOUT_SECONDS,
             runner.AGENT_SESSION_TIMEOUT_SECONDS,
         )
-        self.assertEqual(runner.session_timeout_seconds("goal"), 180)
-        self.assertEqual(runner.session_timeout_seconds("verifiter"), 360)
+        self.assertEqual(
+            runner.session_timeout_seconds("goal"),
+            runner.AGENT_SESSION_TIMEOUT_SECONDS,
+        )
+        self.assertEqual(
+            runner.session_timeout_seconds("verifiter"),
+            runner.VERIFIER_SESSION_TIMEOUT_SECONDS,
+        )
         with tempfile.TemporaryDirectory() as directory:
             view = Path(directory) / "view"
             view.mkdir()
@@ -8499,7 +9489,10 @@ class ContractTests(unittest.TestCase):
                 )
             self.assertEqual(
                 [call.kwargs["timeout"] for call in invoke.call_args_list],
-                [180, 360],
+                [
+                    runner.AGENT_SESSION_TIMEOUT_SECONDS,
+                    runner.VERIFIER_SESSION_TIMEOUT_SECONDS,
+                ],
             )
 
     def test_one_operation_verifies_its_skills_together(self) -> None:
@@ -9005,6 +9998,44 @@ class MockedPipelineTest(unittest.TestCase):
             )
             self.assertEqual(selection["candidate_skills"], ["example"])
 
+    def test_candidate_run_accepts_exported_acp_trace(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            pool = root / "candidate_traces"
+            runs = root / "runs"
+            pool.mkdir()
+            trace = pool / "benchmark-feedback.jsonl"
+            trace.write_text(
+                "\n".join(
+                    [
+                        json.dumps({"type": "user_message", "text": "task"}),
+                        json.dumps({"type": "agent_message", "text": "work"}),
+                        json.dumps(
+                            {
+                                "type": "tool_call",
+                                "title": "objective_verifier",
+                                "status": "completed",
+                            }
+                        ),
+                    ]
+                )
+                + "\n"
+            )
+
+            workspace = candidates.create_run(
+                "benchmark-feedback.jsonl", pool, runs
+            )
+
+            selection = json.loads(
+                (workspace / "run/trace-selection.json").read_text()
+            )
+            self.assertEqual(selection["source"], "acp")
+            self.assertEqual(selection["turns"], 1)
+            self.assertEqual(
+                selection["copied_to"],
+                "traces/raw/acp/benchmark-feedback.jsonl",
+            )
+
     def test_candidate_run_excludes_invalid_candidate_skills(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -9384,6 +10415,90 @@ class TransformVerificationTest(unittest.TestCase):
 
 
 class DshAndInventoryRegressionTest(unittest.TestCase):
+    def test_specific_resource_finding_suppresses_generic_objective_failure(self) -> None:
+        base = {
+            "schema_version": 1,
+            "severity": "critical",
+            "confidence": 0.98,
+            "routing": "skill_evolution",
+            "session_id": "trace",
+            "trace_ids": ["trace-1"],
+            "score": 1.0,
+            "evidence": [],
+        }
+        generic = {
+            **base,
+            "signal_id": "generic",
+            "detector": "method-objective-verifier-failure",
+            "features": {"candidate_source": "methodology"},
+        }
+        specific = {
+            **base,
+            "signal_id": "specific",
+            "detector": "resource-cad-extraction-adoption-opportunity",
+            "features": {
+                "candidate_source": "resource_opportunity",
+                "objective_failure": True,
+            },
+        }
+        config = {
+            "selection": {
+                "min_severity": "high",
+                "min_confidence": 0.6,
+                "suppress_generic_objective_when_resource_specific": True,
+                "max_candidate_findings_per_run": 12,
+            },
+            "_methodology": {"enabled": True, "min_confidence": 0.68},
+            "_resource_opportunities": {"enabled": True, "min_confidence": 0.82},
+        }
+        selected, decisions = signals._select_findings(
+            [generic, specific], config
+        )
+        self.assertEqual([row["signal_id"] for row in selected], ["specific"])
+        by_id = {row["finding_id"]: row for row in decisions}
+        self.assertEqual(
+            by_id["generic"]["reason"],
+            "superseded-by-specific-resource-finding",
+        )
+
+    def test_dsh_transient_failure_is_narrow(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            log = Path(directory) / "session.jsonl"
+            log.write_text("dsh: SERVER: Internal Server Error\n")
+            self.assertTrue(runner.dsh_transient_failure(log))
+            log.write_text("model produced invalid JSON\n")
+            self.assertFalse(runner.dsh_transient_failure(log))
+
+    def test_dsh_session_retries_one_transient_provider_failure(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            log = root / "session.jsonl"
+            calls = 0
+
+            def fake_run(*args, **kwargs):
+                nonlocal calls
+                calls += 1
+                if calls == 1:
+                    log.write_text("STREAM_CLOSED before message_stop\n")
+                    raise subprocess.CalledProcessError(1, ["dsh"])
+                log.write_text("success\n")
+
+            details: dict[str, object] = {}
+            with (
+                patch.object(runner, "run", side_effect=fake_run),
+                patch.object(runner.time, "sleep"),
+            ):
+                runner.run_dsh_session(
+                    "prompt",
+                    "deepseek-chat",
+                    cwd=root,
+                    log_path=log,
+                    timeout=10,
+                    details=details,
+                )
+            self.assertEqual(calls, 2)
+            self.assertEqual(details["transient_retries"], 1)
+
     def test_inventory_seed_copies_current_skill_changelogs(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / "root"
@@ -9892,6 +11007,55 @@ class DshAndInventoryRegressionTest(unittest.TestCase):
             self.assertEqual(candidate["created_skill"], "new-owner")
             self.assertEqual(candidate["prior_owner"], "older-owner")
 
+    def test_inventory_merge_candidates_ignore_broad_fingerprint_collision(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            skills = workspace / "target/to_be_improved_skills"
+            rows = []
+            for index, name in enumerate(("artifact-check", "repair-budget", "aggregate-audit")):
+                (skills / name).mkdir(parents=True)
+                (skills / name / "SKILL.md").write_text(
+                    f"---\nname: {name}\ndescription: distinct {name}\n---\n"
+                    f"# {name}\nUnique responsibility token-{index}.\n"
+                )
+                rows.append({
+                    "skill": name,
+                    "skill_types": [{"type": f"job/distinct-{index}", "weight": 1}],
+                    "lifecycle": {"method_fingerprint": "method-v1:broad-family"},
+                })
+            metadata = workspace / "metadata.json"
+            metadata.write_text(json.dumps({"skills_metadata": rows}))
+            result = runner.inventory_merge_candidates(workspace, metadata)
+            self.assertEqual(result["candidate_count"], 0)
+            self.assertEqual(
+                result["fingerprint_cardinality"]["method-v1:broad-family"], 3
+            )
+
+    def test_inventory_merge_candidates_ignore_generic_label_only_overlap(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            skills = workspace / "target/to_be_improved_skills"
+            rows = []
+            for name, body in (
+                ("content-plan", "campaign editorial publishing calendar"),
+                ("quality-plan", "reliability incident testing operations"),
+                ("navigation-plan", "documentation routes headings digest"),
+            ):
+                (skills / name).mkdir(parents=True)
+                (skills / name / "SKILL.md").write_text(
+                    f"---\nname: {name}\ndescription: {body}\n---\n# Workflow\n{body}\n"
+                )
+                rows.append({
+                    "skill": name,
+                    "skill_types": [{"type": "job/methodology", "weight": 1}],
+                })
+            metadata = workspace / "metadata.json"
+            metadata.write_text(json.dumps({"skills_metadata": rows}))
+            self.assertEqual(
+                runner.inventory_merge_candidates(workspace, metadata)["candidate_count"],
+                0,
+            )
+
     def test_inventory_merge_candidates_ignore_legitimate_multi_skill_update(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             workspace = Path(directory)
@@ -9920,6 +11084,91 @@ class DshAndInventoryRegressionTest(unittest.TestCase):
             self.assertEqual(
                 runner.inventory_merge_candidates(workspace, metadata)["candidate_count"],
                 0,
+            )
+
+    def test_merge_eval_reconciliation_unions_cases_and_resolves_ids(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            target = workspace / "target/to_be_improved_skills/merged/evals"
+            target.mkdir(parents=True)
+            write_json(target / "evals.json", {
+                "skill_name": "merged",
+                "evals": [{
+                    "id": 1,
+                    "prompt": "target case",
+                    "expected_output": "target output",
+                    "expectations": ["target expectation"],
+                    "files": [],
+                    "source_trace_ids": [],
+                }],
+            })
+            for name, prompt in (("first", "target case"), ("second", "source case")):
+                source = workspace / f"target/raw_skills/{name}/evals"
+                source.mkdir(parents=True)
+                write_json(source / "evals.json", {
+                    "skill_name": name,
+                    "evals": [{
+                        "id": 1,
+                        "prompt": prompt,
+                        "expected_output": (
+                            "target output" if prompt == "target case" else "source output"
+                        ),
+                        "expectations": [
+                            "target expectation" if prompt == "target case" else "source expectation"
+                        ],
+                        "files": [],
+                        "source_trace_ids": [],
+                    }],
+                })
+            appended = runner.reconcile_merge_eval_cases(workspace, {
+                "op": "merge",
+                "skills": ["first", "second"],
+                "into": {"skill": "merged"},
+            })
+            self.assertEqual(appended, 1)
+            document = json.loads((target / "evals.json").read_text())
+            self.assertEqual(document["skill_name"], "merged")
+            self.assertEqual([row["id"] for row in document["evals"]], [1, 2])
+            self.assertEqual(
+                [row["prompt"] for row in document["evals"]],
+                ["target case", "source case"],
+            )
+
+    def test_merge_eval_reconciliation_deduplicates_behavior_when_planned(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            target = workspace / "target/to_be_improved_skills/merged/evals"
+            source = workspace / "target/raw_skills/source/evals"
+            target.mkdir(parents=True)
+            source.mkdir(parents=True)
+            write_json(target / "evals.json", {
+                "skill_name": "merged",
+                "evals": [
+                    {"id": 1, "kind": "should_apply", "prompt": "fresh lookup", "expected_output": "route", "expectations": ["route"], "files": [], "source_trace_ids": []},
+                    {"id": 2, "kind": "should_apply", "prompt": "another fresh lookup", "expected_output": "route again", "expectations": ["route"], "files": [], "source_trace_ids": []},
+                    {"id": 3, "kind": "should_apply", "prompt": "digest mismatch", "expected_output": "refresh", "expectations": ["refresh"], "files": [], "source_trace_ids": []},
+                ],
+            })
+            write_json(source / "evals.json", {
+                "skill_name": "source",
+                "evals": [
+                    {"id": 1, "kind": "should_apply", "prompt": "current mapped request", "expected_output": "route", "expectations": ["route"], "files": [], "source_trace_ids": []},
+                    {"id": 2, "kind": "should_apply", "prompt": "stale digest no longer matches", "expected_output": "refresh", "expectations": ["refresh"], "files": [], "source_trace_ids": []},
+                ],
+            })
+            runner.reconcile_merge_eval_cases(workspace, {
+                "op": "merge",
+                "skills": ["source"],
+                "into": {
+                    "skill": "merged",
+                    "remove": ["Remove duplicate eval cases."],
+                },
+            })
+            document = json.loads((target / "evals.json").read_text())
+            self.assertEqual(len(document["evals"]), 2)
+            self.assertEqual(
+                [runner._eval_behavior_key(row) for row in document["evals"]],
+                ["should_apply:fresh-lookup", "should_apply:digest-mismatch"],
             )
 
     def test_scope_source_path_does_not_duplicate_workspace(self) -> None:
@@ -10124,6 +11373,333 @@ class DshAndInventoryRegressionTest(unittest.TestCase):
                 ],
             }
             with self.assertRaisesRegex(SystemExit, "produced no authored file"):
+                runner.validate_planned_resource_outputs(workspace, operation)
+
+    def test_residual_objective_gap_rejects_no_change(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            worker = Path(directory)
+            (worker / "run").mkdir(parents=True)
+            write_json(
+                worker / "run/diagnosis.json",
+                {
+                    "skill_capabilities_missing": [
+                        {"confidence": 0.86, "description": "independent frame check"}
+                    ]
+                },
+            )
+            finding = worker / "traces/derived/findings/sig-test/finding.json"
+            finding.parent.mkdir(parents=True)
+            write_json(
+                finding,
+                {
+                    "detector": "method-objective-verifier-failure",
+                    "features": {
+                        "lesson": {
+                            "portable_preflight_required": True,
+                            "local_objective_conflict": False,
+                            "learning_disposition": "portable-preflight-gap",
+                        }
+                    },
+                },
+            )
+            with self.assertRaisesRegex(
+                runner.pipeline_contracts.ContractError,
+                "residual objective failure",
+            ):
+                runner._validate_residual_objective_disposition(
+                    worker,
+                    {"action": {"disposition": "no_change", "ops": []}},
+                )
+
+            runner._validate_residual_objective_disposition(
+                worker,
+                {"action": {"disposition": "change", "ops": [{}]}},
+            )
+
+    def test_script_fixtures_may_be_discovered_through_evals(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            skill = workspace / "target/to_be_improved_skills/example"
+            (skill / "scripts/fixtures").mkdir(parents=True)
+            (skill / "evals").mkdir(parents=True)
+            (skill / "SKILL.md").write_text(
+                valid_skill_text("example", "Run scripts/check.py and the eval suite.")
+            )
+            (skill / "scripts/check.py").write_text("print('ok')\n")
+            (skill / "scripts/fixtures/input.json").write_text("{}\n")
+            (skill / "evals/evals.json").write_text(
+                '{"skill_name":"example","evals":[{"files":["scripts/fixtures/input.json"]}]}\n'
+            )
+            operation = {
+                "op": "create",
+                "skills": [
+                    {
+                        "skill": "example",
+                        "resource_plan": resource_plan("scripts", "evals"),
+                    }
+                ],
+            }
+            runner.validate_planned_resource_outputs(workspace, operation)
+
+            (skill / "SKILL.md").write_text(valid_skill_text("example", "Run the eval suite."))
+            with self.assertRaisesRegex(SystemExit, "not discoverable"):
+                runner.validate_planned_resource_outputs(workspace, operation)
+
+    def test_audit_repair_separation_rejects_repeated_update_only(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            worker = Path(directory)
+            finding = worker / "traces/derived/findings/sig-test/finding.json"
+            finding.parent.mkdir(parents=True)
+            write_json(
+                finding,
+                {
+                    "detector": "method-objective-verifier-failure",
+                    "evidence": [
+                        {"quote": "ALL CHECKS PASSED; objective_verifier failed"}
+                    ],
+                },
+            )
+            skill = worker / "target/to_be_improved_skills/artifact-preflight"
+            skill.mkdir(parents=True)
+            (skill / "SKILL.md").write_text(
+                valid_skill_text(
+                    "artifact-preflight",
+                    "Run independent geometry_conformance checks.",
+                )
+            )
+            with self.assertRaisesRegex(
+                runner.pipeline_contracts.ContractError, "update-only is invalid"
+            ):
+                runner._validate_audit_repair_separation(
+                    worker,
+                    {
+                        "action": {
+                            "ops": [
+                                {
+                                    "op": "update",
+                                    "skills": [{"skill": "artifact-preflight"}],
+                                }
+                            ]
+                        }
+                    },
+                )
+            runner._validate_audit_repair_separation(
+                worker,
+                {"action": {"ops": [{"op": "create", "skills": []}]}},
+            )
+
+    def test_execution_create_rejects_checker_only_scripts(self) -> None:
+        skill = {
+            "skill": "scene-export",
+            "description": "Export meshes from a source scene.",
+            "sections": [
+                {"section": "workflow", "goal": "Read the source scene and export meshes."}
+            ],
+            "dirs": [
+                {
+                    "dir": "scripts",
+                    "goal": "Create scripts/check_mesh.py to validate exported meshes.",
+                }
+            ],
+        }
+        document = {"action": {"ops": [{"op": "create", "skills": [skill]}]}}
+        with self.assertRaisesRegex(
+            runner.pipeline_contracts.ContractError, "checker-only"
+        ):
+            runner._validate_execution_create_has_producer(document)
+
+        skill["dirs"][0]["goal"] = (
+            "Create scripts/export_meshes.py to read the source scene and write "
+            "the requested mesh artifacts, plus scripts/check_mesh.py."
+        )
+        runner._validate_execution_create_has_producer(document)
+
+        skill["dirs"][0]["goal"] = (
+            "Add a deterministic command scripts/export_scene.mjs that imports "
+            "the source module and emits OBJ output artifacts, plus a checker."
+        )
+        runner._validate_execution_create_has_producer(document)
+
+    def test_threejs_producer_requires_native_end_to_end_fixture(self) -> None:
+        skill = {
+            "skill": "threejs-export",
+            "description": "Export a Three.js source scene.",
+            "sections": [],
+            "dirs": [
+                {
+                    "dir": "scripts",
+                    "goal": "Create a Python exporter that consumes normalized scene JSON.",
+                }
+            ],
+        }
+        document = {"action": {"ops": [{"op": "update", "skills": [skill]}]}}
+        with self.assertRaisesRegex(
+            runner.pipeline_contracts.ContractError, "missing required clauses"
+        ):
+            runner._validate_source_native_producer_contract(document)
+        skill["dirs"][0]["goal"] = (
+            "Provide a one-command end-to-end .mjs producer that imports a "
+            "JavaScript module exposing createScene(), reads each mesh native "
+            "geometry.attributes.position and geometry.index buffer including "
+            "non-indexed geometry, calls toNonIndexed for triangle-expanded "
+            "geometry, and writes vertices with OBJExporter at full precision "
+            "without fixed-decimal rounding, with a native .js fixture. Use a "
+            "root.updateMatrixWorld(true) refresh before reading matrixWorld. Use a "
+            "producer-first flow: execute the bundled producer before writing a "
+            "replacement and allow only a bounded fallback after failure."
+        )
+        runner._validate_source_native_producer_contract(document)
+
+        skill["dirs"][0]["goal"] = skill["dirs"][0]["goal"].replace(
+            "one-command end-to-end", "one command"
+        )
+        runner._validate_source_native_producer_contract(document)
+
+        skill["dirs"][0]["goal"] = skill["dirs"][0]["goal"].replace(
+            "at full precision without fixed-decimal rounding",
+            "with exact Float32 values and prohibit lossy coordinate formatting",
+        ).replace(
+            "bounded fallback after failure",
+            "bounded fallback only after a concrete documented producer failure",
+        )
+        runner._validate_source_native_producer_contract(document)
+
+    def test_threejs_producer_requires_lossless_numeric_serialization(self) -> None:
+        skill = {
+            "skill": "threejs-export",
+            "description": "Export a Three.js source scene.",
+            "sections": [],
+            "dirs": [{
+                "dir": "scripts",
+                "goal": (
+                    "Provide a one-command end-to-end .mjs producer that imports a "
+                    "JavaScript module exposing createScene(), reads native "
+                    "geometry.attributes.position and geometry.index buffers for "
+                    "indexed and non-indexed geometry, calls toNonIndexed for "
+                    "triangle-expanded output, calls root.updateMatrixWorld(true) "
+                    "before reading matrixWorld, and writes with OBJExporter."
+                ),
+            }],
+        }
+        document = {"action": {"ops": [{"op": "update", "skills": [skill]}]}}
+        with self.assertRaisesRegex(
+            runner.pipeline_contracts.ContractError, "full round-trip numeric precision"
+        ):
+            runner._validate_source_native_producer_contract(document)
+
+        skill["dirs"][0]["goal"] += (
+            " Write every vertex at full round-trip numeric precision without "
+            "fixed-decimal coordinate rounding. Execute the bundled producer "
+            "before writing a replacement and use a bounded fallback after failure."
+        )
+        runner._validate_source_native_producer_contract(document)
+
+    def test_threejs_producer_rejects_parameter_retessellation_contract(self) -> None:
+        skill = {
+            "skill": "threejs-export",
+            "description": "Export a Three.js source scene.",
+            "sections": [],
+            "dirs": [{
+                "dir": "scripts",
+                "goal": (
+                    "Provide a one-command end-to-end .mjs producer that imports a "
+                    "JavaScript module exposing createScene() and reconstructs each "
+                    "primitive from geometry.parameters after root.updateMatrixWorld(true), "
+                    "with a native fixture."
+                ),
+            }],
+        }
+        document = {"action": {"ops": [{"op": "update", "skills": [skill]}]}}
+        with self.assertRaisesRegex(
+            runner.pipeline_contracts.ContractError, "geometry.attributes.position"
+        ):
+            runner._validate_source_native_producer_contract(document)
+
+    def test_threejs_producer_requires_world_matrix_refresh(self) -> None:
+        goal = (
+            "Provide a one-command end-to-end .mjs producer that imports a JavaScript "
+            "module exposing createScene(), reads native geometry.attributes.position "
+            "and geometry.index buffers, calls toNonIndexed for triangle-expanded "
+            "non-indexed output, writes with OBJExporter at full round-trip numeric "
+            "precision without fixed-decimal rounding, and runs producer-first with a "
+            "bounded fallback only after a concrete producer failure."
+        )
+        skill = {
+            "skill": "threejs-export",
+            "description": "Export a Three.js source scene.",
+            "sections": [],
+            "dirs": [{"dir": "scripts", "goal": goal}],
+        }
+        document = {"action": {"ops": [{"op": "update", "skills": [skill]}]}}
+        with self.assertRaisesRegex(
+            runner.pipeline_contracts.ContractError,
+            "scene graph world-matrix refresh",
+        ):
+            runner._validate_source_native_producer_contract(document)
+        skill["dirs"][0]["goal"] += (
+            " Call root.updateMatrixWorld(true) before reading any matrixWorld."
+        )
+        runner._validate_source_native_producer_contract(document)
+
+        skill["dirs"][0]["goal"] = skill["dirs"][0]["goal"].replace(
+            "bounded fallback only after a concrete producer failure",
+            "after a concrete producer failure, bound the fallback to one attempt",
+        )
+        runner._validate_source_native_producer_contract(document)
+
+        skill["dirs"][0]["goal"] = skill["dirs"][0]["goal"].replace(
+            "after a concrete producer failure, bound the fallback to one attempt",
+            "Keep producer-first bounded execution: run the bundled producer "
+            "immediately, cap repair/re-export attempts, and stop with a concrete "
+            "failure instead of silently switching paths",
+        )
+        runner._validate_source_native_producer_contract(document)
+
+    def test_threejs_preflight_mentions_exports_without_owning_producer(self) -> None:
+        skill = {
+            "skill": "artifact-conformance-preflight",
+            "description": "Verify exported Three.js meshes independently.",
+            "sections": [
+                {
+                    "section": "verification",
+                    "goal": "Check exported part meshes against the source scene.",
+                }
+            ],
+            "dirs": [
+                {
+                    "dir": "scripts",
+                    "goal": "Extend scripts/preflight.py with an independent geometry checker.",
+                }
+            ],
+        }
+        document = {"action": {"ops": [{"op": "update", "skills": [skill]}]}}
+        runner._validate_source_native_producer_contract(document)
+
+    def test_update_does_not_reject_unchanged_inherited_fixture(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            raw = workspace / "target/raw_skills/example"
+            target = workspace / "target/to_be_improved_skills/example"
+            for skill in (raw, target):
+                (skill / "scripts/fixtures").mkdir(parents=True)
+                (skill / "SKILL.md").write_text(
+                    valid_skill_text("example", "Run scripts/check.py.")
+                )
+                (skill / "scripts/check.py").write_text("print('ok')\n")
+                (skill / "scripts/fixtures/legacy.py").write_text("VALUE = 1\n")
+            operation = {
+                "op": "update",
+                "skills": [
+                    {
+                        "skill": "example",
+                        "resource_plan": resource_plan("scripts"),
+                    }
+                ],
+            }
+            runner.validate_planned_resource_outputs(workspace, operation)
+
+            (target / "scripts/fixtures/legacy.py").write_text("VALUE = 2\n")
+            with self.assertRaisesRegex(SystemExit, "not discoverable"):
                 runner.validate_planned_resource_outputs(workspace, operation)
 
     def test_resource_finding_idempotency_requires_effect_to_still_exist(self) -> None:

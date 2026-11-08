@@ -1,0 +1,16 @@
+{
+  "spec_revision": "fixture-calibration-v1",
+  "records_path": "records",
+  "invariants": [
+    {
+      "id": "confidence-separation",
+      "class": "calibration",
+      "confidence": "confidence",
+      "group_by": "evidence_strength",
+      "order": ["weak", "medium", "strong"],
+      "min_separation": 0.1,
+      "expected_source": "task statement, calibration rule",
+      "record_locator": "id"
+    }
+  ]
+}

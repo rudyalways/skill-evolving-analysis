@@ -1,0 +1,13 @@
+{
+  "units": "mm",
+  "turning_space": {
+    "diameter": 1200,
+    "wall_clearance": 50,
+    "search_step": 200,
+    "max_candidates": 4,
+    "max_grid_points": 20000,
+    "allowed_overlap_layers": [
+      "A-LAV"
+    ]
+  }
+}

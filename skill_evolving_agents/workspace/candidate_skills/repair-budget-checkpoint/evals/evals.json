@@ -1,0 +1,58 @@
+{
+  "skill_name": "repair-budget-checkpoint",
+  "evals": [
+    {
+      "id": 1,
+      "kind": "should_apply",
+      "prompt": "A layout repair task has a 40-minute execution window and requires a fixed layout file plus a validation report. After several failed attempts the agent is still exploring alternative repairs with 6 minutes left. How should it proceed?",
+      "expected_output": "The agent stops exploration at the reserved final-check boundary, writes the best complete layout file and validation report, and spends the remaining interval verifying that both parse and that the latest named defect is fixed or explicitly reported.",
+      "expectations": [
+        "The budget and reserved final-check interval are recorded before further repair.",
+        "All required artifacts are written even though the repair loop has not fully converged.",
+        "The latest deterministic check is re-run after the final edit.",
+        "Any still-unfixed defect is reported explicitly rather than claimed complete.",
+        "The checkpoint record states remaining budget, artifacts written, and the next concrete defect."
+      ],
+      "files": [],
+      "source_trace_ids": ["sig-9ae847b0c6c693a246ca650c"]
+    },
+    {
+      "id": 2,
+      "kind": "should_apply",
+      "prompt": "A previous debugging run hit its tool-call limit and ended with a broken config file and no summary. We are retrying with the same 60-call limit and the same two required outputs.",
+      "expected_output": "The retry records the budget up front, emits a coherent config file and summary early, checkpoints before each repair iteration, and reserves the final calls for parse and consistency checks.",
+      "expectations": [
+        "A prior budget-exhaustion run triggers the checkpoint workflow.",
+        "Coherent artifacts are emitted before the loop is considered converged.",
+        "The reserve is used for verification, not optional exploration."
+      ],
+      "files": [],
+      "source_trace_ids": ["sig-9ae847b0c6c693a246ca650c"]
+    },
+    {
+      "id": 3,
+      "kind": "should_not_apply",
+      "prompt": "Fix the typo in this one-line function name and return the corrected line. There is no deadline, no report, and no other output.",
+      "expected_output": "The correction is made directly without invoking the budget checkpoint workflow.",
+      "expectations": [
+        "The skill is not selected for a short single-step task with one trivial output."
+      ],
+      "files": [],
+      "source_trace_ids": []
+    },
+    {
+      "id": 4,
+      "kind": "should_apply",
+      "prompt": "A repair agent reached its declared final-check checkpoint with three required artifacts still unwritten, but it continued trying alternative fixes and now has only two tool calls left. Decide the next action.",
+      "expected_output": "The agent identifies that continuing past the checkpoint was the near-miss failure, stops exploration immediately, writes the best coherent version of every required artifact, and uses any remaining call for the highest-value deterministic completeness check without claiming unresolved defects are fixed.",
+      "expectations": [
+        "Continuing exploration after the reserved checkpoint is explicitly identified as the failure.",
+        "The next action prioritizes producing all missing required artifacts rather than another speculative repair.",
+        "The final check is bounded to the remaining budget and targets artifact presence, parsing, or the first named contract defect.",
+        "Any unresolved defect or unverified artifact is reported honestly instead of being presented as complete."
+      ],
+      "files": [],
+      "source_trace_ids": ["sig-9ae847b0c6c693a246ca650c"]
+    }
+  ]
+}

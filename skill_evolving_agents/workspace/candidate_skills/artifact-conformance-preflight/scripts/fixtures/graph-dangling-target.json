@@ -1,0 +1,20 @@
+{
+  "graph": {
+    "nodes": [
+      {"id": "Start", "label": "start"},
+      {"id": "A", "label": "task a"},
+      {"id": "B", "label": "task b"},
+      {"id": "C", "label": "task c"},
+      {"id": "End", "label": "terminal"}
+    ],
+    "edges": [
+      {"source": "Start", "target": "A"},
+      {"source": "Start", "target": "B"},
+      {"source": "A", "target": "C"},
+      {"source": "B", "target": "C"},
+      {"source": "B", "target": "End"},
+      {"source": "C", "target": "End"},
+      {"source": "C", "target": "Ghost"}
+    ]
+  }
+}

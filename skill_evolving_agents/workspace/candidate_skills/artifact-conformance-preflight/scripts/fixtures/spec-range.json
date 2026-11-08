@@ -1,0 +1,16 @@
+{
+  "spec_revision": "fixture-range-v1",
+  "records_path": "records",
+  "invariants": [
+    {
+      "id": "range-duration",
+      "class": "numeric_range",
+      "field": "duration_minutes",
+      "min": 60,
+      "max": 3600,
+      "unit": {"from": "minutes", "to": "seconds", "factor": 60, "offset": 0},
+      "expected_source": "task statement, duration bound in seconds",
+      "record_locator": "id"
+    }
+  ]
+}

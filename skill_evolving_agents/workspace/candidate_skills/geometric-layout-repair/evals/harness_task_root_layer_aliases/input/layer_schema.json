@@ -1,0 +1,29 @@
+{
+  "layers": {
+    "A-ROOM": {
+      "type": "wall"
+    },
+    "A-DOOR": {
+      "type": "door"
+    },
+    "A-WC": {
+      "type": "toilet"
+    },
+    "A-LAV": {
+      "type": "lavatory",
+      "canonical": "LAVATORY"
+    },
+    "A-TUB": {
+      "type": "bathtub"
+    },
+    "A-GRABBAR": {
+      "type": "grab_bar"
+    },
+    "A-ANNOTATION": {
+      "type": "annotation"
+    }
+  },
+  "aliases": {
+    "A-ROOM-CANONICAL": "A-ROOM"
+  }
+}

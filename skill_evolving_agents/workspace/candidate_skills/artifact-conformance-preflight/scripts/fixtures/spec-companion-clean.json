@@ -1,0 +1,37 @@
+{
+  "spec_revision": "task-rev-companion-clean",
+  "invariants": [
+    {
+      "id": "graph-reachability",
+      "class": "graph_structure",
+      "objects_path": "graph",
+      "nodes_path": "nodes",
+      "edges_path": "edges",
+      "node_id_field": "id",
+      "edge_source_field": "source",
+      "edge_target_field": "target",
+      "entry_node": "Start",
+      "terminal_nodes": ["End"],
+      "expected_source": "task statement, every node reachable from Start and every edge target a node except the declared terminal End"
+    },
+    {
+      "id": "flow-viz-shapes",
+      "class": "companion_artifact",
+      "deliverable_path": "companion-clean.dot",
+      "format": "dot",
+      "source_nodes_path": "graph.nodes",
+      "source_id_field": "id",
+      "source_type_field": "type",
+      "node_id_attribute": "id",
+      "encoding": {
+        "attribute": "shape",
+        "mapping": {
+          "start": "oval",
+          "task": "box",
+          "terminal": "doublecircle"
+        }
+      },
+      "expected_source": "task statement, node types start=oval, task=box, terminal=doublecircle in the rendered flow diagram"
+    }
+  ]
+}

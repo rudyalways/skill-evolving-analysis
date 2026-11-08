@@ -61,6 +61,14 @@ or semantically different. In that case propose the smallest update that
 replaces or reconciles the resource and its verification; do not choose
 `no_change` merely because SKILL.md already names the expected path.
 
+For every `resource_opportunity`, `no_change` requires direct bounded content
+evidence for every behavioral clause added by the current contract. File
+presence, path names, byte counts, hashes, fixture names, and SKILL.md claims
+do not prove semantic equivalence. If a relevant resource preview is empty or
+truncated, or a new contract clause is absent from the bounded resource text,
+propose the smallest update and regression eval; never infer implementation
+from a large file size or from neighboring fixtures.
+
 For methodology findings, preserve only the generalized method in
 `features.lesson`: prerequisites, decision rule, failure guard, minimal
 successful sequence, and non-generic completion contract. Check
@@ -70,6 +78,70 @@ and remains provisional; cross-task consolidated evidence may be stable.
 Prefer updating a recalled skill. Use `no_change` when the candidate restates
 the prompt, says only to inspect/edit/test, embeds one-off paths or constants,
 or adds no information beyond the recalled skill.
+
+For `objective_verifier_failure` or `cross_task_portable_preflight`, do not
+write a workflow that assumes the hidden objective verifier is callable during
+task execution. Preserve `failure_classes`, `verifier_visibility`, and the
+portable-preflight rule. When `features.lesson.resource_hint` requests a
+script, set `scripts: use` and require a config-driven validator with no
+benchmark-specific constants: artifact path plus task-derived constraint spec
+as input, structured violations as output, nonzero exit on violations, and
+representative fixtures for every evidenced failure class. The script is a
+local preflight, not a replica of or bypass for the hidden verifier.
+When the current trace used or read a recalled skill and still produced an
+`objective_verifier_failure`, treat that residual as behavioral evidence that
+the current implementation is insufficient. Existing prose, fixture names,
+hashes, or a validator that reports clean cannot justify `no_change` when the
+diagnosis records a confident missing capability and the lesson is not an
+`evaluation-contract-conflict`; choose the smallest update plus a focused eval.
+Do not keep enlarging a broad audit or preflight skill when the residual is an
+execution defect and the trace already spent substantial work diagnosing it.
+If the applicable skill was read, its checker or scripts were not actually
+executed, the same objective residual survived, and the missing knowledge is a
+portable domain procedure (for example coordinate-frame-correct export),
+prefer a focused execution skill with a deterministic helper and bounded evals.
+Use update only when the recalled skill is itself the correct execution
+surface; otherwise create the narrower skill and keep the broad preflight as a
+consumer. This is a general audit-versus-repair separation rule, not permission
+to encode benchmark names, hidden thresholds, or one trace's constants.
+When an activated execution skill's checker ran but its bundled producer did
+not, and the trace exhausted substantial time or tool calls before producing an
+incomplete artifact, require a producer-first bounded-execution update. The
+workflow must execute the applicable bundled producer immediately after
+confirming its source and output arguments, validate the required artifact
+manifest, and allow ad-hoc replacement code only after a concrete producer
+failure. Require a bounded fallback sequence and a focused eval proving both
+early producer execution and complete artifact-set delivery; do not solve the
+timeout by weakening verification or encoding one benchmark's file names.
+When that focused create claims to export, generate, transform, repair, or
+otherwise produce an artifact, its `scripts` directory goal must include the
+deterministic producer itself, with source inputs, artifact outputs,
+frame/transform behavior, and failure semantics. A checker-only script is not
+an execution surface and is invalid even if the skill prose says “export.” The
+producer and an independent checker may be separate scripts or clearly
+separated modes of one script; require fixtures and evals for both production
+and rejection behavior.
+The producer must directly consume the source format named by the skill's
+activation trigger. Do not accept a helper that requires the agent to first
+hand-author a normalized intermediate representation containing the same
+geometry or semantics. For source-code scenes or modules, require an
+end-to-end fixture in that native format and a one-command producer invocation
+from source to requested artifact. Any generated manifest may record the run,
+but it cannot be a prerequisite manually reconstructed by the agent.
+When the lesson sets `oracle_independence_required`, prohibit a
+self-referential validator: an expected value produced by the same code path
+as the submitted value cannot establish correctness. Require either a second,
+independently implemented recomputation path or task-grounded metamorphic
+checks such as invariance, bounds, reversibility, or agreement across suitable
+representations. If neither is possible, require the constraint to be reported
+as unverifiable rather than manufacturing an expected value.
+If the lesson sets `local_objective_conflict` or the learning disposition is
+`evaluation-contract-conflict`, do not encode the hidden expected value and do
+not request another skill rewrite merely to chase the posthoc oracle. Propose
+`no_change` unless the finding contains a new task-visible convention,
+independent input, or portable metamorphic rule that the current recalled skill
+does not already preserve; describe the unresolved specification/oracle gap in
+the reason.
 
 For trace-free inventory maintenance, treat
 `duplicate_create_evidence_collision` as provenance evidence that a create was
@@ -99,16 +171,15 @@ qualified repetitions.
 Do not put easy experience that the model and harness already do well into a skill. Do not turn an entire trajectory into a verbose checklist: retain only evidence-dependent, reusable methodology. Do not set `improve_harness` inside scope. Do not recall skills again. Do not ignore a skill named in `label-matching.json`. Do not copy every op, skill, section, or dir from the example. Do not add an `other` item unless the heading or directory is outside the closed list. Do not name the same skill in two actions.
 Keep the goal compact: choose the minimum sufficient operation, limit
 reasoning and plan to three sentences each, and do not inspect checker or
-contract source. Run
-`python3 03_goal_agent/goal-generator/one_action.py <evolve-goal-path>` once
-after writing the output; do not search for the validator. If it fails, use
-its error message to correct the JSON without opening the checker.
+contract source. Do not run, locate, or open a validator. The host freezes and
+validates the candidate after the session. If the contract is invalid, the host
+may start at most one focused repair session with a compact diagnostic; rewrite
+only the named Goal file in that session and stop.
 
 ## Workflow
 
 Write `workspace/run/<finding-id>/evolve-goal.json`. Do not write another
-scope's goal. Run the exact validator command above on that file. A skill name
-may appear in only one `action.ops` item. Fill `goal`, `reasoning`, `plan`,
+scope's goal. A skill name may appear in only one `action.ops` item. Fill `goal`, `reasoning`, `plan`,
 `action`, and `feedback_to`. Keep only applicable ops and fields. A no-change
 disposition stops before Optimize, Verifiter, and Judge. The runner later
 deduplicates identical operations proposed by different findings.
@@ -135,7 +206,41 @@ one non-empty string, never an object copied from diagnosis feedback. For
 }
 ```
 
-Each item in `action.ops` is an object. The five op names are fixed: `create`, `update`, `delete`, `merge`, `split`. Use `other` only when the action is not one of those. Each op has its own parameters. For `create`, `update`, and `delete`, the records are always under the key `skills`; never use a key named `create`, `update`, or `delete` as the record list. A create skill has a description, its sections, its dirs, and at least 3 labels. A label is a path in `skill_capabilites/skill_capabilites.json` and a weight. The core sections are overview, when_to_use, do_not_use, workflow, constraints, verification, output_format, and limitations. Workflow includes methodology, instructions, procedure, and process. State_machine is optional and is used only when states, transitions, retries, or terminal conditions add value. An update skill has a goal, a facet, `sections`, and `dirs`. Each section is `section` and `goal`. Each dir is `dir` and `goal`. When an update, merge result, or split result must remove obsolete or redundant content, list each concrete removal in optional `remove`; do not hide a removal inside a broad section goal. Names and backward-compatible aliases come from `common/skill_format.json`. `other` and `ood` name a heading or directory that is not one of those closed names. An other section also has `heading`. An other dir also has `name`. A delete skill has a reason. `merge` names the skills to combine and `into`, the resulting skill, what it covers, and its dirs. `split` names one skill and `into`, the parts, what each part keeps, and the dirs that part keeps. `other` has a description, the skills it touches, and its dirs. The example uses angle brackets only to mark fields that must be replaced. Write concrete values without angle brackets, and never copy placeholder text into any output field. Name the skills on every op from the label matching. Put the recalled skills on `improve_skills`. A cluster with no recalled skills can be a create. A cluster with recalled skills can be an update, merge, split, or delete.
+Each item in `action.ops` is an object whose operation name is the non-empty
+string value of the `op` key. The five op names are fixed: `create`, `update`,
+`delete`, `merge`, `split`. Use `other` only when the action is not one of
+those. For `create`, `update`, and `delete`, put every target record in the
+sibling `skills` list; the records are always under the key `skills`. The
+canonical envelope is
+`{"op":"update","skills":[{"skill":"concrete-skill", ...}]}`. Never use
+`{"update":{"skills":[...]}}`, `{"update":[...]}`, or flatten a singular
+skill record onto the operation object. Each op has its own parameters. A
+create skill has a description, its sections, its dirs, and at least 3 labels. A label is a path in `skill_capabilites/skill_capabilites.json` and a weight. The core sections are overview, when_to_use, do_not_use, workflow, constraints, verification, output_format, and limitations. Workflow includes methodology, instructions, procedure, and process. State_machine is optional and is used only when states, transitions, retries, or terminal conditions add value. An update skill has a goal, a facet, `sections`, and `dirs`. Each section is `section` and `goal`. Each dir is `dir` and `goal`. When an update, merge result, or split result must remove obsolete or redundant content, list each concrete removal in optional `remove`; do not hide a removal inside a broad section goal. Names and backward-compatible aliases come from `common/skill_format.json`. `other` and `ood` name a heading or directory that is not one of those closed names. An other section also has a `heading`. An other dir also has a `name`. A delete skill has a reason. `merge` names the skills to combine and `into`, the resulting skill, what it covers, and its dirs. `split` names one skill and `into`, the parts, what each part keeps, and the dirs that part keeps. `other` has a description, the skills it touches, and its dirs. Write concrete values without angle brackets or placeholders. Put recalled skills on `improve_skills`. A cluster with no recalled skills can be a create. With recalled skills, create is also legal when the recalled item is only an audit, preflight, or consumer and the missing capability is a distinct reusable execution surface. Explain why update would repeat the failed abstraction and give the new focused skill non-overlapping triggers. Otherwise use update, merge, split, or delete.
+
+For an update, add optional `description_goal` whenever the evidence adds or
+removes a trigger, capability, artifact type, failure mode, or other
+retrieval-relevant scope. State how the one-line frontmatter description must
+change so low-cost recall can discover the evolved behavior. Do not claim a
+description change for wording-only cleanup.
+
+For both create and update, `sections` is always a JSON list. Every section
+item uses exactly the keys `section` and `goal`, both with non-empty strings.
+Never use a section-name object map, and never use `content` in place of
+`goal`.
+
+Every record inside an operation's `skills` list must identify its target with
+the exact key `skill` and a non-empty skill name. This applies to creates as
+well as updates and deletes. Do not substitute `name`, `skill_name`, or a
+description for this required identity field.
+
+Each label record uses exactly `type` and `weight`. Set `type` to the complete
+taxonomy path, such as `job/verification/evidence`, and set `weight` to a
+number from 0 to 1. Do not use `label`, `path`, or a split taxonomy dimension
+in place of `type`.
+
+Every optional `remove` entry is a non-empty string that names the exact
+content or resource being removed and explains why it is obsolete. Do not put
+objects in `remove`.
 
 For an objectively verifiable create, include the canonical `evals` directory
 with a goal to capture evidence-backed positive and near-miss behavioral cases.
@@ -181,6 +286,15 @@ Resource goals may name paths up to four levels below their canonical resource
 directory, for example `references/providers/aws.md`,
 `scripts/lib/parser.py`, or `assets/templates/react-app/`. Prefer the shallowest
 structure that keeps genuinely distinct modes or components understandable.
+
+When an update or merge source already exceeds the configured SKILL.md
+progressive-disclosure threshold, set `references` to `use` and include a
+`references` directory goal. Require Optimize to move substantial conditional
+schemas, modes, and worked examples into discoverable reference files while
+keeping activation, the concise core workflow, constraints, and verification
+in SKILL.md. This is required maintenance for the edited result, even when the
+new finding itself would otherwise fit in prose; do not grow an oversized
+catch-all skill further.
 
 For update and merge, resource planning is additive to inheritance. Preserve
 and reconcile every authored file already present under `scripts`,

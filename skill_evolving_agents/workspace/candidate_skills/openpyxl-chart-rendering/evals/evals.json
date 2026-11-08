@@ -38,6 +38,21 @@
       ],
       "files": [],
       "source_trace_ids": []
+    },
+    {
+      "id": 4,
+      "kind": "should_apply",
+      "prompt": "The two-ring doughnut is saved and the labels look fine to me. I asked a quick check and it answered yes, so can we call it done? The summary I got did not list any labels.",
+      "expected_output": "The one-line yes is rejected as unverified. The agent enumerates both label layers and the expected per-point text, inspects the render, finds the missing labels, injects the per-point dLbl runs, and reruns generation plus the LibreOffice render until every label appears.",
+      "expectations": [
+        "A bare yes answer with no enumerated labels is treated as unverified rather than as completion.",
+        "The response names the inner ring category count and the outer ring point count.",
+        "The response lists the exact expected label text for each point, composed from inner category, outer category, and value.",
+        "The rendered artifact is reopened and checked for missing, clipped, or overlapping labels.",
+        "Missing labels are fixed by rerunning generation with post-save dLbl injection instead of patching the saved workbook in place."
+      ],
+      "files": [],
+      "source_trace_ids": ["sig-0d7a13d1679215c0303f0b6e"]
     }
   ]
 }

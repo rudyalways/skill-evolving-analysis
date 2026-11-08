@@ -3,7 +3,7 @@
   "name": "low-cost",
   "max_cost_tier": 3,
   "preferred_cost_tier": 1,
-  "budgets": {"target_agent_calls": 4, "hard_agent_call_cap": 8, "on_cap": "defer"},
+  "budgets": {"target_agent_calls": 4, "hard_agent_call_cap": 8, "inventory_goal_scope_cap": 3, "on_cap": "defer"},
   "embedding_runtime": {"transport": "in_process", "backend": "sentence-transformers", "model": "Qwen/Qwen3-Embedding-0.6B", "revision": "97b0c614be4d77ee51c0cef4e5f07c00f9eb65b3", "device": "cpu", "dimensions": 1024, "query_instruction": "Retrieve the relevant reusable agent skill, failure category, or evolution evidence for this query", "timeout_ms": 1500, "on_start_error": "hashing-reference"},
   "evolution_gate": {
     "enabled": true,
@@ -23,7 +23,7 @@
     "semantic_prefilter": {"mode": "enabled", "kind": "embedding-service", "algorithm": "prefilter.embedding-json-v1", "endpoint": "http://127.0.0.1:8080", "reject_below": 0.15, "accept_at": 0.7, "noise_accept_at": 0.75, "minimum_margin": 0.08, "top_k": 3, "input_max_chars": 1200, "timeout_ms": 1500, "on_error": "escalate", "categories": {"correction": "user correction, dissatisfaction, repeated instruction, or unresolved request", "execution_failure": "tool error, unchanged retry, oscillation, edit churn, or failed execution", "latency": "slow execution, timeout, excessive waiting, or abandonment", "methodology": "reusable successful workflow, recovery, verification, or decision method", "noise": "incidental, infrastructure-only, non-reusable, or non-evolvable event"}},
     "diagnosis": {"mode": "enabled", "kind": "agent", "algorithm": "diagnosis.agent-full-json-v1"},
     "recall": {"mode": "enabled", "kind": "embedding-service", "algorithm": "recall.embedding-v1", "endpoint": "http://127.0.0.1:8080", "reject_below": 0.15, "accept_at": 0.7, "minimum_score": 0.35, "top_k": 5, "document_max_chars": 1200, "timeout_ms": 1500, "on_error": "fallback"},
-    "goal": {"mode": "enabled", "kind": "agent", "algorithm": "goal.agent-full-json-v1"},
+    "goal": {"mode": "enabled", "kind": "agent", "algorithm": "goal.agent-full-json-v1", "contract_repair_attempts": 2},
     "optimize": {"mode": "enabled", "kind": "agent", "algorithm": "optimize.agent-v1"},
     "verify": {"mode": "enabled", "kind": "agent", "algorithm": "verify.agent-structural-v1"},
     "publish": {"mode": "enabled", "kind": "deterministic", "algorithm": "publish.atomic-v1"}

@@ -1,0 +1,14 @@
+{
+  "spec_revision": "fixture-recompute-self-reference-v1",
+  "records_path": "records",
+  "invariants": [
+    {
+      "id": "recompute-duration-self-reference",
+      "class": "independent_recompute",
+      "field": "duration_minutes",
+      "expected_field": "duration_minutes",
+      "expected_source": "producer output copied into the artifact",
+      "record_locator": "id"
+    }
+  ]
+}

@@ -74,6 +74,34 @@ SCRIPT_VALIDATION = re.compile(
     re.IGNORECASE,
 )
 ASSET_VALIDATION = re.compile(r"\bpipeline\s+(?:list|validate|run|test)\b", re.IGNORECASE)
+CAD_GEOMETRY = re.compile(
+    r"\b(?:dxf|ezdxf|shapely|polyline|linestring|polygon|arc|solid|bbox|"
+    r"turning(?:[ -]circle)?|fixture|clearance|grabrail)\b",
+    re.IGNORECASE,
+)
+CAD_FAILURE = re.compile(
+    r"(?:traceback|command failed|typeerror|syntaxerror|"
+    r"no turning circle position found)",
+    re.IGNORECASE,
+)
+WALL_CLOCK_TIMEOUT = re.compile(
+    r"(?:wall[- ]clock|prompt exceeded).*?(?:timeout|budget)|"
+    r"(?:timeout|budget).*?(?:wall[- ]clock|prompt exceeded)",
+    re.IGNORECASE,
+)
+CAD_EXTRACTOR_NAME = "extract_architectural_dxf.py"
+CAD_EXTRACTOR_NAMES = re.compile(
+    r"(?:extract_architectural_dxf|extract_task_root)\.py", re.IGNORECASE
+)
+AD_HOC_CAD_PROBE = re.compile(
+    r"(?:/root/work/|\b)(?:probe\d*|extract|geom)\.py\b",
+    re.IGNORECASE,
+)
+SCRIPT_EXECUTION_PROOF = re.compile(
+    r"self-test passed:.*LINE/POLYLINE/ARC/CIRCLE/SPLINE|"
+    r'"schema_version"\s*:\s*"1\.0"',
+    re.IGNORECASE,
+)
 
 
 def _existing_script(
@@ -251,6 +279,502 @@ def _equivalent_supporting_resource(
                     if authored_source == asset_source and asset_keys <= content_keys:
                         return path.relative_to(workspace).as_posix()
     return None
+
+
+def _existing_cad_extraction_script(workspace: Path) -> str | None:
+    """Find a real extraction helper, not a downstream geometry validator."""
+    for root in (
+        workspace / "candidate_skills",
+        workspace / "target/to_be_improved_skills",
+    ):
+        for path in sorted(root.glob("*/scripts/**/*.py")) if root.is_dir() else []:
+            if not path.is_file() or path.stat().st_size > 512_000:
+                continue
+            text = path.read_text(errors="replace")
+            if (
+                re.search(r"\bezdxf\b", text, re.IGNORECASE)
+                and re.search(
+                    r"(?:layer[_ -]?schema|layer inventory|entity counts?|"
+                    r"fixture.{0,160}bbox|bbox.{0,160}fixture)",
+                    text,
+                    re.IGNORECASE,
+                )
+            ):
+                return path.relative_to(workspace).as_posix()
+    return None
+
+
+def _cad_tool_churn_findings(
+    workspace: Path,
+    trajectories: list[dict[str, Any]],
+    settings: dict[str, Any],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Promote repeated failed CAD probing into an extraction-script contract.
+
+    ACP traces may omit tool arguments. This detector therefore uses bounded
+    result evidence and requires a terminal wall-clock timeout, several failed
+    geometry probes, and activity in three independent trace windows.
+    """
+    findings: list[dict[str, Any]] = []
+    decisions: list[dict[str, Any]] = []
+    minimum = int(settings.get("min_cad_tool_churn_invocations", 12))
+    minimum_failures = int(settings.get("min_cad_tool_churn_failures", 3))
+    minimum_windows = int(settings.get("min_cad_tool_churn_windows", 3))
+    for trajectory in trajectories:
+        events = list(trajectory.get("events") or [])
+        timeout = next(
+            (
+                event
+                for event in reversed(events)
+                if "objective_verifier" in str(event.get("tool") or "").casefold()
+                and WALL_CLOCK_TIMEOUT.search(str(event.get("result_preview") or ""))
+            ),
+            None,
+        )
+        domain = [
+            event
+            for event in events
+            if str(event.get("tool") or "").casefold() == "execute"
+            and CAD_GEOMETRY.search(str(event.get("result_preview") or ""))
+        ]
+        failures = [
+            event
+            for event in domain
+            if CAD_FAILURE.search(str(event.get("result_preview") or ""))
+        ]
+        ad_hoc_probe_writes = [
+            event
+            for event in events
+            if str(event.get("tool") or "").casefold()
+            in {"write_file", "edit_file", "modify"}
+            and AD_HOC_CAD_PROBE.search(
+                str(event.get("result_preview") or "")
+                + " "
+                + str(event.get("arguments_preview") or "")
+            )
+        ]
+        if timeout is None or len(domain) < minimum or len(failures) < minimum_failures:
+            decisions.append(
+                {
+                    "trace_id": trajectory.get("trace_id"),
+                    "family": "architectural-dxf-extraction",
+                    "disposition": "rejected",
+                    "reason_codes": ["insufficient-cad-tool-churn-evidence"],
+                    "invocations": len(domain),
+                    "failures": len(failures),
+                    "terminal_timeout": timeout is not None,
+                }
+            )
+            continue
+        windows: dict[int, list[dict[str, Any]]] = defaultdict(list)
+        # ACP may collapse a long omitted suffix into a terminal event whose
+        # sequence is far beyond the retained tool evidence. Partition the
+        # observed CAD work itself so early/middle/late churn remains visible.
+        for index, event in enumerate(domain):
+            window = min(2, (index * 3) // len(domain))
+            windows[window].append(event)
+        distinct_windows = len(windows)
+        if distinct_windows < minimum_windows:
+            decisions.append(
+                {
+                    "trace_id": trajectory.get("trace_id"),
+                    "family": "architectural-dxf-extraction",
+                    "disposition": "rejected",
+                    "reason_codes": ["cad-churn-not-spread-across-windows"],
+                    "invocations": len(domain),
+                    "failures": len(failures),
+                    "distinct_windows": distinct_windows,
+                }
+            )
+            continue
+        existing = _existing_cad_extraction_script(workspace)
+        if existing:
+            decisions.append(
+                {
+                    "trace_id": trajectory.get("trace_id"),
+                    "family": "architectural-dxf-extraction",
+                    "disposition": "suppressed",
+                    "reason_codes": ["equivalent-existing-script"],
+                    "existing_resource": existing,
+                }
+            )
+            continue
+        trace_id = str(trajectory.get("trace_id") or "")
+        digest = hashlib.sha256(
+            f"{trajectory.get('session_id')}|architectural-dxf-extraction".encode()
+        ).hexdigest()[:24]
+        window_quotes: list[str] = []
+        for window, rows in sorted(windows.items()):
+            failed = next(
+                (
+                    row
+                    for row in rows
+                    if CAD_FAILURE.search(str(row.get("result_preview") or ""))
+                ),
+                rows[0],
+            )
+            quote = _normalized_excerpt(str(failed.get("result_preview") or ""), 700)
+            window_quotes.append(f"window {window + 1}: {quote}")
+        combined_quote = " | ".join(window_quotes)
+        evidence = [
+            {
+                "trace_id": trace_id,
+                "turn_path": str((trajectory.get("provenance") or {}).get("turn_path") or ""),
+                "field": "tools.result.cad_churn_windows",
+                "quote": combined_quote,
+                "quote_sha256": hashlib.sha256(combined_quote.encode()).hexdigest(),
+            }
+        ]
+        confidence = min(0.99, 0.9 + min(len(failures), 8) * 0.01)
+        signal_id = "sig-" + hashlib.sha256(
+            f"cad-tool-churn|{trace_id}|{digest}".encode()
+        ).hexdigest()[:24]
+        finding = {
+            "schema_version": 1,
+            "signal_id": signal_id,
+            "detector": "resource-cad-extraction-opportunity",
+            "detector_version": "1",
+            "scope": "session",
+            "session_id": trajectory.get("session_id"),
+            "trace_ids": [trace_id],
+            "first_seen": "",
+            "last_seen": "",
+            "severity": "critical",
+            "confidence": round(confidence, 6),
+            "score": round(min(1.0, len(domain) / 30), 6),
+            "routing": "skill_evolution",
+            "features": {
+                "candidate_source": "resource_opportunity",
+                "resource": "scripts",
+                "resource_decision": "use",
+                "resource_family": "architectural-dxf-extraction",
+                "resource_fingerprint": digest,
+                "occurrence_count": len(domain),
+                "failure_count": len(failures),
+                "distinct_windows": distinct_windows,
+                "terminal_wall_clock_timeout": True,
+                "false_positive_guards": [
+                    "cad-geometry-result-markers",
+                    "repeated-concrete-tool-failures",
+                    "three-independent-trace-windows",
+                    "terminal-wall-clock-timeout",
+                    "no-equivalent-extraction-script",
+                ],
+                "script_contract": {
+                    "source": "architectural DXF extraction and plan-view solver",
+                    "inputs": [
+                        "DXF path",
+                        "semantic layer schema",
+                        "output JSON schemas",
+                        "plan-view rules",
+                    ],
+                    "output": (
+                        "normalized layer inventory, room/door/fixture/grab-bar geometry, "
+                        "and bounded turning-space candidates as machine-readable JSON"
+                    ),
+                    "failure_behavior": (
+                        "fail once with entity type, layer, handle, and unsupported geometry; "
+                        "never regenerate ad-hoc probes or publish partial extraction"
+                    ),
+                    "fixture": (
+                        "a small semantic-layer DXF containing LINE, POLYLINE, ARC, CIRCLE, "
+                        "and SPLINE entities plus a no-fit turning-circle case"
+                    ),
+                    "allowed_artifact": (
+                        "a deterministic scripts/extract_architectural_dxf.py helper with "
+                        "stable JSON output and bounded solver search"
+                    ),
+                },
+            },
+            "evidence": evidence,
+        }
+        findings.append(finding)
+        decisions.append(
+            {
+                "signal_id": signal_id,
+                "trace_id": trace_id,
+                "family": "architectural-dxf-extraction",
+                "disposition": "emitted",
+                "reason_codes": ["qualified-cad-extraction-script-opportunity"],
+                "invocations": len(domain),
+                "failures": len(failures),
+                "distinct_windows": distinct_windows,
+                "confidence": round(confidence, 6),
+            }
+        )
+    return findings, decisions
+
+
+def _cad_script_adoption_findings(
+    workspace: Path,
+    trajectories: list[dict[str, Any]],
+    settings: dict[str, Any],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Detect an existing extractor that was discovered but not executed.
+
+    This is deliberately separate from creation detection.  A present script
+    must not suppress learning when a failed rollout lists or reads it, then
+    falls back to repeated ad-hoc CAD probes.  We require objective failure,
+    repeated concrete CAD failures, three work windows, and no execution proof.
+    """
+    findings: list[dict[str, Any]] = []
+    decisions: list[dict[str, Any]] = []
+    minimum = int(settings.get("min_cad_adoption_invocations", 12))
+    minimum_failures = int(settings.get("min_cad_adoption_failures", 3))
+    minimum_windows = int(settings.get("min_cad_adoption_windows", 3))
+    existing = _existing_cad_extraction_script(workspace)
+    if not existing:
+        return findings, decisions
+    for trajectory in trajectories:
+        events = list(trajectory.get("events") or [])
+        objective_failure = next(
+            (
+                event
+                for event in reversed(events)
+                if "objective_verifier" in str(event.get("tool") or "").casefold()
+                and (
+                    str(event.get("status") or "").casefold() == "failed"
+                    or re.search(
+                        r'"reward"\s*:\s*0(?:\.0+)?\b',
+                        str(event.get("result_preview") or ""),
+                    )
+                )
+            ),
+            None,
+        )
+        extractor_mentions = [
+            event
+            for event in events
+            if CAD_EXTRACTOR_NAMES.search(
+                str(event.get("arguments_preview") or "")
+                + " "
+                + str(event.get("result_preview") or "")
+            )
+        ]
+        execution_proof = [
+            event
+            for event in events
+            if str(event.get("tool") or "").casefold() == "execute"
+            and SCRIPT_EXECUTION_PROOF.search(str(event.get("result_preview") or ""))
+        ]
+        portability_context = bool(
+            re.search(
+                r"sys\.executable|permission denied|executable.*(?:empty|missing)|"
+                r"no such file or directory.*python",
+                json.dumps(trajectory),
+                re.IGNORECASE | re.DOTALL,
+            )
+        )
+        portability_failures = [
+            event
+            for event in extractor_mentions
+            if CAD_FAILURE.search(str(event.get("result_preview") or ""))
+            and portability_context
+        ]
+        domain = [
+            event
+            for event in events
+            if str(event.get("tool") or "").casefold() == "execute"
+            and CAD_GEOMETRY.search(str(event.get("result_preview") or ""))
+        ]
+        failures = [
+            event
+            for event in domain
+            if CAD_FAILURE.search(str(event.get("result_preview") or ""))
+        ]
+        ad_hoc_probe_writes = [
+            event
+            for event in events
+            if str(event.get("tool") or "").casefold()
+            in {"write_file", "edit_file", "modify"}
+            and AD_HOC_CAD_PROBE.search(
+                str(event.get("result_preview") or "")
+                + " "
+                + str(event.get("arguments_preview") or "")
+            )
+        ]
+        windows = {
+            min(2, (index * 3) // len(domain))
+            for index, _event in enumerate(domain)
+        } if domain else set()
+        reasons: list[str] = []
+        portability_failure = bool(portability_failures)
+        if objective_failure is None and not portability_failure:
+            reasons.append("no-objective-failure")
+        if not extractor_mentions:
+            reasons.append("extractor-not-discovered")
+        if execution_proof and not portability_failure:
+            reasons.append("extractor-execution-observed")
+        if len(domain) < minimum and not portability_failure:
+            reasons.append("insufficient-cad-probes")
+        if len(failures) < minimum_failures and not portability_failure:
+            reasons.append("insufficient-concrete-failures")
+        if len(windows) < minimum_windows and not portability_failure:
+            reasons.append("cad-work-not-spread-across-windows")
+        if reasons:
+            decisions.append(
+                {
+                    "trace_id": trajectory.get("trace_id"),
+                    "family": "architectural-dxf-extraction-adoption",
+                    "disposition": "rejected",
+                    "reason_codes": reasons,
+                    "invocations": len(domain),
+                    "failures": len(failures),
+                    "extractor_mentions": len(extractor_mentions),
+                }
+            )
+            continue
+        trace_id = str(trajectory.get("trace_id") or "")
+        finding_subtype = (
+            "runtime-portability-failure"
+            if portability_failure
+            else "extractor-not-invoked"
+        )
+        digest = hashlib.sha256(
+            (
+                f"{trajectory.get('session_id')}|"
+                f"architectural-dxf-extraction-adoption|{finding_subtype}"
+            ).encode()
+        ).hexdigest()[:24]
+        evidence_events = (
+            [extractor_mentions[0], portability_failures[0]]
+            if portability_failure
+            else [extractor_mentions[0], *failures[:2], objective_failure]
+        )
+        quote = " | ".join(
+            _normalized_excerpt(
+                str(event.get("result_preview") or event.get("arguments_preview") or ""),
+                700,
+            )
+            for event in evidence_events
+        )
+        evidence = [
+            {
+                "trace_id": trace_id,
+                "turn_path": str((trajectory.get("provenance") or {}).get("turn_path") or ""),
+                "field": "tools.result.resource_adoption",
+                "quote": quote,
+                "quote_sha256": hashlib.sha256(quote.encode()).hexdigest(),
+            }
+        ]
+        signal_id = "sig-" + hashlib.sha256(
+            f"cad-script-adoption|{trace_id}|{digest}".encode()
+        ).hexdigest()[:24]
+        finding = {
+            "schema_version": 1,
+            "signal_id": signal_id,
+            "detector": "resource-cad-extraction-adoption-opportunity",
+            "detector_version": "1",
+            "scope": "session",
+            "session_id": trajectory.get("session_id"),
+            "trace_ids": [trace_id],
+            "first_seen": "",
+            "last_seen": "",
+            "severity": "critical",
+            "confidence": 0.98,
+            "score": round(min(1.0, len(domain) / 30), 6),
+            "routing": "skill_evolution",
+            "features": {
+                "candidate_source": "resource_opportunity",
+                "resource": "scripts",
+                "resource_decision": "use",
+                "resource_family": "architectural-dxf-extraction-adoption",
+                "resource_fingerprint": digest,
+                "existing_resource": existing,
+                "occurrence_count": len(domain),
+                "failure_count": len(failures),
+                "distinct_windows": len(windows),
+                "extractor_discovered": True,
+                "extractor_execution_observed": bool(execution_proof),
+                "extractor_portability_failure": portability_failure,
+                "ad_hoc_probe_writes": len(ad_hoc_probe_writes),
+                "objective_failure": objective_failure is not None,
+                "false_positive_guards": (
+                    [
+                        "existing-adapter-invoked",
+                        "adapter-command-failed",
+                        "runtime-reported-interpreter-portability-workaround",
+                    ]
+                    if portability_failure
+                    else [
+                        "existing-extractor-discovered",
+                        "no-extractor-execution-proof",
+                        "repeated-concrete-cad-failures",
+                        "three-independent-trace-windows",
+                        "objective-evaluation-failed",
+                    ]
+                ),
+                "script_contract": {
+                    "source": "existing architectural DXF extractor adoption",
+                    "inputs": [
+                        "task root or conventional input/output directories",
+                        "bundled extractor-normalization schema",
+                    ],
+                    "output": "the extractor's normalized JSON plus an execution receipt",
+                    "failure_behavior": (
+                        "fail once with the missing conventional input or unsupported geometry; "
+                        "do not fall back to regenerated ad-hoc probes"
+                    ),
+                    "fixture": (
+                        "a harness-style task root with input/<plan>.dxf, "
+                        "input/layer_schema.json, input/*_rules.json, a separate "
+                        "output_schema/ directory for final deliverables, and no "
+                        "extractor-specific schema in the task root"
+                    ),
+                    "allowed_artifact": (
+                        "a backward-compatible one-command task-root adapter for common harness layouts; "
+                        "it must discover a single DXF and layer schema under input/, accept rules "
+                        "files such as ada_rules.json, normalize both nested extractor rules and flat "
+                        "benchmark aliases (including unit/units, turning_space.diameter, "
+                        "turning_circle_diameter_min, and plan_requirements.turning_space.diameter_min), "
+                        "normalize layer schemas that use type/canonical/aliases into role/fixture_type "
+                        "records (wall or space_boundary to room, door to door, toilet/lavatory/bathtub "
+                        "to fixture, grab_bar to grab_bar, and annotation types to ignore), expand every "
+                        "canonical name and alias without discarding the source layer name, "
+                        "tolerate bounded non-geometric helper entities such as POINT on a mapped "
+                        "fixture layer by recording ignored type/layer/count evidence instead of failing, "
+                        "while unknown geometric entities still fail; when a wall schema maps to room and "
+                        "no closed space boundary exists, derive a deterministic interior room candidate "
+                        "from wall geometry rather than treating every open wall polyline as a room, "
+                        "aggregate supported fixture primitives by semantic source layer/fixture_type into "
+                        "one stable fixture record with source handles so degenerate LINE or ARC fragments "
+                        "do not fail independently, and serialize a bounded turning-space search miss as "
+                        "turning_space.status=no_fit evidence rather than failing extraction because no-fit "
+                        "is an input to the repair phase, "
+                        "resolve the child Python interpreter portably by using sys.executable only when "
+                        "non-empty and executable, otherwise discovering python3 then python on PATH; include "
+                        "an eval that invokes extract_task_root.py directly (not through `python script.py`) "
+                        "with an empty sys.executable condition and proves the child extractor still runs, "
+                        "use the extractor's bundled normalized "
+                        "output schema instead of unrelated final-deliverable schemas, write an "
+                        "execution receipt, and expose a mandatory run-before-inspection preflight command "
+                        "in the first 40 lines of SKILL.md as well as Workflow; the preflight must say to "
+                        "stop on adapter failure rather than author any probe*.py, extract.py, or geom.py"
+                    ),
+                },
+            },
+            "evidence": evidence,
+        }
+        findings.append(finding)
+        decisions.append(
+            {
+                "signal_id": signal_id,
+                "trace_id": trace_id,
+                "family": "architectural-dxf-extraction-adoption",
+                "disposition": "emitted",
+                "reason_codes": [
+                    "extractor-runtime-portability-failure"
+                    if portability_failure
+                    else "extractor-discovered-but-not-executed"
+                ],
+                "existing_resource": existing,
+                "invocations": len(domain),
+                "failures": len(failures),
+                "distinct_windows": len(windows),
+                "confidence": 0.98,
+            }
+        )
+    return findings, decisions
 
 
 def _readable_resource_text(path: Path) -> str:
@@ -653,8 +1177,11 @@ def analyze(
     decisions: list[dict[str, Any]] = []
     supporting_records: list[dict[str, Any]] = []
 
-    for path in sorted((output_root / "normalized/task_trajectories").glob("*.json")):
-        trajectory = json.loads(path.read_text())
+    trajectories = [
+        json.loads(path.read_text())
+        for path in sorted((output_root / "normalized/task_trajectories").glob("*.json"))
+    ]
+    for trajectory in trajectories:
         for event in trajectory.get("events") or []:
             arguments = str(event.get("arguments_preview") or "")
             supporting_records.append(
@@ -835,7 +1362,17 @@ def analyze(
     lifecycle_findings, lifecycle_decisions = _authored_resource_lifecycle_findings(
         workspace, output_root, settings
     )
+    cad_findings, cad_decisions = _cad_tool_churn_findings(
+        workspace, trajectories, settings
+    )
+    adoption_findings, adoption_decisions = _cad_script_adoption_findings(
+        workspace, trajectories, settings
+    )
     return (
-        findings + supporting_findings + lifecycle_findings,
-        decisions + supporting_decisions + lifecycle_decisions,
+        findings + supporting_findings + lifecycle_findings + cad_findings + adoption_findings,
+        decisions
+        + supporting_decisions
+        + lifecycle_decisions
+        + cad_decisions
+        + adoption_decisions,
     )

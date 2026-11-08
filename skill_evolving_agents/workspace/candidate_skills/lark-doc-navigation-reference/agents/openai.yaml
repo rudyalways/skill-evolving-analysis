@@ -1,4 +1,4 @@
 interface:
   display_name: "Lark Doc Navigation Reference"
-  short_description: "Consult a durable navigational index for the live lark-doc skill before…"
+  short_description: "Consult and maintain a durable navigational index over the live lark-doc skill…"
   default_prompt: "Use $lark-doc-navigation-reference for this request."

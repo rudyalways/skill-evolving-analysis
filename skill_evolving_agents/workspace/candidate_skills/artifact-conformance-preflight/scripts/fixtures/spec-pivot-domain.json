@@ -1,0 +1,17 @@
+{
+  "spec_revision": "fixture-pivot-domain-v1",
+  "records_path": "rows",
+  "invariants": [
+    {
+      "id": "region-domain",
+      "class": "domain_membership",
+      "objects_path": "rows",
+      "field": "region",
+      "allowed": ["North", "South", "East", "West"],
+      "case_sensitive": true,
+      "allow_null": false,
+      "expected_source": "task statement, region must be one of the four named sales regions",
+      "record_locator": "id"
+    }
+  ]
+}

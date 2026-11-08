@@ -49,6 +49,12 @@ def inspect_trace(path: Path) -> dict[str, object]:
     for record in _records(path):
         kind = record.get("type")
         payload = record.get("payload")
+        if kind in {"user_message", "agent_message", "tool_call"}:
+            source = "acp"
+            if kind == "user_message":
+                user_messages += 1
+            session_id = str(record.get("session_id") or session_id)
+            continue
         if kind == "session_meta" and isinstance(payload, dict):
             source = "codex"
             session_id = str(
@@ -188,7 +194,7 @@ def create_run(
     if not re.fullmatch(r"[A-Za-z0-9_.-]+", run_id):
         raise SystemExit(f"refusing unsafe run id: {run_id}")
     source = str(row["source"])
-    if source not in {"codex", "claude", "cursor"}:
+    if source not in {"codex", "claude", "cursor", "acp"}:
         raise SystemExit(f"{row['file']} has no supported trace source")
     script_dir = Path(__file__).resolve().parent
     if str(script_dir) not in sys.path:

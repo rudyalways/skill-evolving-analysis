@@ -1,0 +1,55 @@
+{
+  "type": "object",
+  "required": [
+    "units",
+    "source",
+    "layer_inventory",
+    "turning_space"
+  ],
+  "properties": {
+    "units": {
+      "type": "string"
+    },
+    "source": {
+      "type": "object",
+      "required": [
+        "path",
+        "sha256",
+        "dxf_version"
+      ],
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "sha256": {
+          "type": "string"
+        },
+        "dxf_version": {
+          "type": "string"
+        }
+      }
+    },
+    "layer_inventory": {
+      "type": "array",
+      "minItems": 1
+    },
+    "turning_space": {
+      "type": "object",
+      "required": [
+        "status",
+        "search_budget"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "fit"
+          ]
+        },
+        "search_budget": {
+          "type": "object"
+        }
+      }
+    }
+  }
+}

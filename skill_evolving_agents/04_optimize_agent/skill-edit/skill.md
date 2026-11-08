@@ -1,5 +1,11 @@
 # Skill edit
 
+Work edit-first. Inspect the named skill, its changelog, and directly affected
+files, then begin writing within the first quarter of the session. Never install
+dependencies or create an environment; the host verifier provisions runtime
+dependencies. If a dependency is unavailable, complete the requested files and
+run only syntax or already-available checks.
+
 Apply an update, delete, merge, or split operation from the active goal. This
 is the optimize agent's Generate state for existing skills. `skill-create`
 applies only to create operations; its refusal for a non-create operation is
@@ -21,9 +27,19 @@ compatibility, allowed-tools, and metadata. Keep `SKILL.md` at most 500 lines,
 with no TODO or EXAMPLE_ placeholder, no symbolic links, and no file over
 10MB. Reference files stay one directory level deep. An update changes every
 claimed section and leaves frontmatter, the preamble, and every unclaimed
-section identical to the raw snapshot. A claimed section must actually change.
+section identical to the raw snapshot. When the operation includes
+`description_goal`, change only the one-line frontmatter description in that
+direction and preserve every other frontmatter field. Without that field,
+frontmatter remains immutable. A claimed section must actually change.
 Delete removes the skill directory. Merge and split keep the source snapshot
 and remove only the sources the operation names.
+
+When the operation's `references` goal says the source is oversized,
+progressive-disclosure extraction is mandatory acceptance work. Move
+conditional schemas, modes, long examples, and detailed check catalogs into
+linked reference files until `SKILL.md` is at or below the stated hard token
+cap. Adding or updating a reference while leaving the main file above that cap
+is a failed edit.
 
 ## Workflow
 
@@ -67,6 +83,26 @@ A behavioral update is incomplete if it edits a `SKILL.md` section without a
 corresponding focused eval delta. Do not replace the existing eval suite with
 only the new case.
 
+Keep regression fixtures and their concrete identifiers in `evals/` (and in
+fixture resources when needed), not in the operational contract. Do not copy
+fixture-specific part names, filenames, expected paths, numeric constants, or
+benchmark vocabulary into frontmatter, workflow, verification, constraints,
+output-format, or limitation prose. State the invariant generically there
+(for example, exact equality between the source-derived and emitted name
+sets), then let the focused eval carry the concrete positive and near-miss
+values. A fixture path may be named only to show how to run that eval; its
+internal expected names and values must remain outside `SKILL.md`.
+
+For an execution skill with a deterministic bundled producer, make the
+producer the default first action after the agent confirms the real source and
+output arguments. The skill must say to execute the shipped producer before
+writing a replacement, inspect its structured failure if it fails, permit only
+a bounded repair/fallback sequence, and reserve enough budget to validate the
+complete requested artifact set. A checker-only loop, repeated source
+exploration, or ad-hoc reimplementation before trying the producer is not a
+compliant repair. Add a focused eval that observes producer execution and
+complete artifact-set delivery under a bounded call/time budget.
+
 An inherited resource is part of the accepted source behavior. Preserve it by
 default even when the original model-authored resource decision said `omit`;
 the runner will have normalized such a decision to `use`. Delete inherited
@@ -78,6 +114,36 @@ file. Mention each non-eval resource by relative path in `SKILL.md`; an orphaned
 script, reference, asset, or delegated prompt fails deterministic validation.
 Python helpers must compile. Generated `agents/openai.yaml` does not satisfy an
 `agents: use` decision because it is interface metadata, not a delegated prompt.
+
+Treat the existing frontmatter description as a recall contract. Preserve
+every existing capability trigger unless the Goal explicitly removes it, while
+adding the requested trigger language. Concision is not permission to silently
+drop an independent capability trigger.
+
+When the Goal requests progressive disclosure, it is mandatory acceptance
+work. Move substantial conditional knowledge, schemas, modes, and worked
+examples into linked `references/` files and reduce `SKILL.md` below the stated
+hard token cap. Adding references while leaving `SKILL.md` oversized is not a
+compliant edit.
+
+For a source-native Three.js producer, preserve the source mesh discretization:
+export the actual `geometry.attributes.position` and `geometry.index` buffers
+returned by the runtime scene (support indexed and non-indexed geometry), then
+apply the composed world transform. For OBJ output, clone the geometry, call
+`toNonIndexed()` when an index exists so face traversal is triangle-expanded,
+and use Three.js `OBJExporter` (or byte-equivalent target-serializer semantics).
+Serialize vertex coordinates with full round-trip numeric precision. Do not use
+`toFixed`, printf-style fixed decimals, or another lossy coordinate formatter:
+small rounding changes can alter canonical sort order and sparse geometric
+sampling even when bounds, centroids, and dense nearest-neighbor distances look
+correct. Include a high-resolution curved indexed fixture whose verification
+compares the serialized coordinates under the consumer's ordering and sampling
+behavior, not only through a tolerant nearest-neighbor check.
+Never rebuild the submitted producer
+surface from `geometry.parameters`; parameter retessellation changes seams,
+caps, and vertex sampling even when bounds appear identical. An independent
+checker may reconstruct geometry separately, but that reconstruction must not
+replace native-buffer export in the producer.
 
 ## Stop condition
 

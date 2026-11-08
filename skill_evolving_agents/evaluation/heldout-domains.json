@@ -1,0 +1,18 @@
+{
+  "citation-check": "citation-and-evidence",
+  "court-form-filling": "document-and-form",
+  "pdf-excel-diff": "cross-format-data-validation",
+  "sales-pivot-analysis": "spreadsheet-aggregation",
+  "weighted-gdp-calc": "quantitative-calculation",
+  "lab-unit-harmonization": "scientific-data-normalization",
+  "manufacturing-codebook-normalization": "industrial-data-normalization",
+  "sec-financial-report": "financial-reporting",
+  "protein-expression-analysis": "bioinformatics-spreadsheet-analysis",
+  "earthquake-plate-calculation": "geospatial-scientific-calculation",
+  "powerlifting-coef-calc": "quantitative-calculation",
+  "reserves-at-risk-calc": "financial-risk-calculation",
+  "financial-modeling-qa": "financial-game-analysis",
+  "energy-market-pricing": "energy-market-optimization",
+  "econ-detrending-correlation": "macroeconomic-time-series",
+  "invoice-fraud-detection": "document-cross-source-validation"
+}

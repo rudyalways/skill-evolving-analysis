@@ -1,0 +1,9 @@
+{
+  "source_module": "native-scene.mjs",
+  "tolerance": 0.006,
+  "coordinate_tolerance": 1e-12,
+  "reconstruction": {
+    "method": "live-createScene-position-index",
+    "independent_of_producer": true
+  }
+}

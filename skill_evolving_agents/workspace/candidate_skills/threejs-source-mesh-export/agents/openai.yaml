@@ -1,0 +1,4 @@
+interface:
+  display_name: "Threejs Source Mesh Export"
+  short_description: "One-command end-to-end exporter for a native .js/.mjs module exposing…"
+  default_prompt: "Use $threejs-source-mesh-export for this request."

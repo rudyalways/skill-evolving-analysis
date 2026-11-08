@@ -1,0 +1,24 @@
+{
+  "title": "Final repaired layout deliverable",
+  "type": "object",
+  "required": [
+    "repaired_layout",
+    "turning_space"
+  ],
+  "properties": {
+    "repaired_layout": {
+      "type": "object",
+      "required": [
+        "room",
+        "fixtures"
+      ]
+    },
+    "turning_space": {
+      "type": "object",
+      "required": [
+        "center",
+        "diameter"
+      ]
+    }
+  }
+}

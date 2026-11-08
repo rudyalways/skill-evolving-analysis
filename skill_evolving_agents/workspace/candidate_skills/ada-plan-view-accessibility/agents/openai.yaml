@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ada Plan View Accessibility"
+  short_description: "Use when checking simplified ADA-derived plan-view bathroom accessibility…"
+  default_prompt: "Use $ada-plan-view-accessibility for this request."

@@ -1,0 +1,59 @@
+{
+  "skill_name": "ada-plan-view-accessibility",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "The ADA plan-view validation failed on turning_circle_fit_usable_floor for bathroom_1. The agent immediately runs the same validation command again with identical arguments and gets a 90% similar failure payload. Evaluate whether the second run was justified and what the agent should do next.",
+      "expected_output": "The second run is identified as an unnecessary retry because arguments, inputs, and failing payload are essentially unchanged. The agent identifies the specific failing rule, makes a traceable geometry or input edit, or reports the blocking rule instead of retrying.",
+      "expectations": [
+        "Identifies the repeat as unjustified because no state, evidence, or error class changed",
+        "Names the specific failing rule or geometry before proposing another action",
+        "Requires a traceable geometry or input edit, or a report of the blocking rule, instead of an identical re-run",
+        "Records the failing rule set from both runs"
+      ],
+      "kind": "should_apply",
+      "files": [],
+      "source_trace_ids": ["sig-2d87a88bc10a323f1c5467e3"]
+    },
+    {
+      "id": 2,
+      "prompt": "An ADA plan-view validation failed on door_clear_width_min for D1. The agent widened the door opening in repaired_plan.dxf and updated repaired_layout.json to match, then re-ran the same validation command. Decide whether the re-run is allowed.",
+      "expected_output": "The re-run is accepted as justified because a relevant state change, a traceable geometry edit, intervened between the failed run and the retry. The agent verifies that repaired_plan.dxf and repaired_layout.json describe the same geometry before accepting a pass.",
+      "expectations": [
+        "Accepts the re-run because the geometry changed after the failure",
+        "Confirms the edit is traceable to the failing rule",
+        "Requires repaired_plan.dxf and repaired_layout.json to agree before a passing result is accepted"
+      ],
+      "kind": "should_apply",
+      "files": [],
+      "source_trace_ids": ["sig-2d87a88bc10a323f1c5467e3"]
+    },
+    {
+      "id": 3,
+      "prompt": "A client asks for a general legal ADA compliance review covering seat height, mounting height, mirror height, and pipe protection for a commercial restroom, with no plan-view geometry files or geometric rules supplied.",
+      "expected_output": "The skill is not selected because its scope is plan-view geometric checks against task-supplied rules, not a full legal ADA compliance review or vertical requirements.",
+      "expectations": [
+        "The skill is not selected or its plan-view workflow is not used",
+        "No vertical requirement checks are reported as violations under this skill"
+      ],
+      "kind": "should_not_apply",
+      "files": [],
+      "source_trace_ids": []
+    },
+    {
+      "id": 4,
+      "prompt": "The verifier response says 'Agent prompt exceeded wall-clock budget 900s' with reward 0 and 166 tool calls, and names no rule, contract, schema field, or element id. The agent has partial artifacts from the run. Decide whether to repair geometry, replay the identical full run, or do something else.",
+      "expected_output": "The response is classified as an execution-budget abort, not a geometry defect. The agent does not edit geometry and does not replay the identical full run; it preserves the partial artifacts, checkpoints progress, and re-runs a narrower scope such as the next unchecked rule group or artifact.",
+      "expectations": [
+        "Classifies the wall-clock budget message with reward 0 and no named rule as an execution-budget abort",
+        "Does not make a geometry repair in response to the abort",
+        "Does not replay the identical full run",
+        "Preserves and checkpoints the partial artifacts",
+        "Re-runs only after reducing scope to the next unchecked rule group or artifact"
+      ],
+      "kind": "should_apply",
+      "files": [],
+      "source_trace_ids": ["sig-2ec611b7b5dcd790195a836c"]
+    }
+  ]
+}

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Derived Aggregate Audit"
+  short_description: "Repair failing derived aggregate cells such as averages, shares, growth rates…"
+  default_prompt: "Use $derived-aggregate-audit for this request."

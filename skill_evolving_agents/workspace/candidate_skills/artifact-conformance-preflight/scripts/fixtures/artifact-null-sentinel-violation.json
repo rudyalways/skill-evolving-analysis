@@ -1,0 +1,7 @@
+{
+  "records": [
+    {"id": "po-1", "po_number": null, "supplier": "acme"},
+    {"id": "po-2", "po_number": "PO-1001", "supplier": "beta"},
+    {"id": "po-3", "po_number": "PO-INVALID", "supplier": "gamma"}
+  ]
+}

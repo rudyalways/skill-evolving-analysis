@@ -1,0 +1,25 @@
+{
+  "layers": {
+    "A-ROOM": {
+      "role": "room"
+    },
+    "A-DOOR": {
+      "role": "door"
+    },
+    "A-WC": {
+      "role": "fixture",
+      "fixture_type": "wc"
+    },
+    "A-LAV": {
+      "role": "fixture",
+      "fixture_type": "lav"
+    },
+    "A-TUB": {
+      "role": "fixture",
+      "fixture_type": "tub"
+    },
+    "A-GRABBAR": {
+      "role": "grab_bar"
+    }
+  }
+}

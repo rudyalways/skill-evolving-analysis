@@ -1,0 +1,10 @@
+digraph order_flow {
+  rankdir=LR;
+  Start [shape=oval, node_type=start, label="receive order"];
+  A [shape=box, node_type=task, label="validate order"];
+  B [shape=box, node_type=task, label="reserve stock"];
+  End [shape=box, node_type=terminal, label="order accepted"];
+  Start -> A;
+  A -> B;
+  B -> End;
+}

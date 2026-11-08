@@ -1,0 +1,55 @@
+{
+  "skill_name": "derived-aggregate-audit",
+  "evals": [
+    {
+      "id": 1,
+      "kind": "should_apply",
+      "prompt": "The workbook's row sums all reconcile and the cross-sheet checks pass, but the verifier fails cell D14 with expected value 0.42. The cell is an average computed over the whole column, including rows the metric's filter excludes. Repair it and make the verifier pass.",
+      "expected_output": "The agent restates the metric, pins the filtered source range and record count, recomputes the average over the intended population, writes cell D14, and replays the full verifier.",
+      "expectations": [
+        "The failing cell and expected value are recorded before editing.",
+        "The agent checks that the denominator uses the metric's population rather than all rows.",
+        "The value is independently recomputed from source data, not copied from the expected value.",
+        "The complete verifier is replayed and the final result includes counts and exit status."
+      ],
+      "files": [],
+      "source_trace_ids": ["sig-6fd71defc8db3e3510214bd3"]
+    },
+    {
+      "id": 2,
+      "kind": "should_apply",
+      "prompt": "A verifier reports that derived growth-rate cell F9 is wrong. Most of the suite passes. The task defines growth as the change between the current period and the prior period for active accounts only. Fix the cell and confirm completion.",
+      "expected_output": "The agent localizes F9, pins the current and prior period ranges for active accounts, recomputes growth independently, writes the corrected cell, and drives the full verifier to zero failures.",
+      "expectations": [
+        "The metric definition and population filter are restated before the edit.",
+        "The source ranges and record count are reported.",
+        "The full verifier, including the previously failing assertion, exits with zero failures.",
+        "The final report distinguishes the recomputed value from the written value."
+      ],
+      "files": [],
+      "source_trace_ids": ["sig-6fd71defc8db3e3510214bd3"]
+    },
+    {
+      "id": 3,
+      "kind": "should_not_apply",
+      "prompt": "The verifier fails because cell B2 contains a malformed formula with an unmatched parenthesis. Repair the syntax error.",
+      "expected_output": "The derived-aggregate workflow is not selected; this is a formula syntax repair.",
+      "expectations": [
+        "The skill is not selected or its population-audit workflow is not used for a syntax-only failure."
+      ],
+      "files": [],
+      "source_trace_ids": []
+    },
+    {
+      "id": 4,
+      "kind": "should_not_apply",
+      "prompt": "Copy the values from Sheet2 into Sheet1 without changing any calculations, then save the workbook.",
+      "expected_output": "The derived-aggregate workflow is not selected; this is transcription with no derived cells.",
+      "expectations": [
+        "The skill is not selected for a transcription-only task."
+      ],
+      "files": [],
+      "source_trace_ids": []
+    }
+  ]
+}

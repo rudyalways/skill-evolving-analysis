@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+from collections import Counter
 import math
 import copy
 import glob
@@ -24,6 +25,8 @@ import time
 from concurrent.futures import Future, ThreadPoolExecutor, as_completed
 from datetime import UTC, datetime
 from pathlib import Path
+
+from jsonschema import Draft202012Validator, FormatChecker
 
 ROOT = Path(__file__).resolve().parent
 INSTALL_ROOT = ROOT
@@ -98,14 +101,19 @@ POOL_CHANGELOG_DIR = Path("candidate_skills_changelog")
 CHANGELOG_SUMMARY_LIMIT = 120
 DEFAULT_CLUSTER_WORKERS = 16
 DEFAULT_OP_WORKERS = 16
-RETRY_BUDGET = 0
+RETRY_BUDGET = max(
+    0, int(os.environ.get("SKILL_EVOLVER_OPERATION_RETRY_BUDGET", "1"))
+)
 VERIFIER_RESPONSE_RETRY_BUDGET = 2
+DSH_TRANSIENT_RETRY_BUDGET = max(
+    0, int(os.environ.get("SKILL_EVOLVER_DSH_TRANSIENT_RETRY_BUDGET", "2"))
+)
 AGENT_SESSION_TIMEOUT_SECONDS = int(
-    os.environ.get("SKILL_EVOLVER_AGENT_TIMEOUT_SECONDS", "180")
+    os.environ.get("SKILL_EVOLVER_AGENT_TIMEOUT_SECONDS", "360")
 )
 # One skill's checks and scored JSON were still being written at 180 seconds.
 VERIFIER_SESSION_TIMEOUT_SECONDS = int(
-    os.environ.get("SKILL_EVOLVER_VERIFIER_TIMEOUT_SECONDS", "360")
+    os.environ.get("SKILL_EVOLVER_VERIFIER_TIMEOUT_SECONDS", "480")
 )
 _EXECUTION_LOG_LOCK = threading.Lock()
 _AGENT_BUDGET_LOCK = threading.Lock()
@@ -116,6 +124,17 @@ ACTIVE_EXECUTION_CONFIG: dict = {}
 ACTIVE_EMBEDDING_PROVIDER: EmbeddingProvider | None = None
 ACTIVE_RUN_DEADLINE_MONOTONIC: float | None = None
 ACTIVE_INVENTORY_ROOT = ROOT / "workspace"
+GOAL_VALIDATION_RECEIPT_SCHEMA_PATH = (
+    ROOT / "common/schemas/goal-validation-receipt.schema.json"
+)
+GOAL_VALIDATION_RECEIPT_SCHEMA = json.loads(
+    GOAL_VALIDATION_RECEIPT_SCHEMA_PATH.read_text()
+)
+Draft202012Validator.check_schema(GOAL_VALIDATION_RECEIPT_SCHEMA)
+GOAL_VALIDATION_RECEIPT_VALIDATOR = Draft202012Validator(
+    GOAL_VALIDATION_RECEIPT_SCHEMA,
+    format_checker=FormatChecker(),
+)
 
 
 def active_inventory_root() -> Path:
@@ -633,6 +652,7 @@ def low_cost_allowed_scopes(
                 "current_evidence_records": current_evidence_count,
                 "historical_sessions": historical_sessions,
                 "recurrence_key": recurrence_key,
+                "candidate_source": str(features.get("candidate_source") or ""),
                 "confidence": confidence,
                 "semantic_disposition": semantic,
             }
@@ -690,6 +710,10 @@ def low_cost_allowed_scopes(
         ranked = sorted(
             set(allowed),
             key=lambda scope: (
+                -int(
+                    decision_by_scope[scope].get("candidate_source")
+                    == "methodology_consolidated"
+                ),
                 -int(
                     bool(
                         protected_reasons
@@ -959,8 +983,12 @@ def recalled_skill_evidence(
             "the finding's contract. When a contract supplies complete content, "
             "prose that names the resource or a placeholder file is not the "
             "effect: update until a listed resource contains semantically "
-            "equivalent content. Do not restate or tighten guidance without new "
-            "behavior supported by the finding."
+            "equivalent content. For resource_opportunity findings, file paths, "
+            "hashes, byte counts, fixture names, and prose claims are not proof "
+            "of equivalence. Empty or truncated relevant content cannot justify "
+            "no_change when the current contract adds a behavioral clause; choose "
+            "the smallest update plus a focused eval. Do not restate or tighten "
+            "guidance without new behavior supported by the finding."
         ),
         "skills": rows,
     }
@@ -1137,6 +1165,43 @@ def embedding_recall(
                     row = dict(row)
                     row["retrieval"] = "lexical"
                     matches.append(row)
+            features = finding.get("features") if isinstance(finding, dict) else {}
+            lesson = features.get("lesson") if isinstance(features, dict) else {}
+            attributed = lesson.get("attributed_skills") if isinstance(lesson, dict) else []
+            by_skill = {str(row.get("skill")): row for row in matches}
+            for skill in attributed or []:
+                if skill not in skill_dirs:
+                    continue
+                if skill in by_skill:
+                    row = by_skill[skill]
+                    row["score"] = max(1.0, float(row.get("score") or 0))
+                    row["retrieval"] = "objective-failure-attribution"
+                    row["matches"] = list(row.get("matches") or []) + [{
+                        "cluster_type": "runtime/activated-skill",
+                        "skill_type": "inventory/skill",
+                        "similarity": 1.0,
+                        "contribution": 1.0,
+                    }]
+                else:
+                    row = {
+                        "skill": skill,
+                        "score": 1.0,
+                        "labels": copy.deepcopy(
+                            metadata_by_name.get(skill, {}).get("skill_types") or []
+                        ),
+                        "matches": [{
+                            "cluster_type": "runtime/activated-skill",
+                            "skill_type": "inventory/skill",
+                            "similarity": 1.0,
+                            "contribution": 1.0,
+                        }],
+                        "retrieval": "objective-failure-attribution",
+                    }
+                    matches.append(row)
+                    by_skill[skill] = row
+            matches.sort(
+                key=lambda row: (-float(row.get("score") or 0), str(row.get("skill") or ""))
+            )
         clusters.append({"cluster": name, "labels": [], "skills": matches})
     return {
         "matching": {
@@ -1152,6 +1217,8 @@ def embedding_recall(
             ).removeprefix("sha256:"),
             "model_revision": response.get("model_revision"),
             "index_revision": response.get("index_revision"),
+            "embedding_cache": response.get("cache"),
+            "embedding_service_ms": response.get("service_ms"),
             "service": "shared-embedding",
             "cost_tier": 1,
             "document_max_chars": document_max_chars,
@@ -1234,6 +1301,643 @@ def failure_text(error: BaseException) -> str:
     return text[:500]
 
 
+def _file_identity(path: Path) -> dict[str, object]:
+    """Return the bounded identity used by host-owned validation receipts."""
+    try:
+        payload = path.read_bytes()
+    except OSError:
+        return {"path": str(path), "present": False}
+    return {
+        "path": str(path),
+        "present": True,
+        "sha256": hashlib.sha256(payload).hexdigest(),
+        "bytes": len(payload),
+    }
+
+
+def _validate_goal_candidate(path: Path) -> dict:
+    """Validate Goal outside the model, including the one-action invariant."""
+    document = pipeline_contracts.validate_goal(path)
+    seen: dict[str, str] = {}
+    for index, operation in enumerate((document.get("action") or {}).get("ops") or []):
+        if not isinstance(operation, dict):
+            continue
+        label = f"action.ops[{index}]"
+        for name in skill_names_mod.skill_names(operation):
+            key = name.casefold()
+            previous = seen.get(key)
+            if previous is not None:
+                raise pipeline_contracts.ContractError(
+                    f"$.action.ops: skill {name!r} appears in both "
+                    f"{previous} and {label}"
+                )
+            seen[key] = label
+    return document
+
+
+def _preserve_goal_repair_invariants(
+    before: dict[str, object], after: dict[str, object]
+) -> bool:
+    """Restore required fields a focused Goal repair accidentally drops.
+
+    Contract repair may rewrite the defective text, but it is not authorized to
+    erase previously populated identity, goal, or resource fields. This keeps a
+    semantic repair from introducing an unrelated schema regression while the
+    normal validator still rejects unchanged or substantively invalid content.
+    """
+    changed = False
+
+    def restore(container_before, container_after, keys):
+        nonlocal changed
+        if not isinstance(container_before, dict) or not isinstance(container_after, dict):
+            return
+        for key in keys:
+            old = container_before.get(key)
+            new = container_after.get(key)
+            missing = new is None or new == "" or new == [] or new == {}
+            if missing and old not in (None, "", [], {}):
+                container_after[key] = copy.deepcopy(old)
+                changed = True
+
+    restore(before, after, ("goal", "reasoning", "plan", "feedback_to"))
+    before_action = before.get("action")
+    after_action = after.get("action")
+    restore(before_action, after_action, ("disposition", "reason", "ops"))
+    if not isinstance(before_action, dict) or not isinstance(after_action, dict):
+        return changed
+    before_ops = before_action.get("ops") or []
+    after_ops = after_action.get("ops") or []
+    if not isinstance(before_ops, list) or not isinstance(after_ops, list):
+        return changed
+    for index, before_op in enumerate(before_ops):
+        if index >= len(after_ops) or not isinstance(after_ops[index], dict):
+            continue
+        after_op = after_ops[index]
+        restore(before_op, after_op, ("op", "skills", "into", "from"))
+        before_skills = before_op.get("skills") if isinstance(before_op, dict) else None
+        after_skills = after_op.get("skills")
+        if not isinstance(before_skills, list) or not isinstance(after_skills, list):
+            continue
+        for skill_index, before_skill in enumerate(before_skills):
+            if skill_index >= len(after_skills) or not isinstance(after_skills[skill_index], dict):
+                continue
+            restore(
+                before_skill,
+                after_skills[skill_index],
+                (
+                    "skill",
+                    "goal",
+                    "facet",
+                    "description",
+                    "description_goal",
+                    "sections",
+                    "dirs",
+                    "labels",
+                    "resource_plan",
+                ),
+            )
+    return changed
+
+
+def _assert_goal_validation_receipt(value: dict[str, object]) -> None:
+    errors = sorted(
+        GOAL_VALIDATION_RECEIPT_VALIDATOR.iter_errors(value),
+        key=lambda error: (list(error.absolute_path), error.message),
+    )
+    if not errors:
+        return
+    first = errors[0]
+    location = "$" + "".join(
+        f"[{part}]" if isinstance(part, int) else f".{part}"
+        for part in first.absolute_path
+    )
+    raise RuntimeError(
+        f"goal validation receipt violates schema at {location}: {first.message}"
+    )
+
+
+def _goal_validation_receipt(
+    workspace: Path,
+    item: str,
+    candidate: Path,
+    attempt: int,
+    *,
+    status: str,
+    error: BaseException | None = None,
+) -> Path:
+    """Persist compact validation evidence before a worker can be removed."""
+    safe_item = safe_name(item)
+    receipt = {
+        "schema_version": 1,
+        "stage": "goal",
+        "item": item,
+        "attempt": attempt,
+        "status": status,
+        "validator": "host.goal-contract-v1",
+        "candidate": _file_identity(candidate),
+        "at": datetime.now(UTC).isoformat(),
+    }
+    if error is not None:
+        receipt["error"] = {
+            "kind": "contract_invalid",
+            "type": type(error).__name__,
+            "message": failure_text(error),
+        }
+    path = (
+        workspace
+        / "run/validation/goal"
+        / safe_item
+        / f"attempt-{attempt}.json"
+    )
+    _assert_goal_validation_receipt(receipt)
+    atomic_write_json(path, receipt)
+    if error is not None:
+        failure = dict(receipt)
+        try:
+            candidate_bytes = candidate.read_bytes()
+        except OSError:
+            candidate_bytes = b""
+        if candidate_bytes and len(candidate_bytes) <= 65_536:
+            snapshot, redactions = privacy.redact_text(candidate_bytes.decode(
+                "utf-8", errors="replace"
+            ))
+            failure["candidate_snapshot"] = snapshot
+            failure["candidate_snapshot_redactions"] = redactions
+        else:
+            failure["candidate_snapshot"] = None
+            failure["snapshot_omitted_reason"] = (
+                "missing" if not candidate_bytes else "larger_than_65536_bytes"
+            )
+        _assert_goal_validation_receipt(failure)
+        atomic_write_json(
+            workspace
+            / "run/failures/goal"
+            / safe_item
+            / f"attempt-{attempt}.json",
+            failure,
+        )
+    return path
+
+
+def _validate_goal_with_bounded_repair(
+    workspace: Path,
+    worker: Path,
+    goal: Path,
+    suffix: str,
+    auth: dict[str, str],
+    model: str | None,
+    install_agent: bool,
+) -> dict:
+    """Validate frozen Goal bytes and permit only configured focused repairs."""
+    phase = (ACTIVE_EXECUTION_CONFIG.get("phases") or {}).get("goal") or {}
+    configured = phase.get("contract_repair_attempts", 2)
+    repair_budget = (
+        configured
+        if isinstance(configured, int) and not isinstance(configured, bool)
+        else 2
+    )
+    repair_budget = min(2, max(0, repair_budget))
+    attempt = 1
+    while True:
+        try:
+            document = _validate_goal_candidate(goal)
+            _validate_residual_objective_disposition(worker, document)
+            _validate_audit_repair_separation(worker, document)
+            _validate_execution_create_has_producer(document)
+            _validate_source_native_producer_contract(document)
+        except (OSError, ValueError, pipeline_contracts.ContractError) as error:
+            _goal_validation_receipt(
+                workspace, suffix, goal, attempt, status="failed", error=error
+            )
+            if attempt > repair_budget:
+                raise
+            identity = _file_identity(goal)
+            try:
+                before_repair = json.loads(goal.read_text())
+            except (OSError, json.JSONDecodeError):
+                before_repair = None
+            repair_suffix = f"{suffix}-contract-repair-{attempt}"
+            run_session(
+                "goal",
+                worker,
+                instruction(
+                    "goal",
+                    "The host validator rejected the Goal candidate. Repair only "
+                    f"{goal}; do not change matching or any other file. "
+                    f"Host diagnostic: {failure_text(error)}. Candidate identity: "
+                    f"sha256={identity.get('sha256', 'missing')}, "
+                    f"bytes={identity.get('bytes', 0)}. Do not run, locate, or open "
+                    "a validator; the host will validate the rewritten bytes. "
+                    "After fixing the reported defect, audit the entire candidate "
+                    "once against every required field and invariant stated in the "
+                    "Goal skill, including operation skill identity, concrete "
+                    "placeholder-free values, sections, directories, labels, and "
+                    "resource_plan. For create, update, and delete, keep the op "
+                    "name at action.ops[N].op and put every target record inside "
+                    "action.ops[N].skills; do not flatten a singular skill record "
+                    "onto the operation object. Fix all contract defects found in that single "
+                    "audit, then stop after rewriting the candidate.",
+                    skill_paths=["03_goal_agent/goal-generator/skill.md"],
+                ),
+                auth,
+                model,
+                install_agent,
+                repair_suffix,
+                {
+                    "contract_repair": True,
+                    "repair_attempt": attempt,
+                    "original_item": suffix,
+                },
+            )
+            if isinstance(before_repair, dict):
+                try:
+                    after_repair = json.loads(goal.read_text())
+                except (OSError, json.JSONDecodeError):
+                    after_repair = None
+                if (
+                    isinstance(after_repair, dict)
+                    and _preserve_goal_repair_invariants(
+                        before_repair, after_repair
+                    )
+                ):
+                    atomic_write_json(goal, after_repair)
+            attempt += 1
+            continue
+        _goal_validation_receipt(
+            workspace, suffix, goal, attempt, status="passed"
+        )
+        return document
+
+
+def _validate_residual_objective_disposition(
+    worker: Path, goal_document: dict[str, object]
+) -> None:
+    """Do not let claimed coverage erase an observed residual failure.
+
+    A posthoc objective failure plus a confident diagnosed capability gap is
+    behavioral evidence that the current skill did not cover the trace.  Goal
+    may still abstain for an evaluation-contract conflict, but cannot use
+    filenames, prose, or existing fixtures alone as proof of equivalence.
+    """
+    action = goal_document.get("action")
+    if not isinstance(action, dict) or action.get("disposition") != "no_change":
+        return
+    diagnosis_path = worker / "run/diagnosis.json"
+    if not diagnosis_path.is_file():
+        return
+    diagnosis = json.loads(diagnosis_path.read_text())
+    gaps = [
+        row
+        for row in diagnosis.get("skill_capabilities_missing") or []
+        if isinstance(row, dict) and float(row.get("confidence") or 0) >= 0.6
+    ]
+    if not gaps:
+        return
+    finding_paths = sorted(
+        (worker / "traces/derived/findings").glob("*/finding.json")
+    )
+    for path in finding_paths:
+        finding = json.loads(path.read_text())
+        lesson = ((finding.get("features") or {}).get("lesson") or {})
+        if finding.get("detector") != "method-objective-verifier-failure":
+            continue
+        if lesson.get("local_objective_conflict"):
+            continue
+        if lesson.get("learning_disposition") == "evaluation-contract-conflict":
+            continue
+        if not lesson.get("portable_preflight_required"):
+            continue
+        descriptions = "; ".join(str(row.get("description") or "") for row in gaps)
+        raise pipeline_contracts.ContractError(
+            "no_change is invalid for this residual objective failure: the "
+            "diagnosis records a confident portable capability gap after the "
+            "current behavior failed. Existing prose, filenames, hashes, or "
+            "fixtures do not prove behavioral coverage. Propose the smallest "
+            "update and focused regression eval that address: " + descriptions
+        )
+
+
+def _validate_audit_repair_separation(
+    worker: Path, goal_document: dict[str, object]
+) -> None:
+    """Reject another audit-only update after an executed audit still failed."""
+    action = goal_document.get("action")
+    if not isinstance(action, dict):
+        return
+    ops = action.get("ops") or []
+    if not ops or any(not isinstance(op, dict) or op.get("op") != "update" for op in ops):
+        return
+    local_pass_objective_fail = False
+    for path in sorted((worker / "traces/derived/findings").glob("*/finding.json")):
+        finding = json.loads(path.read_text())
+        if finding.get("detector") != "method-objective-verifier-failure":
+            continue
+        evidence = "\n".join(
+            str(row.get("quote") or "")
+            for row in finding.get("evidence") or []
+            if isinstance(row, dict)
+        ).lower()
+        if "all checks passed" in evidence and "objective_verifier" in evidence:
+            local_pass_objective_fail = True
+            break
+    if not local_pass_objective_fail:
+        return
+    targets = [
+        row["skill"]
+        for op in ops
+        for row in op.get("skills") or []
+        if isinstance(row, dict) and isinstance(row.get("skill"), str)
+    ]
+    if not targets:
+        return
+    inventory = worker / "target/to_be_improved_skills"
+    broad_targets = []
+    for name in targets:
+        path = inventory / name / "SKILL.md"
+        content = path.read_text(errors="replace").lower() if path.is_file() else ""
+        role = f"{name}\n{content[:5000]}"
+        if any(token in role for token in ("preflight", "audit", "conformance")) and (
+            "geometry_conformance" in content or "independent" in content
+        ):
+            broad_targets.append(name)
+    if len(broad_targets) != len(targets):
+        return
+    raise pipeline_contracts.ContractError(
+        "update-only is invalid after audit/preflight behavior reported local "
+        "success and the objective still failed. The target already owns "
+        "independent conformance guidance, so another audit expansion is not "
+        "the missing execution surface. Propose the smallest focused "
+        "execution-skill create, split, or merge with a deterministic helper "
+        "and bounded evals; keep the broad audit skill as its consumer."
+    )
+
+
+def _validate_execution_create_has_producer(goal_document: dict[str, object]) -> None:
+    """An execution-skill create must ship the producer, not only a checker."""
+    action = goal_document.get("action")
+    if not isinstance(action, dict):
+        return
+    for op in action.get("ops") or []:
+        if not isinstance(op, dict) or op.get("op") != "create":
+            continue
+        for row in op.get("skills") or []:
+            if not isinstance(row, dict):
+                continue
+            section_text = "\n".join(
+                str(section.get("goal") or "")
+                for section in row.get("sections") or []
+                if isinstance(section, dict)
+            ).lower()
+            description = str(row.get("description") or "").lower()
+            execution_export = "source scene" in section_text and any(
+                token in f"{description}\n{section_text}"
+                for token in ("export", "produce", "write each mesh")
+            )
+            if not execution_export:
+                continue
+            script_goals = "\n".join(
+                str(directory.get("goal") or "")
+                for directory in row.get("dirs") or []
+                if isinstance(directory, dict) and directory.get("dir") == "scripts"
+            ).lower()
+            # Judge the declared capability, not the sentence's imperative verb.
+            # Goal writers commonly say "add a deterministic command" or name a
+            # concrete `export_*.mjs` file; requiring create/implement/provide/ship
+            # before the producer noun incorrectly rejects those valid contracts.
+            producer_identity = any(
+                token in script_goals
+                for token in (
+                    "exporter",
+                    "producer",
+                    "export_",
+                    "export-",
+                    "mesh export",
+                    "write each mesh",
+                )
+            )
+            producer_input = any(
+                token in script_goals
+                for token in ("source", "input", "module", "scene", "createscene")
+            )
+            producer_output = any(
+                token in script_goals
+                for token in ("write", "emit", "output", "artifact", ".obj")
+            )
+            producer_contract = producer_identity and producer_input and producer_output
+            checker_only = any(
+                token in script_goals for token in ("check_", "validator", "preflight")
+            ) and not producer_contract
+            if not script_goals or checker_only or not producer_contract:
+                raise pipeline_contracts.ContractError(
+                    "focused execution-skill create is checker-only. Its scripts "
+                    "contract must implement a deterministic producer/exporter "
+                    "that consumes the task source and writes the requested "
+                    "artifact, in addition to any independent checker. Include "
+                    "producer inputs, outputs, transform/frame behavior, failure "
+                    "semantics, fixtures, and bounded evals."
+                )
+
+
+def _validate_source_native_producer_contract(
+    goal_document: dict[str, object]
+) -> None:
+    """Require Three.js producer plans to exercise native modules end to end."""
+    action = goal_document.get("action")
+    if not isinstance(action, dict):
+        return
+    for op in action.get("ops") or []:
+        if not isinstance(op, dict) or op.get("op") not in {"create", "update"}:
+            continue
+        for row in op.get("skills") or []:
+            if not isinstance(row, dict):
+                continue
+            skill_identity = "\n".join(
+                [str(row.get("skill") or ""), str(row.get("description") or "")]
+            ).lower()
+            text = "\n".join(
+                [str(row.get("skill") or ""), str(row.get("description") or "")]
+                + [
+                    str(item.get("goal") or "")
+                    for key in ("sections", "dirs")
+                    for item in row.get(key) or []
+                    if isinstance(item, dict)
+                ]
+            ).lower()
+            if "three.js" not in text and "threejs" not in text:
+                continue
+            script_goals = "\n".join(
+                str(item.get("goal") or "")
+                for item in row.get("dirs") or []
+                if isinstance(item, dict) and item.get("dir") == "scripts"
+            ).lower()
+            # Apply this contract only to a production surface. Verification
+            # skills necessarily mention exported artifacts, but that does not
+            # make their checker responsible for producing those artifacts.
+            # Treating any occurrence of "export" as ownership forced broad
+            # preflight skills to absorb domain producers and defeated the
+            # intended producer/consumer separation.
+            producer_surface = any(
+                token in skill_identity
+                for token in ("producer", "exporter", "-export", " export ")
+            ) or any(
+                token in script_goals
+                for token in ("producer", "exporter", "export_", "export-", "write each mesh")
+            )
+            if not producer_surface:
+                continue
+            native = any(token in script_goals for token in (".js", ".mjs", "javascript module"))
+            entrypoint = "createscene" in script_goals or "create_scene" in script_goals
+            end_to_end = any(token in text for token in (
+                "end-to-end",
+                "end to end",
+                "one-command",
+                "one command",
+                "single-command",
+                "single command",
+                "single invocation",
+                "execute the bundled producer once",
+            ))
+            native_geometry = (
+                any(token in script_goals for token in (
+                    "geometry.attributes.position",
+                    "geometry.attrib position",
+                    "position attribute",
+                    "native geometry buffer",
+                    "native buffer",
+                    "native position",
+                ))
+                and any(token in script_goals for token in (
+                    "geometry.index",
+                    "geometry.attrib index",
+                    "index buffer",
+                    "indexed geometry",
+                    "non-indexed geometry",
+                    "native index",
+                ))
+            )
+            exporter_semantics = (
+                any(token in script_goals for token in (
+                    "tononindexed",
+                    "to non-indexed",
+                    "triangle-expanded",
+                    "triangle expanded",
+                ))
+                and any(token in script_goals for token in (
+                    "objexporter",
+                    "obj exporter",
+                    "target serializer",
+                ))
+            )
+            world_matrix_refresh = any(token in text for token in (
+                "updatematrixworld(true)",
+                "update matrix world before reading matrixworld",
+                "refresh the scene graph world matrices",
+                "refresh world matrices before export",
+            ))
+            lossless_serialization = (
+                any(token in text for token in (
+                    "full precision",
+                    "full numeric precision",
+                    "round-trip precision",
+                    "round-trip numeric precision",
+                    "full float32 precision",
+                    "exact float32",
+                    "exact values",
+                    "verbatim",
+                    "lossless numeric",
+                    "without fixed-decimal rounding",
+                    "without fixed decimal rounding",
+                    "prohibit lossy coordinate formatting",
+                ))
+                and any(token in text for token in (
+                    "coordinate",
+                    "vertex",
+                    "vertices",
+                    "numeric",
+                    "float32",
+                    "position",
+                ))
+            )
+            explicit_producer_first = any(token in text for token in (
+                    "producer-first",
+                    "execute the bundled producer",
+                    "execute the shipped producer",
+                    "run the bundled producer",
+                    "run the shipped producer",
+                ))
+            bounded_fallback = any(token in text for token in (
+                    "bounded fallback",
+                    "bounded repair",
+                    "producer-first bounded execution",
+                    "cap repair/re-export attempts",
+                    "cap repair and re-export attempts",
+                    "bounded producer-first attempt budget",
+                    "before ad-hoc",
+                    "before writing a replacement",
+                    "before reimplementing",
+                    "only after a concrete producer failure",
+                    "only after a concrete documented producer failure",
+                    "after a concrete producer failure",
+                ))
+            bounded_fallback = bounded_fallback or (
+                "only after a concrete" in text and "producer failure" in text
+            )
+            bounded_fallback = bounded_fallback or bool(re.search(
+                r"\bbound(?:ed|ing)?\b.{0,100}\bfallback\b|"
+                r"\bfallback\b.{0,100}\b(?:one|single|at most one)\s+"
+                r"(?:attempt|repair|retry|pass)\b",
+                text,
+                re.DOTALL,
+            ))
+            producer_first = (
+                (explicit_producer_first and bounded_fallback)
+                or (
+                    "producer" in text
+                    and bounded_fallback
+                    and any(token in text for token in (
+                        "at most",
+                        "bounded",
+                    ))
+                )
+            )
+            required_clauses = {
+                "native .js/.mjs module input": native,
+                "createScene() entrypoint": entrypoint,
+                "one-command end-to-end execution": end_to_end,
+                "native position/index buffer export": native_geometry,
+                "toNonIndexed/OBJExporter semantics": exporter_semantics,
+                "scene graph world-matrix refresh": world_matrix_refresh,
+                "full round-trip numeric precision": lossless_serialization,
+                "producer-first bounded execution": producer_first,
+            }
+            missing_clauses = [
+                label for label, present in required_clauses.items() if not present
+            ]
+            if missing_clauses:
+                raise pipeline_contracts.ContractError(
+                    "Three.js producer contract missing required clauses: "
+                    + ", ".join(missing_clauses)
+                    + ". Require a "
+                    "one-command end-to-end producer that directly imports or "
+                    "executes a .js/.mjs module exposing createScene(), plus a "
+                    "native-module fixture. The producer must export the returned "
+                    "mesh's native geometry.attributes.position and geometry.index "
+                    "buffers, convert indexed meshes to triangle-expanded non-indexed "
+                    "geometry, and serialize with Three.js OBJExporter-compatible "
+                    "semantics at full round-trip numeric precision without "
+                    "fixed-decimal coordinate rounding rather than "
+                    "retessellating geometry.parameters. A manually authored normalized scene "
+                    "JSON may be output evidence but cannot be an input prerequisite. "
+                    "Require createScene()'s returned root to call "
+                    "updateMatrixWorld(true) before any matrixWorld is read by either "
+                    "the producer or its independent checker; the checker must not share "
+                    "a stale-matrix fallback with the producer. "
+                    "Require producer-first bounded execution: execute the bundled "
+                    "producer before ad-hoc replacement code, and allow only a bounded "
+                    "repair or fallback after a concrete producer failure."
+                )
+
+
 def require_auth() -> dict[str, str]:
     names = (
         "ANTHROPIC_API_KEY",
@@ -1264,6 +1968,7 @@ def initialize_workspace(workspace: Path) -> None:
         "traces/raw/codex",
         "traces/raw/claude",
         "traces/raw/cursor",
+        "traces/raw/acp",
         "traces/raw/reference_agent",
         "traces/derived/cut",
     ):
@@ -1355,6 +2060,7 @@ def copy_valid_skill_inventory(
         if target.exists():
             shutil.rmtree(target)
         shutil.copytree(skill_dir, target)
+        normalize_skill_resource_permissions(target)
         copied.append(skill_dir.name)
     return copied, invalid
 
@@ -1411,6 +2117,7 @@ def require_seed_inputs(workspace: Path) -> None:
         workspace / "traces/raw/codex",
         workspace / "traces/raw/claude",
         workspace / "traces/raw/cursor",
+        workspace / "traces/raw/acp",
         workspace / "traces/raw/target_agent",
     )
     skills = workspace / "target/to_be_improved_skills"
@@ -1950,6 +2657,66 @@ def dsh_command(prompt: str, model: str | None = None) -> list[str]:
     return command
 
 
+def dsh_transient_failure(log_path: Path | None) -> bool:
+    """Recognize provider/harness failures that are safe to retry once."""
+    if log_path is None or not log_path.is_file():
+        return False
+    text = log_path.read_text(errors="replace").lower()
+    return any(
+        marker in text
+        for marker in (
+            "internal server error",
+            "stream_closed",
+            "stream ended before message_stop",
+            "provider api error [provider_error/transient]",
+            "http 500",
+            "http 502",
+            "http 503",
+            "http 504",
+        )
+    )
+
+
+def run_dsh_session(
+    prompt: str,
+    model: str | None,
+    *,
+    cwd: Path,
+    log_path: Path | None,
+    timeout: float | None,
+    details: dict[str, object] | None = None,
+) -> None:
+    """Run DSH with one bounded retry for a proven transient failure."""
+    attempts = 0
+    while True:
+        try:
+            run(
+                dsh_command(prompt, model),
+                cwd=cwd,
+                log_path=log_path,
+                timeout=timeout,
+            )
+            if details is not None:
+                details["transient_retries"] = attempts
+            return
+        except subprocess.CalledProcessError:
+            if attempts >= DSH_TRANSIENT_RETRY_BUDGET or not dsh_transient_failure(
+                log_path
+            ):
+                if details is not None:
+                    details["transient_retries"] = attempts
+                raise
+            attempts += 1
+            if details is not None:
+                details["transient_retries"] = attempts
+            print(
+                f"! dsh transient provider failure; retry {attempts}/"
+                f"{DSH_TRANSIENT_RETRY_BUDGET}",
+                flush=True,
+            )
+            time.sleep(min(2**attempts, 5))
+
+
 def hermes_command(prompt: str, model: str | None) -> list[str]:
     """Launch one non-interactive Hermes agent turn."""
     command = [resolve_hermes_binary()]
@@ -2045,11 +2812,13 @@ def run_host_session(
                 timeout=session_timeout_seconds(stage),
             )
         elif backend == "dsh":
-            run(
-                dsh_command(prompt, model),
+            run_dsh_session(
+                prompt,
+                model,
                 cwd=view,
                 log_path=log_path,
                 timeout=session_timeout_seconds(stage),
+                details=details,
             )
         elif backend == "hermes":
             run(
@@ -2370,8 +3139,29 @@ def inventory_merge_candidates(
             result.setdefault(finding, set()).add(operation)
         return result
 
-    candidates: list[dict[str, object]] = []
     names = sorted(rows)
+    token_sets = {name: tokens(name) for name in names}
+    token_document_frequency: Counter[str] = Counter(
+        token for values in token_sets.values() for token in values
+    )
+    salient_frequency_cap = max(2, math.ceil(len(names) * 0.2))
+    salient_tokens = {
+        name: {
+            token
+            for token in values
+            if token_document_frequency[token] <= salient_frequency_cap
+        }
+        for name, values in token_sets.items()
+    }
+    candidates: list[dict[str, object]] = []
+    fingerprint_counts: Counter[str] = Counter(
+        str(fingerprint)
+        for row in rows.values()
+        for fingerprint in [
+            (row.get("lifecycle") or {}).get("method_fingerprint")
+        ]
+        if fingerprint
+    )
     for index, left in enumerate(names):
         for right in names[index + 1 :]:
             left_row, right_row = rows[left], rows[right]
@@ -2383,15 +3173,34 @@ def inventory_merge_candidates(
                 if all_labels
                 else 0.0
             )
-            left_tokens, right_tokens = tokens(left), tokens(right)
+            left_tokens, right_tokens = token_sets[left], token_sets[right]
             lexical_overlap = (
                 len(left_tokens & right_tokens) / len(left_tokens | right_tokens)
                 if left_tokens | right_tokens
                 else 0.0
             )
+            left_salient, right_salient = salient_tokens[left], salient_tokens[right]
+            salient_overlap = (
+                len(left_salient & right_salient) / len(left_salient | right_salient)
+                if left_salient | right_salient
+                else 0.0
+            )
             left_fp = ((left_row.get("lifecycle") or {}).get("method_fingerprint"))
             right_fp = ((right_row.get("lifecycle") or {}).get("method_fingerprint"))
-            same_method = bool(left_fp and left_fp == right_fp)
+            # A fingerprint shared by many skills is a method-family bucket,
+            # not pairwise duplicate evidence.  Only a unique pair may use an
+            # exact fingerprint as the strong merge signal; broad collisions
+            # must qualify through independent overlap/provenance evidence.
+            same_method = bool(
+                left_fp
+                and left_fp == right_fp
+                and fingerprint_counts[str(left_fp)] == 2
+            )
+            ambiguous_method = bool(
+                left_fp
+                and left_fp == right_fp
+                and fingerprint_counts[str(left_fp)] > 2
+            )
             left_findings = applied_findings(left)
             right_findings = applied_findings(right)
             shared_findings = sorted(
@@ -2414,11 +3223,15 @@ def inventory_merge_candidates(
                     0.8 * label_overlap + 0.2 * lexical_overlap,
                 )
             )
+            if not same_method and not shared_findings and salient_overlap < 0.25:
+                continue
             if score < min_score:
                 continue
             reasons = []
             if same_method:
                 reasons.append("same_method_fingerprint")
+            if ambiguous_method:
+                reasons.append("ambiguous_method_family_fingerprint")
             if shared_findings:
                 reasons.append("duplicate_create_evidence_collision")
             if label_overlap:
@@ -2431,6 +3244,7 @@ def inventory_merge_candidates(
                     "score": round(score, 6),
                     "label_overlap": round(label_overlap, 6),
                     "lexical_overlap": round(lexical_overlap, 6),
+                    "salient_overlap": round(salient_overlap, 6),
                     "method_fingerprint": left_fp if same_method else None,
                     "shared_finding_ids": shared_findings,
                     "operation_hint": "merge" if shared_findings else None,
@@ -2455,7 +3269,9 @@ def inventory_merge_candidates(
     selected, suppressed = _dedupe_merge_candidates(candidates)
     document = {
         "schema_version": 1,
-        "algorithm": "inventory-maintenance-candidates-v3",
+        "algorithm": "inventory-maintenance-candidates-v5",
+        "salient_frequency_cap": salient_frequency_cap,
+        "fingerprint_cardinality": dict(sorted(fingerprint_counts.items())),
         "min_score": min_score,
         "candidate_count": len(selected),
         "suppressed_candidate_count": len(suppressed),
@@ -4040,6 +4856,35 @@ def remove_transient_skill_artifacts(skill_dir: Path) -> None:
             shutil.rmtree(path)
 
 
+def normalize_skill_resource_permissions(skill_dir: Path) -> None:
+    """Make a published skill usable by an unprivileged runtime user.
+
+    Agent sandboxes commonly mount deployed skills as root-owned files. Model
+    authored files may arrive with a restrictive umask (for example ``0600``),
+    which makes an otherwise valid bundled script unreadable to the agent. A
+    skill is a distributable artifact, so publication normalizes directories to
+    ``0755``, ordinary files to ``0644``, and runnable Python/shell helpers
+    under ``scripts/`` to ``0755``. Schemas and other data nested below
+    ``scripts/`` remain non-executable.
+    """
+    if not skill_dir.is_dir():
+        return
+    skill_dir.chmod(0o755)
+    for path in sorted(skill_dir.rglob("*")):
+        if path.is_dir():
+            path.chmod(0o755)
+            continue
+        if not path.is_file():
+            continue
+        relative = path.relative_to(skill_dir)
+        runnable = (
+            relative.parts
+            and relative.parts[0] == "scripts"
+            and path.suffix.lower() in {".py", ".sh"}
+        )
+        path.chmod(0o755 if runnable else 0o644)
+
+
 def validate_planned_resource_outputs(workspace: Path, op: dict) -> None:
     """Enforce each positive resource decision against the authored output.
 
@@ -4064,8 +4909,20 @@ def validate_planned_resource_outputs(workspace: Path, op: dict) -> None:
         if not isinstance(plan, list):
             continue
         skill = root / str(record["skill"])
+        raw_skill = workspace / "target/raw_skills" / str(record["skill"])
         resources = _resource_files(skill)
         skill_text = (skill / "SKILL.md").read_text(errors="replace")
+        # Progressive disclosure should not force every fixture filename into
+        # SKILL.md. Executable helpers still need a direct instruction link,
+        # while fixture/schema data may be reached through eval manifests or
+        # references that SKILL.md links to.
+        supporting_discovery_text = "\n".join(
+            path.read_text(errors="replace")
+            for directory in (skill / "evals", skill / "references")
+            if directory.is_dir()
+            for path in sorted(directory.rglob("*"))
+            if path.is_file()
+        )
         for row in plan:
             if not isinstance(row, dict) or row.get("decision") != "use":
                 continue
@@ -4076,14 +4933,42 @@ def validate_planned_resource_outputs(workspace: Path, op: dict) -> None:
                     f"planned {resource} resource produced no authored file for {record['skill']}"
                 )
             if resource != "evals":
-                undiscoverable = [
-                    path.as_posix()
-                    for path in files
-                    if path.as_posix() not in skill_text and path.name not in skill_text
-                ]
+                undiscoverable = []
+                for path in files:
+                    # Updates inherit complete resource trees.  Do not make an
+                    # unrelated, byte-identical legacy fixture a new publication
+                    # obligation merely because the current operation uses the
+                    # same resource kind.  New and modified files still have to
+                    # be reachable through SKILL.md or a linked eval/reference
+                    # manifest.
+                    inherited = raw_skill / path
+                    authored = skill / path
+                    unchanged_inherited = (
+                        kind == "update"
+                        and inherited.is_file()
+                        and authored.is_file()
+                        and inherited.read_bytes() == authored.read_bytes()
+                    )
+                    if unchanged_inherited:
+                        continue
+                    direct = path.as_posix() in skill_text or path.name in skill_text
+                    runnable_script = resource == "scripts" and path.suffix.lower() in {
+                        ".py",
+                        ".sh",
+                        ".js",
+                        ".mjs",
+                        ".ts",
+                    }
+                    indirect = (
+                        path.as_posix() in supporting_discovery_text
+                        or path.name in supporting_discovery_text
+                    )
+                    if not direct and (runnable_script or not indirect):
+                        undiscoverable.append(path.as_posix())
                 if undiscoverable:
                     raise SystemExit(
                         f"planned {resource} resource is not discoverable from SKILL.md "
+                        f"or its eval/reference manifests "
                         f"for {record['skill']}: {', '.join(undiscoverable)}"
                     )
             if resource == "scripts":
@@ -4195,6 +5080,105 @@ def reconcile_inherited_resource_plan(workspace: Path, op: dict) -> bool:
     return changed
 
 
+def reconcile_progressive_disclosure_plan(workspace: Path, op: dict) -> bool:
+    """Authorize reference extraction when an edited skill already exceeds prose gates."""
+    kind = op.get("op")
+    records: list[dict[str, object]] = []
+    sources: list[str] = []
+    if kind == "update":
+        records = [row for row in op.get("skills") or [] if isinstance(row, dict)]
+    elif kind == "merge" and isinstance(op.get("into"), dict):
+        records = [op["into"]]
+        sources = [name for name in op.get("skills") or [] if isinstance(name, str)]
+    else:
+        return False
+    root = workspace / "target/to_be_improved_skills"
+    changed = False
+    for record in records:
+        record_sources = sources or [str(record.get("skill") or "")]
+        oversized = [
+            source
+            for source in record_sources
+            if (root / source / "SKILL.md").is_file()
+            and progressive_disclosure_issues(root / source)
+        ]
+        if not oversized:
+            continue
+        dirs = record.setdefault("dirs", [])
+        plan = record.setdefault("resource_plan", [])
+        reference = next(
+            (
+                row
+                for row in plan
+                if isinstance(row, dict) and row.get("resource") == "references"
+            ),
+            None,
+        )
+        if isinstance(reference, dict):
+            if reference.get("decision") != "use":
+                reference.update(
+                    {
+                        "decision": "use",
+                        "reason": (
+                            "The edited source exceeds the progressive-disclosure "
+                            "budget; move substantial conditional modes, schemas, or "
+                            "examples into discoverable references."
+                        ),
+                        "confidence": 1.0,
+                    }
+                )
+                changed = True
+        else:
+            plan.append(
+                {
+                    "resource": "references",
+                    "decision": "use",
+                    "reason": (
+                        "The edited source exceeds the progressive-disclosure budget; "
+                        "move substantial conditional modes, schemas, or examples into "
+                        "discoverable references."
+                    ),
+                    "confidence": 1.0,
+                }
+            )
+            changed = True
+        disclosure_goal = (
+            "Refactor the oversized SKILL.md from "
+            + ", ".join(oversized)
+            + " by moving substantial conditional schemas, modes, and worked "
+            "examples into bounded reference files. Link every new reference "
+            "from SKILL.md and preserve the concise activation, workflow, "
+            "constraints, and verification contract in SKILL.md. The edited "
+            "SKILL.md must finish at or below the configured hard token cap "
+            "(currently 5000 estimated tokens); adding references without "
+            "reducing SKILL.md is not compliant."
+        )
+        reference_dir = next(
+            (
+                row
+                for row in dirs
+                if isinstance(row, dict) and row.get("dir") == "references"
+            ),
+            None,
+        )
+        if isinstance(reference_dir, dict):
+            prior_goal = str(reference_dir.get("goal") or "").strip()
+            if "configured hard token cap" not in prior_goal:
+                reference_dir["goal"] = (
+                    prior_goal + " " + disclosure_goal
+                ).strip()
+                changed = True
+        else:
+            dirs.append(
+                {
+                    "dir": "references",
+                    "goal": disclosure_goal,
+                }
+            )
+            changed = True
+    return changed
+
+
 def validate_inherited_resources(workspace: Path, op: dict) -> dict[str, object]:
     """Reject silent resource loss and return auditable preservation metrics."""
     kind = op.get("op")
@@ -4256,6 +5240,9 @@ def validate_inherited_resources(workspace: Path, op: dict) -> dict[str, object]
             ).encode()
         ).hexdigest()
 
+    def eval_behavior(row: dict[str, object]) -> str:
+        return _eval_behavior_key(row)
+
     for record, sources in targets:
         target = improved / str(record["skill"])
         removals = "\n".join(
@@ -4287,14 +5274,45 @@ def validate_inherited_resources(workspace: Path, op: dict) -> dict[str, object]
                             expected_content[key] != actual_content[key]
                             for key in expected & actual
                         )
+                        missing = expected - actual
                     else:
-                        expected = {eval_signature(row) for row in expected_rows}
-                        actual = {eval_signature(row) for row in actual_rows}
-                        revised = 0
-                    missing = expected - actual
+                        expected_signatures = {
+                            eval_signature(row) for row in expected_rows
+                        }
+                        actual_signatures = {
+                            eval_signature(row) for row in actual_rows
+                        }
+                        actual_behaviors = {
+                            eval_behavior(row) for row in actual_rows
+                        }
+                        preserved = expected_signatures & actual_signatures
+                        revised_rows = [
+                            row
+                            for row in expected_rows
+                            if eval_signature(row) not in actual_signatures
+                            and eval_behavior(row) in actual_behaviors
+                        ]
+                        missing_rows = [
+                            row
+                            for row in expected_rows
+                            if eval_signature(row) not in actual_signatures
+                            and eval_behavior(row) not in actual_behaviors
+                        ]
+                        expected = expected_signatures
+                        actual = actual_signatures
+                        revised = len(revised_rows)
+                        missing = {
+                            eval_signature(row) for row in missing_rows
+                        }
                     report["inherited_files"] = int(report["inherited_files"]) + 1
                     report["inherited_eval_cases"] = int(report["inherited_eval_cases"]) + len(expected)
-                    report["preserved_eval_cases"] = int(report["preserved_eval_cases"]) + len(expected & actual)
+                    preserved_count = len(expected & actual)
+                    if kind != "update":
+                        preserved_count += revised
+                    report["preserved_eval_cases"] = (
+                        int(report["preserved_eval_cases"])
+                        + preserved_count
+                    )
                     report["revised_eval_cases"] = int(report["revised_eval_cases"]) + revised
                     if missing and "evals" not in removals:
                         report["missing"].append(
@@ -5331,9 +6349,9 @@ def _goal_scope(
                     f"This isolated session is cluster <{cluster}> at {source}. "
                     f"{session_context} The cwd's workspace entry already "
                     "points at the worker root; do not create a nested "
-                    "workspace directory. Then run exactly `python3 "
-                    "03_goal_agent/goal-generator/one_action.py "
-                    f"{goal}` once. Do not search for the validator.",
+                    "workspace directory. Write the candidate and stop. Do not "
+                    "run, locate, or open a validator; the host validates the "
+                    "frozen candidate bytes and may request one focused repair.",
                     skill_paths=(
                         ["03_goal_agent/goal-generator/skill.md"]
                         if matching.is_file()
@@ -5351,7 +6369,15 @@ def _goal_scope(
                 },
             )
         pipeline_contracts.validate_label_matching(matching, cluster)
-        pipeline_contracts.validate_goal(goal)
+        _validate_goal_with_bounded_repair(
+            workspace,
+            private,
+            goal,
+            suffix,
+            auth,
+            model,
+            install_agent,
+        )
         _publish_goal_skills(
             workspace, suffix, goal_path=goal, recalled=recalled
         )
@@ -5667,6 +6693,7 @@ def merge_update_ops(ops: list[dict[str, object]]) -> dict[str, object]:
                 by_skill[name] = {
                     "skill": name,
                     "goals": [],
+                    "description_goals": [],
                     "facet": row.get("facet"),
                     "sections": [],
                     "dirs": [],
@@ -5679,6 +6706,12 @@ def merge_update_ops(ops: list[dict[str, object]]) -> dict[str, object]:
             goals = bucket["goals"]
             if text and text not in goals:
                 goals.append(text)
+            description_goal = str(row.get("description_goal") or "").strip()
+            if (
+                description_goal
+                and description_goal not in bucket["description_goals"]
+            ):
+                bucket["description_goals"].append(description_goal)
             if not bucket.get("facet") and row.get("facet"):
                 bucket["facet"] = row["facet"]
             bucket["sections"].extend(row.get("sections") or [])
@@ -5736,6 +6769,8 @@ def merge_update_ops(ops: list[dict[str, object]]) -> dict[str, object]:
                     }
                 )
             item["resource_plan"] = resource_plan
+        if bucket["description_goals"]:
+            item["description_goal"] = "\n".join(bucket["description_goals"])
         if bucket.get("facet"):
             item["facet"] = bucket["facet"]
         if bucket["remove"]:
@@ -6393,6 +7428,8 @@ def _operation_change_claims(op: dict, skill: str) -> tuple[list[str], list[str]
             if value.get("skill") == skill:
                 collect(value.get("sections"), "section", sections)
                 collect(value.get("dirs"), "dir", directories)
+                if isinstance(value.get("description_goal"), str):
+                    sections.add("description")
             for child in value.values():
                 walk(child)
         elif isinstance(value, list):
@@ -6506,6 +7543,7 @@ def mark_operation_phase(
     if not path.is_file():
         raise SystemExit(f"operation changelog was not initialized: {path}")
     document = json.loads(path.read_text())
+    repair_duplicate_running_phase_events(document)
     markers = document.get("phase_markers")
     if not isinstance(markers, list):
         raise SystemExit(f"operation changelog has no phase markers: {path}")
@@ -6524,6 +7562,37 @@ def mark_operation_phase(
     active = workspace / "run/changelog.json"
     if active.is_file():
         atomic_write_json(active, document)
+
+
+def repair_duplicate_running_phase_events(document: dict[str, object]) -> bool:
+    """Migrate retry histories that omitted the failed attempt boundary.
+
+    Older retry handling could append ``running`` twice for the same phase.
+    Preserve both timestamps but turn the superseded attempt into an explicit
+    failure so the lifecycle remains auditable and contract-valid.
+    """
+    events = document.get("phase_events")
+    if not isinstance(events, list):
+        return False
+    latest_by_phase: dict[str, dict[str, object]] = {}
+    changed = False
+    for event in events:
+        if not isinstance(event, dict):
+            continue
+        phase = event.get("phase")
+        if not isinstance(phase, str):
+            continue
+        prior = latest_by_phase.get(phase)
+        if (
+            event.get("status") == "running"
+            and isinstance(prior, dict)
+            and prior.get("status") == "running"
+        ):
+            prior["status"] = "failed"
+            prior["reason"] = "superseded-by-retry"
+            changed = True
+        latest_by_phase[phase] = event
+    return changed
 
 
 def skip_operation_phases(
@@ -6618,6 +7687,7 @@ def _verification_requirements(op: dict, skill: str, avoid: object) -> dict:
     sections: list[dict[str, str]] = []
     directories: list[dict[str, str]] = []
     removals: list[str] = []
+    description: str | None = None
 
     def collect(values: object, name_key: str, output_key: str) -> None:
         if not isinstance(values, list):
@@ -6632,6 +7702,7 @@ def _verification_requirements(op: dict, skill: str, avoid: object) -> dict:
                 target.append({output_key: name, "expectation": goal})
 
     def walk(value: object) -> None:
+        nonlocal description
         if isinstance(value, dict):
             if value.get("skill") == skill:
                 collect(value.get("sections"), "section", "section")
@@ -6641,6 +7712,9 @@ def _verification_requirements(op: dict, skill: str, avoid: object) -> dict:
                     for item in value.get("remove") or []
                     if isinstance(item, str) and item.strip()
                 )
+                description_goal = value.get("description_goal")
+                if isinstance(description_goal, str) and description_goal.strip():
+                    description = description_goal.strip()
                 reason = value.get("reason")
                 if op.get("op") == "delete" and isinstance(reason, str) and reason:
                     removals.append(f"entire skill: {reason}")
@@ -6659,6 +7733,7 @@ def _verification_requirements(op: dict, skill: str, avoid: object) -> dict:
         else []
     )
     return {
+        "description": description,
         "sections": sections,
         "directories": directories,
         "avoid": avoid_items,
@@ -6740,6 +7815,14 @@ def _append_goal_verification_assertions(document: dict) -> None:
         skill = row["skill"]
         requirements = row.get("requirements") or {}
         base = f"#/skills/{skill_index}/requirements"
+        description = requirements.get("description")
+        if isinstance(description, str) and description:
+            append(
+                "step2",
+                skill,
+                f"{base}/description",
+                f"Frontmatter description: {description}",
+            )
         for key, name_key, label in (
             ("sections", "section", "Section"),
             ("directories", "directory", "Directory"),
@@ -7092,6 +8175,10 @@ source or the parent repository to re-derive them.
 - Edit diff: create must contain every claimed section and directory. Update
   must change every claimed section and leave frontmatter, the text before the
   first heading, and every unclaimed section identical to target/raw_skills.
+  The sole exception is a claimed `description_goal`: then the one-line
+  frontmatter description must change in that direction while every other
+  frontmatter field remains identical. Charge a missing or contradictory
+  claimed description as `goal_contradiction` against target `description`.
   Both copies must exist. Delete removes the skill directory. A merge target
   may rewrite sections needed to preserve its named source capabilities; do
   not apply the narrow-update unchanged-section rule to it. Merge and split
@@ -7174,6 +8261,20 @@ def verifier_evidence_bundle(
     if raw.is_dir() and candidate.is_dir():
         heading = re.compile(r"^##\s+(.+?)\s*$", re.MULTILINE)
 
+        def frontmatter(document: str) -> tuple[str | None, str, str]:
+            match = re.match(r"\A---\s*\n(.*?)\n---\s*\n?", document, re.DOTALL)
+            if not match:
+                return None, "", document
+            block = match.group(1)
+            description_match = re.search(
+                r"^description:\s*(.*?)\s*$", block, re.MULTILINE
+            )
+            description = description_match.group(1) if description_match else None
+            without_description = re.sub(
+                r"^description:\s*.*?\s*$", "", block, count=1, flags=re.MULTILINE
+            )
+            return description, without_description.strip(), document[match.end():]
+
         def sections(document: str) -> tuple[str, dict[str, str]]:
             matches = list(heading.finditer(document))
             preamble = document[: matches[0].start()] if matches else document
@@ -7184,9 +8285,12 @@ def verifier_evidence_bundle(
                 values[key] = document[match.start():end].strip()
             return preamble, values
 
-        before_preamble, before_sections = sections(before)
-        after_preamble, after_sections = sections(after)
+        before_description, before_frontmatter, before_body = frontmatter(before)
+        after_description, after_frontmatter, after_body = frontmatter(after)
+        before_preamble, before_sections = sections(before_body)
+        after_preamble, after_sections = sections(after_body)
         requirements = skill_row.get("requirements") or {}
+        description_goal = requirements.get("description")
         claimed_keys = {
             re.sub(r"[^a-z0-9]+", "_", str(row.get("section") or row.get("name") or "").lower()).strip("_")
             for row in requirements.get("sections") or []
@@ -7202,9 +8306,21 @@ def verifier_evidence_bundle(
                 json.dumps(
                     {
                         "frontmatter_and_preamble_unchanged": (
-                            before_preamble == after_preamble
+                            (
+                                before_frontmatter == after_frontmatter
+                                and before_preamble == after_preamble
+                                and (
+                                    before_description == after_description
+                                    or bool(description_goal)
+                                )
+                            )
                             or skill_row.get("role") == "merge_target"
                         ),
+                        "description_change_claimed": bool(description_goal),
+                        "description_changed": (
+                            before_description != after_description
+                        ),
+                        "candidate_description": after_description,
                         "unclaimed_sections_unchanged": all(
                             before_sections.get(key) == after_sections.get(key)
                             for key in unclaimed_keys
@@ -8153,6 +9269,98 @@ def write_operation_resource_metrics(
     return document
 
 
+def progressive_disclosure_issues(skill: Path) -> list[dict[str, object]]:
+    """Reject catch-all SKILL.md growth that should be deferred to references."""
+    policy = preprocessing_config().get("evolution_policy") or {}
+    required_above = int(
+        policy.get("progressive_disclosure_required_above_tokens", 2400)
+    )
+    minimum_share = float(
+        policy.get("progressive_disclosure_min_reference_share", 0.15)
+    )
+    maximum_tokens = int(policy.get("max_skill_md_tokens", 5000))
+    metrics = skill_resources.measure_skill_resources(
+        skill, runtime_observation_available=False
+    )["progressive_disclosure"]
+    tokens = int(metrics["skill_md_tokens"])
+    reference_share = float(metrics["estimated_skill_md_token_reduction"])
+    issues: list[dict[str, object]] = []
+    if tokens > maximum_tokens:
+        issues.append(
+            {
+                "code": "skill-md-token-cap",
+                "observed": tokens,
+                "maximum": maximum_tokens,
+            }
+        )
+    if tokens > required_above and reference_share < minimum_share:
+        issues.append(
+            {
+                "code": "missing-progressive-disclosure",
+                "skill_md_tokens": tokens,
+                "required_above_tokens": required_above,
+                "reference_share": round(reference_share, 6),
+                "minimum_reference_share": minimum_share,
+            }
+        )
+    return issues
+
+
+def validate_candidate_publication_preflight(workspace: Path, op: dict) -> None:
+    """Aggregate deterministic publication defects while optimize can retry."""
+    root = workspace / "target/to_be_improved_skills"
+    failures: dict[str, list[dict[str, object]]] = {}
+    messages: list[str] = []
+    try:
+        validate_planned_resource_outputs(workspace, op)
+    except SystemExit as error:
+        messages.append(str(error))
+    for name in sorted(set(skill_names_mod.skill_names(op))):
+        skill = root / name
+        if not skill.is_dir() or not (skill / "SKILL.md").is_file():
+            continue
+        issues = progressive_disclosure_issues(skill)
+        if issues:
+            failures[name] = issues
+    if failures:
+        messages.append(json.dumps(failures, sort_keys=True))
+    if messages:
+        raise pipeline_contracts.ContractError(
+            "candidate publication preflight failed; repair the candidate before "
+            "verification; all detected defects: " + " | ".join(messages)
+        )
+
+
+def publication_blocking_penalties(
+    operation_directory: Path,
+) -> list[dict[str, str]]:
+    """Return verified contract defects that a soft score may not publish."""
+    verification_path = operation_directory / "verification.json"
+    if not verification_path.is_file():
+        return []
+    verification = json.loads(verification_path.read_text())
+    configured = (
+        preprocessing_config().get("evolution_policy") or {}
+    ).get("publication_blocking_penalties") or []
+    blocking = {str(value) for value in configured}
+    rows: list[dict[str, str]] = []
+    for skill_row in (verification.get("feedback") or {}).get("per_skill") or []:
+        if not isinstance(skill_row, dict):
+            continue
+        skill = str(skill_row.get("skill") or "")
+        for penalty in skill_row.get("penalties") or []:
+            if not isinstance(penalty, dict):
+                continue
+            penalty_id = str(penalty.get("id") or "")
+            if penalty_id in blocking:
+                rows.append({
+                    "skill": skill,
+                    "id": penalty_id,
+                    "target": str(penalty.get("target") or ""),
+                })
+    return sorted(rows, key=lambda row: (row["skill"], row["id"], row["target"]))
+
+
 def publish_operation_result(
     workspace: Path, result: dict[str, object]
 ) -> None:
@@ -8179,6 +9387,37 @@ def publish_operation_result(
                 reason=f"judge-{final_judge_action}",
             )
         return
+    operation_directory = (
+        result["worker"] / "run" / cluster / "ops" / str(op_index)
+    )
+    blocking_penalties = publication_blocking_penalties(operation_directory)
+    if blocking_penalties:
+        atomic_write_json(
+            operation_directory / "publication-penalty-gate.json",
+            {
+                "schema_version": 1,
+                "accepted": False,
+                "blocking_penalties": blocking_penalties,
+            },
+        )
+        _archive_operation_records(workspace, result)
+        replace_path(
+            operation_directory / "publication-penalty-gate.json",
+            workspace
+            / "run"
+            / cluster
+            / "ops"
+            / str(op_index)
+            / "publication-penalty-gate.json",
+        )
+        write_publication(
+            workspace,
+            cluster,
+            op_index,
+            accepted=False,
+            reason="verification-blocking-penalty",
+        )
+        return
     if infrastructure_evolution_blocked(workspace, cluster):
         drop_created_skills(
             workspace, created_skill_names(result["op"])
@@ -8198,6 +9437,52 @@ def publish_operation_result(
         skill = skill_root / name
         if skill.is_dir() and (skill / "SKILL.md").is_file():
             skill_resources.generate_openai_yaml(skill)
+            # Verification may compile authored helpers.  Strip those runtime
+            # byproducts before hashing the immutable release, otherwise a
+            # release can retain __pycache__/ or *.pyc even though inventory
+            # publication filters them later.
+            remove_transient_skill_artifacts(skill)
+            # Release bundles are mounted read-only and commonly owned by
+            # root.  Normalize modes before release hashing so an unprivileged
+            # benchmark/runtime user can actually read and run the generated
+            # resources; normalizing only the mutable inventory is too late.
+            normalize_skill_resource_permissions(skill)
+    disclosure_issues = {
+        name: issues
+        for name in sorted(affected)
+        if (skill_root / name / "SKILL.md").is_file()
+        for issues in [progressive_disclosure_issues(skill_root / name)]
+        if issues
+    }
+    if disclosure_issues:
+        atomic_write_json(
+            workspace
+            / "run"
+            / cluster
+            / "ops"
+            / str(op_index)
+            / "progressive-disclosure-gate.json",
+            {
+                "schema_version": 1,
+                "status": "fail",
+                "skills": disclosure_issues,
+            },
+        )
+        _archive_operation_records(workspace, result)
+        reason = "progressive-disclosure-gate:" + ",".join(disclosure_issues)
+        write_publication(
+            workspace, cluster, op_index, accepted=False, reason=reason
+        )
+        for source in result.get("bundled_sources") or []:
+            if isinstance(source, dict):
+                write_publication(
+                    workspace,
+                    str(source.get("cluster")),
+                    int(source.get("op_index")),
+                    accepted=False,
+                    reason=reason,
+                )
+        return
     release = release_bundle.prepare_release(
         workspace,
         result["worker"],
@@ -8737,7 +10022,10 @@ def resumable_operations(
             operation_directory / "changelog.json", "optimize"
         )
         if phase == "optimize":
-            if optimize_status == "completed":
+            explicitly_rejected = publication_path.is_file() and (
+                publication.get("accepted") is False
+            )
+            if optimize_status == "completed" and not explicitly_rejected:
                 skipped.append(
                     f"{label}: optimize already completed; continue from verification"
                 )
@@ -8910,6 +10198,18 @@ def settle_failed_operation(
     }.get(current_stage)
     if phase is not None:
         try:
+            # Optimize failures often happen after the agent has authored a
+            # useful candidate but before deterministic publication gates
+            # pass. Preserve those bytes so `--from optimize` can make a
+            # focused repair instead of regenerating the whole skill.
+            if phase == "optimize":
+                preserve_optimized_candidate(
+                    workspace,
+                    private,
+                    cluster,
+                    op_index,
+                    task["op"],
+                )
             mark_operation_phase(
                 private, cluster, op_index, phase, "failed", reason
             )
@@ -9000,7 +10300,10 @@ def fanout_operations(
         goal = pipeline_contracts.validate_goal(cluster_goal)
         operations = (goal.get("action") or {}).get("ops") or []
         resource_plan_changes = [
-            reconcile_inherited_resource_plan(workspace, op)
+            (
+                reconcile_inherited_resource_plan(workspace, op)
+                | reconcile_progressive_disclosure_plan(workspace, op)
+            )
             for op in operations
         ]
         if any(resource_plan_changes):
@@ -9200,6 +10503,7 @@ def fanout_operations(
         }
         stage_box = {"stage": "optimize"}
         try:
+            last_attempt_error: BaseException | None = None
             while action == "pending" and attempt < RETRY_BUDGET + 1:
                 attempt += 1
                 suffix = f"{item}-try-{attempt}"
@@ -9220,66 +10524,116 @@ def fanout_operations(
                     "started",
                     skills=skill_names_mod.skill_names(op),
                 )
-                run_session(
-                    current_stage,
-                    private,
-                    instruction(current_stage, context),
-                    auth,
-                    model,
-                    install_agent,
-                    suffix,
-                    {**op_metadata, "attempt": attempt},
-                    input_root=optimize_input,
-                )
-                collect_optimize_input(private, op)
-                materialize_created_skill_metadata(
-                    private, op, cluster, run_id
-                )
-                optimized_outputs = validate_optimized_op(private, op)
-                changelog = materialize_operation_changelog(
-                    private,
-                    op,
-                    run_id,
-                    cluster,
-                    op_index,
-                )
-                verification_input = materialize_verification_input(
-                    private,
-                    json.loads(private_op_goal.read_text()),
-                    op,
-                    run_id,
-                    cluster,
-                    op_index,
-                )
-                complete_session(
-                    private,
-                    current_stage,
-                    suffix,
-                    [
-                        private_op_goal,
-                        *optimized_outputs,
-                        changelog,
-                        verification_input,
-                    ],
-                )
-                preserve_optimized_candidate(
-                    workspace, private, cluster, op_index, op
-                )
-                action = run_verification_and_judge(
-                    workspace=workspace,
-                    private=private,
-                    cluster=cluster,
-                    op_index=op_index,
-                    op=op,
-                    suffix=suffix,
-                    attempt=attempt,
-                    op_metadata=op_metadata,
-                    auth=auth,
-                    model=model,
-                    install_agent=install_agent,
-                    stage_box=stage_box,
-                    start_stage="verifiter",
-                )
+                retry_context = context
+                if last_attempt_error is not None:
+                    retry_context += (
+                        "\n\nThe previous authoring or validation attempt failed. "
+                        "Repair the candidate completely; do not merely explain the "
+                        "failure. Previous failure:\n"
+                        f"{failure_text(last_attempt_error)}"
+                    )
+                try:
+                    try:
+                        run_session(
+                            current_stage,
+                            private,
+                            instruction(current_stage, retry_context),
+                            auth,
+                            model,
+                            install_agent,
+                            suffix,
+                            {**op_metadata, "attempt": attempt},
+                            input_root=optimize_input,
+                        )
+                    except subprocess.CalledProcessError as error:
+                        if not salvage_transient_optimize_result(
+                            private, op, suffix, error, op_metadata
+                        ):
+                            raise
+                    collect_optimize_input(private, op)
+                    materialize_created_skill_metadata(
+                        private, op, cluster, run_id
+                    )
+                    validate_candidate_publication_preflight(private, op)
+                    optimized_outputs = validate_optimized_op(private, op)
+                    changelog = materialize_operation_changelog(
+                        private,
+                        op,
+                        run_id,
+                        cluster,
+                        op_index,
+                    )
+                    verification_input = materialize_verification_input(
+                        private,
+                        json.loads(private_op_goal.read_text()),
+                        op,
+                        run_id,
+                        cluster,
+                        op_index,
+                    )
+                    complete_session(
+                        private,
+                        current_stage,
+                        suffix,
+                        [
+                            private_op_goal,
+                            *optimized_outputs,
+                            changelog,
+                            verification_input,
+                        ],
+                    )
+                    preserve_optimized_candidate(
+                        workspace, private, cluster, op_index, op
+                    )
+                    action = run_verification_and_judge(
+                        workspace=workspace,
+                        private=private,
+                        cluster=cluster,
+                        op_index=op_index,
+                        op=op,
+                        suffix=suffix,
+                        attempt=attempt,
+                        op_metadata=op_metadata,
+                        auth=auth,
+                        model=model,
+                        install_agent=install_agent,
+                        stage_box=stage_box,
+                        start_stage="verifiter",
+                    )
+                    last_attempt_error = None
+                except BaseException as error:
+                    last_attempt_error = error
+                    failed_phase = (
+                        "verification"
+                        if stage_box["stage"] == "verifiter"
+                        else stage_box["stage"]
+                    )
+                    # A retry needs an explicit failed boundary before the
+                    # next running event.  The terminal failure path records
+                    # the final failed marker while building its rejection
+                    # bundle, so do not emit it twice here.
+                    if (
+                        failed_phase in OPERATION_PHASES
+                        and attempt < RETRY_BUDGET + 1
+                    ):
+                        mark_operation_phase(
+                            private,
+                            cluster,
+                            op_index,
+                            failed_phase,
+                            "failed",
+                            failure_text(error),
+                        )
+                    write_status(
+                        workspace,
+                        stage_box["stage"],
+                        suffix,
+                        "failed",
+                        error=failure_text(error),
+                    )
+                    if attempt >= RETRY_BUDGET + 1:
+                        raise
+                    action = "pending"
             result = {
                 **task,
                 "worker": private,
@@ -9352,6 +10706,20 @@ def continue_operations(
         cluster = str(task["cluster"])
         op_index = int(task["op_index"])
         op = task["op"]
+        if phase == "optimize":
+            saved_goal_path = (
+                workspace / "run" / cluster / "ops" / str(op_index)
+                / "evolve-goal.json"
+            )
+            saved_goal = pipeline_contracts.validate_goal(saved_goal_path)
+            saved_op = saved_goal["action"]["ops"][0]
+            if (
+                reconcile_inherited_resource_plan(workspace, saved_op)
+                | reconcile_progressive_disclosure_plan(workspace, saved_op)
+            ):
+                atomic_write_json(saved_goal_path, saved_goal)
+                op = saved_op
+                task["op"] = op
         item = f"{run_id}-{cluster}-op-{op_index}-resume-1"
         conflicts = sorted(str(name) for name in task["conflicts"])
         private = copy_worker(workspace, "operations", item)
@@ -9379,6 +10747,13 @@ def continue_operations(
                 )
                 shutil.copy2(private_op_goal, private / "run/evolve-goal.json")
                 snapshot_optimize_sources(private, op)
+                resumed_candidate = candidate_directory(
+                    workspace, cluster, op_index
+                ).is_dir()
+                if resumed_candidate:
+                    restore_optimized_candidate(
+                        private, workspace, cluster, op_index, op
+                    )
                 optimize_input = prepare_optimize_input(private, op)
                 context = optimize_session_context(
                     cluster,
@@ -9387,6 +10762,13 @@ def continue_operations(
                     "",
                     finding_resource_contracts(private, cluster),
                 )
+                if resumed_candidate:
+                    context += (
+                        "\n\nA previously authored candidate is already staged in "
+                        "the workspace. Preserve its working implementation and "
+                        "make only the smallest repair needed for the remaining "
+                        "validation defect; do not regenerate the skill from scratch."
+                    )
                 mark_operation_phase(
                     private, cluster, op_index, "optimize", "running"
                 )
@@ -9397,21 +10779,28 @@ def continue_operations(
                     "started",
                     skills=skill_names_mod.skill_names(op),
                 )
-                run_session(
-                    "optimize",
-                    private,
-                    instruction("optimize", context),
-                    auth,
-                    model,
-                    install_agent,
-                    suffix,
-                    op_metadata,
-                    input_root=optimize_input,
-                )
+                try:
+                    run_session(
+                        "optimize",
+                        private,
+                        instruction("optimize", context),
+                        auth,
+                        model,
+                        install_agent,
+                        suffix,
+                        op_metadata,
+                        input_root=optimize_input,
+                    )
+                except subprocess.CalledProcessError as error:
+                    if not salvage_transient_optimize_result(
+                        private, op, suffix, error, op_metadata
+                    ):
+                        raise
                 collect_optimize_input(private, op)
                 materialize_created_skill_metadata(
                     private, op, cluster, run_id
                 )
+                validate_candidate_publication_preflight(private, op)
                 optimized_outputs = validate_optimized_op(private, op)
                 changelog = materialize_operation_changelog(
                     private, op, run_id, cluster, op_index
@@ -9444,6 +10833,8 @@ def continue_operations(
                 restore_optimized_candidate(
                     private, workspace, cluster, op_index, op
                 )
+                reconcile_merge_eval_cases(private, op)
+                validate_optimized_op(private, op)
                 stage_saved_operation(
                     private,
                     cluster,
@@ -9719,6 +11110,18 @@ def update_operation_coverage(workspace: Path) -> Path:
 
 OPTIMIZE_AVOIDANCE = """
 Important. These reject the skill. Avoid them.
+
+- Edit-first budget: inspect only the named skill, its changelog, and the files
+  directly named by the operation. Begin writing within the first quarter of
+  the session; do not spend the session narrating a design.
+- Dependencies: never install packages, create a virtual environment, or test
+  network access. The host verifier owns dependency provisioning. Use syntax
+  checks and already-available commands only; if a dependency is absent, finish
+  the requested files and leave runtime execution to verification.
+- Scope: do not search for extra schemas, examples, or repository conventions
+  after the named skill and stage instructions define the contract. Prefer the
+  smallest backward-compatible implementation that satisfies every claimed
+  section and resource directory.
 
 - Description: put it on the same line as `description:`. Do not write
   `description: >` or `description: |`. The checker reads only that line, so
@@ -10185,6 +11588,7 @@ def update_candidate_pool(
                 destination,
                 ignore=shutil.ignore_patterns("__pycache__", "*.pyc", ".DS_Store"),
             )
+            normalize_skill_resource_permissions(destination)
             if name in incoming:
                 current[name] = _row_without_changelog(incoming[name], pool_logs)
         else:
@@ -10342,6 +11746,7 @@ def snapshot_optimize_sources(workspace: Path, op: dict) -> None:
         if destination.exists():
             shutil.rmtree(destination)
         shutil.copytree(source, destination)
+        normalize_skill_resource_permissions(destination)
 
 
 def prepare_optimize_input(workspace: Path, op: dict) -> Path:
@@ -10399,6 +11804,174 @@ def collect_optimize_input(workspace: Path, op: dict) -> None:
         destination = improved / name
         if destination.exists():
             shutil.rmtree(destination)
+    reconcile_merge_eval_cases(workspace, op)
+
+
+def _eval_behavior_key(row: dict[str, object]) -> str:
+    """Stable behavioral intent key for merge-safe eval deduplication."""
+    kind = str(row.get("kind") or "unspecified")
+    text = " ".join(
+        [
+            str(row.get("prompt") or ""),
+            str(row.get("expected_output") or ""),
+            *[str(value) for value in row.get("expectations") or []],
+        ]
+    ).lower()
+    if any(term in text for term in (
+        "digest mismatch", "no longer matches", "digest differs", "stale digest"
+    )):
+        intent = "digest-mismatch"
+    elif any(term in text for term in (
+        "unindexed", "not in the map", "no file or heading row", "missing route"
+    )):
+        intent = "unindexed-topic"
+    elif kind == "should_not_apply" and any(term in text for term in (
+        "already", "earlier answer", "conversation", "restate"
+    )):
+        intent = "already-answered"
+    elif kind == "should_not_apply":
+        intent = "unrelated-task"
+    else:
+        intent = "fresh-lookup"
+    return f"{kind}:{intent}"
+
+
+def reconcile_merge_eval_cases(workspace: Path, op: dict) -> int:
+    """Deterministically union source eval behavior into a merge result.
+
+    Model-authored merges may summarize or rewrite eval prose and accidentally
+    drop inherited behavioral coverage.  Eval preservation is a mechanical
+    merge responsibility: keep authored target cases, append every distinct
+    source case, rewrite only ``skill_name``, and allocate collision-free IDs.
+    """
+    if op.get("op") != "merge":
+        return 0
+    target_name = (op.get("into") or {}).get("skill")
+    sources = [name for name in op.get("skills") or [] if isinstance(name, str)]
+    if not isinstance(target_name, str) or not target_name or not sources:
+        return 0
+    improved = workspace / "target/to_be_improved_skills"
+    raw = workspace / "target/raw_skills"
+    target_path = improved / target_name / "evals/evals.json"
+    if not target_path.is_file():
+        return 0
+    try:
+        target_document = json.loads(target_path.read_text())
+    except (OSError, json.JSONDecodeError):
+        return 0
+    target_rows = target_document.get("evals")
+    if not isinstance(target_rows, list):
+        return 0
+
+    def signature(row: dict[str, object]) -> str:
+        return hashlib.sha256(
+            json.dumps(
+                {
+                    "prompt": row.get("prompt"),
+                    "expected_output": row.get("expected_output"),
+                    "expectations": row.get("expectations"),
+                },
+                sort_keys=True,
+                ensure_ascii=False,
+            ).encode()
+        ).hexdigest()
+
+    observed = {
+        signature(row)
+        for row in target_rows
+        if isinstance(row, dict)
+    }
+    remove_text = " ".join(
+        str(value).lower() for value in (op.get("into") or {}).get("remove", [])
+    ) + " " + " ".join(
+        str(value).lower() for value in op.get("remove", [])
+    )
+    dedupe_requested = "duplicate" in remove_text and "eval" in remove_text
+    if dedupe_requested:
+        unique_rows: list[object] = []
+        observed_behaviors: set[str] = set()
+        for row in target_rows:
+            if not isinstance(row, dict):
+                unique_rows.append(row)
+                continue
+            behavior = _eval_behavior_key(row)
+            if behavior in observed_behaviors:
+                continue
+            observed_behaviors.add(behavior)
+            unique_rows.append(row)
+        target_rows[:] = unique_rows
+        observed = {
+            signature(row) for row in target_rows if isinstance(row, dict)
+        }
+    observed_behaviors = {
+        _eval_behavior_key(row) for row in target_rows if isinstance(row, dict)
+    }
+    used_ids = {
+        row.get("id") for row in target_rows if isinstance(row, dict)
+    }
+    numeric_ids = [value for value in used_ids if isinstance(value, int)]
+    next_id = max(numeric_ids, default=0) + 1
+    appended = 0
+    for source in sources:
+        source_path = raw / source / "evals/evals.json"
+        if not source_path.is_file():
+            continue
+        try:
+            source_rows = json.loads(source_path.read_text()).get("evals") or []
+        except (OSError, json.JSONDecodeError):
+            continue
+        for source_row in source_rows:
+            if not isinstance(source_row, dict):
+                continue
+            row_signature = signature(source_row)
+            row_behavior = _eval_behavior_key(source_row)
+            if row_signature in observed or (
+                dedupe_requested and row_behavior in observed_behaviors
+            ):
+                continue
+            row = copy.deepcopy(source_row)
+            if row.get("id") in used_ids:
+                while next_id in used_ids:
+                    next_id += 1
+                row["id"] = next_id
+                next_id += 1
+            used_ids.add(row.get("id"))
+            target_rows.append(row)
+            observed.add(row_signature)
+            observed_behaviors.add(row_behavior)
+            appended += 1
+    if appended or dedupe_requested:
+        target_document["skill_name"] = target_name
+        atomic_write_json(target_path, target_document)
+    return appended
+
+
+def salvage_transient_optimize_result(
+    workspace: Path,
+    op: dict,
+    suffix: str,
+    error: BaseException,
+    metadata: dict[str, object],
+) -> bool:
+    """Keep DSH edits after a transient exit only if contracts accept them."""
+    if (
+        ACTIVE_BACKEND != "dsh"
+        or not isinstance(error, subprocess.CalledProcessError)
+        or not dsh_transient_failure(session_log_path(workspace, "optimize", suffix))
+    ):
+        return False
+    try:
+        collect_optimize_input(workspace, op)
+        validate_optimized_op(workspace, op)
+    except BaseException:
+        return False
+    metadata["salvaged_transient_exit"] = True
+    metadata["salvage_reason"] = "dsh-transient-exit-after-valid-edits"
+    print(
+        "! dsh optimize stream ended after valid edits; continuing to verification",
+        flush=True,
+    )
+    return True
 
 
 def finding_resource_contracts(workspace: Path, cluster: str) -> dict[str, object]:
@@ -10663,6 +12236,27 @@ def execute(args: argparse.Namespace) -> None:
             ):
                 candidates = inventory_merge_candidates(workspace, metadata_path)
                 scopes = materialize_inventory_findings(workspace, candidates)
+                budget = ACTIVE_EXECUTION_CONFIG.get("budgets") or {}
+                inventory_scope_cap = budget.get("inventory_goal_scope_cap")
+                if (
+                    isinstance(inventory_scope_cap, int)
+                    and not isinstance(inventory_scope_cap, bool)
+                    and inventory_scope_cap >= 1
+                    and len(scopes) > inventory_scope_cap
+                ):
+                    selected_scopes = scopes[:inventory_scope_cap]
+                    atomic_write_json(
+                        workspace / "run/inventory-scope-budget.json",
+                        {
+                            "schema_version": 1,
+                            "policy": "ranked-prefix",
+                            "cap": inventory_scope_cap,
+                            "selected": selected_scopes,
+                            "deferred": scopes[inventory_scope_cap:],
+                            "reason": "reserve-agent-calls-for-optimize-verify",
+                        },
+                    )
+                    scopes = selected_scopes
             move(TransitionDecision("SELECT_UNITS", "labels_ready", "selection.evidence-gate-v1", 1.0))
             if not scopes:
                 move(TransitionDecision("COMPLETE", "no_units", probability=1.0))

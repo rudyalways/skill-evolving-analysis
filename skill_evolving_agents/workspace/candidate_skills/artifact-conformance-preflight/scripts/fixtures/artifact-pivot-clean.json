@@ -1,0 +1,27 @@
+{
+  "workbook": "sales-summary.xlsx",
+  "pivots": [
+    {
+      "name": "RevenueByRegionQuarter",
+      "row_fields": ["Region"],
+      "column_fields": ["Quarter"],
+      "value_fields": ["Revenue"],
+      "aggregation": "sum",
+      "cache_fields": ["Region", "Quarter", "Revenue"]
+    },
+    {
+      "name": "UnitsByRepQuarter",
+      "row_fields": ["SalesRep"],
+      "column_fields": ["Quarter"],
+      "value_fields": ["Units"],
+      "aggregation": "count",
+      "cache_fields": ["SalesRep", "Quarter", "Units"]
+    }
+  ],
+  "rows": [
+    {"id": "s1", "region": "North", "quarter": "Q1", "sales_rep": "Ana", "revenue": 120, "units": 4},
+    {"id": "s2", "region": "South", "quarter": "Q1", "sales_rep": "Bo", "revenue": 80, "units": 3},
+    {"id": "s3", "region": "East", "quarter": "Q2", "sales_rep": "Ana", "revenue": 150, "units": 5},
+    {"id": "s4", "region": "West", "quarter": "Q2", "sales_rep": "Cai", "revenue": 90, "units": 2}
+  ]
+}

@@ -60,7 +60,7 @@
     },
     "diagnosis": {"mode": "enabled", "kind": "agent", "algorithm": "diagnosis.agent-full-json-v1"},
     "recall": {"mode": "enabled", "kind": "embedding-service", "algorithm": "recall.embedding-v1", "reject_below": 0.15, "accept_at": 0.7, "minimum_score": 0.35, "top_k": 5, "document_max_chars": 1200, "timeout_ms": 60000, "on_error": "fallback"},
-    "goal": {"mode": "enabled", "kind": "agent", "algorithm": "goal.agent-full-json-v1"},
+    "goal": {"mode": "enabled", "kind": "agent", "algorithm": "goal.agent-full-json-v1", "contract_repair_attempts": 2},
     "optimize": {"mode": "enabled", "kind": "agent", "algorithm": "optimize.agent-v1"},
     "verify": {"mode": "enabled", "kind": "agent", "algorithm": "verify.agent-structural-v1"},
     "publish": {"mode": "enabled", "kind": "deterministic", "algorithm": "publish.atomic-v1"}

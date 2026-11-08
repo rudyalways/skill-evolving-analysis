@@ -25,9 +25,11 @@ from common import privacy
 from trace_mining.source_adapters import (
     SourceAdapter,
     SourceAdapterRegistry,
+    detects_acp,
     detects_claude,
     detects_cursor,
     parse_claude,
+    parse_acp,
     parse_cursor,
 )
 
@@ -414,6 +416,7 @@ def source_registry() -> SourceAdapterRegistry:
     )
     registry.register(SourceAdapter("claude", detects_claude, parse_claude))
     registry.register(SourceAdapter("cursor", detects_cursor, parse_cursor))
+    registry.register(SourceAdapter("acp", detects_acp, parse_acp))
     return registry
 
 
@@ -445,7 +448,7 @@ def write_tool_evidence(
     config: dict[str, Any],
 ) -> tuple[int, int]:
     limits = config["limits"]
-    events = turn["tools"][: limits["max_tool_events_per_turn"]]
+    events = bounded_tool_events(turn["tools"], limits["max_tool_events_per_turn"])
     target.parent.mkdir(parents=True, exist_ok=True)
     error_count = 0
     with target.open("w") as output:
@@ -475,6 +478,25 @@ def write_tool_evidence(
     return len(events), error_count
 
 
+def bounded_tool_events(
+    events: list[dict[str, Any]], maximum: int
+) -> list[dict[str, Any]]:
+    """Keep bounded history while reserving terminal objective evidence."""
+    if len(events) <= maximum:
+        return list(events)
+    objective = next(
+        (
+            event
+            for event in reversed(events)
+            if "objective_verifier" in str(event.get("tool") or "").casefold()
+        ),
+        None,
+    )
+    if objective is None or maximum < 1:
+        return list(events[:maximum])
+    return [*events[: max(0, maximum - 1)], objective]
+
+
 def event_phase(tool: str, arguments: str) -> str:
     """Classify observable actions without retaining model reasoning."""
     folded = f"{tool} {arguments}".casefold()
@@ -499,9 +521,19 @@ def task_event_rows(
     methodology = config.get("methodology") or {}
     preview_chars = int(methodology.get("event_preview_chars", 400))
     events: list[dict[str, Any]] = []
-    for event in turn["tools"][: limits["max_tool_events_per_turn"]]:
+    for event in bounded_tool_events(
+        turn["tools"], limits["max_tool_events_per_turn"]
+    ):
         arguments = bounded(event["arguments"], preview_chars)
         result = clean_text(event["result"])
+        result_preview_chars = preview_chars
+        if "objective_verifier" in str(event.get("tool") or "").casefold():
+            # Objective verifier output is terminal ground truth, not ordinary
+            # tool chatter. Preserve enough of its structured failure summary
+            # for Diagnosis while retaining a hard upper bound.
+            result_preview_chars = int(
+                methodology.get("objective_verifier_preview_chars", 4000)
+            )
         targets = sorted(set(PATH_TOKEN.findall(arguments)))[:8]
         events.append(
             {
@@ -513,7 +545,7 @@ def task_event_rows(
                 "argument_sha256": hashlib.sha256(
                     clean_text(event["arguments"]).encode()
                 ).hexdigest(),
-                "result_preview": bounded(result, preview_chars),
+                "result_preview": bounded(result, result_preview_chars),
                 "result_sha256": hashlib.sha256(result.encode()).hexdigest(),
                 "targets": targets,
             }
@@ -596,6 +628,7 @@ def normalize(
             raw_root / "codex",
             raw_root / "claude",
             raw_root / "cursor",
+            raw_root / "acp",
             raw_root / "target_agent",
         )
         if path.is_dir()

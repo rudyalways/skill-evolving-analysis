@@ -972,6 +972,245 @@ def _completion_contract(
     ]
 
 
+def _objective_verifier_failure(
+    trajectory: dict[str, Any], turn_path: str
+) -> list[dict[str, Any]]:
+    """Promote an external benchmark failure above proxy behavior signals."""
+    failures = [
+        event
+        for event in trajectory["events"]
+        if event.get("status") == "failed"
+        and "objective_verifier" in str(event.get("tool") or "").casefold()
+    ]
+    if not failures:
+        return []
+    event = failures[-1]
+    event_sequence = int(event.get("sequence") or 0)
+    pre_verifier_context = [
+        candidate
+        for candidate in trajectory["events"]
+        if int(candidate.get("sequence") or 0) < event_sequence
+        and candidate.get("status") == "completed"
+        and str(candidate.get("phase") or "").casefold()
+        in {"execute", "verify", "test", "check"}
+    ][-5:]
+    context_text = " ".join(
+        str(candidate.get("result_preview") or "")
+        for candidate in pre_verifier_context
+    ).casefold()
+    local_objective_conflict = bool(
+        re.search(
+            r"(?:independent (?:implementations?|checks?).{0,80}agree|"
+            r"preflight.{0,40}(?:clean|exit=0)|all .{0,40}assertions passed)",
+            context_text,
+        )
+    )
+    result = str(event.get("result_preview") or "")
+    summaries: list[dict[str, str]] = []
+    attributed_skills: list[str] = []
+    try:
+        payload = json.loads(result)
+        if isinstance(payload, dict) and isinstance(payload.get("verifier_failures"), list):
+            summaries = [
+                {
+                    "test": str(row.get("test") or "")[:500],
+                    "assertion": str(row.get("assertion") or "")[:1200],
+                }
+                for row in payload["verifier_failures"]
+                if isinstance(row, dict)
+            ][:8]
+        if isinstance(payload, dict) and isinstance(payload.get("activated_skills"), list):
+            attributed_skills = sorted({
+                str(value) for value in payload["activated_skills"]
+                if isinstance(value, str) and value.strip()
+            })
+    except (TypeError, ValueError):
+        pass
+    if not attributed_skills:
+        # Normalized tool previews may truncate a large verifier payload after
+        # the compact activation header, leaving invalid JSON. Preserve causal
+        # attribution from that bounded prefix instead of falling back to
+        # semantic similarity alone.
+        activation = re.search(
+            r'"activated_skills"\s*:\s*\[([^\]]*)\]', result
+        )
+        if activation:
+            attributed_skills = sorted(set(re.findall(
+                r'"([a-z0-9][a-z0-9-]{0,63})"', activation.group(1)
+            )))
+    failure_text = " ".join(
+        f"{row.get('test', '')} {row.get('assertion', '')}" for row in summaries
+    ).casefold() or result.casefold()
+    failure_classes: list[str] = []
+    if re.search(r"range errors|expected \[[^]]+\]|out.of.range|bounds?", failure_text):
+        failure_classes.append("numeric-range-invariant")
+    if re.search(r"confidence|correlat|evidence|semantic overlap|near-zero", failure_text):
+        failure_classes.append("evidence-calibration-invariant")
+    if re.search(r"expected|ground.?truth|mismatch|missing|extra|changed|assert .+ ==", failure_text):
+        failure_classes.append("expected-actual-equivalence")
+    derived_numeric_mismatch = bool(
+        re.search(
+            r"(?:assertalmost|within tolerance|delta=|expected\s+-?\d+(?:\.\d+)?"
+            r"[^\n]{0,160}got\s+-?\d+(?:\.\d+)?)",
+            failure_text,
+        )
+    )
+    if derived_numeric_mismatch:
+        failure_classes.append("derived-numeric-oracle-mismatch")
+    if not failure_classes:
+        failure_classes.append("objective-contract-mismatch")
+    selected_events = pre_verifier_context + [event]
+    quality = _quality(
+        selected_events,
+        success_dependency=1.0,
+        surprise=0.9,
+        reusability=0.9,
+        evidence_quality=1.0,
+    )
+    return [
+        _finding(
+            "method-objective-verifier-failure",
+            trajectory,
+            turn_path,
+            selected_events,
+            0.99,
+            quality,
+            {
+                "kind": "objective_verifier_failure",
+                "failed_action": _normalized_action(event),
+                "failure_signature": hashlib.sha256(result.encode()).hexdigest()[:16],
+                "failure_classes": failure_classes,
+                "failure_summaries": summaries,
+                "attributed_skills": attributed_skills,
+                "verifier_visibility": "posthoc-only",
+                "portable_preflight_required": True,
+                "oracle_independence_required": derived_numeric_mismatch,
+                "local_objective_conflict": local_objective_conflict,
+                "learning_disposition": (
+                    "evaluation-contract-conflict"
+                    if local_objective_conflict
+                    else "portable-preflight-gap"
+                ),
+                "validation_strategies": (
+                    ["independent-recomputation", "metamorphic-checks"]
+                    if derived_numeric_mismatch
+                    else ["task-derived-contract"]
+                ),
+                "resource_hint": {
+                    "resource": "scripts",
+                    "decision": "use",
+                    "reason": (
+                        "The objective failure is a deterministic data invariant. "
+                        "Author a bounded preflight validator that accepts the produced "
+                        "artifact plus task-derived constraints, reports concrete failing "
+                        "records or fields, and exits nonzero before submission. For a "
+                        "derived numeric answer whose expected value is hidden, the checker "
+                        "must independently recompute the value or apply metamorphic checks; "
+                        "it must not copy the producer's value into the expected field."
+                    ),
+                },
+                "rule": (
+                    "When the objective verifier is unavailable during execution, "
+                    "translate task-visible acceptance criteria into an independent "
+                    "portable preflight, validate the complete artifact, repair the "
+                    "producing rule rather than isolated outputs, and submit only after "
+                    "the preflight passes. A self-referential check that compares an output "
+                    "to an expectation derived by the same implementation is not evidence "
+                    "of correctness. When multiple independent local checks agree but the "
+                    "posthoc objective oracle still disagrees, preserve that conflict as an "
+                    "evaluation/specification gap; do not encode the hidden expected value "
+                    "or keep rewriting the skill without new task-visible evidence."
+                ),
+            },
+        )
+    ]
+
+
+def _successful_excessive_effort(
+    trajectory: dict[str, Any], turn_path: str, config: dict[str, Any]
+) -> list[dict[str, Any]]:
+    """Learn from accepted runs whose activated skill still causes large churn."""
+    events = trajectory["events"]
+    verifier = next(
+        (
+            event
+            for event in reversed(events)
+            if event.get("status") == "completed"
+            and "objective_verifier" in str(event.get("tool") or "").casefold()
+        ),
+        None,
+    )
+    if verifier is None:
+        return []
+    try:
+        payload = json.loads(str(verifier.get("result_preview") or ""))
+    except (TypeError, ValueError):
+        return []
+    if not isinstance(payload, dict) or float(payload.get("reward") or 0) < 1:
+        return []
+    attributed = sorted(
+        {
+            str(value)
+            for value in payload.get("activated_skills") or []
+            if isinstance(value, str) and value.strip()
+        }
+    )
+    tool_calls = int(payload.get("tool_calls") or 0)
+    minimum = int(config.get("successful_effort_min_tool_calls", 60))
+    if not attributed or tool_calls < minimum:
+        return []
+    work = [event for event in events if event is not verifier]
+    execute = [event for event in work if event.get("phase") == "execute"]
+    modify = [event for event in work if event.get("phase") == "modify"]
+    if len(execute) < int(config.get("successful_effort_min_execute_events", 20)):
+        return []
+    # Evidence spans early, middle, and late work so this cannot be inferred
+    # from a single slow command or an ordinary long input artifact.
+    indices = sorted({0, len(work) // 3, (2 * len(work)) // 3, len(work) - 1})
+    selected = [work[index] for index in indices] + [verifier]
+    quality = _quality(
+        selected,
+        success_dependency=0.94,
+        surprise=0.9,
+        reusability=0.9,
+        evidence_quality=0.96,
+    )
+    return [
+        _finding(
+            "method-successful-excessive-effort",
+            trajectory,
+            turn_path,
+            selected,
+            0.96,
+            quality,
+            {
+                "kind": "successful_excessive_effort",
+                "attributed_skills": attributed,
+                "tool_calls": tool_calls,
+                "execute_events": len(execute),
+                "modify_events": len(modify),
+                "efficiency_target": max(1, minimum // 2),
+                "learning_disposition": "simplify-successful-path",
+                "resource_hint": {
+                    "resource": "scripts",
+                    "decision": "use",
+                    "reason": (
+                        "The task passed, but the activated skill required repeated "
+                        "execution and repair. Consolidate the observed successful path "
+                        "into a bounded compatibility probe and deterministic producer; "
+                        "retain correctness checks and fail once with actionable diagnostics."
+                    ),
+                },
+                "rule": (
+                    "Preserve the accepted output contract while replacing repeated "
+                    "inspection, ad-hoc rewrites, and self-debugging with one compatibility "
+                    "probe, one deterministic execution path, and one independent check."
+                ),
+            },
+        )
+    ]
+
+
 def mine_trajectory(
     trajectory: dict[str, Any], turn_path: str, config: dict[str, Any]
 ) -> list[dict[str, Any]]:
@@ -989,6 +1228,10 @@ def mine_trajectory(
         return enabled is None or name in enabled
 
     findings: list[dict[str, Any]] = []
+    if use("method-objective-verifier-failure"):
+        findings.extend(_objective_verifier_failure(trajectory, turn_path))
+    if use("method-successful-excessive-effort"):
+        findings.extend(_successful_excessive_effort(trajectory, turn_path, config))
     if use("method-phase-workflow"):
         findings.extend(_phase_workflow(trajectory, turn_path))
     if use("method-failure-recovery"):
@@ -1064,9 +1307,50 @@ def consolidate_cross_task(
         row["features"]["candidate_source"] = "methodology_consolidated"
         row["features"]["distinct_sessions"] = len(sessions)
         row["features"]["distinct_tasks"] = len(tasks)
+        row["trace_ids"] = sorted({
+            trace_id
+            for item in rows
+            for trace_id in item.get("trace_ids") or []
+        })
+        row["evidence"] = [
+            evidence
+            for item in rows
+            for evidence in item.get("evidence") or []
+        ]
         row["features"]["supporting_signal_ids"] = [
             item["signal_id"] for item in rows
         ]
+        lessons = [
+            (item.get("features") or {}).get("lesson") or {}
+            for item in rows
+        ]
+        if all(lesson.get("kind") == "objective_verifier_failure" for lesson in lessons):
+            row["features"]["lesson"] = {
+                "kind": "cross_task_portable_preflight",
+                "failure_classes": sorted({
+                    failure_class
+                    for lesson in lessons
+                    for failure_class in lesson.get("failure_classes") or []
+                }),
+                "verifier_visibility": "posthoc-only",
+                "portable_preflight_required": True,
+                "resource_hint": {
+                    "resource": "scripts",
+                    "decision": "use",
+                    "reason": (
+                        "Multiple independent tasks failed deterministic objective "
+                        "contracts visible only after submission. Create a config-driven "
+                        "artifact preflight with numeric-range, evidence-calibration, "
+                        "and expected-versus-actual adapters."
+                    ),
+                },
+                "rule": (
+                    "Before submission, compile task-visible constraints into a portable "
+                    "validation specification, run the independent preflight over the "
+                    "entire artifact, repair producing logic for every reported class, "
+                    "and require a clean exit."
+                ),
+            }
         consolidated.append(row)
     return consolidated
 

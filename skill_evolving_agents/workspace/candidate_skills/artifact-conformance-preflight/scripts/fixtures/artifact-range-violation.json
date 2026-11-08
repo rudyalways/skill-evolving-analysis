@@ -1,0 +1,6 @@
+{
+  "records": [
+    {"id": "r1", "duration_minutes": 5},
+    {"id": "r2", "duration_minutes": 90}
+  ]
+}

@@ -157,7 +157,8 @@ def claim_count(skill: dict[str, Any]) -> int:
     requirements = skill.get("requirements") or {}
     sections = requirements.get("sections") or []
     directories = requirements.get("directories") or []
-    return max(1, len(sections) + len(directories))
+    description = 1 if requirements.get("description") else 0
+    return max(1, len(sections) + len(directories) + description)
 
 
 def skill_decision_score(
@@ -1499,13 +1500,32 @@ def validate_goal(path: Path, *, exactly_one_op: bool = False) -> dict[str, Any]
                 skill_path = f"{op_path}.skills[{skill_index}]"
                 required_string(skill, "goal", skill_path)
                 required_string(skill, "facet", skill_path)
+                if "description_goal" in skill:
+                    required_string(skill, "description_goal", skill_path)
                 _validate_change_lists(skill, skill_path)
                 _validate_resource_plan(skill, skill_path)
                 _require_behavioral_update_evals(skill, skill_path)
+                section_names = {
+                    str(row.get("section") if isinstance(row, dict) else row)
+                    .strip()
+                    .lower()
+                    .replace("-", "_")
+                    for row in skill.get("sections") or []
+                }
+                if (
+                    skill.get("resource_plan") is not None
+                    and "when_to_use" in section_names
+                    and not skill.get("description_goal")
+                ):
+                    fail(
+                        f"{skill_path}.description_goal",
+                        "is required when when_to_use changes so retrieval scope stays aligned",
+                    )
                 if (
                     not skill.get("sections")
                     and not skill.get("dirs")
                     and not skill.get("remove")
+                    and not skill.get("description_goal")
                 ):
                     fail(
                         skill_path,
@@ -1656,6 +1676,14 @@ def validate_verification_input(path: Path) -> dict[str, Any]:
         requirements = skill.get("requirements")
         if not isinstance(requirements, dict):
             fail(f"{item_path}.requirements", "must be an object")
+        description = requirements.get("description")
+        if description is not None and (
+            not isinstance(description, str) or not description.strip()
+        ):
+            fail(
+                f"{item_path}.requirements.description",
+                "must be null or a non-empty string",
+            )
         for key, name_key in (
             ("sections", "section"),
             ("directories", "directory"),
@@ -2251,8 +2279,6 @@ def validate_verification(
     budget = feedback.get("retry_budget")
     if not isinstance(budget, int) or isinstance(budget, bool) or budget < 0:
         fail("$.feedback.retry_budget", "must be a non-negative integer")
-    if budget != 0:
-        fail("$.feedback.retry_budget", "must be 0 while retries are disabled")
     rows = required_list(feedback, "per_skill", "$.feedback")
     names: set[str] = set()
     for index, row in enumerate(rows):

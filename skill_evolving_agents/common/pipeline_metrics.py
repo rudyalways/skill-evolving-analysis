@@ -757,6 +757,46 @@ def collect_phase_metrics(
         else []
     )
     run_root = workspace / "run"
+    status_records = [
+        value
+        for path in sorted((run_root / "status").glob("*/*.json"))
+        if isinstance(value := _read_json(path), dict)
+    ]
+    failed_statuses = [
+        value for value in status_records if value.get("state") == "failed"
+    ]
+    # A continuation may accept an operation after earlier authoring attempts
+    # failed. Historical failures remain valuable attempt metrics, but must not
+    # keep the final run terminally failed after Judge and publication succeed.
+    accepted_operation_tokens: set[str] = set()
+    for publication_path in sorted(run_root.glob("*/ops/*/publication.json")):
+        publication = _read_json(publication_path)
+        if not isinstance(publication, dict) or publication.get("accepted") is not True:
+            continue
+        accepted_operation_tokens.add(
+            f"-{publication_path.parents[2].name}-op-{publication_path.parent.name}-"
+        )
+    unresolved_failed_statuses = [
+        value
+        for value in failed_statuses
+        if not any(
+            token in str(value.get("item") or "")
+            for token in accepted_operation_tokens
+        )
+    ]
+    started_statuses = [
+        value for value in status_records if value.get("state") == "started"
+    ]
+    failed_phases = sorted(
+        {str(value.get("stage") or "unknown") for value in unresolved_failed_statuses}
+    )
+    execution_status = (
+        "failed"
+        if unresolved_failed_statuses
+        else "running" if started_statuses
+        else "completed" if isinstance(pipeline_summary, dict)
+        else "unknown"
+    )
     proposed_by_operation = _operation_counts()
     operation_kind_by_scope: dict[tuple[str, str], str] = {}
     for path in sorted(run_root.glob("*/evolve-goal.json")):
@@ -884,6 +924,12 @@ def collect_phase_metrics(
         and accepted == 0
         and (idempotent_scopes + converged_resource_opportunities) > 0
     )
+    change_disposition = (
+        "changed"
+        if changed_scopes
+        else "converged" if converged_replay else "no_change"
+    )
+    run_disposition = "failed" if execution_status == "failed" else change_disposition
     novel_goal_scopes = max(len(scopes) - idempotent_scopes, 0)
     profile = _read_json(workspace / "run/config/pipeline-profile.json")
     funnel_targets = (
@@ -1093,6 +1139,19 @@ def collect_phase_metrics(
     return {
         "schema_version": 1,
         "run_id": workspace.name,
+        "execution": {
+            "status": execution_status,
+            "failed_phases": failed_phases,
+            "failed_items": [
+                {
+                    "stage": str(value.get("stage") or "unknown"),
+                    "item": str(value.get("item") or "unknown"),
+                    "error": value.get("error"),
+                }
+                for value in unresolved_failed_statuses
+            ],
+            "change_disposition": change_disposition,
+        },
         "metric_semantics": {
             "measured": (
                 "artifact coverage, deterministic validation, timing, replay "
@@ -1191,11 +1250,12 @@ def collect_phase_metrics(
                 "idempotent_replay_scopes": idempotent_scopes,
                 "idempotent_resource_opportunities": converged_resource_opportunities,
                 "converged_replay": converged_replay,
-                "run_disposition": (
-                    "changed"
-                    if changed_scopes
-                    else "converged" if converged_replay else "no_change"
+                "execution_status": execution_status,
+                "failed_scopes": sum(
+                    value.get("stage") == "goal" for value in failed_statuses
                 ),
+                "change_disposition": change_disposition,
+                "run_disposition": run_disposition,
                 "operations": len(operations),
                 "proposed_by_operation": dict(proposed_by_operation),
                 "reduction_decisions": dict(sorted(reduction_counts.items())),
@@ -1290,11 +1350,10 @@ def collect_phase_metrics(
             "idempotent_replay_scopes": idempotent_scopes,
             "idempotent_resource_opportunities": converged_resource_opportunities,
             "converged_replay": converged_replay,
-            "run_disposition": (
-                "changed"
-                if changed_scopes
-                else "converged" if converged_replay else "no_change"
-            ),
+            "execution_status": execution_status,
+            "failed_phases": failed_phases,
+            "change_disposition": change_disposition,
+            "run_disposition": run_disposition,
             "novel_goal_scopes": novel_goal_scopes,
             "rates": funnel_rates,
             "action_count_distribution": dict(

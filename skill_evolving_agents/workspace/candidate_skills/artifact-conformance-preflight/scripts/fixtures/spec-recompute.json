@@ -1,0 +1,15 @@
+{
+  "spec_revision": "fixture-recompute-v1",
+  "records_path": "records",
+  "invariants": [
+    {
+      "id": "recompute-duration",
+      "class": "independent_recompute",
+      "field": "duration_minutes",
+      "oracle_path": "oracle_duration.py",
+      "tolerance": 0.01,
+      "expected_source": "task statement, duration = distance / speed",
+      "record_locator": "id"
+    }
+  ]
+}

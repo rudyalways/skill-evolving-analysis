@@ -1,0 +1,4 @@
+interface:
+  display_name: "Verify Artifact Against Ground Truth"
+  short_description: "Verify an enumerated artifact such as a CSV, JSON, table, report, or extracted…"
+  default_prompt: "Use $verify-artifact-against-ground-truth for this request."

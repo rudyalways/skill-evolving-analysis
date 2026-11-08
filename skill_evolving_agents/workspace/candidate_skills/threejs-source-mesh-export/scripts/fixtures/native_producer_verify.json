@@ -1,0 +1,8 @@
+{
+  "verifier": "producer export verify",
+  "source": "native_scene_displaced_pair.mjs",
+  "status": "pass",
+  "agrees_with_export": true,
+  "mesh_count": 2,
+  "note": "Producer-derived success report. It is output evidence only and is never a checker expectation."
+}

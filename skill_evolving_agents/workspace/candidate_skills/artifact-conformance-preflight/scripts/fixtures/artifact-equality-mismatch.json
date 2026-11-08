@@ -1,0 +1,7 @@
+{
+  "records": [
+    {"id": "r1", "computed_total": 120, "stated_total": 120},
+    {"id": "r2", "computed_total": 79, "stated_total": 80},
+    {"id": "r3", "computed_total": 150, "stated_total": 150}
+  ]
+}

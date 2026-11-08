@@ -1,0 +1,178 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Normalized architectural DXF extraction",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "source",
+    "units",
+    "layer_inventory",
+    "rooms",
+    "doors",
+    "fixtures",
+    "grab_bars",
+    "turning_space"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "source": {
+      "type": "object",
+      "required": [
+        "path",
+        "sha256",
+        "dxf_version"
+      ],
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "sha256": {
+          "type": "string"
+        },
+        "dxf_version": {
+          "type": "string"
+        }
+      }
+    },
+    "units": {
+      "type": "string"
+    },
+    "layer_inventory": {
+      "type": "array",
+      "minItems": 1
+    },
+    "rooms": {
+      "type": "array",
+      "minItems": 1
+    },
+    "doors": {
+      "type": "array",
+      "minItems": 1
+    },
+    "fixtures": {
+      "type": "array",
+      "minItems": 1
+    },
+    "grab_bars": {
+      "type": "array",
+      "minItems": 1
+    },
+    "turning_space": {
+      "type": "object",
+      "required": [
+        "status",
+        "diameter",
+        "wall_clearance",
+        "search_step",
+        "search_budget",
+        "candidates",
+        "selected"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "fit",
+            "no_fit"
+          ]
+        },
+        "diameter": {
+          "type": "number"
+        },
+        "wall_clearance": {
+          "type": "number"
+        },
+        "search_step": {
+          "type": "number"
+        },
+        "search_budget": {
+          "type": "object"
+        },
+        "candidates": {
+          "type": "array"
+        },
+        "selected": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "search_miss": {
+          "type": "object",
+          "properties": {
+            "reason": {
+              "type": "string"
+            },
+            "room_regions": {
+              "type": "integer"
+            },
+            "grid_points_evaluated": {
+              "type": "integer"
+            }
+          }
+        }
+      }
+    },
+    "ignored_entities": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "entity_type",
+          "layer",
+          "count",
+          "reason"
+        ],
+        "properties": {
+          "entity_type": {
+            "type": "string"
+          },
+          "layer": {
+            "type": "string"
+          },
+          "count": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "reason": {
+            "type": "string",
+            "const": "non_geometric_helper"
+          }
+        }
+      }
+    },
+    "derived_rooms": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "room_id",
+          "method",
+          "source_handles",
+          "wall_thickness"
+        ],
+        "properties": {
+          "room_id": {
+            "type": "string"
+          },
+          "method": {
+            "type": "string",
+            "const": "wall_envelope_inset"
+          },
+          "source_handles": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "wall_thickness": {
+            "type": "number"
+          }
+        }
+      }
+    }
+  }
+}

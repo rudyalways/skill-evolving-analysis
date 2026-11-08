@@ -1,0 +1,225 @@
+{
+  "spec_revision": "task-rev-rig-1",
+  "invariants": [
+    {
+      "id": "geometry-outer-rim",
+      "class": "geometry_conformance",
+      "deliverable_path": "wheel_structure/outer_rim.obj",
+      "format": "obj",
+      "source": {
+        "scene_path": "source-scene-rig.json",
+        "units": "meters"
+      },
+      "mesh_to_source": {
+        "wheel_structure/outer_rim": "outer_rim"
+      },
+      "unit_conversion": {
+        "from": "meters",
+        "to": "meters",
+        "factor": 1.0,
+        "offset": 0.0
+      },
+      "frame_transform": [
+        [
+          1,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          1,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          1,
+          0
+        ]
+      ],
+      "tolerance": 0.01,
+      "metric": "chamfer",
+      "sample_count": 512,
+      "export_path_checks": {
+        "pairs": [
+          {
+            "part_path": "wheel_structure/outer_rim.obj",
+            "part_mesh": "wheel_structure/outer_rim",
+            "link_path": "link_structure/outer_rim.obj",
+            "link_mesh": "link_wheel_structure/outer_rim"
+          },
+          {
+            "part_path": "support_structure.obj",
+            "part_mesh": "support_structure",
+            "link_path": "link_structure/support_structure.obj",
+            "link_mesh": "link_support_structure"
+          }
+        ]
+      },
+      "expected_source": "task statement: wheel outer rim and support must match the source scene within 0.01 meter",
+      "provenance": {
+        "source_scene_path": "source-scene-rig.json",
+        "frame": "scene_root",
+        "units": "meters",
+        "derivation": "read the task source scene primitive type, dimensions, and transform, then rebuild the expected surface with the preflight builder",
+        "reader": "task source-scene primitive reader",
+        "transform_path": "independent primitive composition plus frame_transform normalization"
+      }
+    },
+    {
+      "id": "geometry-link-outer-rim",
+      "class": "geometry_conformance",
+      "deliverable_path": "link_structure/outer_rim.obj",
+      "format": "obj",
+      "source": {
+        "scene_path": "source-scene-rig.json",
+        "units": "meters"
+      },
+      "mesh_to_source": {
+        "link_wheel_structure/outer_rim": "outer_rim"
+      },
+      "unit_conversion": {
+        "from": "meters",
+        "to": "meters",
+        "factor": 1.0,
+        "offset": 0.0
+      },
+      "frame_transform": [
+        [
+          1,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          1,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          1,
+          0
+        ]
+      ],
+      "tolerance": 0.01,
+      "metric": "chamfer",
+      "sample_count": 512,
+      "expected_source": "task statement: link outer rim must match the source scene within 0.01 meter",
+      "provenance": {
+        "source_scene_path": "source-scene-rig.json",
+        "frame": "scene_root",
+        "units": "meters",
+        "derivation": "read the task source scene primitive type, dimensions, and transform, then rebuild the expected surface with the preflight builder",
+        "reader": "task source-scene primitive reader",
+        "transform_path": "independent primitive composition plus frame_transform normalization"
+      }
+    },
+    {
+      "id": "geometry-support",
+      "class": "geometry_conformance",
+      "deliverable_path": "support_structure.obj",
+      "format": "obj",
+      "source": {
+        "scene_path": "source-scene-rig.json",
+        "units": "meters"
+      },
+      "mesh_to_source": {
+        "support_structure": "support_structure"
+      },
+      "unit_conversion": {
+        "from": "meters",
+        "to": "meters",
+        "factor": 1.0,
+        "offset": 0.0
+      },
+      "frame_transform": [
+        [
+          1,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          1,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          1,
+          0
+        ]
+      ],
+      "tolerance": 0.01,
+      "metric": "chamfer",
+      "sample_count": 512,
+      "expected_source": "task statement: support structure must match the source scene within 0.01 meter",
+      "provenance": {
+        "source_scene_path": "source-scene-rig.json",
+        "frame": "scene_root",
+        "units": "meters",
+        "derivation": "read the task source scene primitive type, dimensions, and transform, then rebuild the expected surface with the preflight builder",
+        "reader": "task source-scene primitive reader",
+        "transform_path": "independent primitive composition plus frame_transform normalization"
+      }
+    },
+    {
+      "id": "geometry-link-support",
+      "class": "geometry_conformance",
+      "deliverable_path": "link_structure/support_structure.obj",
+      "format": "obj",
+      "source": {
+        "scene_path": "source-scene-rig.json",
+        "units": "meters"
+      },
+      "mesh_to_source": {
+        "link_support_structure": "support_structure"
+      },
+      "unit_conversion": {
+        "from": "meters",
+        "to": "meters",
+        "factor": 1.0,
+        "offset": 0.0
+      },
+      "frame_transform": [
+        [
+          1,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          1,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          1,
+          0
+        ]
+      ],
+      "tolerance": 0.01,
+      "metric": "chamfer",
+      "sample_count": 512,
+      "expected_source": "task statement: link support must match the source scene within 0.01 meter",
+      "provenance": {
+        "source_scene_path": "source-scene-rig.json",
+        "frame": "scene_root",
+        "units": "meters",
+        "derivation": "read the task source scene primitive type, dimensions, and transform, then rebuild the expected surface with the preflight builder",
+        "reader": "task source-scene primitive reader",
+        "transform_path": "independent primitive composition plus frame_transform normalization"
+      }
+    }
+  ]
+}

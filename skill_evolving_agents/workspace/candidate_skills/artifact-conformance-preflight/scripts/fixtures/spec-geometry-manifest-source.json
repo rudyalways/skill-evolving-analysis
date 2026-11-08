@@ -1,0 +1,56 @@
+{
+  "spec_revision": "task-rev-geometry-manifest-source",
+  "invariants": [
+    {
+      "id": "exported-crate-geometry",
+      "class": "geometry_conformance",
+      "deliverable_path": "mesh-box-equivalent.obj",
+      "format": "obj",
+      "source": {
+        "scene_path": "producer-manifest.json",
+        "units": "meters"
+      },
+      "mesh_to_source": {
+        "crate": "crate"
+      },
+      "unit_conversion": {
+        "from": "meters",
+        "to": "meters",
+        "factor": 1.0,
+        "offset": 0.0
+      },
+      "frame_transform": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ]
+      ],
+      "tolerance": 0.01,
+      "metric": "max_nearest",
+      "sample_count": 512,
+      "expected_source": "task statement: the exported crate must match the source scene's 1x2x3 meter box within 0.01 meter",
+      "provenance": {
+        "source_scene_path": "producer-manifest.json",
+        "frame": "scene_root",
+        "units": "meters",
+        "derivation": "read primitives from the producer manifest that accompanied the export",
+        "reader": "producer manifest reader",
+        "transform_path": "producer export transform path"
+      }
+    }
+  ]
+}

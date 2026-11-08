@@ -1,0 +1,20 @@
+{
+  "spec_revision": "fixture-pivot-structural-v1",
+  "records_path": "pivots",
+  "invariants": [
+    {
+      "id": "pivot-object-shape",
+      "class": "structural",
+      "objects_path": "pivots",
+      "record_locator": "name",
+      "required_fields": ["row_fields", "column_fields", "value_fields", "aggregation", "cache_fields"],
+      "non_empty_list_fields": ["row_fields", "column_fields", "value_fields"],
+      "aggregation_field": "aggregation",
+      "allowed_aggregations": ["sum", "count", "average"],
+      "cache_field": "cache_fields",
+      "cache_sources": ["row_fields", "column_fields", "value_fields"],
+      "case_sensitive": false,
+      "expected_source": "task statement, pivot object contract and allowed aggregation modes"
+    }
+  ]
+}

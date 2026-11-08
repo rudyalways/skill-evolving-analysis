@@ -1,0 +1,10 @@
+{
+  "records": [
+    {"id": "r1", "computed_total": 120, "stated_total": 120, "duration_minutes": 5, "confidence": 0.30, "evidence_strength": "weak"},
+    {"id": "r2", "computed_total": 80, "stated_total": 80, "duration_minutes": 10, "confidence": 0.35, "evidence_strength": "weak"},
+    {"id": "r3", "computed_total": 150, "stated_total": 150, "duration_minutes": 20, "confidence": 0.55, "evidence_strength": "medium"},
+    {"id": "r4", "computed_total": 90, "stated_total": 90, "duration_minutes": 30, "confidence": 0.60, "evidence_strength": "medium"},
+    {"id": "r5", "computed_total": 200, "stated_total": 200, "duration_minutes": 40, "confidence": 0.80, "evidence_strength": "strong"},
+    {"id": "r6", "computed_total": 110, "stated_total": 110, "duration_minutes": 50, "confidence": 0.85, "evidence_strength": "strong"}
+  ]
+}

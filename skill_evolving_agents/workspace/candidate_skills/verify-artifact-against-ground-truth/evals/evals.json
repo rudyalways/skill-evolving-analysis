@@ -1,0 +1,43 @@
+{
+  "skill_name": "verify-artifact-against-ground-truth",
+  "evals": [
+    {
+      "id": 1,
+      "kind": "should_apply",
+      "prompt": "The extracted records are in output.csv and the expected records are in expected.csv. The JSON parses, the schema check passes, and the row count matches, but the verifier still reports a content mismatch. Verify the artifact against the expected records and repair the problem before we finish.",
+      "expected_output": "A keyed expected-versus-actual diff exposes the first concrete mismatch; the agent repairs the producing cause, rebuilds the artifact, and replays the diff to zero unexplained differences.",
+      "expectations": [
+        "The agent builds keyed maps from an independently derived expected set and the produced artifact.",
+        "The agent reports matched, missing, extra, and changed counts.",
+        "The agent does not accept the passing structural checks as completion.",
+        "The agent traces the first mismatch to the producing step and repairs the cause before replaying the diff."
+      ],
+      "files": [],
+      "source_trace_ids": []
+    },
+    {
+      "id": 2,
+      "kind": "should_apply",
+      "prompt": "We already ran the structural suite and every row-count and schema assertion passed, so record-level verification is done, right? Confirm and finish without rerunning anything.",
+      "expected_output": "The agent rejects the structural pass as proof of content equivalence, performs the keyed ground-truth diff, and continues until every missing, extra, or changed record is repaired or explicitly justified.",
+      "expectations": [
+        "The passing structural suite is not treated as a passing content check.",
+        "The agent runs or replays the keyed expected-versus-actual diff.",
+        "Completion is withheld until the diff has zero unexplained differences."
+      ],
+      "files": [],
+      "source_trace_ids": []
+    },
+    {
+      "id": 3,
+      "kind": "should_not_apply",
+      "prompt": "Proofread this prose essay for clarity, tone, and flow. There is no list of expected records or enumerated output to compare.",
+      "expected_output": "The record-level verification workflow is not selected; prose editing is handled without an expected-record diff.",
+      "expectations": [
+        "The skill is not selected for a prose deliverable with no enumerated expected records."
+      ],
+      "files": [],
+      "source_trace_ids": []
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "spec_revision": "fixture-equality-v1",
+  "records_path": "records",
+  "invariants": [
+    {
+      "id": "eq-total",
+      "class": "equality",
+      "field": "computed_total",
+      "expected_field": "stated_total",
+      "expected_source": "task statement, totals table",
+      "record_locator": "id"
+    }
+  ]
+}

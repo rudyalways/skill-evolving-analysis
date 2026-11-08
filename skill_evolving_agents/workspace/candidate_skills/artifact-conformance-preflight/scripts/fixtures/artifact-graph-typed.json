@@ -1,0 +1,15 @@
+{
+  "graph": {
+    "nodes": [
+      {"id": "Start", "type": "start", "label": "receive order"},
+      {"id": "A", "type": "task", "label": "validate order"},
+      {"id": "B", "type": "task", "label": "reserve stock"},
+      {"id": "End", "type": "terminal", "label": "order accepted"}
+    ],
+    "edges": [
+      {"source": "Start", "target": "A"},
+      {"source": "A", "target": "B"},
+      {"source": "B", "target": "End"}
+    ]
+  }
+}

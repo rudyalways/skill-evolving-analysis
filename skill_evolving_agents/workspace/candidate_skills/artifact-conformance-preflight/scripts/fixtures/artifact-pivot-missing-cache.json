@@ -1,0 +1,16 @@
+{
+  "workbook": "sales-summary.xlsx",
+  "pivots": [
+    {
+      "name": "RevenueByRegionQuarter",
+      "row_fields": ["Region"],
+      "column_fields": ["Quarter"],
+      "value_fields": ["Revenue"],
+      "aggregation": "sum",
+      "cache_fields": ["Region", "Quarter"]
+    }
+  ],
+  "rows": [
+    {"id": "s1", "region": "North", "quarter": "Q1", "revenue": 120}
+  ]
+}

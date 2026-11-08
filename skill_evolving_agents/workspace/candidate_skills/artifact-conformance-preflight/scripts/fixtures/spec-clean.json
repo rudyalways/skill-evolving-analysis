@@ -1,0 +1,34 @@
+{
+  "spec_revision": "fixture-clean-v1",
+  "records_path": "records",
+  "invariants": [
+    {
+      "id": "eq-total",
+      "class": "equality",
+      "field": "computed_total",
+      "expected_field": "stated_total",
+      "expected_source": "task statement, totals table",
+      "record_locator": "id"
+    },
+    {
+      "id": "range-duration",
+      "class": "numeric_range",
+      "field": "duration_minutes",
+      "min": 60,
+      "max": 3600,
+      "unit": {"from": "minutes", "to": "seconds", "factor": 60, "offset": 0},
+      "expected_source": "task statement, duration bound in seconds",
+      "record_locator": "id"
+    },
+    {
+      "id": "confidence-separation",
+      "class": "calibration",
+      "confidence": "confidence",
+      "group_by": "evidence_strength",
+      "order": ["weak", "medium", "strong"],
+      "min_separation": 0.1,
+      "expected_source": "task statement, calibration rule",
+      "record_locator": "id"
+    }
+  ]
+}

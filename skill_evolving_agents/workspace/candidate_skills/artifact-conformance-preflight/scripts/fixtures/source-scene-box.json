@@ -1,0 +1,14 @@
+{
+  "scene": "exported-crate-source",
+  "units": "meters",
+  "primitives": [
+    {
+      "id": "crate",
+      "type": "box",
+      "size": [1.0, 2.0, 3.0],
+      "position": [0.0, 0.0, 0.0],
+      "rotation_euler_deg": [0.0, 0.0, 0.0],
+      "scale": [1.0, 1.0, 1.0]
+    }
+  ]
+}

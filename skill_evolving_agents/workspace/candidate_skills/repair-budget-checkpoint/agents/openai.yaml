@@ -1,0 +1,4 @@
+interface:
+  display_name: "Repair Budget Checkpoint"
+  short_description: "Checkpoint a long repair or iterative debugging loop against its remaining…"
+  default_prompt: "Use $repair-budget-checkpoint for this request."

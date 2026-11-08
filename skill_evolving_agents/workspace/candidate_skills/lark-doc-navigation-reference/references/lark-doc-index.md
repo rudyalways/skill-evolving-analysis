@@ -1,28 +1,31 @@
 # lark-doc navigational index
 
-A durable index for the live lark-doc skill. It records where knowledge lives and whether it is still fresh; it never copies the knowledge itself.
+A durable index for the live lark-doc skill documentation. It records where knowledge lives, which heading and line range governs a topic, and whether the source is still fresh. It never copies the knowledge itself.
 
 ## Contents
 
 - [Read trigger](#read-trigger)
 - [Source locators](#source-locators)
+- [File map](#file-map)
 - [Digest ledger](#digest-ledger)
 - [Topic-to-heading map](#topic-to-heading-map)
-- [Refresh rule](#refresh-rule)
+- [Freshness and refresh rule](#freshness-and-refresh-rule)
 - [Consult protocol](#consult-protocol)
 
 ## Read trigger
 
-Open this file before a lark-doc-dependent workflow that would otherwise repeatedly read the full lark-doc `SKILL.md` or its references. This includes Feishu/Lark docx or wiki reading, creation, editing, media handling, history, whiteboard, mindnote, and XML authoring tasks, and any step that needs an exact command, flag, scope, or reference-file choice.
+Open this file immediately before a lark-doc-dependent workflow that would otherwise reopen the full lark-doc `SKILL.md` or several reference files. This includes Feishu/Lark docx or wiki reading, creation, editing, media handling, history, whiteboard, mindnote, and XML/Markdown authoring tasks, and any step that needs an exact command, flag, scope, or reference-file choice.
 
-Do not open it for unrelated documentation, for an answer already present in the conversation, or as a replacement for the authoritative section when exact wording governs.
+A first lark-doc request and a later restatement of the same request each trigger this lookup on their own; no prior turn or restatement is required.
+
+Do not open it for unrelated documentation or for an answer already present in the conversation, and never use it as a replacement for the authoritative section when exact wording governs.
 
 ## Source locators
 
-Resolve the live lark-doc skill root in this order, then use these relative paths:
+Resolve the live lark-doc skill root in this order, then use paths relative to it:
 
 1. `$LARK_DOC_SKILL_DIR`
-2. The host-provided skill root containing `lark-doc/SKILL.md`
+2. The normal skill loader or host-provided skill root containing `lark-doc/SKILL.md`
 3. `~/.agents/skills/lark-doc`
 
 | Source | Relative path |
@@ -30,12 +33,39 @@ Resolve the live lark-doc skill root in this order, then use these relative path
 | Main skill document | `SKILL.md` |
 | Reference directory | `references/` |
 | Genre contracts | `references/genres/` |
+| Alternate documentation layout | `doc/skill.md` and the `doc/` tree |
 
-Recorded digests below were captured from the third locator on 2026-11-02. They are baselines, not proof that the path exists here. Recompute before use.
+If the resolved root exposes the same material as `doc/skill.md` and a `doc/` tree instead of top-level `SKILL.md` and `references/`, treat `doc/skill.md` as the entry source and `doc/` as the documentation tree. Rebase every recorded relative path onto the layout actually found before hashing, and record the rebased paths during the refresh.
+
+The recorded digests were captured from the third locator on 2026-11-02. They are baselines, not proof that the path exists here. Recompute before use.
+
+## File map
+
+One row per recorded source file. Read only the file selected by the task; never preload the tree.
+
+| Source file (relative to the resolved root) | Topic label | Read when |
+| --- | --- | --- |
+| `SKILL.md` | Entry and shortcut routing, scope boundaries | First lookup, topic routing, or when no reference row matches the request. |
+| `references/lark-doc-fetch.md` | Read, summarize, scope, and embedded resources | The task reads or inspects an existing document. |
+| `references/lark-doc-create-workflow.md` | Authoring from scratch and genre selection | The task creates a new document or chooses a genre contract. |
+| `references/lark-doc-create.md` | Empty-document creation and import | The task creates a document or imports existing content. |
+| `references/lark-doc-update.md` | Editing, polishing, reorganizing, layout | The task modifies existing document content. |
+| `references/lark-doc-script.md` | Draft initialization, URL/token parsing, character counts | The task needs script helpers before an operation. |
+| `references/lark-doc-history.md` | History listing, revert, revert status | The task inspects or restores document history. |
+| `references/lark-doc-media-insert.md` | Image or file insertion at document end | The task inserts media or a file into a document. |
+| `references/lark-doc-media-preview.md` | Media preview | The task previews document media. |
+| `references/lark-doc-media-download.md` | Media and whiteboard-thumbnail download | The task downloads document media. |
+| `references/lark-doc-resource-cover.md` | Docx cover download, update, delete | The task manages a document cover image. |
+| `references/lark-doc-whiteboard.md` | Whiteboard creation and editing | The task creates or edits a document whiteboard. |
+| `references/lark-doc-mindnote.md` | Mindnote reading, ids, commands, workflow | The task works with an existing mindnote. |
+| `references/lark-doc-xml.md` | Feishu XML tags, tables, colors, escaping | The task authors or edits Feishu XML. |
+| `references/lark-doc-xml-extended-blocks.md` | Extended XML blocks, HTML5, OKR | The task needs an extended XML block. |
+| `references/lark-doc-md.md` | Markdown escaping, shell quoting, image syntax | The task authors or escapes Markdown. |
+| `references/genres/` | Genre content contracts, selected on demand | The create workflow asks for a specific genre contract. |
 
 ## Digest ledger
 
-Compare every row with a freshly computed sha256. A row is current only when its file exists at the resolved root and the digest matches.
+Compare every row with a freshly computed sha256. A row is current only when its file exists at the resolved root and the digest matches. Recompute `SKILL.md` and every recorded reference file, not just the one being routed.
 
 | Source | sha256 |
 | --- | --- |
@@ -100,22 +130,23 @@ Line numbers are heading starts. Read from the recorded heading to the next head
 | Markdown escaping, shell quoting, image syntax | `references/lark-doc-md.md` | `# Markdown 格式参考` | 1 |
 | Confirm what lark-doc does not own | `SKILL.md` | `## 不在本 Skill 范围` | 46 |
 
-## Refresh rule
+## Freshness and refresh rule
 
 Run a freshness pass at the start of every consult.
 
 1. Resolve the live root using the locator order above. If no root is found, mark every digest `unavailable`; do not route from this index.
-2. For each digest row, compute sha256 for the resolved file. Use `shasum -a 256` or `sha256sum`.
-3. If all files exist and all digests match, report `matched` and use the map.
-4. If any file is missing or differs, report `refreshed`. For each affected source, list headings with `grep -nE '^#{1,6} '` and update only the routes, line numbers, and digests that the listing supports.
-5. Add a route only when a real heading supports it. Remove or rewrite routes whose heading no longer exists.
-6. Replace the old digest with the newly computed digest and record the refresh date. Never write a digest that was not computed from the resolved file.
-7. If a source cannot be read, record its digest as `unavailable` rather than guessing; stale routes for that source must not be used as current guidance.
+2. For every digest row, compute sha256 for the resolved file. Use `shasum -a 256` or `sha256sum`. Require 64 hexadecimal characters.
+3. If all files exist and all digests match, report `matched` and use the maps.
+4. If any file is missing or differs, if a digest is unrecorded, or if the topic is not mapped, report `refreshed` and rebuild before lookup. Enumerate the documentation tree with `find "$LARK_DOC_ROOT" -type f -name '*.md' | sort`, then list headings with `grep -nE '^#{1,6} '`.
+5. For each affected file, update only the file rows, heading routes, line ranges, and digests that the real enumeration and heading listing support. Add a file or route only when the live path or heading exists; remove or rewrite rows whose source or heading is gone.
+6. Replace each old digest with the newly computed value in the same pass; never write a digest that was not computed from the resolved file. If a source cannot be read, record its digest as `unavailable` rather than guessing, and do not use its stale routes as current guidance.
+7. Record the refresh date and the refreshed field list, keeping the index free of body text and excerpts.
 
 ## Consult protocol
 
 1. Report the freshness result before using the map.
-2. Cite the governing heading, source file, and line range read.
-3. Read only the mapped range; do not dump the full lark-doc source or unrelated references.
-4. If the mapped range does not answer the need, run the refresh rule before widening the read.
-5. Leave the live lark-doc files untouched; only this index may be updated.
+2. Select exactly one file whose topic and read-when condition match; when several match, choose the narrowest.
+3. Cite the governing heading, source file, and line range read.
+4. Read only the mapped range; do not dump the full lark-doc source or unrelated references.
+5. If the mapped range does not answer the need, run the refresh rule before widening the read.
+6. Leave the live lark-doc files untouched; only this index may be updated.

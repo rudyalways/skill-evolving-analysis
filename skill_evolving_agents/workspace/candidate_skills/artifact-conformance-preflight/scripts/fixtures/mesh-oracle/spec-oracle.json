@@ -1,0 +1,60 @@
+{
+  "spec_revision": "task-rev-oracle-1",
+  "tolerance": 0.01,
+  "metric": "max_nearest",
+  "sample_count": 256,
+  "units": "meters",
+  "unit_conversion": {
+    "from": "meters",
+    "to": "meters",
+    "factor": 1.0,
+    "offset": 0.0
+  },
+  "frame_transform": [
+    [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    [
+      0.0,
+      1.0,
+      0.0,
+      0.0
+    ],
+    [
+      0.0,
+      0.0,
+      1.0,
+      0.0
+    ]
+  ],
+  "expected_source": "task statement: every exported part must match the source scene's primitive assembly at its composed world transform within 0.01 meter",
+  "mesh_to_source": {
+    "pedestal.obj": [
+      "pedestal"
+    ],
+    "column.obj": [
+      "column"
+    ],
+    "arm_plate.obj": [
+      "arm_plate"
+    ],
+    "tool_head.obj": [
+      "tool_head"
+    ],
+    "assembly.obj": [
+      "arm_plate",
+      "tool_head"
+    ],
+    "duplicate.obj": [
+      "pedestal"
+    ]
+  },
+  "independence_evidence": {
+    "reader": "second source-scene JSON reader implemented in this oracle; reads only task-visible scene data",
+    "transform_path": "independent 4x4 parent-chain composition in this oracle; reads only source primitive transforms",
+    "independent_of_exporter": true
+  }
+}

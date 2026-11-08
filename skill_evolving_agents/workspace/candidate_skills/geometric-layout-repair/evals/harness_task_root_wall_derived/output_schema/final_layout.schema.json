@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Final repaired layout deliverable",
+  "type": "object",
+  "required": [
+    "rooms",
+    "fixtures",
+    "turning_space"
+  ]
+}

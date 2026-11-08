@@ -23,6 +23,13 @@ cache. Later runs reuse that cache. Model loading occurs once per pipeline run
 for `in_process`, or once in the managed child for `local_process`; it never
 occurs separately in each phase or agent container.
 
+Stable sentence-transformer document vectors are also cached by model
+revision, dimensions, and exact text under
+`~/.cache/skill-evolving-agents/embeddings`. This makes a stable skill
+inventory cheap to recall across local-service restarts. Query vectors remain
+ephemeral because they can contain private trace or tenant text. Set
+`SKILL_EVOLVER_EMBEDDING_CACHE` to relocate the document cache.
+
 Install the local runtime once:
 
 ```bash

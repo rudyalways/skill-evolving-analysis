@@ -1,0 +1,15 @@
+{
+  "spec_revision": "fixture-null-sentinel-v1",
+  "records_path": "records",
+  "invariants": [
+    {
+      "id": "encode-po-number",
+      "class": "field_encoding",
+      "field": "po_number",
+      "nullable": ["po_number"],
+      "forbidden_sentinels": ["PO-INVALID", "N/A", "TBD", ""],
+      "expected_source": "task statement, PO number is nullable when absent and must be JSON null, never a placeholder",
+      "record_locator": "id"
+    }
+  ]
+}

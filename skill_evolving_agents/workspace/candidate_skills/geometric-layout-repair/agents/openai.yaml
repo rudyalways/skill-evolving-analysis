@@ -1,0 +1,4 @@
+interface:
+  display_name: "Geometric Layout Repair"
+  short_description: "Use when producing a minimally changed repaired 2D layout in JSON from…"
+  default_prompt: "Use $geometric-layout-repair for this request."

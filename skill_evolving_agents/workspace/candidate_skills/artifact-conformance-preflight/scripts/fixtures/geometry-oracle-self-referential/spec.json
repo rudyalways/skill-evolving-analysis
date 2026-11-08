@@ -1,0 +1,62 @@
+{
+  "spec_revision": "sig-81d28a82f0e760d2cda5feb0-self-referential",
+  "invariants": [
+    {
+      "id": "exported-crate-geometry",
+      "class": "geometry_conformance",
+      "deliverable_path": "crate.obj",
+      "format": "obj",
+      "source": {
+        "scene_path": "source-scene.json",
+        "units": "meters"
+      },
+      "mesh_to_source": {
+        "crate": "crate"
+      },
+      "unit_conversion": {
+        "from": "meters",
+        "to": "meters",
+        "factor": 1.0,
+        "offset": 0.0
+      },
+      "frame_transform": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ]
+      ],
+      "acceptance_tolerance": 0.01,
+      "tolerance": 0.5,
+      "metric": "chamfer",
+      "sample_count": 512,
+      "expected_source": "task statement: the exported crate must match the source scene 1x2x3 meter box within 0.01 meter",
+      "provenance": {
+        "source_scene_path": "source-scene.json",
+        "frame": "scene_root",
+        "units": "meters",
+        "derivation": "rebuild the expected surface by replaying the source primitive decomposition and transform chain",
+        "reader": "producer exporter primitive reader",
+        "transform_path": "same exporter transform path",
+        "independence_evidence": {
+          "reader": "producer exporter primitive reader",
+          "transform_path": "same exporter transform path",
+          "independent_of_exporter": false
+        }
+      }
+    }
+  ]
+}

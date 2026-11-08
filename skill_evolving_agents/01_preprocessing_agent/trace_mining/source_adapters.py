@@ -42,6 +42,11 @@ def _turn(turn_id: str, timestamp: str, ordinal: int | None) -> dict[str, Any]:
 def _text(value: Any) -> str:
     if isinstance(value, str):
         return value
+    if isinstance(value, dict):
+        for key in ("text", "content", "output_text", "input_text"):
+            if key in value:
+                return _text(value.get(key))
+        return ""
     if not isinstance(value, list):
         return ""
     parts: list[str] = []
@@ -55,8 +60,9 @@ def _text(value: Any) -> str:
                 or item.get("output_text")
                 or item.get("input_text")
             )
-            if isinstance(candidate, str):
-                parts.append(candidate)
+            candidate_text = _text(candidate)
+            if candidate_text:
+                parts.append(candidate_text)
     return "\n".join(parts)
 
 
@@ -222,6 +228,88 @@ def detects_cursor(record: dict[str, Any]) -> bool:
         isinstance(message, dict)
         and message.get("role") in {"user", "assistant", "tool"}
     )
+
+
+def detects_acp(record: dict[str, Any]) -> bool:
+    """Recognize BenchFlow/ACP's compact trajectory export."""
+    return record.get("type") in {"user_message", "agent_message", "tool_call"}
+
+
+def parse_acp(path: Path) -> tuple[dict[str, Any], Counter[str]]:
+    """Convert one ACP rollout into the normalizer's canonical turn shape.
+
+    ACP exports completed tool calls as a single record, rather than separate
+    request/result events. A trajectory normally contains one benchmark prompt,
+    but this parser also starts a fresh turn for every later user message.
+    """
+    counters: Counter[str] = Counter()
+    session: dict[str, Any] = {
+        "session_id": path.stem,
+        "parent_session_id": None,
+        "raw_bytes": path.stat().st_size,
+        "turns": {},
+    }
+    current: dict[str, Any] | None = None
+    sequence = 0
+    exported_at = datetime.fromtimestamp(path.stat().st_mtime).astimezone().isoformat()
+    with path.open(errors="replace") as stream:
+        for line_number, line in enumerate(stream, start=1):
+            counters["raw_records"] += 1
+            try:
+                record = json.loads(line)
+            except json.JSONDecodeError:
+                counters["invalid_records"] += 1
+                continue
+            if not isinstance(record, dict):
+                counters["dropped_records"] += 1
+                continue
+            kind = record.get("type")
+            if kind == "user_message":
+                turn_id = _identifier(path, line_number, record.get("turn_id"))
+                current = _turn(turn_id, exported_at, line_number)
+                current["root_turn_id"] = turn_id
+                current["user"].append(
+                    {"text": _text(record.get("text")), "user_input_order": line_number}
+                )
+                session["turns"][turn_id] = current
+                continue
+            if current is None:
+                counters["orphan_response_items"] += 1
+                continue
+            if kind == "agent_message":
+                text = _text(record.get("text"))
+                if text.strip():
+                    current["assistant"].append(text)
+                    current["assistant_observations"].append(
+                        {
+                            "text": text,
+                            "after_tool_count": len(current["tools"]),
+                            "source_ordinal": line_number,
+                        }
+                    )
+                    current["assistant_final"].append(text)
+                current["status"] = "completed"
+            elif kind == "tool_call":
+                sequence += 1
+                call_id = str(record.get("tool_call_id") or f"tool-{sequence}")
+                content = record.get("content")
+                result = _text(content)
+                _tool(
+                    current,
+                    call_id,
+                    sequence,
+                    str(record.get("title") or record.get("kind") or "unknown"),
+                    record.get("input") or {},
+                    result,
+                    record.get("status") in {"failed", "error"},
+                )
+            else:
+                counters[f"dropped_{kind}"] += 1
+            current["ordinals"][1] = line_number
+    if current is not None and current["status"] == "unknown":
+        current["status"] = "completed"
+    counters["session_meta"] += 1
+    return session, counters
 
 
 def parse_cursor(path: Path) -> tuple[dict[str, Any], Counter[str]]:

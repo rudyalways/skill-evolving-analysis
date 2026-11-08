@@ -8,11 +8,15 @@
       "expected_output": "The index is consulted, the recorded digest is recomputed and matches, and the answer cites the governing lark-doc-update.md heading with a line range.",
       "expectations": [
         "The freshness status is reported as matched after recomputing sha256.",
-        "The governing heading and reference file are cited.",
+        "The governing heading and reference file are cited with a line range.",
         "Only the mapped line range is read rather than the full SKILL.md or all references."
       ],
-      "files": ["references/lark-doc-index.md"],
-      "source_trace_ids": ["sig-5b9fa5ac67cd21a99558fc07"]
+      "files": [
+        "references/lark-doc-index.md"
+      ],
+      "source_trace_ids": [
+        "sig-5b9fa5ac67cd21a99558fc07"
+      ]
     },
     {
       "id": 2,
@@ -24,11 +28,30 @@
         "The index is updated with the newly computed digest and supported routes only.",
         "The freshness status is reported as refreshed and the cited range is from the refreshed map."
       ],
-      "files": ["references/lark-doc-index.md"],
-      "source_trace_ids": ["sig-5b9fa5ac67cd21a99558fc07"]
+      "files": [
+        "references/lark-doc-index.md"
+      ],
+      "source_trace_ids": [
+        "sig-5b9fa5ac67cd21a99558fc07"
+      ]
     },
     {
       "id": 3,
+      "kind": "should_apply",
+      "prompt": "A lark-doc Wiki task needs a topic the index does not map, and the recorded digests are unchanged. Find the right reference file and heading without reopening the entire lark-doc tree.",
+      "expected_output": "The lookup is treated as stale coverage: the file and heading maps are refreshed from the live tree, a route is added only if a real heading supports it, and one narrowest file and range are cited.",
+      "expectations": [
+        "An unindexed topic triggers the same refresh pass rather than a guess from an unrelated row.",
+        "The file map and heading map are updated from live enumeration and heading extraction.",
+        "Exactly one matching file and its supported line range are reported."
+      ],
+      "files": [
+        "references/lark-doc-index.md"
+      ],
+      "source_trace_ids": []
+    },
+    {
+      "id": 4,
       "kind": "should_not_apply",
       "prompt": "Summarize the main argument of this local PDF and list its three strongest claims.",
       "expected_output": "The lark-doc navigation index is not selected because the task is unrelated to Feishu/Lark docx or wiki content.",
@@ -40,7 +63,7 @@
       "source_trace_ids": []
     },
     {
-      "id": 4,
+      "id": 5,
       "kind": "should_not_apply",
       "prompt": "Earlier in this conversation you already quoted the lark-doc update safety rule and I only need that same quoted wording restated. Do not re-check freshness.",
       "expected_output": "The navigation index is not consulted because the governing answer is already present in the conversation and no freshness check is needed.",

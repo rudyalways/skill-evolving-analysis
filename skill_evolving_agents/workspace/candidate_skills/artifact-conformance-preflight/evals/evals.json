@@ -1,0 +1,649 @@
+{
+  "skill_name": "artifact-conformance-preflight",
+  "evals": [
+    {
+      "id": 1,
+      "kind": "should_apply",
+      "prompt": "Run the local conformance preflight over the complete artifact using the task-derived spec. All expected totals, converted duration bounds, and confidence separations should hold.",
+      "expected_output": "The preflight exits zero with status clean, zero violations, and zero unverifiable constraints.",
+      "expectations": [
+        "scripts/preflight.py is run with the full artifact and the constraint spec.",
+        "The report status is clean.",
+        "The process exit status is zero.",
+        "All three invariants report pass."
+      ],
+      "files": [
+        "scripts/fixtures/artifact-clean.json",
+        "scripts/fixtures/spec-clean.json"
+      ],
+      "source_trace_ids": [
+        "sig-8e98392b97650da46133b6fc"
+      ]
+    },
+    {
+      "id": 2,
+      "kind": "should_apply",
+      "prompt": "Check this completed artifact before submission. One record's computed total does not equal its stated total, and the task requires exact agreement.",
+      "expected_output": "The preflight exits nonzero and reports an equality violation naming the mismatched record and the observed and expected values.",
+      "expectations": [
+        "The report status is violations, not clean.",
+        "The violations array contains invariant_class equality.",
+        "The violation locator identifies the mismatched record and shows both observed and expected values.",
+        "The process exit status is nonzero."
+      ],
+      "files": [
+        "scripts/fixtures/artifact-equality-mismatch.json",
+        "scripts/fixtures/spec-equality.json"
+      ],
+      "source_trace_ids": [
+        "sig-8e98392b97650da46133b6fc"
+      ]
+    },
+    {
+      "id": 3,
+      "kind": "should_apply",
+      "prompt": "Preflight the artifact against the task's duration rule stated in seconds, where the artifact stores durations in minutes. A converted value is outside the allowed range.",
+      "expected_output": "The preflight applies the spec's conversion factor, exits nonzero, and reports a numeric_range violation with the raw and converted values.",
+      "expectations": [
+        "The reported observed value includes both the raw minutes and the converted seconds.",
+        "The violation is classified numeric_range.",
+        "The allowed bound in seconds is shown in the expected rule.",
+        "The process exit status is nonzero."
+      ],
+      "files": [
+        "scripts/fixtures/artifact-range-violation.json",
+        "scripts/fixtures/spec-range.json"
+      ],
+      "source_trace_ids": [
+        "sig-8e98392b97650da46133b6fc"
+      ]
+    },
+    {
+      "id": 4,
+      "kind": "should_apply",
+      "prompt": "Validate the artifact's confidence calibration: confidence must increase on average by at least the task threshold from weak to medium to strong evidence.",
+      "expected_output": "The preflight exits nonzero and reports a calibration violation showing that the weak-to-medium mean separation is below the required minimum.",
+      "expectations": [
+        "The violation is classified calibration.",
+        "The observed separation and the required minimum are both reported.",
+        "The process exit status is nonzero.",
+        "No stated threshold is relaxed."
+      ],
+      "files": [
+        "scripts/fixtures/artifact-calibration-violation.json",
+        "scripts/fixtures/spec-calibration.json"
+      ],
+      "source_trace_ids": [
+        "sig-8e98392b97650da46133b6fc"
+      ]
+    },
+    {
+      "id": 5,
+      "kind": "should_apply",
+      "prompt": "A structural schema check already passes on this artifact, but the task also requires confidence to separate by evidence strength. Run the local conformance preflight before packaging it.",
+      "expected_output": "The structurally valid artifact still fails the preflight with a calibration violation and a nonzero exit.",
+      "expectations": [
+        "The preflight runs on the full artifact despite the structural suite passing.",
+        "The artifact parses and has the expected record shape.",
+        "The report contains a calibration violation for separation below the spec threshold.",
+        "The process exit status is nonzero."
+      ],
+      "files": [
+        "scripts/fixtures/artifact-structurally-valid-calibration-fail.json",
+        "scripts/fixtures/spec-calibration.json"
+      ],
+      "source_trace_ids": [
+        "sig-8e98392b97650da46133b6fc"
+      ]
+    },
+    {
+      "id": 6,
+      "kind": "should_not_apply",
+      "prompt": "Write a short persuasive essay about why preflight checks are useful. There is no data artifact and no machine-checkable acceptance contract.",
+      "expected_output": "The artifact preflight is not selected and no constraint spec is fabricated.",
+      "expectations": [
+        "No artifact path or constraint spec is invented.",
+        "No preflight run is claimed for a deliverable with no machine-checkable contract."
+      ],
+      "files": [],
+      "source_trace_ids": []
+    },
+    {
+      "id": 7,
+      "kind": "should_apply",
+      "prompt": "A complete artifact passes its structural schema and every per-field check, but one derived duration value was produced by rounding inside the producer. Recompute it independently and run the preflight before submission.",
+      "expected_output": "The preflight exits nonzero and reports an independent_recompute violation for the record whose submitted value differs from the separately recomputed value by a small delta, showing both values and the delta.",
+      "expectations": [
+        "The reported invariant_class is independent_recompute.",
+        "The violation locator identifies the record whose derived value is wrong.",
+        "The violation shows the observed value and the independently recomputed expected value.",
+        "The violation reports the numeric observed_delta and the oracle path.",
+        "The process exit status is nonzero."
+      ],
+      "files": [
+        "scripts/fixtures/artifact-recompute-delta.json",
+        "scripts/fixtures/spec-recompute.json",
+        "scripts/fixtures/oracle_duration.py"
+      ],
+      "source_trace_ids": [
+        "sig-7fd2958ada23ab49dbe71e61"
+      ]
+    },
+    {
+      "id": 8,
+      "kind": "should_apply",
+      "prompt": "Before submitting this artifact, verify its derived duration field. The only expected value available is the submitted field itself, and no independent implementation or metamorphic relation exists.",
+      "expected_output": "The preflight reports the independent_recompute invariant as unverifiable, exits nonzero, does not fabricate an expected value, and blocks submission.",
+      "expectations": [
+        "The report contains an unverifiable entry for the independent_recompute invariant.",
+        "The reason states that the oracle is self-referential rather than independent.",
+        "No violation claims a computed expected value.",
+        "The process exit status is nonzero."
+      ],
+      "files": [
+        "scripts/fixtures/artifact-recompute-delta.json",
+        "scripts/fixtures/spec-recompute-self-reference.json"
+      ],
+      "source_trace_ids": [
+        "sig-7fd2958ada23ab49dbe71e61"
+      ]
+    },
+    {
+      "id": 9,
+      "kind": "should_apply",
+      "prompt": "The acceptance spec declares the PO number field nullable and forbids placeholder strings, but the artifact encodes a missing PO as 'PO-INVALID'. Every structural, schema, and record-diff check passes; run the preflight before submission.",
+      "expected_output": "The preflight exits nonzero and reports a field_encoding violation for the record with 'PO-INVALID', naming the record, the field, the observed sentinel, and the required JSON null encoding, without reporting a clean status.",
+      "expectations": [
+        "The report status is violations, not clean.",
+        "The violations array contains invariant_class field_encoding.",
+        "The violation locator identifies the record whose PO number uses the sentinel 'PO-INVALID'.",
+        "The violation reports the field name, observed value 'PO-INVALID', and the required null encoding.",
+        "The process exit status is nonzero."
+      ],
+      "files": [
+        "scripts/fixtures/artifact-null-sentinel-violation.json",
+        "scripts/fixtures/spec-null-sentinel.json"
+      ],
+      "source_trace_ids": [
+        "sig-4b03472209b4601dece97361"
+      ]
+    },
+    {
+      "id": 10,
+      "kind": "should_apply",
+      "prompt": "A sales workbook contains a pivot table whose aggregation mode is median, but the task allows only sum, count, or average. Run the conformance preflight over the complete workbook before submission.",
+      "expected_output": "The preflight exits nonzero and reports a structural violation for the pivot object naming its aggregation field, the observed median mode, and the task-declared allowed modes.",
+      "expectations": [
+        "The reported invariant_class is structural.",
+        "The violation locator identifies the pivot object.",
+        "The violation reports the aggregation field, observed value median, and the allowed mode set.",
+        "The process exit status is nonzero."
+      ],
+      "files": [
+        "scripts/fixtures/artifact-pivot-wrong-aggregation.json",
+        "scripts/fixtures/spec-pivot-structural.json"
+      ],
+      "source_trace_ids": [
+        "sig-c0f46ad9dbb77dcd7922f6c0"
+      ]
+    },
+    {
+      "id": 11,
+      "kind": "should_apply",
+      "prompt": "Preflight this pivot workbook. The task requires a non-empty row field list, but the produced pivot has no row fields even though it still reconciles its totals.",
+      "expected_output": "The preflight exits nonzero and reports a structural violation for the empty required row_fields list, including the pivot locator and observed value.",
+      "expectations": [
+        "The reported invariant_class is structural.",
+        "The violation names row_fields as the offending field.",
+        "The violation shows the empty observed list and the non-empty requirement.",
+        "The process exit status is nonzero."
+      ],
+      "files": [
+        "scripts/fixtures/artifact-pivot-wrong-row.json",
+        "scripts/fixtures/spec-pivot-structural.json"
+      ],
+      "source_trace_ids": [
+        "sig-c0f46ad9dbb77dcd7922f6c0"
+      ]
+    },
+    {
+      "id": 12,
+      "kind": "should_apply",
+      "prompt": "The pivot renders and its values look right, but its cache field list omits Revenue even though Revenue is a value field. Check the workbook structure before submission.",
+      "expected_output": "The preflight exits nonzero and reports a structural violation for the pivot cache missing the field used by the value definition.",
+      "expectations": [
+        "The reported invariant_class is structural.",
+        "The violation names the cache field and the missing Revenue field.",
+        "The violation locator identifies the pivot object and shows the observed cache.",
+        "The process exit status is nonzero."
+      ],
+      "files": [
+        "scripts/fixtures/artifact-pivot-missing-cache.json",
+        "scripts/fixtures/spec-pivot-structural.json"
+      ],
+      "source_trace_ids": [
+        "sig-c0f46ad9dbb77dcd7922f6c0"
+      ]
+    },
+    {
+      "id": 13,
+      "kind": "should_apply",
+      "prompt": "A sales workbook passes its pivot structure checks, but one row uses the category LATAM even though the task states that region must be North, South, East, or West. Run the preflight before submission.",
+      "expected_output": "The preflight exits nonzero and reports a domain_membership violation naming the row, the region field, the observed LATAM label, and the task-declared allowed set.",
+      "expectations": [
+        "The reported invariant_class is domain_membership.",
+        "The violation locator identifies row s2.",
+        "The violation reports the region field, observed value LATAM, and the allowed category set.",
+        "The process exit status is nonzero."
+      ],
+      "files": [
+        "scripts/fixtures/artifact-pivot-domain-violation.json",
+        "scripts/fixtures/spec-pivot-domain.json"
+      ],
+      "source_trace_ids": [
+        "sig-c0f46ad9dbb77dcd7922f6c0"
+      ]
+    },
+    {
+      "id": 14,
+      "kind": "should_apply",
+      "prompt": "This near-miss sales workbook has two pivot tables, populated cache fields, and only the four task-declared sales regions. Run the structural and category-domain preflight before packaging it.",
+      "expected_output": "The preflight exits zero with status clean, a passing structural invariant, a passing domain_membership invariant, and no violations.",
+      "expectations": [
+        "The report status is clean.",
+        "The structural invariant reports pass.",
+        "The domain_membership invariant reports pass.",
+        "The process exit status is zero."
+      ],
+      "files": [
+        "scripts/fixtures/artifact-pivot-clean.json",
+        "scripts/fixtures/spec-pivot-clean.json"
+      ],
+      "source_trace_ids": [
+        "sig-c0f46ad9dbb77dcd7922f6c0"
+      ]
+    },
+    {
+      "id": 15,
+      "kind": "should_apply",
+      "prompt": "A produced directed graph parses cleanly: every edge references an existing node and all structural checks pass, but the terminal node End has no inbound path from the declared entry node. Run the graph conformance preflight before submission.",
+      "expected_output": "The preflight exits nonzero and reports a graph_structure violation naming the unreachable node End and the declared entry node, without treating the structural pass as conformance.",
+      "expectations": [
+        "The report status is violations, not clean.",
+        "The violations array contains invariant_class graph_structure.",
+        "The violation names the unreachable node id End and the declared entry node.",
+        "The process exit status is nonzero."
+      ],
+      "files": [
+        "scripts/fixtures/graph-unreachable-end.json",
+        "scripts/fixtures/spec-graph.json"
+      ],
+      "source_trace_ids": [
+        "sig-13f37d4ce31fa6bd19293c99"
+      ]
+    },
+    {
+      "id": 16,
+      "kind": "should_apply",
+      "prompt": "A produced directed graph has every node reachable from its declared entry node, but one edge targets a node that does not exist and is not the declared terminal node. Run the graph conformance preflight before submission.",
+      "expected_output": "The preflight exits nonzero and reports a graph_structure violation naming the source node and the dangling target.",
+      "expectations": [
+        "The report status is violations, not clean.",
+        "The violations array contains invariant_class graph_structure.",
+        "The violation locator identifies the source node and the observed value names the missing target.",
+        "The process exit status is nonzero."
+      ],
+      "files": [
+        "scripts/fixtures/graph-dangling-target.json",
+        "scripts/fixtures/spec-graph.json"
+      ],
+      "source_trace_ids": [
+        "sig-13f37d4ce31fa6bd19293c99"
+      ]
+    },
+    {
+      "id": 17,
+      "kind": "should_apply",
+      "prompt": "A task requires a JSON process graph and a DOT rendering of it. The graph passes every structured-data and graph-structure check, but the DOT renders the terminal node with a box even though the task convention requires a double circle. Run the conformance preflight before submission.",
+      "expected_output": "The preflight exits nonzero even though the graph structure passes, and reports a companion_artifact violation naming the DOT deliverable, the terminal node locator, the observed shape box, and the expected doublecircle encoding for that node type.",
+      "expectations": [
+        "The report status is violations, not clean.",
+        "The graph_structure invariant reports pass.",
+        "The violations array contains invariant_class companion_artifact.",
+        "The violation names the DOT deliverable, the locator End, the field shape, the observed box, and the expected doublecircle for node type terminal.",
+        "The process exit status is nonzero."
+      ],
+      "files": [
+        "scripts/fixtures/artifact-graph-typed.json",
+        "scripts/fixtures/spec-companion-misencoded.json",
+        "scripts/fixtures/companion-misencoded.dot"
+      ],
+      "source_trace_ids": [
+        "sig-4fa68246f9ffe88b43421397"
+      ]
+    },
+    {
+      "id": 18,
+      "kind": "should_apply",
+      "prompt": "The task names a companion DOT rendering beside the JSON graph, and the graph itself is complete and passes its structural checks, but the declared DOT file was never produced. Run the preflight before packaging.",
+      "expected_output": "The preflight exits nonzero and reports a companion_artifact violation for the missing declared deliverable path instead of treating the graph pass as sufficient.",
+      "expectations": [
+        "The graph_structure invariant reports pass.",
+        "The violations array contains invariant_class companion_artifact.",
+        "The violation names the missing deliverable path with observed absent.",
+        "The process exit status is nonzero."
+      ],
+      "files": [
+        "scripts/fixtures/artifact-graph-typed.json",
+        "scripts/fixtures/spec-companion-missing.json"
+      ],
+      "source_trace_ids": [
+        "sig-4fa68246f9ffe88b43421397"
+      ]
+    },
+    {
+      "id": 19,
+      "kind": "should_apply",
+      "prompt": "This near-miss deliverable has a JSON process graph and a DOT rendering whose start, task, and terminal nodes all use the shapes required by the task convention. Run the companion-deliverable preflight before packaging it.",
+      "expected_output": "The preflight exits zero with status clean, a passing graph_structure invariant, a passing companion_artifact invariant, and no violations.",
+      "expectations": [
+        "The report status is clean.",
+        "The graph_structure invariant reports pass.",
+        "The companion_artifact invariant reports pass.",
+        "The process exit status is zero."
+      ],
+      "files": [
+        "scripts/fixtures/artifact-graph-typed.json",
+        "scripts/fixtures/spec-companion-clean.json",
+        "scripts/fixtures/companion-clean.dot"
+      ],
+      "source_trace_ids": [
+        "sig-4fa68246f9ffe88b43421397"
+      ]
+    },
+    {
+      "id": 20,
+      "kind": "should_apply",
+      "prompt": "A task exports a crate mesh from a source Three.js scene whose box is 1x2x3 meters with a stated 0.01 meter tolerance. The exported mesh has valid vertex, face, normal, and degenerate-face counts, but it is displaced by 0.5 meter from the source shape. Run the conformance preflight before submission.",
+      "expected_output": "The preflight exits nonzero and reports a geometry_conformance violation with a per-mesh numeric delta of about 0.5 against the 0.01 tolerance, even though the structural counts and degeneracy check pass.",
+      "expectations": [
+        "The report status is violations, not clean.",
+        "The geometry array contains an entry for mesh crate with counts showing 24 vertices, 12 faces, and 0 degenerate faces.",
+        "The violations array contains invariant_class geometry_conformance.",
+        "The violation names the mesh and deliverable and reports observed_delta greater than the stated tolerance.",
+        "The process exit status is nonzero."
+      ],
+      "files": [
+        "scripts/fixtures/source-scene-box.json",
+        "scripts/fixtures/mesh-box-displaced.obj",
+        "scripts/fixtures/spec-geometry-displaced.json"
+      ],
+      "source_trace_ids": [
+        "sig-747188bffe7bf16f380c00e0"
+      ]
+    },
+    {
+      "id": 21,
+      "kind": "should_apply",
+      "prompt": "This near-miss deliverable exports the source scene's crate as a mesh with more split vertices than the source primitive but the same six faces on the same 1x2x3 meter box. Run the geometry conformance preflight before packaging it.",
+      "expected_output": "The preflight exits zero with status clean and a passing geometry_conformance invariant; the equivalent mesh is not rejected just because its vertex count differs from the source primitive.",
+      "expectations": [
+        "The report status is clean.",
+        "The geometry_conformance invariant reports pass.",
+        "The geometry entry compares mesh crate with source geometry crate:box at the stated tolerance.",
+        "The observed_delta is within tolerance and the process exit status is zero."
+      ],
+      "files": [
+        "scripts/fixtures/source-scene-box.json",
+        "scripts/fixtures/mesh-box-equivalent.obj",
+        "scripts/fixtures/spec-geometry-clean.json"
+      ],
+      "source_trace_ids": [
+        "sig-747188bffe7bf16f380c00e0"
+      ]
+    },
+    {
+      "id": 22,
+      "kind": "should_apply",
+      "prompt": "A task names an exported mesh and a tolerance, but the source scene file it references is absent, so no expected shape can be independently reconstructed. Run the conformance preflight before submission.",
+      "expected_output": "The preflight exits nonzero and reports the geometry_conformance constraint as unverifiable because the source scene is unavailable, without fabricating an expected mesh or silently passing.",
+      "expectations": [
+        "The report status is violations, not clean.",
+        "The unverifiable array names the geometry_conformance invariant and the missing source scene.",
+        "No geometry violation claims an expected shape or delta.",
+        "The process exit status is nonzero."
+      ],
+      "files": [
+        "scripts/fixtures/source-scene-box.json",
+        "scripts/fixtures/mesh-box-equivalent.obj",
+        "scripts/fixtures/spec-geometry-unverifiable.json"
+      ],
+      "source_trace_ids": [
+        "sig-747188bffe7bf16f380c00e0"
+      ]
+    },
+    {
+      "id": 23,
+      "kind": "should_apply",
+      "prompt": "An exported rig has part and link meshes that agree exactly: identical vertex and face counts, near-zero triangle deltas, and link meshes mirroring their part meshes, so every count and triangle-delta check passes. But wheel_structure/outer_rim.obj, support_structure.obj, and their link copies are displaced 0.5 meter from the source scene. Run the preflight before submission.",
+      "expected_output": "The preflight exits nonzero and reports geometry_conformance violations for the part and link meshes with measured surface/Chamfer distances above tolerance, while the export-path checks are recorded as structural_only and are not accepted as evidence.",
+      "expectations": [
+        "The report status is violations, not clean.",
+        "The export_path_checks entries show matching part/link vertex and face counts and a near-zero triangle delta with status structural_only.",
+        "The geometry array contains four failing entries, including wheel_structure/outer_rim and support_structure, each with an artifact_path, source_scene_path, stated tolerance, measured surface/Chamfer distance, and status fail.",
+        "The violations array contains invariant_class geometry_conformance naming the mesh path, source scene, tolerance, and measured distance.",
+        "The process exit status is nonzero."
+      ],
+      "files": [
+        "scripts/fixtures/geometry-rig-displaced/source-scene-rig.json",
+        "scripts/fixtures/geometry-rig-displaced/wheel_structure/outer_rim.obj",
+        "scripts/fixtures/geometry-rig-displaced/link_structure/outer_rim.obj",
+        "scripts/fixtures/geometry-rig-displaced/support_structure.obj",
+        "scripts/fixtures/geometry-rig-displaced/link_structure/support_structure.obj",
+        "scripts/fixtures/spec-rig-displaced.json"
+      ],
+      "source_trace_ids": [
+        "sig-13438a12a36053bb55fb1e1f"
+      ]
+    },
+    {
+      "id": 24,
+      "kind": "should_apply",
+      "prompt": "As the positive control for the rig regression, the same part and link exports are at the source-scene positions. Independently reconstruct the source surface and run the geometry-conformance preflight before packaging.",
+      "expected_output": "The preflight exits zero with status clean and four passing geometry_conformance mesh entries, including wheel_structure/outer_rim and support_structure, while the export-path checks remain structural_only.",
+      "expectations": [
+        "The report status is clean.",
+        "The geometry_conformance invariants report pass with zero violations and zero unverifiable constraints.",
+        "The geometry array contains four passing entries with artifact_path, source_scene_path, tolerance, measured distance, and status pass.",
+        "The export_path_checks entries remain structural_only and do not replace the independent source comparison.",
+        "The process exit status is zero."
+      ],
+      "files": [
+        "scripts/fixtures/geometry-rig-equivalent/source-scene-rig.json",
+        "scripts/fixtures/geometry-rig-equivalent/wheel_structure/outer_rim.obj",
+        "scripts/fixtures/geometry-rig-equivalent/link_structure/outer_rim.obj",
+        "scripts/fixtures/geometry-rig-equivalent/support_structure.obj",
+        "scripts/fixtures/geometry-rig-equivalent/link_structure/support_structure.obj",
+        "scripts/fixtures/spec-rig-clean.json"
+      ],
+      "source_trace_ids": [
+        "sig-13438a12a36053bb55fb1e1f"
+      ]
+    },
+    {
+      "id": 25,
+      "kind": "should_apply",
+      "prompt": "A rig export is fully self-consistent: every part and link mesh has matching vertex and face counts and a near-zero triangle delta, but the part meshes and their link copies are all displaced 0.5 meter from the task source scene. Independently reconstruct the expected surface with recorded provenance and run the geometry conformance preflight before submission.",
+      "expected_output": "The preflight exits nonzero and reports Chamfer violations naming the part and link meshes with provenance frame and displacement class, while the independently reconstructed equivalent export exits zero.",
+      "expectations": [
+        "The report status is violations, not clean.",
+        "The geometry array contains four failing entries for wheel_structure/outer_rim, link_wheel_structure/outer_rim, support_structure, and link_support_structure.",
+        "Each failing entry reports a Chamfer distance above the 0.01 tolerance, its artifact_path and source_scene_path, provenance frame scene_root, source units, a derivation step, displacement_class frame_or_placement, and status fail.",
+        "The violations array contains invariant_class geometry_conformance naming each failing mesh path and its Chamfer distance.",
+        "The export_path_checks entries show matching part/link counts and a near-zero triangle delta with status structural_only.",
+        "The equivalent root with scripts/fixtures/spec-rig-clean.json exits zero with four passing mesh entries carrying the same provenance fields."
+      ],
+      "files": [
+        "scripts/fixtures/geometry-rig-displaced/source-scene-rig.json",
+        "scripts/fixtures/geometry-rig-displaced/wheel_structure/outer_rim.obj",
+        "scripts/fixtures/geometry-rig-displaced/link_structure/outer_rim.obj",
+        "scripts/fixtures/geometry-rig-displaced/support_structure.obj",
+        "scripts/fixtures/geometry-rig-displaced/link_structure/support_structure.obj",
+        "scripts/fixtures/spec-rig-displaced.json",
+        "scripts/fixtures/geometry-rig-equivalent/source-scene-rig.json",
+        "scripts/fixtures/geometry-rig-equivalent/wheel_structure/outer_rim.obj",
+        "scripts/fixtures/geometry-rig-equivalent/link_structure/outer_rim.obj",
+        "scripts/fixtures/geometry-rig-equivalent/support_structure.obj",
+        "scripts/fixtures/geometry-rig-equivalent/link_structure/support_structure.obj",
+        "scripts/fixtures/spec-rig-clean.json"
+      ],
+      "source_trace_ids": [
+        "sig-60a89f28d4683964c244431b"
+      ]
+    },
+    {
+      "id": 26,
+      "kind": "should_apply",
+      "prompt": "A rig export surface is clean and every part/link count matches the source, but the geometry spec records no expected-surface provenance: no source-scene path, frame, units, or derivation step. A second spec points provenance only at a producer manifest that carries a primitive list and matching provenance strings, with no source_kind. Run the geometry conformance preflight on both before submission.",
+      "expected_output": "Each preflight exits nonzero, reports geometry constraints as unverifiable for absent or producer-owned provenance, and does not fabricate a distance or a clean pass.",
+      "expectations": [
+        "The report status is violations, not clean, for the no-provenance spec.",
+        "The unverifiable array names each geometry_conformance invariant and states that expected-surface provenance is absent.",
+        "The manifest-sourced run also exits nonzero with each mesh unverifiable because the source path is a producer manifest, even without source_kind.",
+        "No geometry violation claims a Chamfer distance or a fabricated expected surface.",
+        "Both process exit statuses are nonzero."
+      ],
+      "files": [
+        "scripts/fixtures/geometry-rig-equivalent/source-scene-rig.json",
+        "scripts/fixtures/geometry-rig-equivalent/wheel_structure/outer_rim.obj",
+        "scripts/fixtures/geometry-rig-equivalent/link_structure/outer_rim.obj",
+        "scripts/fixtures/geometry-rig-equivalent/support_structure.obj",
+        "scripts/fixtures/geometry-rig-equivalent/link_structure/support_structure.obj",
+        "scripts/fixtures/spec-rig-no-provenance.json",
+        "scripts/fixtures/producer-manifest.json",
+        "scripts/fixtures/spec-geometry-manifest-source.json"
+      ],
+      "source_trace_ids": [
+        "sig-60a89f28d4683964c244431b"
+      ]
+    },
+    {
+      "id": 27,
+      "kind": "should_apply",
+      "prompt": "The producer's own check reports ALL CHECKS PASSED for this rig export: every part and link mesh has exact per-mesh vertex and triangle equality, exact_union=True, matching file and mesh counts, link meshes mirroring their part meshes, and a near-zero triangle delta. Independently derive the expected surface from the task Three.js source scene and run the mandatory pre-submit geometry gate over the complete artifact before packaging.",
+      "expected_output": "The source-derived Chamfer comparison rejects the export with a nonzero exit, reporting that the self-consistent part and link meshes are displaced beyond tolerance, naming each failing mesh, observed distance, tolerance, and placement-versus-shape attribution.",
+      "expectations": [
+        "The producer's self-comparison, exact unions, and matching vertex/triangle totals are not accepted as geometric proof.",
+        "The report status is violations, not clean.",
+        "The geometry array contains four failing entries for wheel_structure/outer_rim, link_wheel_structure/outer_rim, support_structure, and link_support_structure, each with source_scene_path, tolerance, observed Chamfer distance, and status fail.",
+        "The violations array contains invariant_class geometry_conformance naming each failing mesh, the observed distance, the stated tolerance, and displacement_class frame_or_placement.",
+        "The export_path_checks entries remain structural_only.",
+        "The process exit status is nonzero."
+      ],
+      "files": [
+        "scripts/fixtures/geometry-rig-displaced/source-scene-rig.json",
+        "scripts/fixtures/geometry-rig-displaced/wheel_structure/outer_rim.obj",
+        "scripts/fixtures/geometry-rig-displaced/link_structure/outer_rim.obj",
+        "scripts/fixtures/geometry-rig-displaced/support_structure.obj",
+        "scripts/fixtures/geometry-rig-displaced/link_structure/support_structure.obj",
+        "scripts/fixtures/spec-rig-displaced.json"
+      ],
+      "source_trace_ids": [
+        "sig-b675c0e9108295532c74f32c"
+      ]
+    },
+    {
+      "id": 28,
+      "kind": "should_apply",
+      "prompt": "The exporter's own parse-and-export check reports clean for this rig because each file is compared with the exporter's reconstruction. Independently recompute the source scene's two-level node hierarchy, primitive assembly, and world transforms, and run the independent oracle on the clean export before packaging.",
+      "expected_output": "The independent oracle exits zero with six passing meshes. Its report records the separate source-scene reader and 4x4 transform path, and each mesh entry compares expected and observed bounds, centroid, and triangle counts against the composed primitive world transforms.",
+      "expectations": [
+        "scripts/independent_mesh_oracle.py is run with the task source scene, the complete artifact root, and the tolerance spec.",
+        "Each of the six exported meshes is compared with the source-scene primitives after applying the root, turret, and arm node hierarchy.",
+        "The report records oracle.method and oracle.transform_path as independent of the exporter and its manifest.",
+        "The report status is clean, all six mesh entries pass, and the process exit status is zero."
+      ],
+      "files": [
+        "scripts/fixtures/mesh-oracle/source-scene.json",
+        "scripts/fixtures/mesh-oracle/spec-oracle.json",
+        "scripts/fixtures/mesh-oracle/clean/pedestal.obj",
+        "scripts/fixtures/mesh-oracle/clean/column.obj",
+        "scripts/fixtures/mesh-oracle/clean/arm_plate.obj",
+        "scripts/fixtures/mesh-oracle/clean/tool_head.obj",
+        "scripts/fixtures/mesh-oracle/clean/assembly.obj",
+        "scripts/fixtures/mesh-oracle/clean/duplicate.obj"
+      ],
+      "source_trace_ids": [
+        "sig-046d7b3d4105686cc325b3c8"
+      ]
+    },
+    {
+      "id": 29,
+      "kind": "should_apply",
+      "prompt": "This export passes the exporter's local parse-and-export check because every mesh is compared with the exporter's own expectation. The source scene says the pedestal is uniformly scaled, the column is translated, the arm plate inherits the turret and arm parent transforms, the tool head has a different rotation, one assembly omits a primitive, and another duplicates the pedestal. Run the independent source-scene oracle before submission.",
+      "expected_output": "The oracle exits nonzero and reports per-mesh transform and assembly violations for the scaled, translated, mis-parented, and rotated parts plus the omitted and duplicated primitives, each naming the affected mesh and reporting expected versus observed placement and shape.",
+      "expectations": [
+        "The report status is violations, not clean, and the process exit status is nonzero.",
+        "The violations include transform_scale for pedestal.obj and transform_translation for column.obj with observed_delta above the 0.01 tolerance.",
+        "The violations include mis_parented for arm_plate.obj and transform_rotation for tool_head.obj.",
+        "The violations include primitive_omission for the assembly's missing tool_head and primitive_duplication for duplicate.obj.",
+        "Each violation names its mesh and carries a transform object with expected and observed centroid and bounds plus translation_delta and size_ratio.",
+        "The oracle report records that expectations came from the source-scene primitive assembly and world transforms, not from the parse-and-export implementation under test."
+      ],
+      "files": [
+        "scripts/fixtures/mesh-oracle/source-scene.json",
+        "scripts/fixtures/mesh-oracle/spec-oracle.json",
+        "scripts/fixtures/mesh-oracle/near-miss/pedestal.obj",
+        "scripts/fixtures/mesh-oracle/near-miss/column.obj",
+        "scripts/fixtures/mesh-oracle/near-miss/arm_plate.obj",
+        "scripts/fixtures/mesh-oracle/near-miss/tool_head.obj",
+        "scripts/fixtures/mesh-oracle/near-miss/assembly.obj",
+        "scripts/fixtures/mesh-oracle/near-miss/duplicate.obj"
+      ],
+      "source_trace_ids": [
+        "sig-046d7b3d4105686cc325b3c8"
+      ]
+    },
+    {
+      "id": 30,
+      "kind": "should_apply",
+      "prompt": "A rig-style geometry preflight reports clean locally because the expected crate surface is reconstructed by the same source-primitive builder and transform path the producer used. The task source says the crate must match within 0.01 meter, but that self-consistent reconstruction is displaced from the task source by 0.2 meter. Run the geometry preflight before packaging.",
+      "expected_output": "The preflight exits nonzero and reports the geometry_conformance constraint as unverifiable because the expected surface reuses the producer's primitive reconstruction and transform path, even though the local reconstruction is self-consistent and a looser local tolerance would pass.",
+      "expectations": [
+        "scripts/preflight.py is run over the complete artifact root with the task-derived spec.",
+        "The report status is violations, not clean.",
+        "The unverifiable array names the geometry_conformance invariant and states that the expected surface is self-referential because it reuses the producer's primitive or transform path.",
+        "No geometry entry reports pass or a fabricated distance for the self-referential reconstruction.",
+        "The process exit status is nonzero."
+      ],
+      "files": [
+        "scripts/fixtures/geometry-oracle-self-referential/source-scene.json",
+        "scripts/fixtures/geometry-oracle-self-referential/crate.obj",
+        "scripts/fixtures/geometry-oracle-self-referential/spec.json"
+      ],
+      "source_trace_ids": [
+        "sig-81d28a82f0e760d2cda5feb0"
+      ]
+    },
+    {
+      "id": 31,
+      "kind": "should_apply",
+      "prompt": "A crate export is displaced 0.03 meter from the task source scene. The local tool tolerance is 0.05 meter and would report clean, but the task contract states a 0.01 meter acceptance tolerance. Run the geometry preflight before packaging.",
+      "expected_output": "The preflight uses the task-derived 0.01 meter acceptance tolerance rather than the looser local 0.05 tolerance, exits nonzero, and reports a geometry_conformance violation naming the mesh path, observed Chamfer, threshold, and placement attribution.",
+      "expectations": [
+        "The geometry entry reports tolerance 0.01 and a Chamfer distance above it.",
+        "The violations array contains invariant_class geometry_conformance naming the crate mesh path and the observed Chamfer distance.",
+        "The violation reports displacement_class frame_or_placement and does not substitute the looser 0.05 local tolerance.",
+        "The process exit status is nonzero."
+      ],
+      "files": [
+        "scripts/fixtures/geometry-tolerance-near-miss/source-scene.json",
+        "scripts/fixtures/geometry-tolerance-near-miss/crate.obj",
+        "scripts/fixtures/geometry-tolerance-near-miss/spec.json"
+      ],
+      "source_trace_ids": [
+        "sig-81d28a82f0e760d2cda5feb0"
+      ]
+    }
+  ]
+}

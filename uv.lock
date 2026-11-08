@@ -724,10 +724,14 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "claude-agent-sdk" },
+    { name = "jsonschema" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "claude-agent-sdk", specifier = "==0.2.174" }]
+requires-dist = [
+    { name = "claude-agent-sdk", specifier = "==0.2.174" },
+    { name = "jsonschema", specifier = "==4.26.0" },
+]
 
 [[package]]
 name = "sniffio"

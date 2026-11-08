@@ -1,0 +1,49 @@
+{
+  "layers": {
+    "A-ROOM": {
+      "type": "wall",
+      "canonical": "SPACE_BOUNDARY",
+      "aliases": [
+        "A-WALL"
+      ]
+    },
+    "A-DOOR": {
+      "type": "door",
+      "canonical": "DOOR_OPENING",
+      "aliases": [
+        "A-DOORS"
+      ]
+    },
+    "A-WC": {
+      "type": "toilet",
+      "canonical": "WATER_CLOSET",
+      "aliases": [
+        "A-TOILET"
+      ]
+    },
+    "A-LAV": {
+      "type": "lavatory",
+      "canonical": "LAVATORY",
+      "aliases": [
+        "A-LAVATORY"
+      ]
+    },
+    "A-GRABBAR": {
+      "type": "grab_bar",
+      "canonical": "GRAB_BAR",
+      "aliases": [
+        "A-GRAB-BAR"
+      ]
+    },
+    "A-ANNOTATION": {
+      "type": "annotation",
+      "canonical": "NOTE",
+      "aliases": [
+        "A-TEXT"
+      ]
+    }
+  },
+  "aliases": {
+    "WALLS": "A-ROOM"
+  }
+}

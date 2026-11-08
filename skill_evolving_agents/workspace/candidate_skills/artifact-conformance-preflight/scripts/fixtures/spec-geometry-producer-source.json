@@ -1,0 +1,57 @@
+{
+  "spec_revision": "task-rev-geometry-producer-source",
+  "invariants": [
+    {
+      "id": "exported-crate-geometry",
+      "class": "geometry_conformance",
+      "deliverable_path": "mesh-box-equivalent.obj",
+      "format": "obj",
+      "source": {
+        "scene_path": "source-scene-box.json",
+        "units": "meters"
+      },
+      "mesh_to_source": {
+        "crate": "crate"
+      },
+      "unit_conversion": {
+        "from": "meters",
+        "to": "meters",
+        "factor": 1.0,
+        "offset": 0.0
+      },
+      "frame_transform": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ]
+      ],
+      "tolerance": 0.01,
+      "metric": "max_nearest",
+      "sample_count": 512,
+      "expected_source": "task statement: the exported crate must match the source scene's 1x2x3 meter box within 0.01 meter",
+      "provenance": {
+        "source_scene_path": "source-scene-box.json",
+        "frame": "scene_root",
+        "units": "meters",
+        "derivation": "read the task source scene primitive type, dimensions, and transform, then rebuild the expected surface with the preflight builder",
+        "reader": "task source-scene primitive reader",
+        "transform_path": "independent primitive composition plus frame_transform normalization",
+        "source_kind": "producer_output"
+      }
+    }
+  ]
+}

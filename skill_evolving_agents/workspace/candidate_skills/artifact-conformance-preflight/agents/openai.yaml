@@ -1,0 +1,4 @@
+interface:
+  display_name: "Artifact Conformance Preflight"
+  short_description: "Run equality, range, calibration, graph, companion, and geometry conformance…"
+  default_prompt: "Use $artifact-conformance-preflight for this request."

@@ -1,0 +1,7 @@
+{
+  "records": [
+    {"id": "r1", "distance_km": 10.0, "speed_kmh": 60.0, "duration_minutes": 10.0, "duration_seconds": 600},
+    {"id": "r2", "distance_km": 10.0, "speed_kmh": 45.0, "duration_minutes": 13.2, "duration_seconds": 792},
+    {"id": "r3", "distance_km": 6.0, "speed_kmh": 40.0, "duration_minutes": 9.0, "duration_seconds": 540}
+  ]
+}

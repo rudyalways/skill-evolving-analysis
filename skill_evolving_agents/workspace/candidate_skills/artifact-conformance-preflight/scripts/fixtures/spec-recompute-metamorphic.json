@@ -1,0 +1,18 @@
+{
+  "spec_revision": "fixture-recompute-metamorphic-v1",
+  "records_path": "records",
+  "invariants": [
+    {
+      "id": "duration-metamorphic",
+      "class": "independent_recompute",
+      "field": "duration_minutes",
+      "metamorphic": [
+        {"kind": "positive"},
+        {"kind": "bounds", "min": 1, "max": 600},
+        {"kind": "representation", "other_field": "duration_seconds", "factor": 0.016666666666666666, "tolerance": 0.01}
+      ],
+      "expected_source": "task statement, duration bounds and unit equivalence",
+      "record_locator": "id"
+    }
+  ]
+}

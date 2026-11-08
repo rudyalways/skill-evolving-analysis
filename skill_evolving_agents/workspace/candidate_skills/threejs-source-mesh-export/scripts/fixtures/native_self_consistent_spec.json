@@ -1,0 +1,21 @@
+{
+  "source": "clean/support_structure.obj",
+  "reconstruction": {
+    "method": "producer-reexport",
+    "independent_of_producer": true
+  },
+  "frame": {
+    "source_up": "Y",
+    "artifact_up": "Y"
+  },
+  "units": {
+    "source_to_artifact": 1.0
+  },
+  "mapping": {
+    "wheel_structure/outer_rim.obj": "outer_rim",
+    "support_structure.obj": "support"
+  },
+  "tolerance": 0.006,
+  "min_coverage": 0.9,
+  "sampling_budget": 2400
+}

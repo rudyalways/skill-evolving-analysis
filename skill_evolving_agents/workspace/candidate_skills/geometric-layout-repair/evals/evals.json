@@ -1,0 +1,358 @@
+{
+  "skill_name": "geometric-layout-repair",
+  "evals": [
+    {
+      "id": 1,
+      "kind": "should_apply",
+      "prompt": "Repair this bathroom layout and write repaired_layout.json plus repaired_plan.dxf. The current JSON has room polygon coordinates with three columns, such as [[0,0,0],[4,0,0],[4,3,0],[0,3,0],[0,0,0]], and one ring is not explicitly closed.",
+      "expected_output": "The round-trip gate reconstructs the written JSON and DXF, rejects the (N, 3) and open-ring geometry with the offending element ID and observed shape, does not invoke the objective verifier, and after correction accepts the (N, 2), closed-ring layout before submission.",
+      "expectations": [
+        "The written repaired_layout.json and repaired_plan.dxf are re-read from disk and reconstructed with shapely and ezdxf before any objective verifier runs.",
+        "A (N, 3) JSON coordinate array is rejected with a diagnostic naming the element and comparing (N, 3) with the expected (N, 2) shape.",
+        "An unclosed polygon ring is rejected and the corrected layout explicitly repeats the first vertex as the last vertex.",
+        "The corrected (N, 2), closed-ring layout passes the gate and only then is the objective verifier invoked."
+      ],
+      "files": [],
+      "source_trace_ids": [
+        "sig-0b7689f2b6c484a0abeadd64"
+      ]
+    },
+    {
+      "id": 2,
+      "kind": "should_apply",
+      "prompt": "Finish an accessible bathroom repair where the JSON has valid (N, 2) room and fixture rings but the repaired DXF REPAIR-WC polyline describes a different fixture position from the JSON bbox.",
+      "expected_output": "The round-trip gate reports the DXF entity and the JSON element that disagree on plan-view geometry and blocks submission until both representations describe the same polygon.",
+      "expectations": [
+        "Every written polygon and bbox is rebuilt from repaired_layout.json and cross-checked against the REPAIR-* DXF entities.",
+        "The mismatch is reported with the offending element ID and coordinate shape.",
+        "The skill does not submit or claim success while the JSON and DXF disagree."
+      ],
+      "files": [],
+      "source_trace_ids": [
+        "sig-0b7689f2b6c484a0abeadd64"
+      ]
+    },
+    {
+      "id": 3,
+      "kind": "should_not_apply",
+      "prompt": "List the layer names and entity counts in an existing architectural DXF so I can decide which layers to archive.",
+      "expected_output": "The geometric layout repair workflow is not selected; this is DXF inspection, not a layout repair with a JSON geometry contract.",
+      "expectations": [
+        "The repair and geometry-contract workflow is not used for a read-only layer inventory.",
+        "No repaired_layout.json or repaired_plan.dxf is produced."
+      ],
+      "files": [],
+      "source_trace_ids": []
+    },
+    {
+      "id": 4,
+      "kind": "should_apply",
+      "prompt": "A long bathroom repair run has already written repaired_layout.json, repaired_plan.dxf, and changes.json to their required paths, and the round-trip geometry contract passes. With time still left on the clock, you keep reopening the input DXF to look for further geometry improvements. Apply the completion gate and decide what to do next.",
+      "expected_output": "The run checkpoints the complete required-output manifest, confirms each JSON and the repaired DXF exists, is non-empty, parses, and agrees on geometry, runs the final self-check, and stops further exploratory inspection instead of starting another inspect-modify cycle until the wall-clock timeout.",
+      "expectations": [
+        "Before more geometry work, the run records that repaired_layout.json, repaired_plan.dxf, and changes.json exist, are non-empty, and parse where applicable.",
+        "The final self-check runs only after every required output is present and confirms the repaired_layout.json and DXF describe the same geometry.",
+        "Once the complete deliverable set passes, the run stops exploratory inspection and optional preview work rather than iterating until a wall-clock timeout.",
+        "A missing or empty required artifact would be repaired next instead of continuing geometry inspection."
+      ],
+      "files": [],
+      "source_trace_ids": [
+        "sig-2ec611b7b5dcd790195a836c"
+      ]
+    },
+    {
+      "id": 5,
+      "kind": "should_apply",
+      "prompt": "Three successive ad-hoc ezdxf extraction windows each recovered only part of the same accessible bathroom plan, so repair is starting from guessed geometry. Extract the architectural DXF deterministically from its semantic layers before making any repair edit, and show that repeated runs agree.",
+      "expected_output": "One invocation of scripts/extract_architectural_dxf.py consumes the DXF, semantic layer schema, output JSON schema, and plan-view rules, emits normalized layer, room, door, fixture, grab-bar, and bounded turning-space JSON that conforms to the schema, and produces byte-identical output on a repeated run.",
+      "expectations": [
+        "The extractor is invoked once with the DXF path, semantic layer schema, output JSON schema, and plan-view rules before any repair edit.",
+        "The JSON covers LINE, POLYLINE, ARC, CIRCLE, and SPLINE entities normalized from their semantic layers.",
+        "The output conforms to the supplied JSON schema and contains layer inventory, rooms, doors, fixtures, grab bars, and bounded turning-space candidates.",
+        "A second run on the same input produces byte-identical JSON."
+      ],
+      "files": [
+        "evals/fixtures/positive_semantic.dxf",
+        "evals/fixtures/layer_schema.json",
+        "evals/fixtures/output_schema.json",
+        "evals/fixtures/plan_view_rules.json"
+      ],
+      "source_trace_ids": [
+        "sig-96bedb6f053e75d144c8b85d"
+      ]
+    },
+    {
+      "id": 6,
+      "kind": "should_apply",
+      "prompt": "The semantic-layer DXF is valid, but the plan-view rules require a turning circle larger than any position the usable floor allows. Run the extraction and solve the turning space rather than drawing a circle by hand.",
+      "expected_output": "The extractor performs a bounded search, writes the normalized extraction with turning_space.status no_fit, empty candidates, selected null, and search_miss evidence, and does not fabricate or infer a turning-circle position.",
+      "expectations": [
+        "The solver search honors its grid and candidate bounds instead of searching without limit.",
+        "A bounded no-fit result is serialized as turning_space.status no_fit with search_miss evidence rather than failing extraction.",
+        "The output JSON records empty candidates and selected null and is written only after schema validation.",
+        "No turning circle is fabricated or inferred from the no-fit case."
+      ],
+      "files": [
+        "evals/fixtures/no_fit_semantic.dxf",
+        "evals/fixtures/layer_schema.json",
+        "evals/fixtures/output_schema.json",
+        "evals/fixtures/plan_view_rules.json"
+      ],
+      "source_trace_ids": [
+        "sig-96bedb6f053e75d144c8b85d"
+      ]
+    },
+    {
+      "id": 7,
+      "kind": "should_apply",
+      "prompt": "Extract the plan from a DXF whose A-LAV semantic layer contains a TEXT entity among otherwise supported fixtures. Report the extraction problem instead of skipping the entity or guessing its geometry.",
+      "expected_output": "The extractor fails once with entity type TEXT, layer A-LAV, the entity handle, and unsupported_geometry, and it writes no partial extraction.",
+      "expectations": [
+        "The failure names the entity type, layer, and handle.",
+        "The diagnostic includes unsupported_geometry identifying why the entity cannot be normalized.",
+        "The run stops after that single explicit failure and publishes no output JSON."
+      ],
+      "files": [
+        "evals/fixtures/unsupported_semantic.dxf",
+        "evals/fixtures/layer_schema.json",
+        "evals/fixtures/output_schema.json",
+        "evals/fixtures/plan_view_rules.json"
+      ],
+      "source_trace_ids": [
+        "sig-96bedb6f053e75d144c8b85d"
+      ]
+    },
+    {
+      "id": 8,
+      "kind": "should_apply",
+      "prompt": "A task root contains input/plan.dxf, input/layer_schema.json, input/plan_view_rules.json, and final-deliverable schemas under input/output_schemas, but no explicit extractor paths are given. Run the architectural extraction once before any repair edit under the task-root adapter and show what produced the normalized output.",
+      "expected_output": "The task-root adapter resolves the single input DXF, layer schema, and plan-view rules, invokes the existing extractor with the bundled scripts/schemas/normalized_extraction.schema.json, and ignores the unrelated input/output_schemas deliverable schemas. It writes output/extracted_geometry.json conforming to the bundled schema and output/extraction_receipt.json whose status, input hashes, schema count, and normalized-output hash match the files actually used and written.",
+      "expectations": [
+        "The adapter is invoked once for the task root and resolves exactly one input DXF, input/layer_schema.json, and input/plan_view_rules.json.",
+        "The existing extractor is called with the bundled scripts/schemas/normalized_extraction.schema.json rather than any input/output_schemas/*.json file.",
+        "The normalized JSON is written to output/extracted_geometry.json only after it conforms to the bundled normalization schema.",
+        "output/extraction_receipt.json records status success, the input paths and SHA-256 values, output_schema_count 1, and the normalized JSON path, SHA-256, and byte count.",
+        "The receipt and required-output manifest are checked and agree with the actual invocation inputs and written outputs before repair begins."
+      ],
+      "files": [
+        "evals/task_root/input/plan.dxf",
+        "evals/task_root/input/layer_schema.json",
+        "evals/task_root/input/plan_view_rules.json",
+        "evals/task_root/input/output_schemas/01_extraction.schema.json",
+        "evals/task_root/input/output_schemas/02_source_manifest.schema.json"
+      ],
+      "source_trace_ids": [
+        "sig-1e1ecbb93ff31d0a7ae604d1"
+      ]
+    },
+    {
+      "id": 9,
+      "kind": "should_apply",
+      "prompt": "The task root has input/plan.dxf and input/ada_rules.json, but input/layer_schema.json is missing. Extraction blocks the repair, so write a temporary probe that infers the missing layer schema and extracts anyway.",
+      "expected_output": "The task-root adapter stops once with a missing_conventional_input failure that names input/layer_schema.json, writes no normalized JSON or receipt, and does not run an ad-hoc probe or infer a replacement schema.",
+      "expectations": [
+        "The adapter resolves conventional inputs once and fails on the first missing input rather than searching alternate roots or regenerating probes.",
+        "The failure is a single JSON diagnostic with error missing_conventional_input naming the expected input/layer_schema.json path.",
+        "No output/extracted_geometry.json, output/extraction_receipt.json, or partial extraction is written.",
+        "No probe*.py, extract.py, geom.py, inferred schema, or guessed geometry is produced as a fallback."
+      ],
+      "files": [],
+      "source_trace_ids": [
+        "sig-1e1ecbb93ff31d0a7ae604d1"
+      ]
+    },
+    {
+      "id": 10,
+      "kind": "should_apply",
+      "prompt": "The repaired_layout.json and repaired_plan.dxf already pass the round-trip geometry gate, but the objective verifier reports failed accessibility assertions: the toilet centerline_from_side_wall is outside its allowed range and the turning circle overlaps the lavatory. The session has not yet submitted.",
+      "expected_output": "The run treats the verifier output as a repair queue: it extracts each failing assertion and its concrete contract defect, repairs the first actionable defect in repaired_layout.json or repaired_plan.dxf, reruns the verifier, and repeats until the verifier passes or every remaining failure is documented as outside the declared scope instead of ending the session red.",
+      "expectations": [
+        "Each failing assertion, test name, and missing or mismatched field is extracted from the verifier output before another edit is attempted.",
+        "The first actionable in-scope defect is mapped to a responsible layout or DXF element and repaired with the smallest local change.",
+        "The same objective verifier is replayed after the repair rather than submission or a completion claim.",
+        "Completion is not reported while any in-scope verifier assertion still fails; remaining failures are documented only when outside the declared scope."
+      ],
+      "files": [],
+      "source_trace_ids": [
+        "sig-a35a64811a3553bcbe557be8"
+      ]
+    },
+    {
+      "id": 11,
+      "kind": "should_apply",
+      "prompt": "A harness-style task root has input/plan.dxf, input/layer_schema.json, input/plan_view_rules.json, and a separate output_schema/final_layout.schema.json for the final deliverable, but no extractor-specific schema. Run the one-command extraction adapter before any repair edit and show what produced the normalized output.",
+      "expected_output": "scripts/extract_task_root.py resolves the single DXF, layer schema, and rules, invokes the existing extractor with the bundled scripts/schemas/normalized_extraction.schema.json, writes output/extracted_geometry.json conforming to that bundled schema, and writes output/extraction_receipt.json recording the discovered inputs, one bundled schema, and the normalized-output hash; output_schema/final_layout.schema.json is not used.",
+      "expectations": [
+        "The adapter is invoked once for the task root and resolves exactly one input/plan.dxf, input/layer_schema.json, and input/plan_view_rules.json.",
+        "The existing extractor is called with the bundled scripts/schemas/normalized_extraction.schema.json rather than output_schema/final_layout.schema.json.",
+        "output/extracted_geometry.json is written only after it conforms to the bundled normalization schema.",
+        "output/extraction_receipt.json records status success, the discovered input paths and SHA-256 values, output_schema_count 1, and the normalized JSON path, SHA-256, and byte count.",
+        "The receipt and normalized output are checked against the files actually written before repair begins."
+      ],
+      "files": [
+        "evals/harness_task_root/input/plan.dxf",
+        "evals/harness_task_root/input/layer_schema.json",
+        "evals/harness_task_root/input/plan_view_rules.json",
+        "evals/harness_task_root/output_schema/final_layout.schema.json"
+      ],
+      "source_trace_ids": [
+        "sig-1e1ecbb93ff31d0a7ae604d1"
+      ]
+    },
+    {
+      "id": 12,
+      "kind": "should_apply",
+      "prompt": "A harness-style task root uses input/ada_rules.json for its rules and contains an unsupported TEXT entity on the A-LAV semantic layer. Run the one-command task-root adapter and report the extraction problem instead of writing an ad-hoc probe or guessing the geometry.",
+      "expected_output": "scripts/extract_task_root.py discovers the DXF, layer schema, and input/ada_rules.json, invokes the extractor with the bundled normalization schema, and stops once with the extractor's unsupported_geometry diagnostic naming entity type, layer, and handle. It writes no normalized JSON and no execution receipt and generates no ad-hoc fallback probe.",
+      "expectations": [
+        "The adapter accepts a single input/*_rules.json such as input/ada_rules.json when input/plan_view_rules.json is absent.",
+        "The extractor is invoked with the bundled scripts/schemas/normalized_extraction.schema.json, not the separate final-deliverable output schema.",
+        "The run fails exactly once with unsupported_geometry naming the entity type, layer, and handle.",
+        "No output/extracted_geometry.json, output/extraction_receipt.json, replacement schema, or ad-hoc extraction probe is produced.",
+        "No probe*.py, extract.py, or geom.py is written and the adapter is not retried with a regenerated rules or schema file."
+      ],
+      "files": [
+        "evals/harness_task_root_unsupported/input/plan.dxf",
+        "evals/harness_task_root_unsupported/input/layer_schema.json",
+        "evals/harness_task_root_unsupported/input/ada_rules.json",
+        "evals/harness_task_root_unsupported/output_schema/final_layout.schema.json"
+      ],
+      "source_trace_ids": [
+        "sig-1e1ecbb93ff31d0a7ae604d1"
+      ]
+    },
+    {
+      "id": 13,
+      "kind": "should_apply",
+      "prompt": "A harness-style task root carries input/ada_rules.json with flat benchmark aliases: unit instead of units, turning_circle_diameter_min, and plan_requirements.turning_space.diameter_min. A separate output_schema/final_layout.schema.json describes the final deliverable. Run the one-command adapter once and report which rules and schema actually produced the normalized extraction.",
+      "expected_output": "scripts/extract_task_root.py normalizes unit to units and both diameter aliases to turning_space.diameter, invokes the existing extractor with the bundled scripts/schemas/normalized_extraction.schema.json, writes output/extracted_geometry.json conforming to that schema, and writes output/extraction_receipt.json recording the source rules hash, the normalized rules hash, the applied aliases, and the normalized-output hash. The final-deliverable output_schema is not used.",
+      "expectations": [
+        "The adapter accepts input/ada_rules.json and maps unit to units, turning_circle_diameter_min and plan_requirements.turning_space.diameter_min to turning_space.diameter before invoking the extractor.",
+        "The extractor is called with the bundled scripts/schemas/normalized_extraction.schema.json, not output_schema/final_layout.schema.json.",
+        "output/extracted_geometry.json is written only after it conforms to the bundled normalization schema.",
+        "output/extraction_receipt.json records status success, the source and normalized rules SHA-256 values, output_schema_count 1, and the normalized JSON path, SHA-256, and byte count.",
+        "The receipt and normalized output are checked against the files actually written before repair begins."
+      ],
+      "files": [
+        "evals/harness_task_root_flat_aliases/input/plan.dxf",
+        "evals/harness_task_root_flat_aliases/input/layer_schema.json",
+        "evals/harness_task_root_flat_aliases/input/ada_rules.json",
+        "evals/harness_task_root_flat_aliases/output_schema/final_layout.schema.json"
+      ],
+      "source_trace_ids": [
+        "sig-1e1ecbb93ff31d0a7ae604d1"
+      ]
+    },
+    {
+      "id": 14,
+      "kind": "should_apply",
+      "prompt": "A harness-style task root has input/plan.dxf, input/layer_schema.json whose entries use type, canonical, and aliases, input/ada_rules.json, and a separate output_schema/final_layout.schema.json for the final deliverable. Run the one-command extraction preflight before inspecting the DXF; if it exits nonzero, stop with its single diagnostic instead of authoring a probe.",
+      "expected_output": "scripts/extract_task_root.py runs exactly once before inspection, expands the type/canonical/aliases layer schema into role/fixture_type records while preserving every source layer name, normalizes the flat rule aliases, writes schema-valid output/extracted_geometry.json plus output/extraction_receipt.json recording the actual invocation, and on failure stops with missing_conventional_input or unsupported_geometry without writing probe*.py, extract.py, or geom.py.",
+      "expectations": [
+        "The preflight is invoked exactly once on the task root before the DXF is listed, read, or edited.",
+        "Type, canonical, and alias layer entries expand to role/fixture_type records for room, door, fixture, grab_bar, and ignore, and the DXF's source layer names are retained.",
+        "output/extracted_geometry.json conforms to scripts/schemas/normalized_extraction.schema.json and output/extraction_receipt.json records the actual invocation, input hashes, output_schema_count 1, and the normalized-output path, SHA-256, and byte count.",
+        "The separate output_schema/final_layout.schema.json is not passed to the extractor.",
+        "A nonzero adapter exit stops the run with its single missing_conventional_input or unsupported_geometry diagnostic and creates no probe*.py, extract.py, geom.py, partial extraction, or replacement schema."
+      ],
+      "files": [
+        "evals/harness_task_root_layer_aliases/input/plan.dxf",
+        "evals/harness_task_root_layer_aliases/input/layer_schema.json",
+        "evals/harness_task_root_layer_aliases/input/ada_rules.json",
+        "evals/harness_task_root_layer_aliases/output_schema/final_layout.schema.json"
+      ],
+      "source_trace_ids": [
+        "acp:trace:turn-a6634d92086ca3144135"
+      ]
+    },
+    {
+      "id": 15,
+      "kind": "should_apply",
+      "prompt": "A harness-style task root has input/plan.dxf, input/layer_schema.json using type, canonical, and aliases, input/ada_rules.json, and a separate output_schema/final_layout.schema.json. The wall-mapped room layer contains only open wall polylines and lines, the A-LAV fixture layer also carries a POINT helper, and there is no closed space boundary. Run the one-command preflight before inspecting the DXF and report what produced the normalized extraction.",
+      "expected_output": "scripts/extract_task_root.py runs exactly once before inspection, expands the type/canonical/aliases schema into role/fixture_type records while retaining every source layer name, normalizes the flat aliases, ignores the bounded POINT helper with type/layer/count evidence, derives one deterministic interior room candidate from the wall geometry instead of one room per open polyline, writes schema-valid output/extracted_geometry.json plus output/extraction_receipt.json recording the actual invocation, the ignored evidence, and the derived room, and never passes output_schema/final_layout.schema.json to the extractor.",
+      "expectations": [
+        "The adapter is invoked exactly once with the task-root directory as its only argument before the DXF is listed, read, or edited.",
+        "Type, canonical, and alias entries expand to role/fixture_type records for room, door, fixture, grab_bar, and ignore, and the DXF source layer names are retained.",
+        "The POINT helper on the mapped fixture layer is tolerated and recorded as ignored type/layer/count evidence instead of failing or contributing geometry.",
+        "A single WALL-DERIVED room is derived deterministically from the open wall geometry, and open wall polylines are not each emitted as separate rooms.",
+        "Fixture primitives are aggregated by semantic layer/fixture_type into one stable record with source_handles instead of failing on an individual degenerate fragment.",
+        "output/extracted_geometry.json validates against scripts/schemas/normalized_extraction.schema.json and output/extraction_receipt.json records the actual invocation, input hashes, output_schema_count 1, ignored-entity evidence, derived-room evidence, and the normalized-output path, SHA-256, and byte count.",
+        "The separate output_schema/final_layout.schema.json is not passed to the extractor."
+      ],
+      "files": [
+        "evals/harness_task_root_wall_derived/input/plan.dxf",
+        "evals/harness_task_root_wall_derived/input/layer_schema.json",
+        "evals/harness_task_root_wall_derived/input/ada_rules.json",
+        "evals/harness_task_root_wall_derived/output_schema/final_layout.schema.json"
+      ],
+      "source_trace_ids": [
+        "sig-1e1ecbb93ff31d0a7ae604d1"
+      ]
+    },
+    {
+      "id": 16,
+      "kind": "should_apply",
+      "prompt": "A harness-style task root has input/plan.dxf, input/layer_schema.json using type, canonical, and aliases, input/ada_rules.json, and a separate output_schema/final_layout.schema.json. The plan contains an ELLIPSE, an unknown geometric entity, on the mapped A-LAV fixture layer. Run the one-command task-root adapter once and report the extraction problem instead of writing an ad-hoc probe or guessing the geometry.",
+      "expected_output": "scripts/extract_task_root.py stops once with the extractor's unsupported_geometry diagnostic naming the ELLIPSE entity type, layer, and handle, writes no normalized JSON or execution receipt, and creates no probe*.py, extract.py, geom.py, replacement schema, or partial extraction.",
+      "expectations": [
+        "The adapter is invoked exactly once on the task root and accepts input/ada_rules.json when input/plan_view_rules.json is absent.",
+        "The run fails exactly once with unsupported_geometry naming the unknown ELLIPSE entity type, layer, and handle.",
+        "No output/extracted_geometry.json, output/extraction_receipt.json, partial extraction, or replacement schema is written.",
+        "No probe*.py, extract.py, or geom.py is authored and the adapter is not retried with a regenerated rules or schema file."
+      ],
+      "files": [
+        "evals/harness_task_root_wall_derived_unsupported/input/plan.dxf",
+        "evals/harness_task_root_wall_derived_unsupported/input/layer_schema.json",
+        "evals/harness_task_root_wall_derived_unsupported/input/ada_rules.json",
+        "evals/harness_task_root_wall_derived_unsupported/output_schema/final_layout.schema.json"
+      ],
+      "source_trace_ids": [
+        "sig-1e1ecbb93ff31d0a7ae604d1"
+      ]
+    },
+    {
+      "id": 17,
+      "kind": "should_apply",
+      "prompt": "A harness-style task root has input/plan.dxf, input/layer_schema.json, input/ada_rules.json with flat aliases, a separate output_schema/final_layout.schema.json, and usable floor too narrow for the required turning circle. Run the one-command preflight before inspecting the DXF and report what the normalized extraction contains.",
+      "expected_output": "scripts/extract_task_root.py runs exactly once before inspection, normalizes the flat rule aliases, uses the bundled scripts/schemas/normalized_extraction.schema.json, and writes schema-valid output/extracted_geometry.json plus output/extraction_receipt.json. The normalized turning_space records status no_fit with empty candidates, selected null, and search_miss evidence, and the receipt records that miss rather than failing extraction or fabricating a circle.",
+      "expectations": [
+        "The adapter is invoked exactly once with the task-root directory before the DXF is listed, read, or edited.",
+        "The bundled scripts/schemas/normalized_extraction.schema.json is used and the separate output_schema/final_layout.schema.json is not passed to the extractor.",
+        "A bounded turning-space search miss is serialized as turning_space.status no_fit with empty candidates, selected null, and search_miss evidence.",
+        "output/extracted_geometry.json and output/extraction_receipt.json are both written, schema-valid, and hash-consistent on this no-fit input.",
+        "No turning circle is fabricated, no extracted_geometry.json is withheld because of the miss, and no probe*.py, extract.py, or geom.py fallback is authored."
+      ],
+      "files": [
+        "evals/harness_task_root_no_fit/input/plan.dxf",
+        "evals/harness_task_root_no_fit/input/layer_schema.json",
+        "evals/harness_task_root_no_fit/input/ada_rules.json",
+        "evals/harness_task_root_no_fit/output_schema/final_layout.schema.json"
+      ],
+      "source_trace_ids": [
+        "sig-1e1ecbb93ff31d0a7ae604d1"
+      ]
+    },
+    {
+      "id": 18,
+      "kind": "should_apply",
+      "prompt": "An embedded harness runs the skill's adapter code in-process with runpy.run_path('scripts/extract_task_root.py') instead of launching it as the argument to python, and the process has an empty sys.executable (or a non-executable stub). The task root is evals/harness_task_root with input/plan.dxf, input/layer_schema.json, input/plan_view_rules.json, and a separate output_schema/final_layout.schema.json. Prove the bundled extractor still runs as a child process and produces the normalized output and execution receipt.",
+      "expected_output": "The adapter resolves a usable child interpreter without trusting the empty sys.executable: it rejects the empty or non-executable value and selects python3 or python from PATH. The child extractor still runs on input/plan.dxf with the bundled scripts/schemas/normalized_extraction.schema.json, and the direct run writes schema-valid output/extracted_geometry.json plus output/extraction_receipt.json whose child_interpreter is the non-empty PATH executable actually used and whose hashes and byte counts match the written files.",
+      "expectations": [
+        "The adapter is invoked directly through runpy.run_path with sys.executable set to an empty string and then to a non-executable path, not through a `python scripts/extract_task_root.py` command line.",
+        "Interpreter resolution uses sys.executable only when it is non-empty and executable, otherwise selects python3 then python from PATH, and never lets the empty value reach subprocess.run.",
+        "The child extractor still runs and writes output/extracted_geometry.json conforming to scripts/schemas/normalized_extraction.schema.json.",
+        "output/extraction_receipt.json records status success, child_interpreter as the non-empty executable actually used, child_interpreter_source PATH, output_schema_count 1, and the normalized-output path, SHA-256, and byte count matching the file on disk.",
+        "The run succeeds without writing probe*.py, extract.py, geom.py, or a replacement schema."
+      ],
+      "files": [
+        "evals/harness_task_root/input/plan.dxf",
+        "evals/harness_task_root/input/layer_schema.json",
+        "evals/harness_task_root/input/plan_view_rules.json",
+        "evals/harness_task_root/output_schema/final_layout.schema.json"
+      ],
+      "source_trace_ids": [
+        "sig-728b0345a098365077c273c5"
+      ]
+    }
+  ]
+}

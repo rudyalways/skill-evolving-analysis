@@ -23,6 +23,7 @@
     "score.detector_strength_weight": {"target": "preprocessing", "path": "evolution_policy.priority_score.detector_strength_weight", "type": "float", "domain": {"values": [0.1, 0.2, 0.3]}, "default": 0.2, "risk": "quality", "mutable": true},
     "score.skill_match_weight": {"target": "preprocessing", "path": "evolution_policy.priority_score.skill_match_weight", "type": "float", "domain": {"values": [0.05, 0.1, 0.2]}, "default": 0.1, "risk": "quality", "mutable": true},
     "score.detector_saturation_scale": {"target": "preprocessing", "path": "evolution_policy.priority_score.detector_saturation_scale", "type": "float", "domain": {"values": [2.0, 4.0, 8.0]}, "default": 4.0, "risk": "quality", "mutable": true},
+    "goal.contract_repair_attempts": {"target": "profile", "path": "phases.goal.contract_repair_attempts", "type": "integer", "domain": {"values": [0, 1, 2]}, "default": 2, "risk": "cost", "mutable": true},
     "publish.atomic": {"target": "super_config", "path": "algorithms.publish.atomic-v1", "type": "locked", "default": true, "risk": "safety", "mutable": false},
     "fail_open.embedding": {"target": "profile", "path": "phases.semantic_prefilter.on_error", "type": "locked", "default": "escalate", "risk": "safety", "mutable": false}
   },

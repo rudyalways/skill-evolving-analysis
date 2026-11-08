@@ -712,6 +712,34 @@ def _select_findings(
     overlap_threshold = float(
         config.get("deduplicate_overlap_threshold", 0.8)
     )
+    if config.get("suppress_generic_objective_when_resource_specific", True):
+        specific_resource_traces = {
+            trace_id
+            for row in eligible
+            if (row.get("features") or {}).get("candidate_source")
+            == "resource_opportunity"
+            and (row.get("features") or {}).get("objective_failure") is True
+            for trace_id in row.get("trace_ids") or []
+        }
+        retained: list[dict[str, Any]] = []
+        for row in eligible:
+            is_generic_objective = (
+                row.get("detector") == "method-objective-verifier-failure"
+            )
+            overlap = specific_resource_traces.intersection(
+                row.get("trace_ids") or []
+            )
+            if is_generic_objective and overlap:
+                decisions[row["signal_id"]].update(
+                    {
+                        "disposition": "deduplicated",
+                        "reason": "superseded-by-specific-resource-finding",
+                        "same_learning_target": True,
+                    }
+                )
+                continue
+            retained.append(row)
+        eligible = retained
     deduplicated: list[dict[str, Any]] = []
 
     def is_duplicate(

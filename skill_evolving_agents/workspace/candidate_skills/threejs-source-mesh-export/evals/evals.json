@@ -1,0 +1,811 @@
+{
+  "skill_name": "threejs-source-mesh-export",
+  "evals": [
+    {
+      "id": 1,
+      "kind": "should_apply",
+      "prompt": "Export the wheel and support meshes from the Three.js source scene and verify they conform to the source primitives before submission.",
+      "expected_output": "The clean fixture rig passes the source-derived geometry check with a zero exit and no violations.",
+      "expectations": [
+        "The check helper is run against scripts/fixtures/spec.json and scripts/fixtures/clean.",
+        "The helper exits zero and reports status pass for wheel_structure/outer_rim.obj and support_structure.obj.",
+        "Every check record reports attribution none."
+      ],
+      "files": [
+        "scripts/check_mesh_conformance.py",
+        "scripts/fixtures/spec.json",
+        "scripts/fixtures/source_scene.json",
+        "scripts/fixtures/clean/wheel_structure/outer_rim.obj",
+        "scripts/fixtures/clean/support_structure.obj"
+      ],
+      "source_trace_ids": [
+        "sig-b675c0e9108295532c74f32c"
+      ]
+    },
+    {
+      "id": 2,
+      "kind": "should_apply",
+      "prompt": "Verify the exported wheel_structure/outer_rim.obj part mesh, which sits away from the source part placement.",
+      "expected_output": "The check fails nonzero and identifies the outer rim as displaced.",
+      "expectations": [
+        "The helper exits nonzero.",
+        "The violation names wheel_structure/outer_rim.obj.",
+        "The violation attribution is placement."
+      ],
+      "files": [
+        "scripts/check_mesh_conformance.py",
+        "scripts/fixtures/spec.json",
+        "scripts/fixtures/source_scene.json",
+        "scripts/fixtures/displaced_part/wheel_structure/outer_rim.obj",
+        "scripts/fixtures/displaced_part/support_structure.obj"
+      ],
+      "source_trace_ids": [
+        "sig-b675c0e9108295532c74f32c"
+      ]
+    },
+    {
+      "id": 3,
+      "kind": "should_apply",
+      "prompt": "Verify the exported support_structure.obj link mesh, which is offset from the source link placement.",
+      "expected_output": "The check fails nonzero and identifies the support link as displaced.",
+      "expectations": [
+        "The helper exits nonzero.",
+        "The violation names support_structure.obj.",
+        "The violation attribution is placement."
+      ],
+      "files": [
+        "scripts/check_mesh_conformance.py",
+        "scripts/fixtures/spec.json",
+        "scripts/fixtures/source_scene.json",
+        "scripts/fixtures/displaced_link/wheel_structure/outer_rim.obj",
+        "scripts/fixtures/displaced_link/support_structure.obj"
+      ],
+      "source_trace_ids": [
+        "sig-b675c0e9108295532c74f32c"
+      ]
+    },
+    {
+      "id": 4,
+      "kind": "should_apply",
+      "prompt": "Check a wheel rim export whose radius differs from the source cylinder while its placement is unchanged.",
+      "expected_output": "The check fails nonzero and attributes the error to shape rather than placement.",
+      "expectations": [
+        "The helper exits nonzero.",
+        "The violation names wheel_structure/outer_rim.obj.",
+        "The violation attribution is shape."
+      ],
+      "files": [
+        "scripts/check_mesh_conformance.py",
+        "scripts/fixtures/spec.json",
+        "scripts/fixtures/source_scene.json",
+        "scripts/fixtures/shape_distorted/wheel_structure/outer_rim.obj",
+        "scripts/fixtures/shape_distorted/support_structure.obj"
+      ],
+      "source_trace_ids": [
+        "sig-b675c0e9108295532c74f32c"
+      ]
+    },
+    {
+      "id": 5,
+      "kind": "should_apply",
+      "prompt": "Check an export that was written in the wrong up axis for the artifact frame.",
+      "expected_output": "The check fails nonzero and attributes the error to the frame.",
+      "expectations": [
+        "The helper exits nonzero.",
+        "The violation names wheel_structure/outer_rim.obj.",
+        "The violation attribution is frame."
+      ],
+      "files": [
+        "scripts/check_mesh_conformance.py",
+        "scripts/fixtures/spec.json",
+        "scripts/fixtures/source_scene.json",
+        "scripts/fixtures/frame_mismatch/wheel_structure/outer_rim.obj",
+        "scripts/fixtures/frame_mismatch/support_structure.obj"
+      ],
+      "source_trace_ids": [
+        "sig-b675c0e9108295532c74f32c"
+      ]
+    },
+    {
+      "id": 6,
+      "kind": "should_apply",
+      "prompt": "Check an export whose units are an order of magnitude larger than the scene units.",
+      "expected_output": "The check fails nonzero and attributes the error to a unit mismatch.",
+      "expectations": [
+        "The helper exits nonzero.",
+        "The violation names wheel_structure/outer_rim.obj.",
+        "The violation attribution is unit."
+      ],
+      "files": [
+        "scripts/check_mesh_conformance.py",
+        "scripts/fixtures/spec.json",
+        "scripts/fixtures/source_scene.json",
+        "scripts/fixtures/unit_mismatch/wheel_structure/outer_rim.obj",
+        "scripts/fixtures/unit_mismatch/support_structure.obj"
+      ],
+      "source_trace_ids": [
+        "sig-b675c0e9108295532c74f32c"
+      ]
+    },
+    {
+      "id": 7,
+      "kind": "should_not_apply",
+      "prompt": "Audit the whole submission repository for missing files, schema conformance, and acceptance-package completeness.",
+      "expected_output": "The mesh export skill is not selected; generic artifact conformance is deferred to artifact-conformance-preflight.",
+      "expectations": [
+        "No Three.js source mesh export or source-primitive reconstruction is performed."
+      ],
+      "files": [],
+      "source_trace_ids": []
+    },
+    {
+      "id": 8,
+      "kind": "should_apply",
+      "prompt": "Export wheel_structure/outer_rim.obj and support_structure.obj from the source scene with the deterministic producer, then prove them with the independent source reconstruction at tolerance 0.006.",
+      "expected_output": "The producer writes both OBJ meshes, and the checker exits zero because every independently reconstructed Chamfer distance is within tolerance.",
+      "expectations": [
+        "scripts/export_scene_meshes.py exits zero and writes both mapped OBJ meshes.",
+        "scripts/check_mesh_conformance.py exits zero and reports status pass only after checking wheel_structure/outer_rim.obj and support_structure.obj.",
+        "Every check record reports an observed Chamfer distance at or below tolerance 0.006 and attribution none."
+      ],
+      "files": [
+        "scripts/export_scene_meshes.py",
+        "scripts/check_mesh_conformance.py",
+        "scripts/fixtures/spec.json",
+        "scripts/fixtures/source_scene.json",
+        "scripts/fixtures/clean/wheel_structure/outer_rim.obj",
+        "scripts/fixtures/clean/support_structure.obj"
+      ],
+      "source_trace_ids": [
+        "sig-57b48db21146eba90303f52c"
+      ]
+    },
+    {
+      "id": 9,
+      "kind": "should_apply",
+      "prompt": "Verify a source-scene export whose wheel_structure/outer_rim.obj is displaced from its reconstructed source placement by about 1.46.",
+      "expected_output": "The check exits nonzero, names wheel_structure/outer_rim.obj with an observed Chamfer near 1.46, states tolerance 0.006, and attributes the deviation to placement.",
+      "expectations": [
+        "The helper exits nonzero.",
+        "The violation names wheel_structure/outer_rim.obj.",
+        "The violation reports an observed Chamfer distance between 1.44 and 1.48 and tolerance 0.006.",
+        "The violation attribution is placement, not shape."
+      ],
+      "files": [
+        "scripts/check_mesh_conformance.py",
+        "scripts/fixtures/spec.json",
+        "scripts/fixtures/source_scene.json",
+        "scripts/fixtures/displaced_rim_1p46/wheel_structure/outer_rim.obj",
+        "scripts/fixtures/displaced_rim_1p46/support_structure.obj"
+      ],
+      "source_trace_ids": [
+        "sig-57b48db21146eba90303f52c"
+      ]
+    },
+    {
+      "id": 10,
+      "kind": "should_apply",
+      "prompt": "Verify a source-scene export whose support_structure.obj link is displaced from its reconstructed source placement by about 0.075.",
+      "expected_output": "The check exits nonzero, names support_structure.obj with an observed Chamfer near 0.075, states tolerance 0.006, and attributes the deviation to placement.",
+      "expectations": [
+        "The helper exits nonzero.",
+        "The violation names support_structure.obj.",
+        "The violation reports an observed Chamfer distance between 0.073 and 0.078 and tolerance 0.006.",
+        "The violation attribution is placement, not shape."
+      ],
+      "files": [
+        "scripts/check_mesh_conformance.py",
+        "scripts/fixtures/spec.json",
+        "scripts/fixtures/source_scene.json",
+        "scripts/fixtures/displaced_support_0p075/wheel_structure/outer_rim.obj",
+        "scripts/fixtures/displaced_support_0p075/support_structure.obj"
+      ],
+      "source_trace_ids": [
+        "sig-57b48db21146eba90303f52c"
+      ]
+    },
+    {
+      "id": 11,
+      "kind": "should_apply",
+      "prompt": "Export the wheel and support meshes from the native Three.js module native_scene.mjs that exposes createScene(), then verify the complete output tree with the independent source-primitive checker.",
+      "expected_output": "One producer command executes createScene() and writes both OBJ meshes without any hand-authored scene JSON; the separate checker rebuilds the expected surfaces and exits zero within tolerance 0.006.",
+      "expectations": [
+        "scripts/export_scene_meshes.py --module scripts/fixtures/native_scene.mjs --spec scripts/fixtures/native_spec.json --out <root> exits zero and writes wheel_structure/outer_rim.obj and assembly/support.obj.",
+        "No normalized scene JSON is supplied to the producer or checker as the source of geometry.",
+        "scripts/check_mesh_conformance.py exits zero, reports status pass, and every check record reports attribution none with observed Chamfer at or below tolerance 0.006."
+      ],
+      "files": [
+        "scripts/export_scene_meshes.py",
+        "scripts/check_mesh_conformance.py",
+        "scripts/fixtures/native_scene.mjs",
+        "scripts/fixtures/native_spec.json"
+      ],
+      "source_trace_ids": [
+        "sig-85ed7e4f9aa45ea37901f19f"
+      ]
+    },
+    {
+      "id": 12,
+      "kind": "should_apply",
+      "prompt": "Export from the native displaced module while the checker expectation remains the clean native_scene.mjs, so the outer rim sits away from its source placement.",
+      "expected_output": "The checker exits nonzero, names wheel_structure/outer_rim.obj with its observed Chamfer, tolerance 0.006, and placement attribution rather than shape.",
+      "expectations": [
+        "The producer executes scripts/fixtures/native_scene_displaced.mjs and exits zero.",
+        "The checker uses scripts/fixtures/native_spec.json, whose source is the clean native_scene.mjs, and exits nonzero.",
+        "The violation names wheel_structure/outer_rim.obj and reports its observed Chamfer value, tolerance 0.006, and attribution placement."
+      ],
+      "files": [
+        "scripts/export_scene_meshes.py",
+        "scripts/check_mesh_conformance.py",
+        "scripts/fixtures/native_scene.mjs",
+        "scripts/fixtures/native_scene_displaced.mjs",
+        "scripts/fixtures/native_spec.json"
+      ],
+      "source_trace_ids": [
+        "sig-85ed7e4f9aa45ea37901f19f"
+      ]
+    },
+    {
+      "id": 13,
+      "kind": "should_apply",
+      "prompt": "Check the clean native export with an expectation whose source and reconstruction method came from the producer's own re-export.",
+      "expected_output": "The checker reports unverifiable and exits nonzero instead of passing, because the expected geometry is producer-derived rather than source-derived.",
+      "expectations": [
+        "The checker exits nonzero with status unverifiable.",
+        "The report states that the reconstruction method or source is producer-derived and is not a source-derived expectation.",
+        "The result is not reported as pass even though the exported mesh is otherwise clean."
+      ],
+      "files": [
+        "scripts/check_mesh_conformance.py",
+        "scripts/fixtures/native_scene.mjs",
+        "scripts/fixtures/native_self_consistent_spec.json"
+      ],
+      "source_trace_ids": [
+        "sig-85ed7e4f9aa45ea37901f19f"
+      ]
+    },
+    {
+      "id": 14,
+      "kind": "should_apply",
+      "prompt": "Produce part and link meshes from the native multipart-scene.mjs module with the one-command producer, then preflight the exact part-directory and link-OBJ manifest before submission.",
+      "expected_output": "The one command executes createScene() from the native module with no scene JSON input, writes exactly four sibling part directories and eight link OBJs, and finishes with the independent checker deriving the same sets from the Group hierarchy and exiting zero with every geometry check passing.",
+      "expectations": [
+        "node scripts/export_scene_meshes.mjs --module scripts/fixtures/multipart-scene.mjs --out <root> --spec scripts/fixtures/multipart_spec.json --report <report> exits zero without a mapping or normalized scene JSON.",
+        "The artifact contains exactly the part directories left_rail, right_rail, front_axle, and rear_axle, and exactly the eight link OBJs from their primitive leaves.",
+        "The same command's checker derives the expected sets from the part contract group_type Group and primitive_leaf_type Mesh and reports manifest status pass with eight passing checks.",
+        "Sibling part Groups are not collapsed into a material or top-level grouping."
+      ],
+      "files": [
+        "scripts/export_scene_meshes.mjs",
+        "scripts/check_mesh_conformance.py",
+        "scripts/fixtures/multipart-scene.mjs",
+        "scripts/fixtures/multipart_spec.json"
+      ],
+      "source_trace_ids": [
+        "sig-014cedbfd6b3dda1f0c58358"
+      ]
+    },
+    {
+      "id": 15,
+      "kind": "should_apply",
+      "prompt": "Check the collapsed multipart artifact that folded the four sibling part Groups into two top-level parts before submission.",
+      "expected_output": "The checker exits nonzero at the manifest gate, reports every missing and extra part directory and link OBJ plus renamed entries, and never reports a clean pass.",
+      "expectations": [
+        "The checker exits nonzero with status fail before geometry acceptance.",
+        "The report lists missing directories left_rail, right_rail, front_axle, and rear_axle and extra directories rails and axles.",
+        "The report lists missing and extra link OBJs, including left_rail/left_beam.obj and rails/left_beam.obj, and the corresponding renamed pair.",
+        "The collapsed artifact is not accepted as a valid part-level decomposition."
+      ],
+      "files": [
+        "scripts/check_mesh_conformance.py",
+        "scripts/fixtures/multipart-scene.mjs",
+        "scripts/fixtures/multipart_spec.json",
+        "scripts/fixtures/multipart_collapsed/rails/left_beam.obj",
+        "scripts/fixtures/multipart_collapsed/rails/left_mount.obj",
+        "scripts/fixtures/multipart_collapsed/axles/front_shaft.obj",
+        "scripts/fixtures/multipart_collapsed/axles/front_hub.obj"
+      ],
+      "source_trace_ids": [
+        "sig-014cedbfd6b3dda1f0c58358"
+      ]
+    },
+    {
+      "id": 16,
+      "kind": "should_apply",
+      "prompt": "Run one command on the native .js/.mjs module native_scene_displaced_pair.mjs exposing createScene(): it displaces both the outer-rim part and the support link, while the producer's own verify report native_producer_verify.json claims success. Then run the same one command on the clean native module.",
+      "expected_output": "The displaced pair exports tree and the one command exits nonzero, naming wheel_structure/outer_rim.obj and assembly/support.obj with measured Chamfer values, tolerance 0.006, and placement attribution even though the producer-side report claims success; the clean native module exports and exits zero.",
+      "expectations": [
+        "node scripts/export_scene_meshes.mjs --module scripts/fixtures/native_scene_displaced_pair.mjs --out <root> --spec scripts/fixtures/native_spec.json --report <report> exits nonzero after writing both OBJ meshes.",
+        "The check report lists both wheel_structure/outer_rim.obj and assembly/support.obj as violations, each with an observed Chamfer value greater than tolerance 0.006 and attribution placement, not shape.",
+        "The run does not stop at the first failing mesh and does not treat scripts/fixtures/native_producer_verify.json or any producer-side success report as evidence.",
+        "The same one command on scripts/fixtures/native_scene.mjs exits zero with both meshes passing."
+      ],
+      "files": [
+        "scripts/export_scene_meshes.mjs",
+        "scripts/check_mesh_conformance.py",
+        "scripts/fixtures/native_scene.mjs",
+        "scripts/fixtures/native_scene_displaced_pair.mjs",
+        "scripts/fixtures/native_spec.json",
+        "scripts/fixtures/native_producer_verify.json"
+      ],
+      "source_trace_ids": [
+        "sig-e23a3399ed093b6bb2fd6100"
+      ]
+    },
+    {
+      "id": 17,
+      "kind": "should_apply",
+      "prompt": "Export an OBJ from the native .mjs scene module that exports createScene() and verify the artifact against the scene's live BufferGeometry.",
+      "expected_output": "One command imports scripts/fixtures/native_scene.mjs, calls createScene(), writes both native meshes to one OBJ, and the independent checker exits zero because every expanded triangle matches the live position and index buffers under the world transform.",
+      "expectations": [
+        "node scripts/export_threejs_scene.mjs --module scripts/fixtures/native_scene.mjs --out <artifact.obj> --report <report.json> exits zero and reports two meshes.",
+        "The producer emits v, vn, vt, o, usemtl, and f records without reading geometry.parameters or a hand-authored intermediate.",
+        "node scripts/check_native_export.mjs --config scripts/fixtures/native_export_spec.json --artifact <artifact.obj> exits zero with every mesh status pass and attribution none.",
+        "Each observed position distance is at or below the task-derived tolerance 0.006."
+      ],
+      "files": [
+        "scripts/export_threejs_scene.mjs",
+        "scripts/check_native_export.mjs",
+        "scripts/fixtures/native_scene.mjs",
+        "scripts/fixtures/native_export_spec.json"
+      ],
+      "source_trace_ids": [
+        "sig-3f9b8886e382c04619269d6d"
+      ]
+    },
+    {
+      "id": 18,
+      "kind": "should_apply",
+      "prompt": "Check an indexed Three.js mesh whose source geometry has an index buffer and an exporter that expanded it to non-indexed OBJ triangles.",
+      "expected_output": "The indexed mesh is accepted only when its OBJ triangle sequence equals the fixture's live toNonIndexed() expansion, with output triangle count equal to the source index count divided by three.",
+      "expectations": [
+        "The checker reports the outer_rim source mesh as indexed with a nonzero source index count.",
+        "The checker compares the expanded OBJ triangle sequence position-by-position and exits zero when it matches.",
+        "The report shows indexed-to-non-indexed triangle counts consistent with the source index count.",
+        "An artifact that retains a different face order or omits expansion is reported as a shape violation, not a pass."
+      ],
+      "files": [
+        "scripts/check_native_export.mjs",
+        "scripts/export_threejs_scene.mjs",
+        "scripts/fixtures/native_scene.mjs",
+        "scripts/fixtures/native_export_spec.json"
+      ],
+      "source_trace_ids": [
+        "sig-3f9b8886e382c04619269d6d"
+      ]
+    },
+    {
+      "id": 19,
+      "kind": "should_apply",
+      "prompt": "Review a producer that rebuilds a Three.js scene mesh by retessellating geometry.parameters or by accepting a hand-authored normalized JSON mesh intermediate.",
+      "expected_output": "The producer is rejected as non-native; the skill requires direct position and index buffer export from createScene() and never accepts a normalized intermediate.",
+      "expectations": [
+        "The review identifies geometry.parameters retessellation or a manually authored normalized intermediate as a contract violation.",
+        "The skill does not accept the resulting OBJ as source-native even when its bounds or counts look plausible.",
+        "The required path remains an executable .js or .mjs module exposing createScene() and its live position and index buffers."
+      ],
+      "files": [
+        "scripts/export_threejs_scene.mjs",
+        "references/native-producer-contract.md"
+      ],
+      "source_trace_ids": [
+        "sig-3f9b8886e382c04619269d6d"
+      ]
+    },
+    {
+      "id": 20,
+      "kind": "should_apply",
+      "prompt": "Run the one-command producer on a .mjs file that does not export createScene().",
+      "expected_output": "The producer exits nonzero and names the module as missing a createScene() export instead of writing an empty or fallback artifact.",
+      "expectations": [
+        "node scripts/export_threejs_scene.mjs --module <module-without-createScene.mjs> --out <artifact.obj> exits nonzero.",
+        "The error names the module and states that a createScene() export is missing.",
+        "No normalized intermediate or parameters-based fallback is used."
+      ],
+      "files": [
+        "scripts/export_threejs_scene.mjs",
+        "references/native-producer-contract.md"
+      ],
+      "source_trace_ids": [
+        "sig-3f9b8886e382c04619269d6d"
+      ]
+    },
+    {
+      "id": 21,
+      "kind": "should_apply",
+      "prompt": "Seed a part-placement displacement and a link-placement displacement, produce each artifact, and check both against the clean native createScene() expectation at tolerance 0.006.",
+      "expected_output": "Each seeded control exits nonzero and names the displaced mesh path with its observed distance, tolerance 0.006, and placement attribution rather than shape.",
+      "expectations": [
+        "The part-displaced module exits nonzero naming the outer-rim mesh path with its observed distance, tolerance 0.006, and attribution placement.",
+        "The link-displaced module exits nonzero naming the support mesh path with its observed distance, tolerance 0.006, and attribution placement.",
+        "The pair-displaced module names both meshes and never stops at the first violation."
+      ],
+      "files": [
+        "scripts/export_threejs_scene.mjs",
+        "scripts/check_native_export.mjs",
+        "scripts/fixtures/native_scene.mjs",
+        "scripts/fixtures/native_scene_displaced.mjs",
+        "scripts/fixtures/native_scene_displaced_link.mjs",
+        "scripts/fixtures/native_scene_displaced_pair.mjs",
+        "scripts/fixtures/native_export_spec.json"
+      ],
+      "source_trace_ids": [
+        "sig-3f9b8886e382c04619269d6d"
+      ]
+    },
+    {
+      "id": 22,
+      "kind": "should_not_apply",
+      "prompt": "A checker reports a clean pass for an OBJ while the same run accepts a seeded part or link displacement and never names the displaced mesh.",
+      "expected_output": "The result is rejected as an unverifiable oracle, not accepted as a clean artifact.",
+      "expectations": [
+        "A checker that passes a seeded displacement is classified as unverifiable rather than pass.",
+        "The skill requires the negative control to exit nonzero with a named mesh path, observed distance, tolerance, and placement attribution.",
+        "The absence of a valid negative control prevents reporting acceptance of the artifact."
+      ],
+      "files": [
+        "scripts/check_native_export.mjs",
+        "references/verification-contract.md"
+      ],
+      "source_trace_ids": [
+        "sig-3f9b8886e382c04619269d6d"
+      ]
+    },
+    {
+      "id": 23,
+      "kind": "should_apply",
+      "prompt": "Preflight an export from the self-consistent but geometrically distorted native module native_shape_distorted.mjs. Its position buffer matches the locally patched reference native_shape_distorted_ref.json and its normals are recomputed for that same distorted surface, but the task-derived independent source is the clean native_scene.mjs at tolerance 0.006.",
+      "expected_output": "The locally patched reference check exits zero because the export is internally self-consistent, but the independent Chamfer preflight over the complete tree exits nonzero, names wheel_structure/outer_rim.obj, reports an observed distance greater than 0.006, and attributes the failure to shape rather than a rigid placement.",
+      "expectations": [
+        "node scripts/export_threejs_scene.mjs --module scripts/fixtures/native_shape_distorted.mjs --out <artifact.obj> exits zero and writes both meshes.",
+        "node scripts/check_native_export.mjs --config scripts/fixtures/native_shape_distorted_ref.json --artifact <artifact.obj> exits zero against the locally patched reference; because the fixture recomputes normals for the same distorted surface, the export is internally self-consistent rather than a torn position/normal mismatch.",
+        "python3 scripts/check_mesh_conformance.py scripts/fixtures/shape_distorted --spec scripts/fixtures/spec.json exits nonzero with status fail.",
+        "The violation names wheel_structure/outer_rim.obj, reports its observed Chamfer above the task-derived threshold 0.006, and attributes the deviation to shape.",
+        "The result is never reported as a clean pass merely because the patched reference or producer-side checks agree."
+      ],
+      "files": [
+        "scripts/export_threejs_scene.mjs",
+        "scripts/check_native_export.mjs",
+        "scripts/check_mesh_conformance.py",
+        "scripts/fixtures/native_shape_distorted.mjs",
+        "scripts/fixtures/native_shape_distorted_ref.json",
+        "scripts/fixtures/spec.json",
+        "scripts/fixtures/shape_distorted/wheel_structure/outer_rim.obj",
+        "scripts/fixtures/shape_distorted/support_structure.obj"
+      ],
+      "source_trace_ids": [
+        "sig-4e7c1d53b7cec9c00140dcd2"
+      ]
+    },
+    {
+      "id": 24,
+      "kind": "should_apply",
+      "prompt": "Run the one command on the native module scripts/fixtures/native-scene.mjs exposing createScene(), then verify triangle expansion and full-precision coordinates for its indexed mesh.",
+      "expected_output": "One command imports the module, calls createScene(), exports the indexed outer_rim through toNonIndexed() and the non-indexed support directly, and the independent check exits zero with zero coordinate_error for every mesh.",
+      "expectations": [
+        "node scripts/export_threejs_scene.mjs --module scripts/fixtures/native-scene.mjs --out <artifact.obj> exits zero and reports two meshes.",
+        "outer_rim is exported with an output triangle count equal to its source index count divided by three, and support is traversed as non-indexed triangles.",
+        "node scripts/check_native_export.mjs --config scripts/fixtures/native-scene-spec.json --artifact <artifact.obj> exits zero with every mesh status pass.",
+        "Every mesh reports coordinate_error zero within coordinate_tolerance 1e-12, and no fixed-decimal coordinate formatter is used."
+      ],
+      "files": [
+        "scripts/export_threejs_scene.mjs",
+        "scripts/check_native_export.mjs",
+        "scripts/fixtures/native-scene.mjs",
+        "scripts/fixtures/native-scene-spec.json",
+        "references/native-producer-contract.md"
+      ],
+      "source_trace_ids": [
+        "sig-4e7c1d53b7cec9c00140dcd2"
+      ]
+    },
+    {
+      "id": 25,
+      "kind": "should_apply",
+      "prompt": "Check a complete native export with a spec whose reconstruction method is patched-reference and whose expectation is a locally patched copy of the producer output.",
+      "expected_output": "The preflight exits nonzero as unverifiable instead of passing, because a patched or producer-derived reference is not independent evidence and no clean result may be claimed without a source-derived or task-supplied reference.",
+      "expectations": [
+        "python3 scripts/check_mesh_conformance.py <artifact-root> --spec scripts/fixtures/native_patched_reference_spec.json exits nonzero with status unverifiable.",
+        "The report states that the patched reference is not source-derived and is therefore non-evidence.",
+        "The result is not reported as pass even when the submitted mesh is otherwise clean."
+      ],
+      "files": [
+        "scripts/check_mesh_conformance.py",
+        "scripts/fixtures/native_patched_reference_spec.json",
+        "scripts/fixtures/native_scene.mjs",
+        "references/verification-contract.md"
+      ],
+      "source_trace_ids": [
+        "sig-4e7c1d53b7cec9c00140dcd2"
+      ]
+    },
+    {
+      "id": 26,
+      "kind": "should_apply",
+      "prompt": "Run the one bundled producer command on the native module scripts/fixtures/native_scene.mjs exposing createScene(), then preflight the complete part_meshes and links tree against the source-derived names and native position and index buffers.",
+      "expected_output": "One command executes createScene(), writes every part mesh and link OBJ, and the independent checker exits zero with exact name-set equality and zero coordinate error for every path.",
+      "expectations": [
+        "node scripts/export_part_meshes.mjs --module scripts/fixtures/native_scene.mjs --out <root> exits zero and writes part_meshes/wheel_structure/outer_rim.obj, part_meshes/assembly/support.obj, links/wheel_structure.obj, and links/assembly.obj.",
+        "The command calls createScene() directly and reads the live position and index buffers; no normalized scene JSON or geometry.parameters rebuild is used.",
+        "node scripts/check_part_meshes.mjs --module scripts/fixtures/native_scene.mjs --root <root> exits zero with missing and extra sets empty.",
+        "Every part mesh and link OBJ reports coordinate_error zero within coordinate_tolerance 1e-12, and the indexed outer_rim path is triangle-expanded to its source index count divided by three."
+      ],
+      "files": [
+        "scripts/export_part_meshes.mjs",
+        "scripts/check_part_meshes.mjs",
+        "scripts/fixtures/native_scene.mjs"
+      ],
+      "source_trace_ids": [
+        "sig-1127a2e1e63f0ac1209e4463"
+      ]
+    },
+    {
+      "id": 27,
+      "kind": "should_apply",
+      "prompt": "Produce the native tree from scripts/fixtures/native-part-scene-renamed.mjs, which renames one part Group, then preflight it against the clean scripts/fixtures/native_scene.mjs source.",
+      "expected_output": "The preflight exits nonzero at the name-set gate, names the missing original part directory and link OBJ plus the extra renamed ones, and never accepts the tree merely because the directories exist.",
+      "expectations": [
+        "node scripts/export_part_meshes.mjs --module scripts/fixtures/native-part-scene-renamed.mjs --out <root> --no-verify exits zero and writes the renamed part tree.",
+        "node scripts/check_part_meshes.mjs --module scripts/fixtures/native_scene.mjs --root <root> exits nonzero with status fail.",
+        "The report lists part_meshes/wheel_structure as a missing part directory, part_meshes/wheel_assembly as an extra part directory, and the corresponding missing and extra part mesh and links/wheel_structure.obj and links/wheel_assembly.obj records.",
+        "The run does not report a clean pass from directory existence, matching file counts, or the producer's own report."
+      ],
+      "files": [
+        "scripts/export_part_meshes.mjs",
+        "scripts/check_part_meshes.mjs",
+        "scripts/fixtures/native_scene.mjs",
+        "scripts/fixtures/native-part-scene-renamed.mjs"
+      ],
+      "source_trace_ids": [
+        "sig-1127a2e1e63f0ac1209e4463"
+      ]
+    },
+    {
+      "id": 28,
+      "kind": "should_apply",
+      "prompt": "Produce the native tree from scripts/fixtures/native-part-scene-rounded.mjs, whose live position buffer loses precision in one coordinate, then preflight it against the clean scripts/fixtures/native_scene.mjs source.",
+      "expected_output": "The name sets match, but the preflight exits nonzero on the coordinate round-trip gate and names the inexact part mesh and link OBJ paths with expected and actual coordinate values.",
+      "expectations": [
+        "node scripts/export_part_meshes.mjs --module scripts/fixtures/native-part-scene-rounded.mjs --out <root> --no-verify exits zero and writes the matching name set.",
+        "node scripts/check_part_meshes.mjs --module scripts/fixtures/native_scene.mjs --root <root> exits nonzero with status fail.",
+        "The report lists no missing or extra part directory, part mesh, or link OBJ, but records inexact_part_mesh_coordinate for part_meshes/wheel_structure/outer_rim.obj and inexact_link_coordinate for links/wheel_structure.obj.",
+        "Each inexact record states the coordinate error, the 1e-12 coordinate_tolerance, and the first mismatching triangle and component."
+      ],
+      "files": [
+        "scripts/export_part_meshes.mjs",
+        "scripts/check_part_meshes.mjs",
+        "scripts/fixtures/native_scene.mjs",
+        "scripts/fixtures/native-part-scene-rounded.mjs"
+      ],
+      "source_trace_ids": [
+        "sig-1127a2e1e63f0ac1209e4463"
+      ]
+    },
+    {
+      "id": 29,
+      "kind": "should_apply",
+      "prompt": "Run the bundled one-command producer on the native module scripts/fixtures/native-module/scene.mjs exposing createScene(), then preflight the complete artifact set before doing anything else.",
+      "expected_output": "The producer is executed first, imports the native module, exports the indexed and non-indexed meshes from their live buffers, applies the Blender Z-up -90 degree X frame transfer, writes scene.obj plus a validated manifest.json with full-precision coordinates, and the independent checker exits zero with every mesh passing.",
+      "expectations": [
+        "node scripts/export_native_scene.mjs --module scripts/fixtures/native-module/scene.mjs --out <root> exits zero and writes scene.obj and manifest.json without any normalized-scene input.",
+        "The producer runs before any ad-hoc export code or checker invocation and reports the complete artifact set, including indexed-to-non-indexed expansion and source index counts.",
+        "node scripts/check_native_scene.mjs --module scripts/fixtures/native-module/scene.mjs --root <root> --tolerance 1e-12 exits zero with missing and extra mesh sets empty and coordinate_error zero for every mesh.",
+        "Every emitted vertex and normal has the -90 degree X frame applied exactly once, and the manifest counts and frame agree with the written OBJ."
+      ],
+      "files": [
+        "scripts/export_native_scene.mjs",
+        "scripts/check_native_scene.mjs",
+        "scripts/fixtures/native-module/scene.mjs",
+        "scripts/fixtures/native-module/clean/scene.obj",
+        "scripts/fixtures/native-module/clean/manifest.json",
+        "references/native-scene-producer.md"
+      ],
+      "source_trace_ids": [
+        "sig-82297b4a4701a7724ba4e737"
+      ]
+    },
+    {
+      "id": 30,
+      "kind": "should_apply",
+      "prompt": "Accept the self-consistent but wrongly framed artifact in scripts/fixtures/native-module/wrongly_framed after a proxy comparison reports identical bounds and a matching manifest.",
+      "expected_output": "The independent preflight exits nonzero and reports a frame-attributed coordinate violation with concrete failing vertex indices, expected and actual bounds, observed error, and tolerance, even though the proxy and manifest agree.",
+      "expectations": [
+        "node scripts/check_native_scene.mjs --module scripts/fixtures/native-module/scene.mjs --root scripts/fixtures/native-module/wrongly_framed --tolerance 1e-12 exits nonzero with status fail.",
+        "The violation names the affected object and reports first_mismatch_vertex_index, expected and actual bounds, coordinate_error, and coordinate_tolerance.",
+        "The attribution is frame rather than an accepted position or shape result.",
+        "Matching bounds, a self-consistent manifest, or reference-exporter agreement is not treated as independent acceptance evidence."
+      ],
+      "files": [
+        "scripts/check_native_scene.mjs",
+        "scripts/fixtures/native-module/scene.mjs",
+        "scripts/fixtures/native-module/wrongly_framed/scene.obj",
+        "scripts/fixtures/native-module/wrongly_framed/manifest.json",
+        "references/native-scene-producer.md"
+      ],
+      "source_trace_ids": [
+        "sig-82297b4a4701a7724ba4e737"
+      ]
+    },
+    {
+      "id": 31,
+      "kind": "should_apply",
+      "prompt": "Preflight the tolerance near-miss artifact in scripts/fixtures/native-module/near_miss at a one-micrometre tolerance.",
+      "expected_output": "The checker exits nonzero, names the single mismatching vertex index and its observed error just above tolerance, and reports the sibling mesh as passing rather than failing the whole artifact for the wrong reason.",
+      "expectations": [
+        "node scripts/check_native_scene.mjs --module scripts/fixtures/native-module/scene.mjs --root scripts/fixtures/native-module/near_miss --tolerance 1e-6 exits nonzero with status fail.",
+        "The failing record reports coordinate_error near 2e-6, the tolerance 1e-6, and first_mismatch_vertex_index 0.",
+        "The unaffected sibling mesh remains status pass with coordinate_error zero.",
+        "The near-miss is rejected rather than rounded, clamped, or reported as within tolerance."
+      ],
+      "files": [
+        "scripts/check_native_scene.mjs",
+        "scripts/fixtures/native-module/scene.mjs",
+        "scripts/fixtures/native-module/near_miss/scene.obj",
+        "scripts/fixtures/native-module/near_miss/manifest.json"
+      ],
+      "source_trace_ids": [
+        "sig-82297b4a4701a7724ba4e737"
+      ]
+    },
+    {
+      "id": 32,
+      "kind": "should_apply",
+      "prompt": "Run the one-command producer on scripts/fixtures/native-module/missing_create_scene.mjs, which has no createScene() export.",
+      "expected_output": "The producer exits nonzero with the structured MISSING_CREATE_SCENE error naming the module, and writes no fallback artifact or normalized intermediate.",
+      "expectations": [
+        "node scripts/export_native_scene.mjs --module scripts/fixtures/native-module/missing_create_scene.mjs --out <root> exits nonzero.",
+        "The structured error code is MISSING_CREATE_SCENE and the message names the module.",
+        "No fallback, normalized-scene, or parameters-based export is attempted."
+      ],
+      "files": [
+        "scripts/export_native_scene.mjs",
+        "scripts/fixtures/native-module/missing_create_scene.mjs",
+        "references/native-scene-producer.md"
+      ],
+      "source_trace_ids": [
+        "sig-82297b4a4701a7724ba4e737"
+      ]
+    },
+    {
+      "id": 33,
+      "kind": "should_apply",
+      "prompt": "Run the one-command producer on scripts/fixtures/native-module/missing_buffers.mjs, whose mesh geometry has no position buffer.",
+      "expected_output": "The producer exits nonzero with a structured MISSING_POSITION error naming the mesh path, and never writes an empty or retessellated artifact.",
+      "expectations": [
+        "node scripts/export_native_scene.mjs --module scripts/fixtures/native-module/missing_buffers.mjs --out <root> exits nonzero.",
+        "The structured error code is MISSING_POSITION and the message names the affected mesh path.",
+        "The producer does not rebuild positions from geometry.parameters or accept a normalized intermediate."
+      ],
+      "files": [
+        "scripts/export_native_scene.mjs",
+        "scripts/fixtures/native-module/missing_buffers.mjs",
+        "references/native-scene-producer.md"
+      ],
+      "source_trace_ids": [
+        "sig-82297b4a4701a7724ba4e737"
+      ]
+    },
+    {
+      "id": 34,
+      "kind": "should_not_apply",
+      "prompt": "Accept an OBJ as correct because the producer's manifest validates and a reference exporter emits the same bytes, without running an independent source-derived preflight.",
+      "expected_output": "The result is rejected as insufficient evidence; manifest and reference-exporter agreement are producer-derived and cannot substitute for independent whole-artifact verification.",
+      "expectations": [
+        "Manifest agreement and reference-exporter byte agreement are classified as producer-derived evidence, not acceptance evidence.",
+        "The skill requires the independent checker to derive expected vertices from the native module or another task-visible oracle.",
+        "Absence of an independent oracle prevents reporting pass and yields unverifiable with a nonzero exit."
+      ],
+      "files": [
+        "references/native-scene-producer.md",
+        "references/verification-contract.md"
+      ],
+      "source_trace_ids": [
+        "sig-82297b4a4701a7724ba4e737"
+      ]
+    },
+    {
+      "id": 35,
+      "kind": "should_apply",
+      "prompt": "A native .mjs module exports createScene() returning a mesh under a nested non-identity parent transform plus an InstancedMesh with two instances. After confirming only the module path and OBJ output path, run the one documented producer command and deliver the complete OBJ artifact and manifest.",
+      "expected_output": "The workflow immediately runs one producer invocation that executes createScene(), composes the nested hierarchy and both instance matrices, exports the native position and index buffers as triangle-expanded non-indexed faces with OBJExporter winding and order at full precision, validates the manifest once, then runs exactly one independent geometry check that exits zero.",
+      "expectations": [
+        "node scripts/export_native_scene.mjs --module scripts/fixtures/native-module/instanced_scene.mjs --out <root> runs before any ad-hoc code, probe, or file inspection and exits zero.",
+        "The manifest and OBJ contain two expanded instance records plus the nested plate record, with every indexed source mesh written as triangle-expanded non-indexed faces.",
+        "The producer reports its built-in manifest validation once and the workflow does not hand-author, patch, or separately re-validate the manifest.",
+        "node scripts/check_native_scene.mjs --module scripts/fixtures/native-module/instanced_scene.mjs --root <root> --tolerance 1e-12 runs exactly once, exits zero, and reports hierarchy, world transforms, both instanced expansions, Float32 positions, non_indexed_output true, max_position_delta zero, and no missing or extra meshes.",
+        "The complete OBJ artifact and manifest are delivered rather than a partial tree or a prose report."
+      ],
+      "files": [
+        "scripts/export_native_scene.mjs",
+        "scripts/check_native_scene.mjs",
+        "scripts/fixtures/native-module/instanced_scene.mjs",
+        "references/native-producer-contract.md"
+      ],
+      "source_trace_ids": [
+        "sig-a7530dfbb6ed584ad3214016"
+      ]
+    },
+    {
+      "id": 36,
+      "kind": "should_apply",
+      "prompt": "Run the one-command producer on a native module whose InstancedMesh declares a count but has no readable instanceMatrix, then decide whether to probe transforms and file presence further.",
+      "expected_output": "The producer exits nonzero with the structured UNSUPPORTED_INSTANCING diagnostic naming the mesh, and the workflow stops after that single reported producer failure instead of probing matrices, paths, or precision or writing replacement code.",
+      "expectations": [
+        "node scripts/export_native_scene.mjs --module scripts/fixtures/native-module/incompatible_instancing.mjs --out <root> exits nonzero.",
+        "The structured error code is UNSUPPORTED_INSTANCING and the message names the affected mesh path.",
+        "No ad-hoc replacement producer, additional matrix or precision probe, file-presence inspection, or second fallback pass is attempted.",
+        "The recorded diagnostic is reported as the stopping condition rather than a partial or guessed artifact."
+      ],
+      "files": [
+        "scripts/export_native_scene.mjs",
+        "scripts/fixtures/native-module/incompatible_instancing.mjs",
+        "references/native-producer-contract.md"
+      ],
+      "source_trace_ids": [
+        "sig-a7530dfbb6ed584ad3214016"
+      ]
+    },
+    {
+      "id": 37,
+      "kind": "should_apply",
+      "prompt": "Preflight the precision_truncated OBJ artifact whose coordinates were written with six fixed decimals while the source module still returns Float32 native position buffers.",
+      "expected_output": "The single independent round-trip precision check exits nonzero, reports a maximum position delta above the 1e-12 tolerance with concrete failing vertex indices and bounds, and rejects the truncated serialization.",
+      "expectations": [
+        "node scripts/check_native_scene.mjs --module scripts/fixtures/native-module/scene.mjs --root scripts/fixtures/native-module/precision_truncated --tolerance 1e-12 exits nonzero with status fail.",
+        "The affected check records round_trip_precision fail, max_position_delta above 1e-12, first failing vertex indices, expected and actual bounds, and the frame.",
+        "The rejection is attributed to lossy coordinate serialization rather than triangle-expanded face count or mesh naming.",
+        "No second comparison, manual probe, or patched expected value is used to accept the artifact."
+      ],
+      "files": [
+        "scripts/check_native_scene.mjs",
+        "scripts/fixtures/native-module/scene.mjs",
+        "scripts/fixtures/native-module/precision_truncated/scene.obj",
+        "scripts/fixtures/native-module/precision_truncated/manifest.json",
+        "references/verification-contract.md"
+      ],
+      "source_trace_ids": [
+        "sig-a7530dfbb6ed584ad3214016"
+      ]
+    },
+    {
+      "id": 38,
+      "kind": "should_not_apply",
+      "prompt": "After the producer returns UNSUPPORTED_INSTANCING for a native module, keep writing replacement exporters and probing matrices, precisions, and output paths until some OBJ appears.",
+      "expected_output": "The open-ended probing path is not used; the skill stops on the structured producer diagnostic and reports it, or uses at most the single bounded fallback permitted by the contract.",
+      "expectations": [
+        "Repeated ad-hoc exporters, matrix probes, precision probes, and file-presence inspections after a concrete producer error are rejected as non-compliant.",
+        "The structured UNSUPPORTED_INSTANCING diagnostic is reported instead of masking it with a guessed or partial artifact.",
+        "Any replacement code requires the recorded producer error and remains one bounded pass using the native module ABI and native buffers."
+      ],
+      "files": [
+        "scripts/export_native_scene.mjs",
+        "references/native-producer-contract.md"
+      ],
+      "source_trace_ids": [
+        "sig-a7530dfbb6ed584ad3214016"
+      ]
+    },
+    {
+      "id": 39,
+      "kind": "should_apply",
+      "prompt": "Run the one-command producer on the native .mjs module scripts/fixtures/native-module/wrongly_framed.mjs, which exposes createScene() and returns the same vertex and triangle counts with a clean producer manifest but a wrong world-space frame and a missing Blender Z-up -90 degree X rotation. Then run the same producer and independent preflight on the clean scripts/fixtures/native-module/scene.mjs.",
+      "expected_output": "The wrong-frame export is rejected by the executed independent preflight, which exits nonzero naming the frame, maximum position delta, bounds, and failing vertex indices for the rotated comparison even though counts and the manifest agree; the clean native-module export passes and round-trips at full numeric precision.",
+      "expectations": [
+        "node scripts/export-scene.mjs --module scripts/fixtures/native-module/wrongly_framed.mjs --out <root> exits zero and writes an OBJ with the same mesh, vertex, and triangle counts as the clean module plus a manifest that validates.",
+        "node scripts/check-export.mjs --module scripts/fixtures/native-module/scene.mjs --artifact <root>/scene.obj exits nonzero with status fail and reports frame attribution, the -90 degree X comparison, maximum position delta above tolerance, source and output bounds, and failing vertex indices.",
+        "Matching counts, a clean manifest, or agreement with the producer are not accepted as frame or position evidence.",
+        "The same producer and preflight on the clean scripts/fixtures/native-module/scene.mjs exit zero with maximum position delta within tolerance and round-trip precision pass."
+      ],
+      "files": [
+        "scripts/export-scene.mjs",
+        "scripts/check-export.mjs",
+        "scripts/fixtures/native-module/scene.mjs",
+        "scripts/fixtures/native-module/wrongly_framed.mjs",
+        "references/verification-contract.md"
+      ],
+      "source_trace_ids": [
+        "sig-7a37a2fb3928da6d0a13019d"
+      ]
+    }
+  ]
+}

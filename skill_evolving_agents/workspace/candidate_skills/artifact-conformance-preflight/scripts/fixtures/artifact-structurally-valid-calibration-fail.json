@@ -1,0 +1,10 @@
+{
+  "records": [
+    {"id": "r1", "confidence": 0.50, "evidence_strength": "weak"},
+    {"id": "r2", "confidence": 0.52, "evidence_strength": "weak"},
+    {"id": "r3", "confidence": 0.53, "evidence_strength": "medium"},
+    {"id": "r4", "confidence": 0.55, "evidence_strength": "medium"},
+    {"id": "r5", "confidence": 0.90, "evidence_strength": "strong"},
+    {"id": "r6", "confidence": 0.92, "evidence_strength": "strong"}
+  ]
+}

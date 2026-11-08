@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "status": "produced",
+  "source_module": "scripts/fixtures/native-module/scene.mjs",
+  "artifact": "scene.obj",
+  "manifest": "manifest.json",
+  "frame": {
+    "name": "blender-z-up",
+    "source_up": "Y",
+    "artifact_up": "Z",
+    "rotation_degrees_xyz": [
+      -90,
+      0,
+      0
+    ]
+  },
+  "mesh_count": 2,
+  "vertex_count": 9,
+  "triangle_count": 3,
+  "meshes": [
+    {
+      "mesh": "shell/panel",
+      "hierarchy": [
+        "shell"
+      ],
+      "instanced": false,
+      "instance": null,
+      "indexed": true,
+      "source_array_type": "Float32Array",
+      "source_vertex_count": 4,
+      "source_index_count": 6,
+      "output_vertex_count": 6,
+      "output_triangle_count": 2,
+      "expansion": "toNonIndexed",
+      "vertex_offset": 0,
+      "triangle_offset": 0
+    },
+    {
+      "mesh": "shell/brace",
+      "hierarchy": [
+        "shell"
+      ],
+      "instanced": false,
+      "instance": null,
+      "indexed": false,
+      "source_array_type": "Float32Array",
+      "source_vertex_count": 3,
+      "source_index_count": 0,
+      "output_vertex_count": 3,
+      "output_triangle_count": 1,
+      "expansion": "non-indexed",
+      "vertex_offset": 6,
+      "triangle_offset": 2
+    }
+  ]
+}

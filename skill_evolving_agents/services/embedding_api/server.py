@@ -12,6 +12,7 @@ import re
 import time
 import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 from typing import Any
 
 
@@ -67,6 +68,7 @@ class SentenceTransformerBackend:
         configure_framework_environment()
         try:
             from sentence_transformers import SentenceTransformer
+            import torch
         except ImportError as error:
             raise RuntimeError(
                 "sentence-transformers is required for the qwen backend"
@@ -75,21 +77,94 @@ class SentenceTransformerBackend:
         self.revision = revision
         self.dimensions = dimensions
         self.query_instruction = query_instruction
+        cache_root = Path(
+            os.environ.get(
+                "SKILL_EVOLVER_EMBEDDING_CACHE",
+                Path.home() / ".cache/skill-evolving-agents/embeddings",
+            )
+        )
+        cache_identity = hashlib.sha256(
+            f"{model}\0{revision}\0{dimensions}".encode()
+        ).hexdigest()[:24]
+        self.cache_dir = cache_root / cache_identity
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
+        self.document_cache_hits = 0
+        self.document_cache_misses = 0
+        model_options: dict[str, Any] = {}
+        if device == "cpu":
+            # Some model revisions declare bfloat16. On Apple/ordinary CPU
+            # inference that path can be dramatically slower than float32 and
+            # turns cheap recall into the dominant pipeline cost.
+            model_options["model_kwargs"] = {"dtype": torch.float32}
         self.model = SentenceTransformer(
             model,
             revision=revision,
             device=device,
             trust_remote_code=True,
+            **model_options,
         )
 
-    def _encode_many(self, texts: list[str]) -> list[list[float]]:
-        vectors = self.model.encode(
-            texts,
-            normalize_embeddings=True,
-            truncate_dim=self.dimensions,
-            show_progress_bar=False,
-        )
-        return [[float(value) for value in vector] for vector in vectors]
+    def _cache_path(self, namespace: str, text: str) -> Path:
+        digest = hashlib.sha256(
+            f"{namespace}\0{text}".encode()
+        ).hexdigest()
+        return self.cache_dir / f"{digest}.json"
+
+    def _read_cached(self, namespace: str, text: str) -> list[float] | None:
+        path = self._cache_path(namespace, text)
+        try:
+            vector = json.loads(path.read_text())
+        except (OSError, json.JSONDecodeError):
+            return None
+        if (
+            not isinstance(vector, list)
+            or len(vector) != self.dimensions
+            or not all(isinstance(value, (int, float)) for value in vector)
+        ):
+            return None
+        return [float(value) for value in vector]
+
+    def _write_cached(self, namespace: str, text: str, vector: list[float]) -> None:
+        path = self._cache_path(namespace, text)
+        temporary = path.with_suffix(f".{uuid.uuid4().hex}.tmp")
+        temporary.write_text(json.dumps(vector, separators=(",", ":")))
+        temporary.replace(path)
+
+    def _encode_many(self, texts: list[str], *, namespace: str = "document") -> list[list[float]]:
+        # Persist only reusable inventory documents. Queries can contain raw
+        # trace or tenant text and must not leak into a cross-run cache.
+        if namespace != "document":
+            vectors = self.model.encode(
+                texts,
+                normalize_embeddings=True,
+                truncate_dim=self.dimensions,
+                show_progress_bar=False,
+            )
+            return [[float(value) for value in vector] for vector in vectors]
+        output: list[list[float] | None] = [None] * len(texts)
+        missing_indexes: list[int] = []
+        missing_texts: list[str] = []
+        for index, text in enumerate(texts):
+            cached = self._read_cached(namespace, text)
+            if cached is None:
+                self.document_cache_misses += 1
+                missing_indexes.append(index)
+                missing_texts.append(text)
+            else:
+                self.document_cache_hits += 1
+                output[index] = cached
+        if missing_texts:
+            vectors = self.model.encode(
+                missing_texts,
+                normalize_embeddings=True,
+                truncate_dim=self.dimensions,
+                show_progress_bar=False,
+            )
+            for index, text, vector in zip(missing_indexes, missing_texts, vectors):
+                normalized = [float(value) for value in vector]
+                output[index] = normalized
+                self._write_cached(namespace, text, normalized)
+        return [vector for vector in output if vector is not None]
 
     def _encode(self, text: str) -> list[float]:
         return self._encode_many([text])[0]
@@ -99,7 +174,7 @@ class SentenceTransformerBackend:
 
     def embed_query(self, text: str) -> list[float]:
         instructed = f"Instruct: {self.query_instruction}\nQuery: {text}"
-        return self._encode(instructed)
+        return self._encode_many([instructed], namespace="query")[0]
 
     def embed_many(self, texts: list[str]) -> list[list[float]]:
         return self._encode_many(texts)
@@ -108,7 +183,13 @@ class SentenceTransformerBackend:
         instructed = [
             f"Instruct: {self.query_instruction}\nQuery: {text}" for text in texts
         ]
-        return self._encode_many(instructed)
+        return self._encode_many(instructed, namespace="query")
+
+    def cache_stats(self) -> dict[str, int]:
+        return {
+            "document_hits": self.document_cache_hits,
+            "document_misses": self.document_cache_misses,
+        }
 
 
 BACKEND = HashingBackend()
@@ -185,6 +266,11 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self) -> None:  # noqa: N802
         started = time.perf_counter_ns()
         request_id = self.headers.get("X-Request-ID") or uuid.uuid4().hex
+        cache_before = (
+            BACKEND.cache_stats()
+            if hasattr(BACKEND, "cache_stats")
+            else {"document_hits": 0, "document_misses": 0}
+        )
         try:
             size = int(self.headers.get("Content-Length", "0"))
             if size <= 0 or size > 2_000_000:
@@ -208,7 +294,16 @@ class Handler(BaseHTTPRequestHandler):
             else:
                 self._write(404, {"error": "not_found", "request_id": request_id})
                 return
-            self._write(200, {"request_id": request_id, "model": BACKEND.name, "model_revision": BACKEND.revision, "index_revision": "request-local", "service_ms": round((time.perf_counter_ns() - started) / 1e6, 3), key: data})
+            cache_after = (
+                BACKEND.cache_stats()
+                if hasattr(BACKEND, "cache_stats")
+                else cache_before
+            )
+            cache = {
+                name: int(cache_after.get(name, 0)) - int(cache_before.get(name, 0))
+                for name in ("document_hits", "document_misses")
+            }
+            self._write(200, {"request_id": request_id, "model": BACKEND.name, "model_revision": BACKEND.revision, "index_revision": "request-local", "service_ms": round((time.perf_counter_ns() - started) / 1e6, 3), "cache": cache, key: data})
         except (ValueError, json.JSONDecodeError) as error:
             self._write(400, {"error": str(error), "request_id": request_id})
 

@@ -1,0 +1,21 @@
+{
+  "source": "multipart-scene.mjs",
+  "reconstruction": {
+    "method": "source-primitives",
+    "independent_of_producer": true
+  },
+  "frame": {
+    "source_up": "Y",
+    "artifact_up": "Y"
+  },
+  "units": {
+    "source_to_artifact": 1.0
+  },
+  "part_contract": {
+    "group_type": "Group",
+    "primitive_leaf_type": "Mesh"
+  },
+  "tolerance": 0.006,
+  "min_coverage": 0.9,
+  "sampling_budget": 2400
+}

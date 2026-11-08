@@ -85,6 +85,35 @@ class CostAwareArchitectureTests(unittest.TestCase):
         )
         self.assertEqual(rows, [{"matches": [{"id": "left", "score": 1.0}]}] * 2)
 
+    def test_sentence_transformer_backend_persists_content_addressed_vectors(self) -> None:
+        class FakeModel:
+            def __init__(self) -> None:
+                self.calls: list[list[str]] = []
+
+            def encode(self, texts, **_kwargs):
+                self.calls.append(list(texts))
+                return [[float(len(text)), 1.0] for text in texts]
+
+        with tempfile.TemporaryDirectory() as directory:
+            backend = embedding_server.SentenceTransformerBackend.__new__(
+                embedding_server.SentenceTransformerBackend
+            )
+            backend.dimensions = 2
+            backend.cache_dir = Path(directory)
+            backend.model = FakeModel()
+            backend.document_cache_hits = 0
+            backend.document_cache_misses = 0
+            first = backend._encode_many(["alpha", "beta"])
+            second = backend._encode_many(["alpha", "beta"])
+            query = backend._encode_many(["alpha"], namespace="query")
+        self.assertEqual(first, second)
+        self.assertEqual(backend.model.calls, [["alpha", "beta"], ["alpha"]])
+        self.assertEqual(query, [[5.0, 1.0]])
+        self.assertEqual(
+            backend.cache_stats(),
+            {"document_hits": 2, "document_misses": 2},
+        )
+
     def test_optimization_specs_validate_and_grid_respects_constraints(self) -> None:
         registry = validate_knob_registry(
             load_spec(AGENTS / "config/knob-registry.json", "knob registry")
