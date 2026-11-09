@@ -1,0 +1,21 @@
+{
+  "name": "@skill-evolving-agents/pipeline-v2",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Cordis-native skill evolution pipeline v2 (Milestone 0 contracts and comparison harness)",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run --config vitest.config.ts"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.1.0"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.0",
+    "vitest": "^4.1.8"
+  }
+}
