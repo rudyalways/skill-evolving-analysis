@@ -3,6 +3,20 @@ import type { Operation, PublicationReceipt } from '../contracts/operations.ts'
 import type { Resource } from '../contracts/resources.ts'
 import type { SkillId, TraceId } from '../contracts/ids.ts'
 import type {
+  PreflightReport,
+  PreflightRequest,
+} from '../preflight/preflight.ts'
+import type {
+  SkillPlan,
+  SkillPlanningRequest,
+} from '../resources/planner.ts'
+import type {
+  RouterBudget,
+  RouterResult,
+  RouterRetrieval,
+  RouterTask,
+} from '../router/two-stage-router.ts'
+import type {
   GeneralizationDecision,
   GeneralizationObservation,
   GeneralizationPolicy,
@@ -116,6 +130,22 @@ export interface GeneralizationEvaluator {
   ): GeneralizationDecision
 }
 
+/** A provider that retrieves and decides skill actions with bounded evidence. */
+export interface RouterCapability {
+  retrieve(task: RouterTask): Promise<RouterRetrieval>
+  route(task: RouterTask, budget: RouterBudget): Promise<RouterResult>
+}
+
+/** A provider that renders a complete resource plan for one operation. */
+export interface ResourcePlannerCapability {
+  plan(request: SkillPlanningRequest): SkillPlan
+}
+
+/** A provider that executes deterministic preflight checks. */
+export interface PreflightCapability {
+  run(request: PreflightRequest): Promise<PreflightReport>
+}
+
 /** Capability names and their provider interfaces. */
 export interface CapabilityMap {
   traceSource: TraceSource
@@ -126,6 +156,9 @@ export interface CapabilityMap {
   verifier: Verifier
   publisher: Publisher
   feedbackLearner: FeedbackLearner
+  router: RouterCapability
+  resourcePlanner: ResourcePlannerCapability
+  preflight: PreflightCapability
   configurationSearch: ConfigurationSearch
   generalizationEvaluator: GeneralizationEvaluator
 }

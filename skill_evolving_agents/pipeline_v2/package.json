@@ -1,8 +1,8 @@
 {
   "name": "@skill-evolving-agents/pipeline-v2",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
-  "description": "Cordis-native skill evolution pipeline v2 (Milestone 0 contracts and comparison harness)",
+  "description": "Cordis-native skill evolution pipeline v2: durable store, routing, resources, preflight, and benchmark validity",
   "type": "module",
   "exports": {
     ".": "./src/index.ts"

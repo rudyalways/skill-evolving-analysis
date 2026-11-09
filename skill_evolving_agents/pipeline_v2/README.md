@@ -1,8 +1,9 @@
 # pipeline_v2
 
-Milestones 0–1 of the Cordis-native skill-evolution pipeline. This package is a
-parallel implementation beside the existing Python pipeline; the Python code is
-the compatibility baseline and remains the default runtime.
+Milestones 0–2 of the Cordis-native skill-evolution pipeline. This package is
+now the primary orchestration implementation for the new vertical slice; the
+existing Python pipeline remains the compatibility baseline, trace/report
+adapter, and comparison oracle until each provider is ported and verified.
 
 ## What Milestone 0 contains
 
@@ -19,8 +20,26 @@ the compatibility baseline and remains the default runtime.
 - a versioned JSON request/result protocol for future Python workers;
 - a versioned legacy/v2 comparison-report schema.
 
-It intentionally contains **no model providers, no embedding providers, no
-network calls, no Docker, no database, and no paid evaluation**.
+The integrated slice adds:
+
+- a durable append-only JSONL study store with atomic snapshots, restart/replay,
+  idempotent writes, schema migration, duplicate/mixed-run protection, and
+  hard rejection of holdout feedback into search;
+- a two-stage router with deterministic lexical/embedding recall, bounded
+  stage-two decisions, explicit budgets, abstention, and labeled metrics;
+- a resource planner that renders justified `SKILL.md`, `scripts/`,
+  `references/`, `evals/`, and conditional `assets/` bundles for the four
+  general failure families;
+- executable preflight with path, structure, resource, reference, script,
+  leakage, duplicate, token, tool-call, and wall-time checks;
+- benchmark admission/reporting that separates raw, activated-skill, and
+  selective-policy views and excludes invalid exposure;
+- `V2Pipeline`, which mounts every phase through Cordis capability providers
+  and replays the result from the durable store.
+
+It still contains **no model providers, no external embedding service, no
+network calls, no Docker, and no paid evaluation**. The store is JSONL-backed;
+SQLite remains a future backend behind the same facade.
 
 ## Milestone 1 search control plane
 
@@ -63,9 +82,17 @@ measure, replace, and remove a provider without leaking global registrations.
 ```text
 src/contracts/   ids, errors, events, evidence, operations, resources,
                  worker protocol, comparison report
-src/core/        event log, projections, capability registry, run controller
+src/core/        event log, projections, capability registry, run controller,
+                 durable v2 pipeline
 src/capabilities/ capability interfaces and an in-memory trace fixture
-src/search/      native portfolio search and sealed generalization evaluation
+src/router/      two-stage recall and bounded decision
+src/store/       durable JSONL study store with atomic snapshots
+src/resources/   resource planning and in-memory skill bundle rendering
+src/preflight/   executable preflight checks
+src/benchmark/   admission, three-view report, Wilson/sign-test metrics
+src/search/      portfolio search, successive halving, sealed generalization
+src/adapters/    validated Python worker client seam
+src/providers/   deterministic low-cost providers and new capability providers
 src/vendor/      narrow ambient Cordis type boundary used only by tsc
 src/index.ts     public package surface
 tests/           focused offline lifecycle, validation, projection, protocol tests
@@ -105,6 +132,12 @@ same bytes. The log rejects mixed run ids, duplicate event ids, duplicate
 resource ids, and any verification that would reopen an accepted, rejected, or
 published operation.
 
+`mountLowCostV2Profile()` mounts the deterministic trace, detector, router,
+planner, preflight, verifier, and publisher providers through Cordis and returns
+a disposer plus a `V2Pipeline` factory. `V2Pipeline` writes every phase to the
+event log, mirrors it to the durable store, and replays the final projection
+from disk.
+
 ## Worker boundary
 
 `parseWorkerRequest` and `parseWorkerResult` validate protocol version `1`,
@@ -127,17 +160,20 @@ does not own pipeline-global state.
 From this directory, with the DSH checkout present at its documented path:
 
 ```sh
-../../../../oss/deepseek-harness/node_modules/.bin/tsc -p tsconfig.json
-../../../../oss/deepseek-harness/node_modules/.bin/vitest run --config vitest.config.ts
+./node_modules/.bin/tsc -p tsconfig.json
+./node_modules/.bin/vitest run --config vitest.config.ts
 ```
 
-The commands are offline. They read the Cordis source from the DSH checkout but
-do not modify it. In a normal installed environment, use `npm run typecheck` and
-`npm test` after installing the declared peer/dev dependencies.
+The commands are offline. Tests resolve Cordis from the read-only DSH checkout
+through `vitest.config.ts`; `tsconfig.json` keeps its Node type root there.
+Neither modifies the DSH checkout. In a normal installed environment, use
+`pnpm run typecheck` and `pnpm test`.
 
 ## Milestone boundary
 
-Milestone 1 adds native search and anti-overfitting evaluation capabilities but
-does not yet add the durable study store, an executable run orchestrator,
-model-backed providers, replay execution, publication receipts, or DSH bundle
-integration.
+The durable v2 slice is implemented and offline-tested. It does **not** yet
+include a real replay verifier, content-addressed publication receipts, a
+benchmark observation producer for legacy job directories, model-backed
+providers, or DSH bundle/profile packaging. No fresh sealed holdout has been
+run against v2. The achieved benchmark result remains baseline `5/16` and
+selective policy `6/16`; the 10/16 milestone is not claimed.
