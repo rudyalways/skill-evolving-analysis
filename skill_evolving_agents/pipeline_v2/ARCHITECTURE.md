@@ -124,14 +124,15 @@ views.
 ## First validation result
 
 The real v2 run published a generated spreadsheet skill, then ran a four-task
-validation cohort. Three cells were abstentions; the one selected xlsx cell ran
-with-skill but the trajectory audit observed no skill activation, so it was
-excluded. There was no activated effect, no lift, and no evidence for a fresh
+validation cohort. Three cells were abstentions. The selected xlsx cell ran with
+the published skill prompt-mounted (the sandbox `/skills` mount was not
+visible); activation was verified, but the treatment did not pass and used more
+calls and time than baseline. There was no lift and no evidence for a fresh
 holdout. See `VALIDATION.md`.
 
 ## Next vertical slice
 
-Fix activation of the published skill, produce at least one selected cell with
-verified skill use, and run a bounded repair round on a second disjoint
-validation cohort. A fresh sealed holdout remains mandatory for any 10/16
-claim.
+Improve the generated spreadsheet skill so the one verified activated cell
+produces a pass or partial-reward lift, then run a bounded repair round on a
+second disjoint validation cohort. A fresh sealed holdout remains mandatory for
+any 10/16 claim.
