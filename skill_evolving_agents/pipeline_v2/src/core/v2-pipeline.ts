@@ -2,6 +2,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import type { EventOf, EventPayloadMap, PipelineEvent, PipelineEventType } from '../contracts/events.ts'
 import { operationId, skillId, type TraceId } from '../contracts/ids.ts'
 import type { Operation, PublicationReceipt } from '../contracts/operations.ts'
+import type { PublicationReceiptDocument, PublicationResult } from '../publication/publisher.ts'
 import type {
   PreflightPolicyOverrides,
   PreflightReport,
@@ -27,6 +28,8 @@ export interface V2PipelineRequest {
   readonly existingBundle?: SkillBundle
   readonly preflightPolicy?: PreflightPolicyOverrides
   readonly scriptRunner?: ScriptRunner
+  readonly policyVersion?: string
+  readonly configVersion?: string
 }
 
 /** Outcome of one v2 run, including the evidence needed for audit. */
@@ -36,6 +39,8 @@ export interface V2PipelineResult {
   readonly plan?: SkillPlan
   readonly preflight?: PreflightReport
   readonly publication?: PublicationReceipt
+  readonly publicationReceipt?: PublicationReceiptDocument
+  readonly publicationReceiptPath?: string
   readonly reason?: string
 }
 
@@ -254,7 +259,11 @@ export class V2Pipeline {
         return { projection, route, plan, preflight: preflightReport, reason }
       }
 
-      const verification = await this.ctx.capabilities.require('verifier').verify(operation)
+      const verification = await this.ctx.capabilities.require('verifier').verify(operation, {
+        plan,
+        bundle: plan.bundle,
+        preflight: preflightReport,
+      })
       await this.append('verification/completed', {
         operationId: operation.id,
         status: verification.status,
@@ -274,12 +283,33 @@ export class V2Pipeline {
         operationId: operation.id,
         reason: 'preflight and verification passed',
       }, request.at)
-      const publication = await this.ctx.capabilities.require('publisher').publish(operation)
-      await this.append('publication/completed', {
-        operationId: publication.operationId,
-        releaseId: publication.releaseId,
-        channel: publication.channel,
-      }, request.at)
+      const planPublisher = this.ctx.capabilities.get('skillPublisher')
+      let publication: PublicationReceipt | undefined
+      let publicationResult: PublicationResult | undefined
+      if (planPublisher) {
+        publicationResult = await planPublisher.publish({
+          operation,
+          plan,
+          bundle: plan.bundle,
+          preflight: preflightReport,
+          sourceTraceIds: [trace.id],
+          policyVersion: request.policyVersion ?? 'v2-policy-default',
+          configVersion: request.configVersion ?? request.profile,
+          channel: 'provisional',
+        })
+        await this.append('publication/completed', {
+          operationId: operation.id,
+          releaseId: publicationResult.releaseId,
+          channel: publicationResult.receipt.channel,
+        }, request.at)
+      } else {
+        publication = await this.ctx.capabilities.require('publisher').publish(operation)
+        await this.append('publication/completed', {
+          operationId: publication.operationId,
+          releaseId: publication.releaseId,
+          channel: publication.channel,
+        }, request.at)
+      }
       if (this.store) {
         await this.store.recordSkillExposure({
           runId: String(this.run.runId),
@@ -290,7 +320,19 @@ export class V2Pipeline {
         })
       }
       const projection = await this.complete(`published ${String(operation.id)}`, request.at)
-      return { projection, route, plan, preflight: preflightReport, publication }
+      return {
+        projection,
+        route,
+        plan,
+        preflight: preflightReport,
+        ...(publication === undefined ? {} : { publication }),
+        ...(publicationResult === undefined
+          ? {}
+          : {
+              publicationReceipt: publicationResult.receipt,
+              publicationReceiptPath: publicationResult.receiptPath,
+            }),
+      }
     } catch (error) {
       await this.fail(error, request.at)
       throw error

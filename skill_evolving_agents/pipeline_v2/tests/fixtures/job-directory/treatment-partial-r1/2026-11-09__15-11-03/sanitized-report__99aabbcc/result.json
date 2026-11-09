@@ -1,0 +1,37 @@
+{
+  "task_name": "sanitized-report",
+  "rollout_name": "sanitized-report__99aabbcc",
+  "rewards": {
+    "reward": 0.417
+  },
+  "agent": "deepagents",
+  "agent_name": "deepagents",
+  "model": "deepseek/deepseek-chat",
+  "skill_mode": "with-skill",
+  "skill_source": "custom_runtime",
+  "requested_skills_dir": null,
+  "effective_skills_dir": null,
+  "n_tool_calls": 55,
+  "n_skill_invocations": 1,
+  "agent_result": {
+    "n_tool_calls": 55,
+    "n_skill_invocations": 1,
+    "n_input_tokens": 4000,
+    "n_output_tokens": 400,
+    "n_cache_read_tokens": 800,
+    "total_tokens": 4400,
+    "cost_usd": 0.1
+  },
+  "final_metrics": {
+    "total_prompt_tokens": 4000,
+    "total_completion_tokens": 400,
+    "total_cached_tokens": 800,
+    "total_cost_usd": 0.1
+  },
+  "error": null,
+  "verifier_error": null,
+  "partial_trajectory": false,
+  "timing": {
+    "agent_execution": 140.2
+  }
+}

@@ -1,0 +1,5 @@
+{"type": "user_message", "text": "Use the provided workbook to fill the sanitized fixture cells."}
+{"type": "tool_call", "tool_call_id": "call_1", "kind": "read", "title": "read", "status": "completed", "content": "/skills/sanitized-skill/SKILL.md\n---\nname: sanitized-skill\ndescription: A sanitized fixture skill for adapter tests.\n---\n\n# Sanitized skill\n"}
+{"type": "tool_call", "tool_call_id": "call_2", "kind": "execute", "title": "execute", "status": "completed", "content": "[Command succeeded with exit code 0]"}
+{"type": "tool_call", "tool_call_id": "call_3", "kind": "execute", "title": "execute", "status": "completed", "content": "checked=4 passed=4 failed=0"}
+{"type": "agent_message", "text": "Applied the sanitized skill and re-ran the verifier."}

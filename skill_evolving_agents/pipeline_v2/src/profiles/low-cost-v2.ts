@@ -2,6 +2,7 @@ import type { Context, Fiber } from '@deepseek-ai/cordis'
 import type {
   FindingDetector,
   Publisher,
+  SkillPublisherCapability,
   TraceSource,
   Verifier,
 } from '../capabilities/definitions.ts'
@@ -30,6 +31,7 @@ export interface LowCostV2ProfileOptions {
   readonly findingDetector?: FindingDetector
   readonly verifier?: Verifier
   readonly publisher?: Publisher
+  readonly skillPublisher?: SkillPublisherCapability
   readonly routerConfig?: Partial<RouterConfig>
   readonly embedding?: EmbeddingProvider
   readonly decisionProvider?: DecisionProvider
@@ -74,6 +76,9 @@ export async function mountLowCostV2Profile(
     }))))
     fibers.push(await ctx.plugin(providerPlugin('resourcePlanner', new DeterministicResourcePlanner())))
     fibers.push(await ctx.plugin(providerPlugin('preflight', new DeterministicPreflight())))
+    if (options.skillPublisher) {
+      fibers.push(await ctx.plugin(providerPlugin('skillPublisher', options.skillPublisher)))
+    }
     let disposed = false
     return {
       pipeline: (run, store) => new V2Pipeline(ctx, run, store),

@@ -7,6 +7,11 @@ import type {
   PreflightRequest,
 } from '../preflight/preflight.ts'
 import type {
+  PublicationRequest,
+  PublicationResult,
+} from '../publication/publisher.ts'
+import type {
+  SkillBundle,
   SkillPlan,
   SkillPlanningRequest,
 } from '../resources/planner.ts'
@@ -88,10 +93,17 @@ export interface SkillMutator {
   mutate(operation: Operation): Promise<MutationResult>
 }
 
+/** Plan, bundle, and preflight context for verification. */
+export interface VerificationContext {
+  readonly plan?: SkillPlan
+  readonly bundle?: SkillBundle
+  readonly preflight?: PreflightReport
+}
+
 /** A provider that verifies an operation against its declared evidence. */
 export interface Verifier {
-  /** Verify one operation. */
-  verify(operation: Operation): Promise<VerificationEvidence>
+  /** Verify one operation with optional plan/bundle/preflight context. */
+  verify(operation: Operation, context?: VerificationContext): Promise<VerificationEvidence>
 }
 
 /** A provider that publishes or stages an accepted operation. */
@@ -146,6 +158,11 @@ export interface PreflightCapability {
   run(request: PreflightRequest): Promise<PreflightReport>
 }
 
+/** A provider that atomically publishes an accepted skill plan. */
+export interface SkillPublisherCapability {
+  publish(request: PublicationRequest): Promise<PublicationResult>
+}
+
 /** Capability names and their provider interfaces. */
 export interface CapabilityMap {
   traceSource: TraceSource
@@ -159,6 +176,7 @@ export interface CapabilityMap {
   router: RouterCapability
   resourcePlanner: ResourcePlannerCapability
   preflight: PreflightCapability
+  skillPublisher: SkillPublisherCapability
   configurationSearch: ConfigurationSearch
   generalizationEvaluator: GeneralizationEvaluator
 }

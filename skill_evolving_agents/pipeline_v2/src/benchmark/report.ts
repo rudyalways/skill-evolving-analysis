@@ -65,9 +65,9 @@ export interface EfficiencyMetrics {
   readonly treatmentLatencyMs: number
   readonly totalLatencyMs: number
   readonly meanLatencyMsDelta: number | null
-  readonly baselineCostUsd: number
-  readonly treatmentCostUsd: number
-  readonly totalCostUsd: number
+  readonly baselineCostUsd: number | null
+  readonly treatmentCostUsd: number | null
+  readonly totalCostUsd: number | null
   /** Cells where both baseline and treatment reported a cost. */
   readonly costAvailableCells: number
   /** Cells where at least one condition omitted cost. */
@@ -292,6 +292,8 @@ function efficiencyMetrics(samples: readonly ViewSample[]): EfficiencyMetrics {
   let treatmentLatencyMs = 0
   let baselineCostUsd = 0
   let treatmentCostUsd = 0
+  let baselineCostMeasuredCells = 0
+  let treatmentCostMeasuredCells = 0
   let costAvailableCells = 0
   let costDelta = 0
   let baselineEfficiencyFailures = 0
@@ -301,8 +303,14 @@ function efficiencyMetrics(samples: readonly ViewSample[]): EfficiencyMetrics {
     treatmentToolCalls += sample.treatment.toolCalls
     baselineLatencyMs += sample.baseline.latencyMs
     treatmentLatencyMs += sample.treatment.latencyMs
-    if (sample.baseline.costUsd !== null) baselineCostUsd += sample.baseline.costUsd
-    if (sample.treatment.costUsd !== null) treatmentCostUsd += sample.treatment.costUsd
+    if (sample.baseline.costUsd !== null) {
+      baselineCostUsd += sample.baseline.costUsd
+      baselineCostMeasuredCells += 1
+    }
+    if (sample.treatment.costUsd !== null) {
+      treatmentCostUsd += sample.treatment.costUsd
+      treatmentCostMeasuredCells += 1
+    }
     if (sample.baseline.costUsd !== null && sample.treatment.costUsd !== null) {
       costAvailableCells += 1
       costDelta += sample.treatment.costUsd - sample.baseline.costUsd
@@ -312,6 +320,8 @@ function efficiencyMetrics(samples: readonly ViewSample[]): EfficiencyMetrics {
   }
   const toolCallDelta = treatmentToolCalls - baselineToolCalls
   const latencyDelta = treatmentLatencyMs - baselineLatencyMs
+  const baselineCost = baselineCostMeasuredCells === 0 ? null : round6(baselineCostUsd)
+  const treatmentCost = treatmentCostMeasuredCells === 0 ? null : round6(treatmentCostUsd)
   return {
     cells,
     baselineToolCalls,
@@ -322,9 +332,11 @@ function efficiencyMetrics(samples: readonly ViewSample[]): EfficiencyMetrics {
     treatmentLatencyMs,
     totalLatencyMs: baselineLatencyMs + treatmentLatencyMs,
     meanLatencyMsDelta: cells === 0 ? null : round6(latencyDelta / cells),
-    baselineCostUsd: round6(baselineCostUsd),
-    treatmentCostUsd: round6(treatmentCostUsd),
-    totalCostUsd: round6(baselineCostUsd + treatmentCostUsd),
+    baselineCostUsd: baselineCost,
+    treatmentCostUsd: treatmentCost,
+    totalCostUsd: baselineCost === null || treatmentCost === null
+      ? null
+      : round6(baselineCost + treatmentCost),
     costAvailableCells,
     costUnavailableCells: cells - costAvailableCells,
     meanCostUsdDelta: costAvailableCells === 0

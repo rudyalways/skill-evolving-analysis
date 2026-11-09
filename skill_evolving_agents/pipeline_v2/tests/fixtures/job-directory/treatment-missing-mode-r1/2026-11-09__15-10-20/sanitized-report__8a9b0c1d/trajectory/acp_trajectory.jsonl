@@ -1,0 +1,3 @@
+{"type": "user_message", "text": "Use the provided workbook to fill the sanitized fixture cells."}
+{"type": "agent_message", "text": "<mounted-skill path=/skills/sanitized-skill/SKILL.md>\n---\nname: sanitized-skill\ndescription: A sanitized fixture skill for adapter tests.\n---\n"}
+{"type": "agent_message", "text": "The sanitized skill was available but skill_mode is missing from result.json."}

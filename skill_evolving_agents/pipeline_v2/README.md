@@ -155,6 +155,27 @@ does not own pipeline-global state.
 - A v2 provider must match or exceed frozen legacy behavior before it can replace
   a Python phase.
 
+## Real runnable CLI
+
+Build once, then run a trace through the mounted Cordis pipeline:
+
+```sh
+./node_modules/.bin/tsc -p tsconfig.build.json
+node dist/cli/v2.js \
+  --trace-file /path/to/trace.json \
+  --stage train \
+  --run-id my-run \
+  --store /tmp/v2-store \
+  --publish-root /tmp/v2-validation-inventory \
+  --json-out /tmp/v2-report.json
+```
+
+`--publish-root` must be an absolute dedicated validation inventory; the
+publisher refuses the home directory, the current working directory, and
+primary skill inventories. `--dry-run` validates options without publishing.
+`--job-dir` accepts a rollout directory containing `prompts.json`. The command
+returns nonzero when no verified publication was produced.
+
 ## Commands
 
 From this directory, with the DSH checkout present at its documented path:
@@ -171,9 +192,12 @@ Neither modifies the DSH checkout. In a normal installed environment, use
 
 ## Milestone boundary
 
-The durable v2 slice is implemented and offline-tested. It does **not** yet
-include a real replay verifier, content-addressed publication receipts, a
-benchmark observation producer for legacy job directories, model-backed
-providers, or DSH bundle/profile packaging. No fresh sealed holdout has been
-run against v2. The achieved benchmark result remains baseline `5/16` and
-selective policy `6/16`; the 10/16 milestone is not claimed.
+The durable v2 slice now includes a real replay verifier, a content-addressed
+atomic publisher, a legacy job-directory observation adapter, a real CLI, and
+a Qwen-compatible embedding provider seam. It still does **not** include a
+DSH bundle/profile package or a model-backed stage-two decision provider in the
+default path. The first four-task validation cohort is recorded in
+`VALIDATION.md`; the single selected treatment was invalid because the skill
+was not activated. No fresh sealed holdout has been run. The historical
+baseline remains `5/16` and selective policy `6/16`; the 10/16 milestone is not
+claimed.

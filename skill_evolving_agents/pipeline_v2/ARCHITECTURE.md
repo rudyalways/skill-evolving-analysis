@@ -64,8 +64,12 @@ trace
 | Successive halving | implemented | `src/search/halving.ts` |
 | Durable v2 pipeline slice | implemented | `src/core/v2-pipeline.ts` |
 | Low-cost Cordis profile | implemented | `src/profiles/low-cost-v2.ts` |
-| Real verifier/replay execution | missing | - |
-| Benchmark observation producer | missing | - |
+| Real verifier/replay execution | implemented | `src/verification/replay-verifier.ts` |
+| Content-addressed publication | implemented | `src/publication/publisher.ts` |
+| Benchmark observation producer | implemented | `src/benchmark/job-directory.ts` |
+| Production CLI | implemented | `src/cli/v2.ts` |
+| Semantic embedding seam | implemented | `src/router/qwen-embedding.ts` |
+| Validation cohort builder/audit | implemented | `src/validation/cohort.ts` |
 | DSH bundle/profile packaging | missing | - |
 
 ## Dependency rules
@@ -117,10 +121,17 @@ providers. The store rejects holdout feedback. The benchmark admission/report
 modules consume paired observations and separate raw, activated, and selective
 views.
 
+## First validation result
+
+The real v2 run published a generated spreadsheet skill, then ran a four-task
+validation cohort. Three cells were abstentions; the one selected xlsx cell ran
+with-skill but the trajectory audit observed no skill activation, so it was
+excluded. There was no activated effect, no lift, and no evidence for a fresh
+holdout. See `VALIDATION.md`.
+
 ## Next vertical slice
 
-Replace the deterministic verifier/publisher stubs with a real replay verifier
-and content-addressed publication receipt, then add a `BenchmarkObservation`
-producer for legacy job directories. Only after that should a small validation
-cohort be considered. A fresh sealed holdout remains mandatory for any 10/16
+Fix activation of the published skill, produce at least one selected cell with
+verified skill use, and run a bounded repair round on a second disjoint
+validation cohort. A fresh sealed holdout remains mandatory for any 10/16
 claim.

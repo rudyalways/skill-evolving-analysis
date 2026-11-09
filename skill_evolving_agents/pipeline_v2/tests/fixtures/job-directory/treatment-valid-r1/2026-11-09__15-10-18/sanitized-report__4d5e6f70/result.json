@@ -1,0 +1,55 @@
+{
+  "task_name": "sanitized-report",
+  "rollout_name": "sanitized-report__4d5e6f70",
+  "rewards": {
+    "reward": 1.0
+  },
+  "agent": "deepagents",
+  "agent_name": "deepagents",
+  "model": "deepseek/deepseek-chat",
+  "skill_mode": "with-skill",
+  "skill_source": "custom_runtime",
+  "requested_skills_dir": "workspace/skillbench/sanitized-bundles/sanitized-report",
+  "effective_skills_dir": "workspace/skillbench/sanitized-bundles/sanitized-report",
+  "skills_sandbox_dir": "/skills",
+  "include_task_skills": false,
+  "n_tool_calls": 118,
+  "n_skill_invocations": 2,
+  "n_prompts": 1,
+  "agent_result": {
+    "n_tool_calls": 118,
+    "n_skill_invocations": 2,
+    "n_input_tokens": 9000,
+    "n_output_tokens": 1100,
+    "n_cache_read_tokens": 3000,
+    "total_tokens": 10100,
+    "cost_usd": null
+  },
+  "final_metrics": {
+    "total_prompt_tokens": 9000,
+    "total_completion_tokens": 1100,
+    "total_cached_tokens": 3000,
+    "total_cost_usd": null
+  },
+  "trajectory_summary": {
+    "steps": 5,
+    "tool_call_steps": 3,
+    "user_message_steps": 1,
+    "agent_message_steps": 1,
+    "partial_trajectory": false,
+    "trajectory_source": "acp"
+  },
+  "error": null,
+  "error_category": null,
+  "verifier_error": null,
+  "partial_trajectory": false,
+  "started_at": "2026-11-09 15:10:18.000000",
+  "finished_at": "2026-11-09 15:15:40.000000",
+  "timing": {
+    "environment_setup": 11.0,
+    "agent_setup": 1.0,
+    "agent_execution": 300.5,
+    "verifier": 2.5,
+    "total": 315.0
+  }
+}

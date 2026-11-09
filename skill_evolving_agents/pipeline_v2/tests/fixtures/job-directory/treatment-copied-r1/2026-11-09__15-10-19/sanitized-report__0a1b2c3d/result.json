@@ -1,0 +1,65 @@
+{
+  "task_name": "sanitized-report",
+  "rollout_name": "sanitized-report__0a1b2c3d",
+  "rewards": {
+    "reward": 0.5
+  },
+  "agent": "deepagents",
+  "agent_name": "deepagents",
+  "model": "deepseek/deepseek-chat",
+  "skill_mode": "no-skill",
+  "skill_source": "none",
+  "requested_skills_dir": null,
+  "effective_skills_dir": null,
+  "skills_sandbox_dir": null,
+  "include_task_skills": false,
+  "n_tool_calls": 241,
+  "n_skill_invocations": 0,
+  "n_prompts": 1,
+  "agent_result": {
+    "n_tool_calls": 241,
+    "n_skill_invocations": 0,
+    "n_input_tokens": 12000,
+    "n_output_tokens": 800,
+    "n_cache_read_tokens": 4000,
+    "total_tokens": 12800,
+    "cost_usd": 0.25
+  },
+  "final_metrics": {
+    "total_prompt_tokens": 12000,
+    "total_completion_tokens": 800,
+    "total_cached_tokens": 4000,
+    "total_cost_usd": 0.25
+  },
+  "trajectory_summary": {
+    "steps": 6,
+    "tool_call_steps": 4,
+    "user_message_steps": 1,
+    "agent_message_steps": 1,
+    "partial_trajectory": false,
+    "trajectory_source": "acp"
+  },
+  "error": null,
+  "error_category": null,
+  "verifier_error": null,
+  "verifier_error_category": null,
+  "export_error": null,
+  "idle_timeout_info": null,
+  "agent_timeout_info": null,
+  "sandbox_startup_info": null,
+  "transport_error_info": null,
+  "verifier_timeout_info": null,
+  "api_error_info": null,
+  "suspected_api_error_info": null,
+  "partial_trajectory": false,
+  "trajectory_source": "acp",
+  "started_at": "2026-11-09 15:10:17.762997",
+  "finished_at": "2026-11-09 15:25:30.000000",
+  "timing": {
+    "environment_setup": 12.5,
+    "agent_setup": 1.2,
+    "agent_execution": 900.1,
+    "verifier": 3.0,
+    "total": 916.8
+  }
+}

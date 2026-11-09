@@ -58,3 +58,6 @@ skill_evolving_agents/workspace/metrics.sqlite-shm
 skill_evolving_agents/workspace/metrics.sqlite-wal
 skill_evolving_agents/workspace/active-inventory.json
 skill_evolving_agents/workspace/inventory_releases/
+
+# pipeline_v2 build output
+skill_evolving_agents/pipeline_v2/dist/

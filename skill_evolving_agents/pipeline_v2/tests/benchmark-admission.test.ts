@@ -512,3 +512,21 @@ describe('benchmark validity report', () => {
     expect(empty.byDomain).toEqual([])
   })
 })
+
+describe('unmeasured cost', () => {
+  it('reports null cost totals rather than zero', () => {
+    const report = buildBenchmarkReport({
+      benchmark: 'bench',
+      cohort: 'cohort',
+      observations: [observation({
+        observationId: 'unmeasured',
+        baseline: condition({ passed: true, costUsd: null }),
+        treatment: condition({ passed: false, costUsd: null }),
+      })],
+    })
+    expect(report.views.rawPaired.efficiency.costAvailableCells).toBe(0)
+    expect(report.views.rawPaired.efficiency.baselineCostUsd).toBeNull()
+    expect(report.views.rawPaired.efficiency.treatmentCostUsd).toBeNull()
+    expect(report.views.rawPaired.efficiency.totalCostUsd).toBeNull()
+  })
+})

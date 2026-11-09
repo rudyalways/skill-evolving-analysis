@@ -1,0 +1,3 @@
+{"type": "user_message", "text": "Use the provided workbook to fill the sanitized fixture cells."}
+{"type": "tool_call", "tool_call_id": "call_1", "kind": "read", "title": "read", "status": "completed", "content": "Workbook layout: Task and Data sheets."}
+{"type": "agent_message", "text": "A skills directory was mounted, but the transcript never contains SKILL.md."}
