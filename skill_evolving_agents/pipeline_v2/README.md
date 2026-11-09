@@ -8,7 +8,9 @@ unchanged and remains the default runtime.
 
 - branded run, trace, finding, operation, skill, resource, and event ids;
 - versioned durable event unions for the run lifecycle;
-- an in-memory append-only event log with schema and transition validation;
+- an in-memory append-only event log with schema and transition validation,
+  one-run identity enforcement, terminal operation closure, and duplicate
+  resource rejection;
 - deterministic projections for run status, funnel counts, operations,
   resource use, and failures;
 - capability interfaces for every pipeline phase;
@@ -42,6 +44,7 @@ src/contracts/   ids, errors, events, evidence, operations, resources,
                  worker protocol, comparison report
 src/core/        event log, projections, capability registry, run controller
 src/capabilities/ capability interfaces and an in-memory trace fixture
+src/vendor/      narrow ambient Cordis type boundary used only by tsc
 src/index.ts     public package surface
 tests/           focused offline lifecycle, validation, projection, protocol tests
 ```
@@ -49,6 +52,12 @@ tests/           focused offline lifecycle, validation, projection, protocol tes
 The exact layout in the design note allowed per-capability files. Milestone 0
 uses one `capabilities/definitions.ts` file to keep the slice small; the
 interfaces are still independent of their providers.
+
+`src/vendor/cordis.d.ts` is a narrow ambient declaration for the external
+Cordis API. TypeScript compiles our package with full strict checks and does not
+recompile the vendored source; Vitest resolves the same import to the real
+Cordis source in the read-only DSH checkout. This keeps the vendor boundary out
+of our strictness settings without changing runtime behavior.
 
 ## Using the package
 
@@ -70,7 +79,9 @@ await fiber.dispose()
 
 A run is written through `EventLog` or `RunController` and read through
 `projectEvents`. Projection is a pure fold: the same event sequence produces the
-same bytes.
+same bytes. The log rejects mixed run ids, duplicate event ids, duplicate
+resource ids, and any verification that would reopen an accepted, rejected, or
+published operation.
 
 ## Worker boundary
 

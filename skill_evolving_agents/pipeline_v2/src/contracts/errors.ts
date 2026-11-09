@@ -57,6 +57,20 @@ export class InvalidTransitionError extends PipelineError {
   }
 }
 
+/** An event belongs to a different run than the log it is appended to. */
+export class RunIdMismatchError extends PipelineError {
+  constructor(expected: string, actual: string) {
+    super('run-id-mismatch', 'event belongs to a different run', { expected, actual })
+  }
+}
+
+/** Two resource events reused the same resource id within one run. */
+export class DuplicateResourceError extends PipelineError {
+  constructor(resourceId: string) {
+    super('duplicate-resource', `duplicate resource id ${resourceId}`, { resourceId })
+  }
+}
+
 /** Two events reused the same append-only event id. */
 export class DuplicateEventError extends PipelineError {
   constructor(eventId: string) {

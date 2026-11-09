@@ -126,12 +126,13 @@ export function parseWorkerResult(value: unknown): WorkerResult {
       issues.push(issue('$.output', 'invalid', 'output must be an object when status is ok'))
     }
     if (issues.length > 0) throw new WorkerProtocolError(issues)
+    const usage = readUsage(value.usage)
     return {
       protocolVersion: WORKER_PROTOCOL_VERSION,
       requestId: requestId as string,
       status: 'ok',
       output: value.output as Readonly<Record<string, unknown>>,
-      ...(readUsage(value.usage) ? { usage: readUsage(value.usage) } : {}),
+      ...(usage ? { usage } : {}),
     }
   }
   if (value.status === 'error') {
@@ -148,6 +149,7 @@ export function parseWorkerResult(value: unknown): WorkerResult {
     }
     if (issues.length > 0) throw new WorkerProtocolError(issues)
     const normalized = error as Record<string, unknown>
+    const usage = readUsage(value.usage)
     return {
       protocolVersion: WORKER_PROTOCOL_VERSION,
       requestId: requestId as string,
@@ -159,7 +161,7 @@ export function parseWorkerResult(value: unknown): WorkerResult {
           ? { details: normalized.details as Readonly<Record<string, unknown>> }
           : {}),
       },
-      ...(readUsage(value.usage) ? { usage: readUsage(value.usage) } : {}),
+      ...(usage ? { usage } : {}),
     }
   }
   issues.push(issue('$.status', 'invalid', 'status must be ok or error'))

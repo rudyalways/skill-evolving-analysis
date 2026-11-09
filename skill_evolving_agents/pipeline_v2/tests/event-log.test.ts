@@ -5,6 +5,8 @@ import {
   EventValidationError,
   InvalidIdError,
   InvalidTransitionError,
+  RunIdMismatchError,
+  DuplicateResourceError,
   UnsupportedEventVersionError,
 } from '../src/contracts/errors.ts'
 import { runId } from '../src/contracts/ids.ts'
@@ -75,6 +77,59 @@ function accepted(id = 'evt-4') {
   }
 }
 
+function verificationWith(status: 'pass' | 'fail' | 'efficiency_failure', id: string) {
+  return {
+    id,
+    runId: 'run-1',
+    type: 'verification/completed',
+    version: 1,
+    at: AT,
+    payload: { operationId: 'op-1', status, summary: 'checker result' },
+  }
+}
+
+function rejected(id = 'evt-4') {
+  return {
+    id,
+    runId: 'run-1',
+    type: 'operation/rejected',
+    version: 1,
+    at: AT,
+    payload: { operationId: 'op-1', reason: 'failed verification' },
+  }
+}
+
+function published(id = 'evt-5') {
+  return {
+    id,
+    runId: 'run-1',
+    type: 'publication/completed',
+    version: 1,
+    at: AT,
+    payload: { operationId: 'op-1', releaseId: 'release-1', channel: 'provisional' },
+  }
+}
+
+function resource(id = 'res-1', event = 'evt-4') {
+  return {
+    id: event,
+    runId: 'run-1',
+    type: 'resource/generated',
+    version: 1,
+    at: AT,
+    payload: {
+      resource: {
+        id,
+        operationId: 'op-1',
+        skillId: 'skill-1',
+        kind: 'scripts',
+        path: 'scripts/guard.py',
+        status: 'generated',
+      },
+    },
+  }
+}
+
 describe('branded ids', () => {
   it('rejects empty ids with a structured error', () => {
     expect(() => runId('')).toThrow(InvalidIdError)
@@ -140,6 +195,59 @@ describe('event validation', () => {
       payload: { summary: 'done' },
     })
     expect(() => log.append(trace('evt-3'))).toThrow(InvalidTransitionError)
+  })
+
+  it('rejects events from a different run', () => {
+    const log = new EventLog()
+    log.append(started())
+    expect(() => log.append({ ...trace(), runId: 'run-2' })).toThrow(
+      RunIdMismatchError,
+    )
+  })
+
+  it('does not reopen a verified operation after acceptance', () => {
+    const log = new EventLog()
+    log.append(started())
+    log.append(operationPlanned())
+    log.append(verification())
+    log.append(accepted())
+    expect(() => log.append(verification('evt-5'))).toThrow(
+      InvalidTransitionError,
+    )
+  })
+
+  it('rejects duplicate resource ids instead of overwriting', () => {
+    const log = new EventLog()
+    log.append(started())
+    log.append(operationPlanned())
+    log.append(resource('res-1', 'evt-3'))
+    expect(() => log.append(resource('res-1', 'evt-4'))).toThrow(
+      DuplicateResourceError,
+    )
+    expect(log.length).toBe(3)
+  })
+
+  it('does not reopen an operation after rejection', () => {
+    const log = new EventLog()
+    log.append(started())
+    log.append(operationPlanned())
+    log.append(verificationWith('fail', 'evt-3'))
+    log.append(rejected())
+    expect(() => log.append(verificationWith('pass', 'evt-5'))).toThrow(
+      InvalidTransitionError,
+    )
+  })
+
+  it('does not reopen an operation after publication', () => {
+    const log = new EventLog()
+    log.append(started())
+    log.append(operationPlanned())
+    log.append(verificationWith('pass', 'evt-3'))
+    log.append(accepted())
+    log.append(published())
+    expect(() => log.append(verificationWith('pass', 'evt-6'))).toThrow(
+      InvalidTransitionError,
+    )
   })
 
   it('rolls back appendAll when a later event is invalid', () => {

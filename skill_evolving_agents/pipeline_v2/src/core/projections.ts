@@ -258,13 +258,14 @@ export function projectEvents(events: readonly PipelineEvent[]): RunProjection {
   }
   for (const resource of resourceValues) byKind[resource.kind] += 1
 
+  const lastEvent = events[events.length - 1]
   return {
     ...(runId === undefined ? {} : { runId }),
     status,
     ...(startedAt === undefined ? {} : { startedAt }),
     ...(endedAt === undefined ? {} : { endedAt }),
     eventCount: events.length,
-    ...(events.length === 0 ? {} : { lastEventId: events[events.length - 1]?.id }),
+    ...(lastEvent ? { lastEventId: lastEvent.id } : {}),
     funnel,
     operations: sorted(operations),
     resources: sorted(resources),

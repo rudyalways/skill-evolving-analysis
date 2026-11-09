@@ -11,11 +11,8 @@
     "skipLibCheck": true,
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": false,
-    "noUncheckedIndexedAccess": false,
-    "exactOptionalPropertyTypes": false,
-    "noImplicitOverride": false,
-    "noUnusedLocals": false,
-    "noUnusedParameters": false,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
     "types": [
       "node"
     ],
@@ -23,19 +20,16 @@
       "../../../../oss/deepseek-harness/node_modules/@types"
     ],
     "paths": {
-      "@deepseek-ai/cordis": [
-        "../../../../oss/deepseek-harness/vendor/cordis/src/index.ts"
-      ],
-      "@deepseek-ai/cosmokit": [
-        "../../../../oss/deepseek-harness/vendor/cosmokit/src/index.ts"
-      ],
       "vitest": [
         "../../../../oss/deepseek-harness/node_modules/vitest/dist/index.d.ts"
       ]
     },
-    "noImplicitAny": false,
-    "noImplicitThis": false,
-    "strictFunctionTypes": false
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+    "noImplicitAny": true,
+    "noImplicitThis": true,
+    "strictFunctionTypes": true
   },
   "include": [
     "src/**/*.ts",

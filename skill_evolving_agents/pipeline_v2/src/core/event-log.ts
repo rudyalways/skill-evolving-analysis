@@ -1,7 +1,9 @@
 import {
   DuplicateEventError,
+  DuplicateResourceError,
   EventValidationError,
   InvalidTransitionError,
+  RunIdMismatchError,
   UnsupportedEventVersionError,
 } from '../contracts/errors.ts'
 import type { StructuredIssue } from '../contracts/errors.ts'
@@ -216,6 +218,10 @@ function referencedOperationId(event: PipelineEvent): string | undefined {
 
 function assertTransition(events: readonly PipelineEvent[], event: PipelineEvent): void {
   const status = runStatus(events)
+  const first = events[0]
+  if (first && event.runId !== first.runId) {
+    throw new RunIdMismatchError(first.runId, event.runId)
+  }
   if (events.length === 0 && event.type !== 'run/started') {
     throw new InvalidTransitionError(event.type, status, 'the first durable event must be run/started')
   }
@@ -231,6 +237,15 @@ function assertTransition(events: readonly PipelineEvent[], event: PipelineEvent
   ) {
     throw new InvalidTransitionError(event.type, status, 'terminal event requires a running run')
   }
+  if (event.type === 'resource/generated') {
+    const resource = event.payload.resource
+    const duplicate = events.some(
+      (previous) =>
+        previous.type === 'resource/generated' &&
+        previous.payload.resource.id === resource.id,
+    )
+    if (duplicate) throw new DuplicateResourceError(resource.id)
+  }
   if (event.type === 'operation/planned') {
     const id = event.payload.operation.id
     if (operationState(events, id) !== undefined) {
@@ -242,6 +257,16 @@ function assertTransition(events: readonly PipelineEvent[], event: PipelineEvent
     const state = operationState(events, reference)
     if (state === undefined) {
       throw new InvalidTransitionError(event.type, status, `operation ${reference} must be planned first`)
+    }
+    if (
+      event.type === 'verification/completed' &&
+      (state === 'verified_pass' ||
+        state === 'verified_fail' ||
+        state === 'accepted' ||
+        state === 'rejected' ||
+        state === 'published')
+    ) {
+      throw new InvalidTransitionError(event.type, state, 'operation verification is already final')
     }
     if (event.type === 'operation/accepted' && state !== 'verified_pass') {
       throw new InvalidTransitionError(event.type, state, 'operation may be accepted only after a passing verification')
