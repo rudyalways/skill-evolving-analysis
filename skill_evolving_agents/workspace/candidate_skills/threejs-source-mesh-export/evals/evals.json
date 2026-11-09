@@ -806,6 +806,11 @@
       "source_trace_ids": [
         "sig-7a37a2fb3928da6d0a13019d"
       ]
+    },
+    {
+      "id": 40,
+      "prompt": "Export the part_meshes and links tree from a native Three.js module for a task that does not request Blender Z-up or any axis rotation. Preserve the source scene coordinates and verify the artifact in the native frame.",
+      "expected_output": "The part producer writes the native tree without an axis transfer; the independent checker is invoked with --frame native, exits zero, and reports native coordinates. No unrequested -90 degree X rotation is applied."
     }
   ]
 }

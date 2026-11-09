@@ -24,6 +24,17 @@ MOUNTED_SKILL = re.compile(
     r"/([a-z0-9][a-z0-9._-]*)/SKILL\.md>",
     re.IGNORECASE,
 )
+REPORTED_SCRIPT = re.compile(
+    r"(?:python(?:3)?|bash|sh|node)\s+([^\s`'\"]*?/skills/"
+    r"([a-z0-9][a-z0-9._-]*)/scripts/[^\s`'\"]+)",
+    re.IGNORECASE,
+)
+EXECUTION_SUCCESS = re.compile(
+    r"exit\s+(?:status|code)\s*0|\bexit\s*0\b|"
+    r"\"status\"\s*:\s*\"pass\"|exits?\s+zero|"
+    r"preflight[^.\n]{0,48}\bpass|checker[^.\n]{0,48}\bpass",
+    re.IGNORECASE,
+)
 
 
 def _strings(value: Any) -> Iterable[str]:
@@ -72,6 +83,8 @@ def audit(path: Path) -> dict[str, Any]:
     resource_attempts: dict[str, set[str]] = {}
     resource_successes: dict[str, set[str]] = {}
     resource_failures: dict[str, set[str]] = {}
+    reported_attempts: dict[str, set[str]] = {}
+    reported_successes: dict[str, set[str]] = {}
     matched_events = 0
     for event in _events(path):
         event_matches: set[tuple[str, str]] = set()
@@ -88,6 +101,17 @@ def audit(path: Path) -> dict[str, Any]:
                     event_matches.add((skill_name, "SKILL.md"))
             for match in SKILL_PATH.finditer(text):
                 resource_matches.add((match.group(1), match.group(2)))
+        if event.get("type") == "agent_message":
+            # Some ACP adapters retain only tool output, not the command input.
+            # A final report that names a skill script is weaker than an observed
+            # execution, but it is better than a false "never executed" claim.
+            succeeded = bool(EXECUTION_SUCCESS.search(event_text))
+            for match in REPORTED_SCRIPT.finditer(event_text):
+                skill = match.group(2)
+                resource = "scripts/" + match.group(1).split("/scripts/", 1)[1]
+                reported_attempts.setdefault(skill, set()).add(resource)
+                if succeeded:
+                    reported_successes.setdefault(skill, set()).add(resource)
         title = str(event.get("title") or "").lower()
         kind = str(event.get("kind") or "").lower()
         listing_only = title in {"ls", "list", "find"} and kind == "read"
@@ -146,6 +170,10 @@ def audit(path: Path) -> dict[str, Any]:
                 "attempted": sorted(resource_attempts.get(name, set())),
                 "succeeded": sorted(resource_successes.get(name, set())),
                 "failed": sorted(resource_failures.get(name, set())),
+                "reported": sorted(reported_attempts.get(name, set())),
+                "reported_succeeded": sorted(
+                    reported_successes.get(name, set())
+                ),
             },
         }
         for name in sorted(all_skill_names)

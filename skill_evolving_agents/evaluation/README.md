@@ -61,6 +61,141 @@ selection cost and false-positive exposure part of the benchmark evidence.
 Use the same selection policy for every held-out cell; do not hand-pick skills
 after seeing verifier outcomes.
 
+Policy `v4` adds an offline object/action compatibility gate on top of the
+create-vs-repair check. The gate reads the task's artifact family
+(presentation, workbook, DXF/CAD plan, Three.js module, XML draft, and so on)
+and action family (inspect, transform, create, save, publish), then rejects a
+skill that explicitly scopes itself to a disjoint family, requires a batch or
+multi-variant action the task does not request, or requires a publisher action
+for a single-artifact transformation. It reads the full `SKILL.md`, not the
+truncated embedding document, so negative scope such as `Do not use for non-XML
+formats` is visible. The gate only causes abstention; it never promotes another
+candidate. Task-scoped benchmark feedback with a confirmed negative reward
+delta now also abstains explicitly (`feedback-regression`), with
+`feedback_min_observations` frozen in the policy. Task-scoped events are kept
+out of the global skill prior: a single costly task can suppress that task/skill
+pair but cannot silently suppress the skill across unrelated tasks.
+
+The confirmed held-out regression that motivated this gate:
+`pptx-reference-formatting` passed with no skill in `30` tool calls but failed
+with router-selected `batch-doc-variant-publishing` in `46` calls. The pair now
+abstains from both intent evidence (presentation request vs XML document
+variants) and calibrated task-scoped feedback, while `threejs-to-obj` still
+selects `threejs-source-mesh-export` and `ada-bathroom-plan-repair` still
+selects `ada-plan-view-accessibility`.
+
+### Executable leverage and strict trial budgets
+
+`evaluation/executable_leverage.py` scores paired treatment evidence on a
+five-stage funnel:
+
+```text
+resource discovered -> opened -> executed -> succeeded -> reduced tool calls
+```
+
+Discovery-only listings, reads without execution, failed commands, and
+successful commands that do not reduce paired tool calls do not count as
+executable leverage. The feedback tool records the claim
+(`discovered-only`, `opened-only`, `executed-not-succeeded`,
+`succeeded-no-reduction`, or `executable-leverage`) and the aggregate stage
+rates. Inspect one trial directly with:
+
+```bash
+python evaluation/executable_leverage.py path/to/acp_trajectory.jsonl \
+  --baseline-tool-calls 30 --treatment-tool-calls 22
+```
+
+`evaluation/trial-budgets.json` defines hard wall-time, tool-call, and cost
+ceilings. `paired_benchmark_report.py` and `benchmark_resource_feedback.py`
+apply them with strict `>` semantics and emit the explicit
+`efficiency_failure` outcome. A pass that exceeds a budget is recorded as an
+efficiency failure and excluded from the outcome pass rate; raw reward/pass
+fields are retained alongside the outcome fields for audit. An
+efficiency-exhausted side is excluded from benchmark feedback so budget failure
+is not misread as skill-quality evidence. Override the limits with `--budgets`.
+
+### Parallel held-out cohort runner
+
+`evaluation/heldout_cohort_runner.py` executes a frozen cohort spec as matched
+baseline/treatment repetitions with a bounded worker pool and an auditable
+manifest (exact command, exit code, duration, jobs directory). The cohort is
+declared before outcomes are seen; tasks may opt into baseline-only conditions,
+and treatment always uses its own frozen bundle. This removes sequential
+one-job-at-a-time back-and-forth from the loop.
+
+```bash
+python evaluation/heldout_cohort_runner.py --spec cohort.json --out manifest.json
+python evaluation/heldout_cohort_runner.py --spec cohort.json --out manifest.json --dry-run
+```
+
+### Time and cost profiles
+
+`evaluation/benchmark_controller.py` turns a requested wall-clock budget and
+cost tier into a concrete cohort plan: task count, conditions, repetitions,
+parallelism, per-trial budgets, and a worst-case cost cap. It writes a frozen
+cohort spec; `--execute` hands it to the parallel runner with a hard wall-clock
+cap and resume support.
+
+| Profile | Typical plan | Default budgets |
+|---|---|---|
+| `smoke-15m` | 2 selected tasks, 4 trials, 2 workers | 300s / 60 calls / `$0.50` per trial |
+| `quick-1h` | 6 selected tasks, 12 trials, 4 workers | 600s / 100 calls / `$1.00` |
+| `standard-3h` | 16 tasks (selected treatment + abstained baseline), 22 trials, 6 workers | 900s / 120 calls / `$2.00` |
+| `deep-1d` | up to 16 tasks, 3 reps per condition, 96 trials, 8 workers | 1200s / 180 calls / `$3.00` |
+
+Cost tiers `low`, `standard`, and `high` cap trials, parallelism, repetitions,
+per-trial budgets, and worst-case spend. Profiles and estimates live in
+`evaluation/benchmark-profiles.json`.
+
+```bash
+python evaluation/benchmark_controller.py \
+  --time-budget smoke-15m --cost-tier standard \
+  --out workspace/reports/smoke-plan.json
+
+python evaluation/benchmark_controller.py \
+  --time-budget smoke-15m --cost-tier standard --execute
+```
+
+The runner enforces the wall-clock cap with a process-group kill, skips
+completed trials with `resume`, and records `timed_out` / `stopped_by_wall_clock`
+separately from model failures.
+
+### Held-out iteration controller
+
+`evaluation/heldout_iteration.py` converts a completed paired bench into a
+repeatable next-round plan. It joins paired pass/reward/tool-call evidence with
+trial validity, activation audit, and executable-leverage claims, then emits
+typed gaps (`regression`, `router_false_positive`, `efficiency_failure`,
+`activation_missing`, `no_executable_leverage`, and others). Instrumentation
+gaps block the next paid round; quality gaps become the authoring work items.
+`baseline_drift`, `baseline_efficiency_failure`, and `task_budget_infeasible`
+are instrumentation gates:
+a no-skill regression, an over-budget baseline, or a task whose failing
+baseline already exceeds the hard budget cannot be attributed to a skill. Prose-only skills that reduce calls without scripts are reported as
+`methodology-leverage` and are not counted as missed executable leverage.
+
+```bash
+python evaluation/heldout_iteration.py \
+  --baseline workspace/skillbench/<baseline-job> \
+  --treatment workspace/skillbench/<treatment-job> \
+  --benchmark skillsbench@1.1 --cohort heldout-v4 \
+  --selection-report workspace/skillbench/<router-report>.json \
+  --out workspace/reports/<round>.json
+```
+
+The controller is read-only and never starts a paid run.
+
+### Replay-required acceptance
+
+`common/acceptance_gates.py` blocks acceptance of a resource-changing
+operation (`scripts`, `references`, `assets`, `agents`, or `evals`) when a
+behavioral replay is available but did not pass, or when a replay fixture
+exists and no replay was executed. With neither a fixture nor a replay,
+acceptance remains explicitly provisional. The publication records
+`outcome: replay_required` and the gate artifact, so structural-only acceptance
+can no longer be mistaken for behavioral evidence.
+
+
 ### Generalization and future cross-benchmark gate
 
 Freeze trace hashes, generated skill hashes, task IDs, domains, benchmark

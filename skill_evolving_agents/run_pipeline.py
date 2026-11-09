@@ -65,7 +65,16 @@ from core.state_machine import StateMachineRuntime, TransitionDecision, load_mac
 from core.super_config import SuperConfigError, load_super_config, resolve_execution_config
 from core.service_tiers import ServiceTierError, load_service_tiers
 from core.optimization import load_spec, validate_knob_registry
-from common import inventory_store, privacy, release_bundle, replay_runner, skill_resources
+from common import (
+    acceptance_gates,
+    execution_budget,
+    inventory_store,
+    privacy,
+    release_bundle,
+    replay_runner,
+    run_identity,
+    skill_resources,
+)
 from policy import FixedPolicy, PolicyCompiler, PolicyStore, extract_policy_features
 from services.embedding_api.client import EmbeddingClient, EmbeddingServiceError
 from services.embedding_api.provider import EmbeddingProvider, validate_embedding_runtime
@@ -3021,10 +3030,14 @@ def configure_run_deadline(workspace: Path) -> dict[str, object]:
                 turns = value
         except json.JSONDecodeError:
             pass
+    profile_budget = ACTIVE_EXECUTION_CONFIG.get("budgets") or {}
     configured_budget = os.environ.get("SKILL_EVOLVER_RUN_BUDGET_SECONDS")
     if configured_budget:
         budget_seconds = max(1, int(configured_budget))
         budget_source = "environment"
+    elif profile_budget.get("hard_wall_seconds"):
+        budget_seconds = max(1, int(profile_budget["hard_wall_seconds"]))
+        budget_source = "profile"
     else:
         # A changing run can invoke diagnosis, goal, optimize, and verification.
         # The former 300-second short-run ceiling was lower than the sum of the
@@ -3032,17 +3045,82 @@ def configure_run_deadline(workspace: Path) -> dict[str, object]:
         # be killed solely because earlier stages used their allowed time.
         budget_seconds = 1200 if turns > 30 else 900
         budget_source = "derived-default"
+    limits = execution_budget.normalize_limits({
+        **profile_budget,
+        "wall_seconds": budget_seconds,
+        "tool_calls": os.environ.get(
+            "SKILL_EVOLVER_RUN_TOOL_CALL_BUDGET",
+            profile_budget.get("hard_tool_calls", execution_budget.DEFAULT_BUDGETS["tool_calls"]),
+        ),
+        "cost_usd": os.environ.get(
+            "SKILL_EVOLVER_RUN_COST_BUDGET_USD",
+            profile_budget.get("hard_cost_usd", execution_budget.DEFAULT_BUDGETS["cost_usd"]),
+        ),
+    })
     ACTIVE_RUN_DEADLINE_MONOTONIC = time.monotonic() + budget_seconds
     document: dict[str, object] = {
         "schema_version": 1,
         "turns": turns,
         "budget_seconds": budget_seconds,
         "budget_source": budget_source,
+        "budgets": limits,
         "classification": "long" if turns > 30 else "short",
-        "policy": "end-to-end-agent-timeout-clamp-v1",
+        "policy": "strict-wall-tool-cost-budget-v1",
     }
     atomic_write_json(workspace / "run/config/runtime-budget.json", document)
     return document
+
+
+def run_budget_exhausted() -> bool:
+    return (
+        ACTIVE_RUN_DEADLINE_MONOTONIC is not None
+        and time.monotonic() >= ACTIVE_RUN_DEADLINE_MONOTONIC
+    )
+
+
+def is_efficiency_failure(error: BaseException) -> bool:
+    """A budget cap or an exhausted end-to-end deadline is an efficiency failure."""
+    return isinstance(
+        error, execution_budget.ExecutionBudgetExceeded
+    ) or (
+        isinstance(error, subprocess.TimeoutExpired) and run_budget_exhausted()
+    )
+
+
+def record_tool_usage(workspace: Path, count: int) -> dict[str, object]:
+    """Accumulate session tool events and enforce the hard tool-call ceiling."""
+    if count <= 0:
+        return {}
+    budget_path = metrics_workspace(workspace) / "logs/tool-call-budget.json"
+    with _AGENT_BUDGET_LOCK:
+        previous: dict[str, object] = {}
+        if budget_path.is_file():
+            try:
+                value = json.loads(budget_path.read_text())
+                previous = value if isinstance(value, dict) else {}
+            except json.JSONDecodeError:
+                previous = {}
+        used = int(previous.get("used") or 0) + int(count)
+        budget = ACTIVE_EXECUTION_CONFIG.get("budgets") or {}
+        limit = int(
+            budget.get("hard_tool_calls")
+            or execution_budget.DEFAULT_BUDGETS["tool_calls"]
+        )
+        document = {
+            "schema_version": 1,
+            "used": used,
+            "limit": limit,
+            "remaining": max(0, limit - used),
+            "on_cap": budget.get("on_cap", "efficiency_failure"),
+            "policy": "strict-wall-tool-cost-budget-v1",
+        }
+        atomic_write_json(budget_path, document)
+    if used > limit:
+        raise execution_budget.ExecutionBudgetExceeded(
+            f"tool-call budget {limit} exceeded ({used} observed)"
+        )
+    return document
+
 
 
 def _dedupe_merge_candidates(
@@ -3658,6 +3736,9 @@ def run_session(
                     )
             finally:
                 details.update(session_counts(log_path))
+                record_tool_usage(
+                    workspace, int(details.get("tool_events") or 0)
+                )
     except BaseException as error:
         append_execution_event(workspace, stage, "failed")
         write_status(
@@ -9483,6 +9564,56 @@ def publish_operation_result(
                     reason=reason,
                 )
         return
+    operation_directory = (
+        result["worker"] / "run" / cluster / "ops" / str(op_index)
+    )
+    verification_path = operation_directory / "verification.json"
+    try:
+        verification = json.loads(verification_path.read_text())
+    except (OSError, json.JSONDecodeError):
+        verification = {}
+    replay_gate = acceptance_gates.replay_acceptance(
+        workspace,
+        operation_directory=operation_directory,
+        op=result.get("op"),
+        verification=verification,
+        affected={str(name) for name in result.get("affected") or []},
+    )
+    if replay_gate["decision"] == "reject":
+        atomic_write_json(
+            operation_directory / "replay-acceptance-gate.json", replay_gate
+        )
+        _archive_operation_records(workspace, result)
+        gate_target = (
+            workspace
+            / "run"
+            / cluster
+            / "ops"
+            / str(op_index)
+            / "replay-acceptance-gate.json"
+        )
+        atomic_write_json(gate_target, replay_gate)
+        reason = f"replay-required:{replay_gate['reason']}"
+        write_publication(
+            workspace,
+            cluster,
+            op_index,
+            accepted=False,
+            reason=reason,
+            outcome="replay_required",
+        )
+        for source in result.get("bundled_sources") or []:
+            if not isinstance(source, dict):
+                continue
+            write_publication(
+                workspace,
+                str(source.get("cluster")),
+                int(source.get("op_index")),
+                accepted=False,
+                reason=reason,
+                outcome="replay_required",
+            )
+        return
     release = release_bundle.prepare_release(
         workspace,
         result["worker"],
@@ -10025,7 +10156,11 @@ def resumable_operations(
             explicitly_rejected = publication_path.is_file() and (
                 publication.get("accepted") is False
             )
-            if optimize_status == "completed" and not explicitly_rejected:
+            if (
+                optimize_status == "completed"
+                and candidate_directory(workspace, cluster, op_index).is_dir()
+                and not explicitly_rejected
+            ):
                 skipped.append(
                     f"{label}: optimize already completed; continue from verification"
                 )
@@ -10056,6 +10191,19 @@ def resumable_operations(
             }
         )
     return ready, skipped
+
+
+def resume_phase(workspace: Path) -> str | None:
+    """Return the earliest phase with a saved, unaccepted operation.
+
+    ``auto`` never invents work: when no operation is resumable it returns
+    ``None`` so the caller reports that instead of recreating the stamped run.
+    """
+    for phase in ("optimize", "verification", "judge"):
+        ready, _ = resumable_operations(workspace, phase)
+        if ready:
+            return phase
+    return None
 
 
 def run_verification_and_judge(
@@ -10191,6 +10339,20 @@ def settle_failed_operation(
 ) -> dict[str, object]:
     """Record one lane failure and keep any optimized skill already saved."""
     reason = failure_text(error)
+    efficiency_failure = is_efficiency_failure(error)
+    if efficiency_failure:
+        atomic_write_json(
+            workspace / "run" / "efficiency-failure.json",
+            {
+                "schema_version": 1,
+                "outcome": "efficiency_failure",
+                "reason": reason,
+                "stage": current_stage,
+                "cluster": cluster,
+                "op_index": op_index,
+                "policy": "strict-wall-tool-cost-budget-v1",
+            },
+        )
     phase = {
         "optimize": "optimize",
         "verifiter": "verification",
@@ -10252,6 +10414,7 @@ def settle_failed_operation(
                 op_index,
                 accepted=False,
                 reason=f"{phase}-failed",
+                outcome="efficiency_failure" if efficiency_failure else None,
             )
         except BaseException as archival_error:
             note = (
@@ -12049,7 +12212,9 @@ def execute(args: argparse.Namespace) -> None:
         if tenant_id == "default"
         else privacy.tenant_root(ROOT / "workspace/tenants", tenant_id)
     )
-    workspace = (ACTIVE_INVENTORY_ROOT / "runs" / args.run_id).resolve()
+    workspace = run_identity.resolve_run_workspace(
+        ACTIVE_INVENTORY_ROOT / "runs", args.run_id
+    )
     if args.init:
         try:
             initialize_workspace(workspace)
@@ -12063,6 +12228,21 @@ def execute(args: argparse.Namespace) -> None:
     if resuming:
         if not workspace_was_started(workspace):
             raise SystemExit(f"{workspace.name} has not been started")
+        if args.resume_from == "auto":
+            resolved_phase = resume_phase(workspace)
+            if resolved_phase is None:
+                print(
+                    f"no saved operation to continue in {workspace.name}; "
+                    "nothing was recreated",
+                    flush=True,
+                )
+                ACTIVE_INVENTORY_ROOT = previous_inventory_root
+                return
+            print(
+                f"auto-resuming {workspace.name} from {resolved_phase}",
+                flush=True,
+            )
+            args.resume_from = resolved_phase
     else:
         require_path(
             workspace / "target/to_be_improved_skills",
@@ -12636,10 +12816,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--from",
         dest="resume_from",
-        choices=("optimize", "verification", "judge"),
+        choices=("auto", "optimize", "verification", "judge"),
         help=(
-            "continue a stamped run from optimize, verification, or judge "
-            "for every eligible operation that was not accepted"
+            "continue a stamped run from its earliest incomplete phase (auto), "
+            "or from optimize, verification, or judge for every eligible "
+            "operation that was not accepted"
         ),
     )
     parser.add_argument(
@@ -12732,20 +12913,22 @@ def parse_args() -> argparse.Namespace:
     args = parser.parse_args()
     if args.resume_from and args.init:
         parser.error("--from cannot be combined with --init")
-    stamped = re.fullmatch(
-        r"[A-Za-z0-9_.-]+@[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}(?:-[0-9]+)?",
-        args.run_id,
-    )
-    if args.resume_from:
-        if not stamped:
-            parser.error(
-                "--from requires the stamped run directory name, "
-                "such as run-id@YYYY-MM-DDTHH:MM"
-            )
-    elif not re.fullmatch(r"[A-Za-z0-9_.-]+", args.run_id):
-        parser.error(
-            "run_id may contain only letters, numbers, dot, underscore, dash"
+    # A stamped run id that was interrupted should be continuable without
+    # recreation.  `auto` resolves to the earliest saved, unaccepted operation.
+    if (
+        args.resume_from is None
+        and not args.init
+        and not args.inventory_only
+        and run_identity.is_stamped(args.run_id)
+    ):
+        args.resume_from = "auto"
+    try:
+        run_identity.validate_run_id(
+            args.run_id,
+            require_stamped=bool(args.resume_from),
         )
+    except ValueError as error:
+        parser.error(str(error))
     if args.cluster_workers < 1 or args.op_workers < 1:
         parser.error("worker counts must be at least 1")
     if args.max_ops_per_skill is not None and args.max_ops_per_skill < 1:

@@ -20,7 +20,11 @@ import { pathToFileURL } from "node:url";
 import path from "node:path";
 import process from "node:process";
 
-const FRAME_ROTATION = [-90, 0, 0];
+const FRAMES = {
+  native: { name: "native", rotation_degrees_xyz: [0, 0, 0] },
+  "blender-z-up": { name: "blender-z-up", rotation_degrees_xyz: [-90, 0, 0] },
+};
+const DEFAULT_FRAME = "blender-z-up";
 
 class CheckError extends Error {
   constructor(code, message) {
@@ -103,7 +107,9 @@ const transformPoint = (m, p) => [
   m[1][0] * p[0] + m[1][1] * p[1] + m[1][2] * p[2] + m[1][3],
   m[2][0] * p[0] + m[2][1] * p[1] + m[2][2] * p[2] + m[2][3],
 ];
-const framePoint = (p) => [p[0], p[2], -p[1]];
+const framePoint = (p, frame) => (
+  frame.name === "blender-z-up" ? [p[0], p[2], -p[1]] : [p[0], p[1], p[2]]
+);
 const otherFrames = {
   "identity-frame": (p) => [p[0], p[1], p[2]],
   "plus90-x": (p) => [p[0], -p[2], p[1]],
@@ -310,9 +316,9 @@ const compareVariant = (actual, expected, tolerance) => {
   return result;
 };
 
-const compareMesh = (name, expected, actual, tolerance) => {
+const compareMesh = (name, expected, actual, tolerance, frame) => {
   const worldVertices = expected.vertices;
-  const framedVertices = worldVertices.map(framePoint);
+  const framedVertices = worldVertices.map((point) => framePoint(point, frame));
   const record = {
     mesh: name,
     status: "pass",
@@ -338,8 +344,8 @@ const compareMesh = (name, expected, actual, tolerance) => {
     coordinate_tolerance: tolerance,
     coordinate_error: 0,
     max_position_delta: 0,
-    frame: "blender-z-up",
-    rotation_degrees_xyz: FRAME_ROTATION,
+    frame: frame.name,
+    rotation_degrees_xyz: frame.rotation_degrees_xyz,
     source_bounds: bounds(framedVertices),
     output_bounds: actual ? bounds(actual.vertices) : null,
     comparisons: {
@@ -489,7 +495,11 @@ const run = async () => {
   }
   if (!args.module || (!args.artifact && !args.root)) {
     throw new CheckError("BAD_ARGUMENT",
-      "usage: check-export.mjs --module <scene.js|scene.mjs> --artifact <artifact.obj> [--tolerance 1e-12]");
+      "usage: check-export.mjs --module <scene.js|scene.mjs> --artifact <artifact.obj> [--tolerance 1e-12] [--frame native|blender-z-up]");
+  }
+  const frame = FRAMES[args.frame || DEFAULT_FRAME];
+  if (!frame) {
+    throw new CheckError("BAD_ARGUMENT", `unknown --frame ${args.frame}; use native or blender-z-up`);
   }
   const tolerance = args.tolerance === undefined ? 1e-12 : Number(args.tolerance);
   if (!Number.isFinite(tolerance) || tolerance < 0) {
@@ -551,7 +561,7 @@ const run = async () => {
     if (manifest.status !== "produced") manifestProblems.push("status");
     if (Number(manifest.mesh_count) !== expected.size) manifestProblems.push("mesh_count");
     if (!Array.isArray(manifest.meshes)) manifestProblems.push("mesh records");
-    if (manifest.frame?.rotation_degrees_xyz?.join(",") !== FRAME_ROTATION.join(",")) {
+    if (manifest.frame?.rotation_degrees_xyz?.join(",") !== frame.rotation_degrees_xyz.join(",")) {
       manifestProblems.push("frame rotation");
     }
     if (Number(manifest.vertex_count) !== obj.vertexCount) manifestProblems.push("vertex_count");
@@ -559,7 +569,7 @@ const run = async () => {
   }
 
   const checks = [...expected.entries()].map(([name, data]) =>
-    compareMesh(name, data, obj.objects.get(name), tolerance));
+    compareMesh(name, data, obj.objects.get(name), tolerance, frame));
   const failures = checks.filter((check) => check.status !== "pass");
   const pass = !missing.length && !extra.length && !failures.length;
   const aggregate = (key) => {
@@ -581,8 +591,8 @@ const run = async () => {
     entrypoint: "createScene()",
     scene_update_matrix_world: true,
     frame: {
-      name: "blender-z-up",
-      rotation_degrees_xyz: FRAME_ROTATION,
+      name: frame.name,
+      rotation_degrees_xyz: frame.rotation_degrees_xyz,
     },
     coordinate_tolerance: tolerance,
     max_position_delta: Math.max(...checks.map((check) => check.max_position_delta || 0)),

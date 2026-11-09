@@ -1,0 +1,1945 @@
+{
+  "accuracy": {
+    "absolute_lift": 0.0625,
+    "baseline_efficiency_failures": 4,
+    "baseline_outcome_pass_rate": 0.3125,
+    "baseline_outcome_passes": 5,
+    "baseline_pass_rate": 0.3125,
+    "baseline_passes": 5,
+    "baseline_wilson_95": [
+      0.141646,
+      0.555956
+    ],
+    "discordant_exact_p": 1.0,
+    "lifts": 1,
+    "regressions": 0,
+    "treatment_efficiency_failures": 5,
+    "treatment_outcome_pass_rate": 0.375,
+    "treatment_outcome_passes": 6,
+    "treatment_pass_rate": 0.375,
+    "treatment_passes": 6,
+    "treatment_wilson_95": [
+      0.184812,
+      0.61359
+    ],
+    "unchanged": 15
+  },
+  "benchmark": "skillsbench@1.1",
+  "budgets": {
+    "cost_usd": 2.0,
+    "exceeded_outcome": "efficiency_failure",
+    "schema_version": 1,
+    "tool_calls": 120,
+    "wall_seconds": 900
+  },
+  "cohort": "heldout-v8-full16",
+  "efficiency": {
+    "baseline_agent_seconds": 5130.400000000001,
+    "baseline_efficiency_failures": 4,
+    "baseline_tool_calls": 1221,
+    "budget_policy": "strict-wall-tool-cost-budget-v1",
+    "efficiency_failure_rate": 0.3125,
+    "mean_agent_seconds_delta": 35.63125,
+    "mean_tool_call_delta": 9.625,
+    "treatment_agent_seconds": 5700.500000000001,
+    "treatment_efficiency_failures": 5,
+    "treatment_tool_calls": 1375
+  },
+  "gap_count": 28,
+  "gaps": [
+    {
+      "code": "efficiency_failure",
+      "evidence": {
+        "cost_available": false,
+        "limits": {
+          "cost_usd": 2.0,
+          "tool_calls": 120.0,
+          "wall_seconds": 900.0
+        },
+        "observed": {
+          "cost_usd": null,
+          "tool_calls": 202.0,
+          "wall_seconds": 510.1
+        },
+        "outcome": "efficiency_failure",
+        "policy": "strict-wall-tool-cost-budget-v1",
+        "schema_version": 1,
+        "violations": [
+          {
+            "limit": 120.0,
+            "metric": "tool_calls",
+            "observed": 202.0,
+            "overage": 82.0
+          }
+        ],
+        "within_budget": false
+      },
+      "next_action": "Tighten the skill workflow or scope; keep the hard budget and rerun only after the expected call/time path is shorter.",
+      "severity": "efficiency",
+      "task_id": "court-form-filling",
+      "trial": 1
+    },
+    {
+      "code": "task_budget_infeasible",
+      "evidence": {
+        "cost_available": false,
+        "limits": {
+          "cost_usd": 2.0,
+          "tool_calls": 120.0,
+          "wall_seconds": 900.0
+        },
+        "observed": {
+          "cost_usd": null,
+          "tool_calls": 202.0,
+          "wall_seconds": 510.1
+        },
+        "outcome": "efficiency_failure",
+        "policy": "strict-wall-tool-cost-budget-v1",
+        "schema_version": 1,
+        "violations": [
+          {
+            "limit": 120.0,
+            "metric": "tool_calls",
+            "observed": 202.0,
+            "overage": 82.0
+          }
+        ],
+        "within_budget": false
+      },
+      "next_action": "The task is not feasible under the hard call budget: its baseline already failed while exceeding the limit. Do not rerun the same setup; raise the budget only with approval, or abstain/remove the task.",
+      "severity": "efficiency",
+      "task_id": "court-form-filling",
+      "trial": 1
+    },
+    {
+      "code": "efficiency_regression",
+      "evidence": {
+        "additional_calls": 43,
+        "baseline_tool_calls": 13,
+        "treatment_tool_calls": 56
+      },
+      "next_action": "Quality is preserved but cost regressed. Do not promote for this task until the skill removes over-verification or the router abstains.",
+      "severity": "efficiency",
+      "task_id": "invoice-fraud-detection",
+      "trial": 1
+    },
+    {
+      "code": "efficiency_failure",
+      "evidence": {
+        "cost_available": false,
+        "limits": {
+          "cost_usd": 2.0,
+          "tool_calls": 120.0,
+          "wall_seconds": 900.0
+        },
+        "observed": {
+          "cost_usd": null,
+          "tool_calls": 120.0,
+          "wall_seconds": 900.1
+        },
+        "outcome": "efficiency_failure",
+        "policy": "strict-wall-tool-cost-budget-v1",
+        "schema_version": 1,
+        "violations": [
+          {
+            "limit": 900.0,
+            "metric": "wall_seconds",
+            "observed": 900.1,
+            "overage": 0.1
+          }
+        ],
+        "within_budget": false
+      },
+      "next_action": "Tighten the skill workflow or scope; keep the hard budget and rerun only after the expected call/time path is shorter.",
+      "severity": "efficiency",
+      "task_id": "manufacturing-codebook-normalization",
+      "trial": 1
+    },
+    {
+      "code": "task_budget_infeasible",
+      "evidence": {
+        "cost_available": false,
+        "limits": {
+          "cost_usd": 2.0,
+          "tool_calls": 120.0,
+          "wall_seconds": 900.0
+        },
+        "observed": {
+          "cost_usd": null,
+          "tool_calls": 120.0,
+          "wall_seconds": 900.1
+        },
+        "outcome": "efficiency_failure",
+        "policy": "strict-wall-tool-cost-budget-v1",
+        "schema_version": 1,
+        "violations": [
+          {
+            "limit": 900.0,
+            "metric": "wall_seconds",
+            "observed": 900.1,
+            "overage": 0.1
+          }
+        ],
+        "within_budget": false
+      },
+      "next_action": "The task is not feasible under the hard call budget: its baseline already failed while exceeding the limit. Do not rerun the same setup; raise the budget only with approval, or abstain/remove the task.",
+      "severity": "efficiency",
+      "task_id": "manufacturing-codebook-normalization",
+      "trial": 1
+    },
+    {
+      "code": "efficiency_failure",
+      "evidence": {
+        "cost_available": false,
+        "limits": {
+          "cost_usd": 2.0,
+          "tool_calls": 120.0,
+          "wall_seconds": 900.0
+        },
+        "observed": {
+          "cost_usd": null,
+          "tool_calls": 176.0,
+          "wall_seconds": 630.0
+        },
+        "outcome": "efficiency_failure",
+        "policy": "strict-wall-tool-cost-budget-v1",
+        "schema_version": 1,
+        "violations": [
+          {
+            "limit": 120.0,
+            "metric": "tool_calls",
+            "observed": 176.0,
+            "overage": 56.0
+          }
+        ],
+        "within_budget": false
+      },
+      "next_action": "Tighten the skill workflow or scope; keep the hard budget and rerun only after the expected call/time path is shorter.",
+      "severity": "efficiency",
+      "task_id": "reserves-at-risk-calc",
+      "trial": 1
+    },
+    {
+      "code": "task_budget_infeasible",
+      "evidence": {
+        "cost_available": false,
+        "limits": {
+          "cost_usd": 2.0,
+          "tool_calls": 120.0,
+          "wall_seconds": 900.0
+        },
+        "observed": {
+          "cost_usd": null,
+          "tool_calls": 176.0,
+          "wall_seconds": 630.0
+        },
+        "outcome": "efficiency_failure",
+        "policy": "strict-wall-tool-cost-budget-v1",
+        "schema_version": 1,
+        "violations": [
+          {
+            "limit": 120.0,
+            "metric": "tool_calls",
+            "observed": 176.0,
+            "overage": 56.0
+          }
+        ],
+        "within_budget": false
+      },
+      "next_action": "The task is not feasible under the hard call budget: its baseline already failed while exceeding the limit. Do not rerun the same setup; raise the budget only with approval, or abstain/remove the task.",
+      "severity": "efficiency",
+      "task_id": "reserves-at-risk-calc",
+      "trial": 1
+    },
+    {
+      "code": "efficiency_failure",
+      "evidence": {
+        "cost_available": false,
+        "limits": {
+          "cost_usd": 2.0,
+          "tool_calls": 120.0,
+          "wall_seconds": 900.0
+        },
+        "observed": {
+          "cost_usd": null,
+          "tool_calls": 200.0,
+          "wall_seconds": 660.1
+        },
+        "outcome": "efficiency_failure",
+        "policy": "strict-wall-tool-cost-budget-v1",
+        "schema_version": 1,
+        "violations": [
+          {
+            "limit": 120.0,
+            "metric": "tool_calls",
+            "observed": 200.0,
+            "overage": 80.0
+          }
+        ],
+        "within_budget": false
+      },
+      "next_action": "Tighten the skill workflow or scope; keep the hard budget and rerun only after the expected call/time path is shorter.",
+      "severity": "efficiency",
+      "task_id": "sales-pivot-analysis",
+      "trial": 1
+    },
+    {
+      "code": "task_budget_infeasible",
+      "evidence": {
+        "cost_available": false,
+        "limits": {
+          "cost_usd": 2.0,
+          "tool_calls": 120.0,
+          "wall_seconds": 900.0
+        },
+        "observed": {
+          "cost_usd": null,
+          "tool_calls": 200.0,
+          "wall_seconds": 660.1
+        },
+        "outcome": "efficiency_failure",
+        "policy": "strict-wall-tool-cost-budget-v1",
+        "schema_version": 1,
+        "violations": [
+          {
+            "limit": 120.0,
+            "metric": "tool_calls",
+            "observed": 200.0,
+            "overage": 80.0
+          }
+        ],
+        "within_budget": false
+      },
+      "next_action": "The task is not feasible under the hard call budget: its baseline already failed while exceeding the limit. Do not rerun the same setup; raise the budget only with approval, or abstain/remove the task.",
+      "severity": "efficiency",
+      "task_id": "sales-pivot-analysis",
+      "trial": 1
+    },
+    {
+      "code": "efficiency_failure",
+      "evidence": {
+        "cost_available": false,
+        "limits": {
+          "cost_usd": 2.0,
+          "tool_calls": 120.0,
+          "wall_seconds": 900.0
+        },
+        "observed": {
+          "cost_usd": null,
+          "tool_calls": 241.0,
+          "wall_seconds": 900.1
+        },
+        "outcome": "efficiency_failure",
+        "policy": "strict-wall-tool-cost-budget-v1",
+        "schema_version": 1,
+        "violations": [
+          {
+            "limit": 900.0,
+            "metric": "wall_seconds",
+            "observed": 900.1,
+            "overage": 0.1
+          },
+          {
+            "limit": 120.0,
+            "metric": "tool_calls",
+            "observed": 241.0,
+            "overage": 121.0
+          }
+        ],
+        "within_budget": false
+      },
+      "next_action": "Tighten the skill workflow or scope; keep the hard budget and rerun only after the expected call/time path is shorter.",
+      "severity": "efficiency",
+      "task_id": "weighted-gdp-calc",
+      "trial": 1
+    },
+    {
+      "code": "no_lift_no_efficiency",
+      "evidence": {
+        "baseline_tool_calls": 202,
+        "treatment_tool_calls": 202
+      },
+      "next_action": "Do not iterate this skill blindly; change the finding, the workflow, or the router evidence first.",
+      "severity": "quality",
+      "task_id": "court-form-filling",
+      "trial": 1
+    },
+    {
+      "code": "still_failing",
+      "evidence": {
+        "activation": null,
+        "baseline_tool_calls": 202,
+        "leverage_claim": "no-resource-evidence",
+        "treatment_tool_calls": 202
+      },
+      "next_action": "Inspect the treatment trajectory's first wrong action and the verifier failure; change the skill or abstain before rerunning.",
+      "severity": "quality",
+      "task_id": "court-form-filling",
+      "trial": 1
+    },
+    {
+      "code": "no_lift_no_efficiency",
+      "evidence": {
+        "baseline_tool_calls": 27,
+        "treatment_tool_calls": 27
+      },
+      "next_action": "Do not iterate this skill blindly; change the finding, the workflow, or the router evidence first.",
+      "severity": "quality",
+      "task_id": "earthquake-plate-calculation",
+      "trial": 1
+    },
+    {
+      "code": "still_failing",
+      "evidence": {
+        "activation": null,
+        "baseline_tool_calls": 27,
+        "leverage_claim": "no-resource-evidence",
+        "treatment_tool_calls": 27
+      },
+      "next_action": "Inspect the treatment trajectory's first wrong action and the verifier failure; change the skill or abstain before rerunning.",
+      "severity": "quality",
+      "task_id": "earthquake-plate-calculation",
+      "trial": 1
+    },
+    {
+      "code": "no_lift_no_efficiency",
+      "evidence": {
+        "baseline_tool_calls": 107,
+        "treatment_tool_calls": 107
+      },
+      "next_action": "Do not iterate this skill blindly; change the finding, the workflow, or the router evidence first.",
+      "severity": "quality",
+      "task_id": "energy-market-pricing",
+      "trial": 1
+    },
+    {
+      "code": "still_failing",
+      "evidence": {
+        "activation": null,
+        "baseline_tool_calls": 107,
+        "leverage_claim": "no-resource-evidence",
+        "treatment_tool_calls": 107
+      },
+      "next_action": "Inspect the treatment trajectory's first wrong action and the verifier failure; change the skill or abstain before rerunning.",
+      "severity": "quality",
+      "task_id": "energy-market-pricing",
+      "trial": 1
+    },
+    {
+      "code": "still_failing",
+      "evidence": {
+        "activation": "injected",
+        "baseline_tool_calls": 48,
+        "leverage_claim": "methodology-leverage",
+        "treatment_tool_calls": 26
+      },
+      "next_action": "Inspect the treatment trajectory's first wrong action and the verifier failure; change the skill or abstain before rerunning.",
+      "severity": "quality",
+      "task_id": "financial-modeling-qa",
+      "trial": 1
+    },
+    {
+      "code": "no_lift_no_efficiency",
+      "evidence": {
+        "baseline_tool_calls": 48,
+        "treatment_tool_calls": 48
+      },
+      "next_action": "Do not iterate this skill blindly; change the finding, the workflow, or the router evidence first.",
+      "severity": "quality",
+      "task_id": "lab-unit-harmonization",
+      "trial": 1
+    },
+    {
+      "code": "still_failing",
+      "evidence": {
+        "activation": null,
+        "baseline_tool_calls": 48,
+        "leverage_claim": "no-resource-evidence",
+        "treatment_tool_calls": 48
+      },
+      "next_action": "Inspect the treatment trajectory's first wrong action and the verifier failure; change the skill or abstain before rerunning.",
+      "severity": "quality",
+      "task_id": "lab-unit-harmonization",
+      "trial": 1
+    },
+    {
+      "code": "no_lift_no_efficiency",
+      "evidence": {
+        "baseline_tool_calls": 120,
+        "treatment_tool_calls": 120
+      },
+      "next_action": "Do not iterate this skill blindly; change the finding, the workflow, or the router evidence first.",
+      "severity": "quality",
+      "task_id": "manufacturing-codebook-normalization",
+      "trial": 1
+    },
+    {
+      "code": "still_failing",
+      "evidence": {
+        "activation": null,
+        "baseline_tool_calls": 120,
+        "leverage_claim": "no-resource-evidence",
+        "treatment_tool_calls": 120
+      },
+      "next_action": "Inspect the treatment trajectory's first wrong action and the verifier failure; change the skill or abstain before rerunning.",
+      "severity": "quality",
+      "task_id": "manufacturing-codebook-normalization",
+      "trial": 1
+    },
+    {
+      "code": "no_lift_no_efficiency",
+      "evidence": {
+        "baseline_tool_calls": 176,
+        "treatment_tool_calls": 176
+      },
+      "next_action": "Do not iterate this skill blindly; change the finding, the workflow, or the router evidence first.",
+      "severity": "quality",
+      "task_id": "reserves-at-risk-calc",
+      "trial": 1
+    },
+    {
+      "code": "still_failing",
+      "evidence": {
+        "activation": null,
+        "baseline_tool_calls": 176,
+        "leverage_claim": "no-resource-evidence",
+        "treatment_tool_calls": 176
+      },
+      "next_action": "Inspect the treatment trajectory's first wrong action and the verifier failure; change the skill or abstain before rerunning.",
+      "severity": "quality",
+      "task_id": "reserves-at-risk-calc",
+      "trial": 1
+    },
+    {
+      "code": "no_lift_no_efficiency",
+      "evidence": {
+        "baseline_tool_calls": 200,
+        "treatment_tool_calls": 200
+      },
+      "next_action": "Do not iterate this skill blindly; change the finding, the workflow, or the router evidence first.",
+      "severity": "quality",
+      "task_id": "sales-pivot-analysis",
+      "trial": 1
+    },
+    {
+      "code": "still_failing",
+      "evidence": {
+        "activation": null,
+        "baseline_tool_calls": 200,
+        "leverage_claim": "no-resource-evidence",
+        "treatment_tool_calls": 200
+      },
+      "next_action": "Inspect the treatment trajectory's first wrong action and the verifier failure; change the skill or abstain before rerunning.",
+      "severity": "quality",
+      "task_id": "sales-pivot-analysis",
+      "trial": 1
+    },
+    {
+      "code": "still_failing",
+      "evidence": {
+        "activation": "injected",
+        "baseline_tool_calls": 22,
+        "leverage_claim": "methodology-leverage",
+        "treatment_tool_calls": 15
+      },
+      "next_action": "Inspect the treatment trajectory's first wrong action and the verifier failure; change the skill or abstain before rerunning.",
+      "severity": "quality",
+      "task_id": "sec-financial-report",
+      "trial": 1
+    },
+    {
+      "code": "no_lift_no_efficiency",
+      "evidence": {
+        "baseline_tool_calls": 82,
+        "treatment_tool_calls": 241
+      },
+      "next_action": "Do not iterate this skill blindly; change the finding, the workflow, or the router evidence first.",
+      "severity": "quality",
+      "task_id": "weighted-gdp-calc",
+      "trial": 1
+    },
+    {
+      "code": "still_failing",
+      "evidence": {
+        "activation": "injected",
+        "baseline_tool_calls": 82,
+        "leverage_claim": "opened-only",
+        "treatment_tool_calls": 241
+      },
+      "next_action": "Inspect the treatment trajectory's first wrong action and the verifier failure; change the skill or abstain before rerunning.",
+      "severity": "quality",
+      "task_id": "weighted-gdp-calc",
+      "trial": 1
+    }
+  ],
+  "gaps_by_code": {
+    "efficiency_failure": 5,
+    "efficiency_regression": 1,
+    "no_lift_no_efficiency": 8,
+    "still_failing": 10,
+    "task_budget_infeasible": 4
+  },
+  "instrumentation_gaps": 4,
+  "next_round_blocked_by": [
+    "task_budget_infeasible",
+    "task_budget_infeasible",
+    "task_budget_infeasible",
+    "task_budget_infeasible"
+  ],
+  "paired_report": {
+    "accuracy": {
+      "absolute_lift": 0.0625,
+      "baseline_efficiency_failures": 4,
+      "baseline_outcome_pass_rate": 0.3125,
+      "baseline_outcome_passes": 5,
+      "baseline_pass_rate": 0.3125,
+      "baseline_passes": 5,
+      "baseline_wilson_95": [
+        0.141646,
+        0.555956
+      ],
+      "discordant_exact_p": 1.0,
+      "lifts": 1,
+      "regressions": 0,
+      "treatment_efficiency_failures": 5,
+      "treatment_outcome_pass_rate": 0.375,
+      "treatment_outcome_passes": 6,
+      "treatment_pass_rate": 0.375,
+      "treatment_passes": 6,
+      "treatment_wilson_95": [
+        0.184812,
+        0.61359
+      ],
+      "unchanged": 15
+    },
+    "baseline_jobs": [
+      "workspace/skillbench/heldout-v8-final2/baseline/citation-check__baseline",
+      "workspace/skillbench/heldout-v8-final2/baseline/court-form-filling__baseline",
+      "workspace/skillbench/heldout-v8-final2/baseline/pdf-excel-diff__baseline",
+      "workspace/skillbench/heldout-v8-final2/baseline/sales-pivot-analysis__baseline",
+      "workspace/skillbench/heldout-v8-final2/baseline/weighted-gdp-calc__baseline",
+      "workspace/skillbench/heldout-v8-final2/baseline/lab-unit-harmonization__baseline",
+      "workspace/skillbench/heldout-v8-final2/baseline/manufacturing-codebook-normalization__baseline",
+      "workspace/skillbench/heldout-v8-final2/baseline/sec-financial-report__baseline",
+      "workspace/skillbench/heldout-v8-final2/baseline/protein-expression-analysis__baseline",
+      "workspace/skillbench/heldout-v8-final2/baseline/earthquake-plate-calculation__baseline",
+      "workspace/skillbench/heldout-v8-final2/baseline/powerlifting-coef-calc__baseline",
+      "workspace/skillbench/heldout-v8-final2/baseline/reserves-at-risk-calc__baseline",
+      "workspace/skillbench/heldout-v8-final2/baseline/financial-modeling-qa__baseline",
+      "workspace/skillbench/heldout-v8-final2/baseline/energy-market-pricing__baseline",
+      "workspace/skillbench/heldout-v8-final2/baseline/econ-detrending-correlation__baseline",
+      "workspace/skillbench/heldout-v8-final2/baseline/invoice-fraud-detection__baseline"
+    ],
+    "benchmark": "skillsbench@1.1",
+    "budgets": {
+      "cost_usd": 2.0,
+      "exceeded_outcome": "efficiency_failure",
+      "schema_version": 1,
+      "tool_calls": 120,
+      "wall_seconds": 900
+    },
+    "by_domain": {
+      "bioinformatics-spreadsheet-analysis": {
+        "baseline_pass_rate": 0.0,
+        "lifts": 1,
+        "regressions": 0,
+        "tasks": 1,
+        "treatment_pass_rate": 1.0
+      },
+      "citation-and-evidence": {
+        "baseline_pass_rate": 1.0,
+        "lifts": 0,
+        "regressions": 0,
+        "tasks": 1,
+        "treatment_pass_rate": 1.0
+      },
+      "cross-format-data-validation": {
+        "baseline_pass_rate": 1.0,
+        "lifts": 0,
+        "regressions": 0,
+        "tasks": 1,
+        "treatment_pass_rate": 1.0
+      },
+      "document-and-form": {
+        "baseline_pass_rate": 0.0,
+        "lifts": 0,
+        "regressions": 0,
+        "tasks": 1,
+        "treatment_pass_rate": 0.0
+      },
+      "document-cross-source-validation": {
+        "baseline_pass_rate": 1.0,
+        "lifts": 0,
+        "regressions": 0,
+        "tasks": 1,
+        "treatment_pass_rate": 1.0
+      },
+      "energy-market-optimization": {
+        "baseline_pass_rate": 0.0,
+        "lifts": 0,
+        "regressions": 0,
+        "tasks": 1,
+        "treatment_pass_rate": 0.0
+      },
+      "financial-game-analysis": {
+        "baseline_pass_rate": 0.0,
+        "lifts": 0,
+        "regressions": 0,
+        "tasks": 1,
+        "treatment_pass_rate": 0.0
+      },
+      "financial-reporting": {
+        "baseline_pass_rate": 0.0,
+        "lifts": 0,
+        "regressions": 0,
+        "tasks": 1,
+        "treatment_pass_rate": 0.0
+      },
+      "financial-risk-calculation": {
+        "baseline_pass_rate": 0.0,
+        "lifts": 0,
+        "regressions": 0,
+        "tasks": 1,
+        "treatment_pass_rate": 0.0
+      },
+      "geospatial-scientific-calculation": {
+        "baseline_pass_rate": 0.0,
+        "lifts": 0,
+        "regressions": 0,
+        "tasks": 1,
+        "treatment_pass_rate": 0.0
+      },
+      "industrial-data-normalization": {
+        "baseline_pass_rate": 0.0,
+        "lifts": 0,
+        "regressions": 0,
+        "tasks": 1,
+        "treatment_pass_rate": 0.0
+      },
+      "macroeconomic-time-series": {
+        "baseline_pass_rate": 1.0,
+        "lifts": 0,
+        "regressions": 0,
+        "tasks": 1,
+        "treatment_pass_rate": 1.0
+      },
+      "quantitative-calculation": {
+        "baseline_pass_rate": 0.5,
+        "lifts": 0,
+        "regressions": 0,
+        "tasks": 2,
+        "treatment_pass_rate": 0.5
+      },
+      "scientific-data-normalization": {
+        "baseline_pass_rate": 0.0,
+        "lifts": 0,
+        "regressions": 0,
+        "tasks": 1,
+        "treatment_pass_rate": 0.0
+      },
+      "spreadsheet-aggregation": {
+        "baseline_pass_rate": 0.0,
+        "lifts": 0,
+        "regressions": 0,
+        "tasks": 1,
+        "treatment_pass_rate": 0.0
+      }
+    },
+    "cohort": "heldout-v8-full16",
+    "coverage": {
+      "domains": 15,
+      "tasks_by_domain": {
+        "bioinformatics-spreadsheet-analysis": 1,
+        "citation-and-evidence": 1,
+        "cross-format-data-validation": 1,
+        "document-and-form": 1,
+        "document-cross-source-validation": 1,
+        "energy-market-optimization": 1,
+        "financial-game-analysis": 1,
+        "financial-reporting": 1,
+        "financial-risk-calculation": 1,
+        "geospatial-scientific-calculation": 1,
+        "industrial-data-normalization": 1,
+        "macroeconomic-time-series": 1,
+        "quantitative-calculation": 2,
+        "scientific-data-normalization": 1,
+        "spreadsheet-aggregation": 1
+      }
+    },
+    "efficiency": {
+      "baseline_agent_seconds": 5130.400000000001,
+      "baseline_efficiency_failures": 4,
+      "baseline_tool_calls": 1221,
+      "budget_policy": "strict-wall-tool-cost-budget-v1",
+      "efficiency_failure_rate": 0.3125,
+      "mean_agent_seconds_delta": 35.63125,
+      "mean_tool_call_delta": 9.625,
+      "treatment_agent_seconds": 5700.500000000001,
+      "treatment_efficiency_failures": 5,
+      "treatment_tool_calls": 1375
+    },
+    "excluded_contaminated": [],
+    "excluded_unpaired": {},
+    "paired_tasks": 16,
+    "reward": {
+      "baseline_mean": 0.338562,
+      "improvements": 1,
+      "mean_delta": 0.0625,
+      "regressions": 0,
+      "treatment_mean": 0.401062
+    },
+    "schema_version": 1,
+    "tasks": [
+      {
+        "agent_seconds_delta": 0.0,
+        "baseline_agent_seconds": 300.0,
+        "baseline_budget": {
+          "cost_available": false,
+          "limits": {
+            "cost_usd": 2.0,
+            "tool_calls": 120.0,
+            "wall_seconds": 900.0
+          },
+          "observed": {
+            "cost_usd": null,
+            "tool_calls": 21.0,
+            "wall_seconds": 300.0
+          },
+          "outcome": "passed",
+          "policy": "strict-wall-tool-cost-budget-v1",
+          "schema_version": 1,
+          "violations": [],
+          "within_budget": true
+        },
+        "baseline_outcome": "passed",
+        "baseline_passed": true,
+        "baseline_reward": 1.0,
+        "baseline_tool_calls": 21,
+        "domain": "citation-and-evidence",
+        "pass_delta": 0,
+        "reward_delta": 0.0,
+        "task_id": "citation-check",
+        "tool_call_delta": 0,
+        "treatment_agent_seconds": 300.0,
+        "treatment_budget": {
+          "cost_available": false,
+          "limits": {
+            "cost_usd": 2.0,
+            "tool_calls": 120.0,
+            "wall_seconds": 900.0
+          },
+          "observed": {
+            "cost_usd": null,
+            "tool_calls": 21.0,
+            "wall_seconds": 300.0
+          },
+          "outcome": "passed",
+          "policy": "strict-wall-tool-cost-budget-v1",
+          "schema_version": 1,
+          "violations": [],
+          "within_budget": true
+        },
+        "treatment_outcome": "passed",
+        "treatment_passed": true,
+        "treatment_reward": 1.0,
+        "treatment_tool_calls": 21,
+        "trial": 1
+      },
+      {
+        "agent_seconds_delta": 0.0,
+        "baseline_agent_seconds": 510.1,
+        "baseline_budget": {
+          "cost_available": false,
+          "limits": {
+            "cost_usd": 2.0,
+            "tool_calls": 120.0,
+            "wall_seconds": 900.0
+          },
+          "observed": {
+            "cost_usd": null,
+            "tool_calls": 202.0,
+            "wall_seconds": 510.1
+          },
+          "outcome": "efficiency_failure",
+          "policy": "strict-wall-tool-cost-budget-v1",
+          "schema_version": 1,
+          "violations": [
+            {
+              "limit": 120.0,
+              "metric": "tool_calls",
+              "observed": 202.0,
+              "overage": 82.0
+            }
+          ],
+          "within_budget": false
+        },
+        "baseline_outcome": "efficiency_failure",
+        "baseline_passed": false,
+        "baseline_reward": 0.0,
+        "baseline_tool_calls": 202,
+        "domain": "document-and-form",
+        "pass_delta": 0,
+        "reward_delta": 0.0,
+        "task_id": "court-form-filling",
+        "tool_call_delta": 0,
+        "treatment_agent_seconds": 510.1,
+        "treatment_budget": {
+          "cost_available": false,
+          "limits": {
+            "cost_usd": 2.0,
+            "tool_calls": 120.0,
+            "wall_seconds": 900.0
+          },
+          "observed": {
+            "cost_usd": null,
+            "tool_calls": 202.0,
+            "wall_seconds": 510.1
+          },
+          "outcome": "efficiency_failure",
+          "policy": "strict-wall-tool-cost-budget-v1",
+          "schema_version": 1,
+          "violations": [
+            {
+              "limit": 120.0,
+              "metric": "tool_calls",
+              "observed": 202.0,
+              "overage": 82.0
+            }
+          ],
+          "within_budget": false
+        },
+        "treatment_outcome": "efficiency_failure",
+        "treatment_passed": false,
+        "treatment_reward": 0.0,
+        "treatment_tool_calls": 202,
+        "trial": 1
+      },
+      {
+        "agent_seconds_delta": 0.0,
+        "baseline_agent_seconds": 90.0,
+        "baseline_budget": {
+          "cost_available": false,
+          "limits": {
+            "cost_usd": 2.0,
+            "tool_calls": 120.0,
+            "wall_seconds": 900.0
+          },
+          "observed": {
+            "cost_usd": null,
+            "tool_calls": 27.0,
+            "wall_seconds": 90.0
+          },
+          "outcome": "failed",
+          "policy": "strict-wall-tool-cost-budget-v1",
+          "schema_version": 1,
+          "violations": [],
+          "within_budget": true
+        },
+        "baseline_outcome": "failed",
+        "baseline_passed": false,
+        "baseline_reward": 0.0,
+        "baseline_tool_calls": 27,
+        "domain": "geospatial-scientific-calculation",
+        "pass_delta": 0,
+        "reward_delta": 0.0,
+        "task_id": "earthquake-plate-calculation",
+        "tool_call_delta": 0,
+        "treatment_agent_seconds": 90.0,
+        "treatment_budget": {
+          "cost_available": false,
+          "limits": {
+            "cost_usd": 2.0,
+            "tool_calls": 120.0,
+            "wall_seconds": 900.0
+          },
+          "observed": {
+            "cost_usd": null,
+            "tool_calls": 27.0,
+            "wall_seconds": 90.0
+          },
+          "outcome": "failed",
+          "policy": "strict-wall-tool-cost-budget-v1",
+          "schema_version": 1,
+          "violations": [],
+          "within_budget": true
+        },
+        "treatment_outcome": "failed",
+        "treatment_passed": false,
+        "treatment_reward": 0.0,
+        "treatment_tool_calls": 27,
+        "trial": 1
+      },
+      {
+        "agent_seconds_delta": 0.0,
+        "baseline_agent_seconds": 60.0,
+        "baseline_budget": {
+          "cost_available": false,
+          "limits": {
+            "cost_usd": 2.0,
+            "tool_calls": 120.0,
+            "wall_seconds": 900.0
+          },
+          "observed": {
+            "cost_usd": null,
+            "tool_calls": 10.0,
+            "wall_seconds": 60.0
+          },
+          "outcome": "passed",
+          "policy": "strict-wall-tool-cost-budget-v1",
+          "schema_version": 1,
+          "violations": [],
+          "within_budget": true
+        },
+        "baseline_outcome": "passed",
+        "baseline_passed": true,
+        "baseline_reward": 1.0,
+        "baseline_tool_calls": 10,
+        "domain": "macroeconomic-time-series",
+        "pass_delta": 0,
+        "reward_delta": 0.0,
+        "task_id": "econ-detrending-correlation",
+        "tool_call_delta": 0,
+        "treatment_agent_seconds": 60.0,
+        "treatment_budget": {
+          "cost_available": false,
+          "limits": {
+            "cost_usd": 2.0,
+            "tool_calls": 120.0,
+            "wall_seconds": 900.0
+          },
+          "observed": {
+            "cost_usd": null,
+            "tool_calls": 10.0,
+            "wall_seconds": 60.0
+          },
+          "outcome": "passed",
+          "policy": "strict-wall-tool-cost-budget-v1",
+          "schema_version": 1,
+          "violations": [],
+          "within_budget": true
+        },
+        "treatment_outcome": "passed",
+        "treatment_passed": true,
+        "treatment_reward": 1.0,
+        "treatment_tool_calls": 10,
+        "trial": 1
+      },
+      {
+        "agent_seconds_delta": 0.0,
+        "baseline_agent_seconds": 630.1,
+        "baseline_budget": {
+          "cost_available": false,
+          "limits": {
+            "cost_usd": 2.0,
+            "tool_calls": 120.0,
+            "wall_seconds": 900.0
+          },
+          "observed": {
+            "cost_usd": null,
+            "tool_calls": 107.0,
+            "wall_seconds": 630.1
+          },
+          "outcome": "failed",
+          "policy": "strict-wall-tool-cost-budget-v1",
+          "schema_version": 1,
+          "violations": [],
+          "within_budget": true
+        },
+        "baseline_outcome": "failed",
+        "baseline_passed": false,
+        "baseline_reward": 0.0,
+        "baseline_tool_calls": 107,
+        "domain": "energy-market-optimization",
+        "pass_delta": 0,
+        "reward_delta": 0.0,
+        "task_id": "energy-market-pricing",
+        "tool_call_delta": 0,
+        "treatment_agent_seconds": 630.1,
+        "treatment_budget": {
+          "cost_available": false,
+          "limits": {
+            "cost_usd": 2.0,
+            "tool_calls": 120.0,
+            "wall_seconds": 900.0
+          },
+          "observed": {
+            "cost_usd": null,
+            "tool_calls": 107.0,
+            "wall_seconds": 630.1
+          },
+          "outcome": "failed",
+          "policy": "strict-wall-tool-cost-budget-v1",
+          "schema_version": 1,
+          "violations": [],
+          "within_budget": true
+        },
+        "treatment_outcome": "failed",
+        "treatment_passed": false,
+        "treatment_reward": 0.0,
+        "treatment_tool_calls": 107,
+        "trial": 1
+      },
+      {
+        "agent_seconds_delta": -60.0,
+        "baseline_agent_seconds": 120.0,
+        "baseline_budget": {
+          "cost_available": false,
+          "limits": {
+            "cost_usd": 2.0,
+            "tool_calls": 120.0,
+            "wall_seconds": 900.0
+          },
+          "observed": {
+            "cost_usd": null,
+            "tool_calls": 48.0,
+            "wall_seconds": 120.0
+          },
+          "outcome": "failed",
+          "policy": "strict-wall-tool-cost-budget-v1",
+          "schema_version": 1,
+          "violations": [],
+          "within_budget": true
+        },
+        "baseline_outcome": "failed",
+        "baseline_passed": false,
+        "baseline_reward": 0.0,
+        "baseline_tool_calls": 48,
+        "domain": "financial-game-analysis",
+        "pass_delta": 0,
+        "reward_delta": 0.0,
+        "task_id": "financial-modeling-qa",
+        "tool_call_delta": -22,
+        "treatment_agent_seconds": 60.0,
+        "treatment_budget": {
+          "cost_available": false,
+          "limits": {
+            "cost_usd": 2.0,
+            "tool_calls": 120.0,
+            "wall_seconds": 900.0
+          },
+          "observed": {
+            "cost_usd": null,
+            "tool_calls": 26.0,
+            "wall_seconds": 60.0
+          },
+          "outcome": "failed",
+          "policy": "strict-wall-tool-cost-budget-v1",
+          "schema_version": 1,
+          "violations": [],
+          "within_budget": true
+        },
+        "treatment_outcome": "failed",
+        "treatment_passed": false,
+        "treatment_reward": 0.0,
+        "treatment_tool_calls": 26,
+        "trial": 1
+      },
+      {
+        "agent_seconds_delta": 180.0,
+        "baseline_agent_seconds": 60.0,
+        "baseline_budget": {
+          "cost_available": false,
+          "limits": {
+            "cost_usd": 2.0,
+            "tool_calls": 120.0,
+            "wall_seconds": 900.0
+          },
+          "observed": {
+            "cost_usd": null,
+            "tool_calls": 13.0,
+            "wall_seconds": 60.0
+          },
+          "outcome": "passed",
+          "policy": "strict-wall-tool-cost-budget-v1",
+          "schema_version": 1,
+          "violations": [],
+          "within_budget": true
+        },
+        "baseline_outcome": "passed",
+        "baseline_passed": true,
+        "baseline_reward": 1.0,
+        "baseline_tool_calls": 13,
+        "domain": "document-cross-source-validation",
+        "pass_delta": 0,
+        "reward_delta": 0.0,
+        "task_id": "invoice-fraud-detection",
+        "tool_call_delta": 43,
+        "treatment_agent_seconds": 240.0,
+        "treatment_budget": {
+          "cost_available": false,
+          "limits": {
+            "cost_usd": 2.0,
+            "tool_calls": 120.0,
+            "wall_seconds": 900.0
+          },
+          "observed": {
+            "cost_usd": null,
+            "tool_calls": 56.0,
+            "wall_seconds": 240.0
+          },
+          "outcome": "passed",
+          "policy": "strict-wall-tool-cost-budget-v1",
+          "schema_version": 1,
+          "violations": [],
+          "within_budget": true
+        },
+        "treatment_outcome": "passed",
+        "treatment_passed": true,
+        "treatment_reward": 1.0,
+        "treatment_tool_calls": 56,
+        "trial": 1
+      },
+      {
+        "agent_seconds_delta": 0.0,
+        "baseline_agent_seconds": 150.0,
+        "baseline_budget": {
+          "cost_available": false,
+          "limits": {
+            "cost_usd": 2.0,
+            "tool_calls": 120.0,
+            "wall_seconds": 900.0
+          },
+          "observed": {
+            "cost_usd": null,
+            "tool_calls": 48.0,
+            "wall_seconds": 150.0
+          },
+          "outcome": "failed",
+          "policy": "strict-wall-tool-cost-budget-v1",
+          "schema_version": 1,
+          "violations": [],
+          "within_budget": true
+        },
+        "baseline_outcome": "failed",
+        "baseline_passed": false,
+        "baseline_reward": 0.417,
+        "baseline_tool_calls": 48,
+        "domain": "scientific-data-normalization",
+        "pass_delta": 0,
+        "reward_delta": 0.0,
+        "task_id": "lab-unit-harmonization",
+        "tool_call_delta": 0,
+        "treatment_agent_seconds": 150.0,
+        "treatment_budget": {
+          "cost_available": false,
+          "limits": {
+            "cost_usd": 2.0,
+            "tool_calls": 120.0,
+            "wall_seconds": 900.0
+          },
+          "observed": {
+            "cost_usd": null,
+            "tool_calls": 48.0,
+            "wall_seconds": 150.0
+          },
+          "outcome": "failed",
+          "policy": "strict-wall-tool-cost-budget-v1",
+          "schema_version": 1,
+          "violations": [],
+          "within_budget": true
+        },
+        "treatment_outcome": "failed",
+        "treatment_passed": false,
+        "treatment_reward": 0.417,
+        "treatment_tool_calls": 48,
+        "trial": 1
+      },
+      {
+        "agent_seconds_delta": 0.0,
+        "baseline_agent_seconds": 900.1,
+        "baseline_budget": {
+          "cost_available": false,
+          "limits": {
+            "cost_usd": 2.0,
+            "tool_calls": 120.0,
+            "wall_seconds": 900.0
+          },
+          "observed": {
+            "cost_usd": null,
+            "tool_calls": 120.0,
+            "wall_seconds": 900.1
+          },
+          "outcome": "efficiency_failure",
+          "policy": "strict-wall-tool-cost-budget-v1",
+          "schema_version": 1,
+          "violations": [
+            {
+              "limit": 900.0,
+              "metric": "wall_seconds",
+              "observed": 900.1,
+              "overage": 0.1
+            }
+          ],
+          "within_budget": false
+        },
+        "baseline_outcome": "efficiency_failure",
+        "baseline_passed": false,
+        "baseline_reward": 0.0,
+        "baseline_tool_calls": 120,
+        "domain": "industrial-data-normalization",
+        "pass_delta": 0,
+        "reward_delta": 0.0,
+        "task_id": "manufacturing-codebook-normalization",
+        "tool_call_delta": 0,
+        "treatment_agent_seconds": 900.1,
+        "treatment_budget": {
+          "cost_available": false,
+          "limits": {
+            "cost_usd": 2.0,
+            "tool_calls": 120.0,
+            "wall_seconds": 900.0
+          },
+          "observed": {
+            "cost_usd": null,
+            "tool_calls": 120.0,
+            "wall_seconds": 900.1
+          },
+          "outcome": "efficiency_failure",
+          "policy": "strict-wall-tool-cost-budget-v1",
+          "schema_version": 1,
+          "violations": [
+            {
+              "limit": 900.0,
+              "metric": "wall_seconds",
+              "observed": 900.1,
+              "overage": 0.1
+            }
+          ],
+          "within_budget": false
+        },
+        "treatment_outcome": "efficiency_failure",
+        "treatment_passed": false,
+        "treatment_reward": 0.0,
+        "treatment_tool_calls": 120,
+        "trial": 1
+      },
+      {
+        "agent_seconds_delta": 0.0,
+        "baseline_agent_seconds": 90.0,
+        "baseline_budget": {
+          "cost_available": false,
+          "limits": {
+            "cost_usd": 2.0,
+            "tool_calls": 120.0,
+            "wall_seconds": 900.0
+          },
+          "observed": {
+            "cost_usd": null,
+            "tool_calls": 23.0,
+            "wall_seconds": 90.0
+          },
+          "outcome": "passed",
+          "policy": "strict-wall-tool-cost-budget-v1",
+          "schema_version": 1,
+          "violations": [],
+          "within_budget": true
+        },
+        "baseline_outcome": "passed",
+        "baseline_passed": true,
+        "baseline_reward": 1.0,
+        "baseline_tool_calls": 23,
+        "domain": "cross-format-data-validation",
+        "pass_delta": 0,
+        "reward_delta": 0.0,
+        "task_id": "pdf-excel-diff",
+        "tool_call_delta": 0,
+        "treatment_agent_seconds": 90.0,
+        "treatment_budget": {
+          "cost_available": false,
+          "limits": {
+            "cost_usd": 2.0,
+            "tool_calls": 120.0,
+            "wall_seconds": 900.0
+          },
+          "observed": {
+            "cost_usd": null,
+            "tool_calls": 23.0,
+            "wall_seconds": 90.0
+          },
+          "outcome": "passed",
+          "policy": "strict-wall-tool-cost-budget-v1",
+          "schema_version": 1,
+          "violations": [],
+          "within_budget": true
+        },
+        "treatment_outcome": "passed",
+        "treatment_passed": true,
+        "treatment_reward": 1.0,
+        "treatment_tool_calls": 23,
+        "trial": 1
+      },
+      {
+        "agent_seconds_delta": -120.0,
+        "baseline_agent_seconds": 210.0,
+        "baseline_budget": {
+          "cost_available": false,
+          "limits": {
+            "cost_usd": 2.0,
+            "tool_calls": 120.0,
+            "wall_seconds": 900.0
+          },
+          "observed": {
+            "cost_usd": null,
+            "tool_calls": 25.0,
+            "wall_seconds": 210.0
+          },
+          "outcome": "passed",
+          "policy": "strict-wall-tool-cost-budget-v1",
+          "schema_version": 1,
+          "violations": [],
+          "within_budget": true
+        },
+        "baseline_outcome": "passed",
+        "baseline_passed": true,
+        "baseline_reward": 1.0,
+        "baseline_tool_calls": 25,
+        "domain": "quantitative-calculation",
+        "pass_delta": 0,
+        "reward_delta": 0.0,
+        "task_id": "powerlifting-coef-calc",
+        "tool_call_delta": 1,
+        "treatment_agent_seconds": 90.0,
+        "treatment_budget": {
+          "cost_available": false,
+          "limits": {
+            "cost_usd": 2.0,
+            "tool_calls": 120.0,
+            "wall_seconds": 900.0
+          },
+          "observed": {
+            "cost_usd": null,
+            "tool_calls": 26.0,
+            "wall_seconds": 90.0
+          },
+          "outcome": "passed",
+          "policy": "strict-wall-tool-cost-budget-v1",
+          "schema_version": 1,
+          "violations": [],
+          "within_budget": true
+        },
+        "treatment_outcome": "passed",
+        "treatment_passed": true,
+        "treatment_reward": 1.0,
+        "treatment_tool_calls": 26,
+        "trial": 1
+      },
+      {
+        "agent_seconds_delta": -90.0,
+        "baseline_agent_seconds": 360.0,
+        "baseline_budget": {
+          "cost_available": false,
+          "limits": {
+            "cost_usd": 2.0,
+            "tool_calls": 120.0,
+            "wall_seconds": 900.0
+          },
+          "observed": {
+            "cost_usd": null,
+            "tool_calls": 97.0,
+            "wall_seconds": 360.0
+          },
+          "outcome": "failed",
+          "policy": "strict-wall-tool-cost-budget-v1",
+          "schema_version": 1,
+          "violations": [],
+          "within_budget": true
+        },
+        "baseline_outcome": "failed",
+        "baseline_passed": false,
+        "baseline_reward": 0.0,
+        "baseline_tool_calls": 97,
+        "domain": "bioinformatics-spreadsheet-analysis",
+        "pass_delta": 1,
+        "reward_delta": 1.0,
+        "task_id": "protein-expression-analysis",
+        "tool_call_delta": -20,
+        "treatment_agent_seconds": 270.0,
+        "treatment_budget": {
+          "cost_available": false,
+          "limits": {
+            "cost_usd": 2.0,
+            "tool_calls": 120.0,
+            "wall_seconds": 900.0
+          },
+          "observed": {
+            "cost_usd": null,
+            "tool_calls": 77.0,
+            "wall_seconds": 270.0
+          },
+          "outcome": "passed",
+          "policy": "strict-wall-tool-cost-budget-v1",
+          "schema_version": 1,
+          "violations": [],
+          "within_budget": true
+        },
+        "treatment_outcome": "passed",
+        "treatment_passed": true,
+        "treatment_reward": 1.0,
+        "treatment_tool_calls": 77,
+        "trial": 1
+      },
+      {
+        "agent_seconds_delta": 0.0,
+        "baseline_agent_seconds": 630.0,
+        "baseline_budget": {
+          "cost_available": false,
+          "limits": {
+            "cost_usd": 2.0,
+            "tool_calls": 120.0,
+            "wall_seconds": 900.0
+          },
+          "observed": {
+            "cost_usd": null,
+            "tool_calls": 176.0,
+            "wall_seconds": 630.0
+          },
+          "outcome": "efficiency_failure",
+          "policy": "strict-wall-tool-cost-budget-v1",
+          "schema_version": 1,
+          "violations": [
+            {
+              "limit": 120.0,
+              "metric": "tool_calls",
+              "observed": 176.0,
+              "overage": 56.0
+            }
+          ],
+          "within_budget": false
+        },
+        "baseline_outcome": "efficiency_failure",
+        "baseline_passed": false,
+        "baseline_reward": 0.0,
+        "baseline_tool_calls": 176,
+        "domain": "financial-risk-calculation",
+        "pass_delta": 0,
+        "reward_delta": 0.0,
+        "task_id": "reserves-at-risk-calc",
+        "tool_call_delta": 0,
+        "treatment_agent_seconds": 630.0,
+        "treatment_budget": {
+          "cost_available": false,
+          "limits": {
+            "cost_usd": 2.0,
+            "tool_calls": 120.0,
+            "wall_seconds": 900.0
+          },
+          "observed": {
+            "cost_usd": null,
+            "tool_calls": 176.0,
+            "wall_seconds": 630.0
+          },
+          "outcome": "efficiency_failure",
+          "policy": "strict-wall-tool-cost-budget-v1",
+          "schema_version": 1,
+          "violations": [
+            {
+              "limit": 120.0,
+              "metric": "tool_calls",
+              "observed": 176.0,
+              "overage": 56.0
+            }
+          ],
+          "within_budget": false
+        },
+        "treatment_outcome": "efficiency_failure",
+        "treatment_passed": false,
+        "treatment_reward": 0.0,
+        "treatment_tool_calls": 176,
+        "trial": 1
+      },
+      {
+        "agent_seconds_delta": 0.0,
+        "baseline_agent_seconds": 660.1,
+        "baseline_budget": {
+          "cost_available": false,
+          "limits": {
+            "cost_usd": 2.0,
+            "tool_calls": 120.0,
+            "wall_seconds": 900.0
+          },
+          "observed": {
+            "cost_usd": null,
+            "tool_calls": 200.0,
+            "wall_seconds": 660.1
+          },
+          "outcome": "efficiency_failure",
+          "policy": "strict-wall-tool-cost-budget-v1",
+          "schema_version": 1,
+          "violations": [
+            {
+              "limit": 120.0,
+              "metric": "tool_calls",
+              "observed": 200.0,
+              "overage": 80.0
+            }
+          ],
+          "within_budget": false
+        },
+        "baseline_outcome": "efficiency_failure",
+        "baseline_passed": false,
+        "baseline_reward": 0.0,
+        "baseline_tool_calls": 200,
+        "domain": "spreadsheet-aggregation",
+        "pass_delta": 0,
+        "reward_delta": 0.0,
+        "task_id": "sales-pivot-analysis",
+        "tool_call_delta": 0,
+        "treatment_agent_seconds": 660.1,
+        "treatment_budget": {
+          "cost_available": false,
+          "limits": {
+            "cost_usd": 2.0,
+            "tool_calls": 120.0,
+            "wall_seconds": 900.0
+          },
+          "observed": {
+            "cost_usd": null,
+            "tool_calls": 200.0,
+            "wall_seconds": 660.1
+          },
+          "outcome": "efficiency_failure",
+          "policy": "strict-wall-tool-cost-budget-v1",
+          "schema_version": 1,
+          "violations": [
+            {
+              "limit": 120.0,
+              "metric": "tool_calls",
+              "observed": 200.0,
+              "overage": 80.0
+            }
+          ],
+          "within_budget": false
+        },
+        "treatment_outcome": "efficiency_failure",
+        "treatment_passed": false,
+        "treatment_reward": 0.0,
+        "treatment_tool_calls": 200,
+        "trial": 1
+      },
+      {
+        "agent_seconds_delta": 0.0,
+        "baseline_agent_seconds": 120.0,
+        "baseline_budget": {
+          "cost_available": false,
+          "limits": {
+            "cost_usd": 2.0,
+            "tool_calls": 120.0,
+            "wall_seconds": 900.0
+          },
+          "observed": {
+            "cost_usd": null,
+            "tool_calls": 22.0,
+            "wall_seconds": 120.0
+          },
+          "outcome": "failed",
+          "policy": "strict-wall-tool-cost-budget-v1",
+          "schema_version": 1,
+          "violations": [],
+          "within_budget": true
+        },
+        "baseline_outcome": "failed",
+        "baseline_passed": false,
+        "baseline_reward": 0.0,
+        "baseline_tool_calls": 22,
+        "domain": "financial-reporting",
+        "pass_delta": 0,
+        "reward_delta": 0.0,
+        "task_id": "sec-financial-report",
+        "tool_call_delta": -7,
+        "treatment_agent_seconds": 120.0,
+        "treatment_budget": {
+          "cost_available": false,
+          "limits": {
+            "cost_usd": 2.0,
+            "tool_calls": 120.0,
+            "wall_seconds": 900.0
+          },
+          "observed": {
+            "cost_usd": null,
+            "tool_calls": 15.0,
+            "wall_seconds": 120.0
+          },
+          "outcome": "failed",
+          "policy": "strict-wall-tool-cost-budget-v1",
+          "schema_version": 1,
+          "violations": [],
+          "within_budget": true
+        },
+        "treatment_outcome": "failed",
+        "treatment_passed": false,
+        "treatment_reward": 0.0,
+        "treatment_tool_calls": 15,
+        "trial": 1
+      },
+      {
+        "agent_seconds_delta": 660.1,
+        "baseline_agent_seconds": 240.0,
+        "baseline_budget": {
+          "cost_available": false,
+          "limits": {
+            "cost_usd": 2.0,
+            "tool_calls": 120.0,
+            "wall_seconds": 900.0
+          },
+          "observed": {
+            "cost_usd": null,
+            "tool_calls": 82.0,
+            "wall_seconds": 240.0
+          },
+          "outcome": "failed",
+          "policy": "strict-wall-tool-cost-budget-v1",
+          "schema_version": 1,
+          "violations": [],
+          "within_budget": true
+        },
+        "baseline_outcome": "failed",
+        "baseline_passed": false,
+        "baseline_reward": 0.0,
+        "baseline_tool_calls": 82,
+        "domain": "quantitative-calculation",
+        "pass_delta": 0,
+        "reward_delta": 0.0,
+        "task_id": "weighted-gdp-calc",
+        "tool_call_delta": 159,
+        "treatment_agent_seconds": 900.1,
+        "treatment_budget": {
+          "cost_available": false,
+          "limits": {
+            "cost_usd": 2.0,
+            "tool_calls": 120.0,
+            "wall_seconds": 900.0
+          },
+          "observed": {
+            "cost_usd": null,
+            "tool_calls": 241.0,
+            "wall_seconds": 900.1
+          },
+          "outcome": "efficiency_failure",
+          "policy": "strict-wall-tool-cost-budget-v1",
+          "schema_version": 1,
+          "violations": [
+            {
+              "limit": 900.0,
+              "metric": "wall_seconds",
+              "observed": 900.1,
+              "overage": 0.1
+            },
+            {
+              "limit": 120.0,
+              "metric": "tool_calls",
+              "observed": 241.0,
+              "overage": 121.0
+            }
+          ],
+          "within_budget": false
+        },
+        "treatment_outcome": "efficiency_failure",
+        "treatment_passed": false,
+        "treatment_reward": 0.0,
+        "treatment_tool_calls": 241,
+        "trial": 1
+      }
+    ],
+    "treatment_exposure": "selective-read",
+    "treatment_jobs": [
+      "workspace/skillbench/heldout-v8-final2/treatment/citation-check__treatment",
+      "workspace/skillbench/heldout-v8-final2/treatment/court-form-filling__treatment",
+      "workspace/skillbench/heldout-v8-final2/treatment/pdf-excel-diff__treatment",
+      "workspace/skillbench/heldout-v8-final2/treatment/sales-pivot-analysis__treatment",
+      "workspace/skillbench/heldout-v8-final2/treatment/weighted-gdp-calc__treatment",
+      "workspace/skillbench/heldout-v8-final2/treatment/lab-unit-harmonization__treatment",
+      "workspace/skillbench/heldout-v8-final2/treatment/manufacturing-codebook-normalization__treatment",
+      "workspace/skillbench/heldout-v8-final2/treatment/sec-financial-report__treatment",
+      "workspace/skillbench/heldout-v8-final2/treatment/protein-expression-analysis__treatment",
+      "workspace/skillbench/heldout-v8-final2/treatment/earthquake-plate-calculation__treatment",
+      "workspace/skillbench/heldout-v8-final2/treatment/powerlifting-coef-calc__treatment",
+      "workspace/skillbench/heldout-v8-final2/treatment/reserves-at-risk-calc__treatment",
+      "workspace/skillbench/heldout-v8-final2/treatment/financial-modeling-qa__treatment",
+      "workspace/skillbench/heldout-v8-final2/treatment/energy-market-pricing__treatment",
+      "workspace/skillbench/heldout-v8-final2/treatment/econ-detrending-correlation__treatment",
+      "workspace/skillbench/heldout-v8-final2/treatment/invoice-fraud-detection__treatment"
+    ]
+  },
+  "paired_tasks": 16,
+  "ready_for_next_round": false,
+  "round_id": "v8-full16",
+  "schema_version": 1,
+  "trials": [
+    {
+      "activated": false,
+      "baseline_outcome": "passed",
+      "expected_activation": false,
+      "leverage_claim": "no-resource-evidence",
+      "task_id": "citation-check",
+      "treatment_outcome": "passed",
+      "treatment_path": "workspace/skillbench/heldout-v8-final2/treatment/citation-check__treatment",
+      "trial": 1,
+      "valid": true
+    },
+    {
+      "activated": false,
+      "baseline_outcome": "efficiency_failure",
+      "expected_activation": false,
+      "leverage_claim": "no-resource-evidence",
+      "task_id": "court-form-filling",
+      "treatment_outcome": "efficiency_failure",
+      "treatment_path": "workspace/skillbench/heldout-v8-final2/treatment/court-form-filling__treatment",
+      "trial": 1,
+      "valid": true
+    },
+    {
+      "activated": false,
+      "baseline_outcome": "failed",
+      "expected_activation": false,
+      "leverage_claim": "no-resource-evidence",
+      "task_id": "earthquake-plate-calculation",
+      "treatment_outcome": "failed",
+      "treatment_path": "workspace/skillbench/heldout-v8-final2/treatment/earthquake-plate-calculation__treatment",
+      "trial": 1,
+      "valid": true
+    },
+    {
+      "activated": false,
+      "baseline_outcome": "passed",
+      "expected_activation": false,
+      "leverage_claim": "no-resource-evidence",
+      "task_id": "econ-detrending-correlation",
+      "treatment_outcome": "passed",
+      "treatment_path": "workspace/skillbench/heldout-v8-final2/treatment/econ-detrending-correlation__treatment",
+      "trial": 1,
+      "valid": true
+    },
+    {
+      "activated": false,
+      "baseline_outcome": "failed",
+      "expected_activation": false,
+      "leverage_claim": "no-resource-evidence",
+      "task_id": "energy-market-pricing",
+      "treatment_outcome": "failed",
+      "treatment_path": "workspace/skillbench/heldout-v8-final2/treatment/energy-market-pricing__treatment",
+      "trial": 1,
+      "valid": true
+    },
+    {
+      "activated": true,
+      "baseline_outcome": "failed",
+      "expected_activation": true,
+      "leverage_claim": "methodology-leverage",
+      "task_id": "financial-modeling-qa",
+      "treatment_outcome": "failed",
+      "treatment_path": "workspace/skillbench/heldout-v8-final2/treatment/financial-modeling-qa__treatment",
+      "trial": 1,
+      "valid": true
+    },
+    {
+      "activated": true,
+      "baseline_outcome": "passed",
+      "expected_activation": true,
+      "leverage_claim": "opened-only",
+      "task_id": "invoice-fraud-detection",
+      "treatment_outcome": "passed",
+      "treatment_path": "workspace/skillbench/heldout-v8-final2/treatment/invoice-fraud-detection__treatment",
+      "trial": 1,
+      "valid": true
+    },
+    {
+      "activated": false,
+      "baseline_outcome": "failed",
+      "expected_activation": false,
+      "leverage_claim": "no-resource-evidence",
+      "task_id": "lab-unit-harmonization",
+      "treatment_outcome": "failed",
+      "treatment_path": "workspace/skillbench/heldout-v8-final2/treatment/lab-unit-harmonization__treatment",
+      "trial": 1,
+      "valid": true
+    },
+    {
+      "activated": false,
+      "baseline_outcome": "efficiency_failure",
+      "expected_activation": false,
+      "leverage_claim": "no-resource-evidence",
+      "task_id": "manufacturing-codebook-normalization",
+      "treatment_outcome": "efficiency_failure",
+      "treatment_path": "workspace/skillbench/heldout-v8-final2/treatment/manufacturing-codebook-normalization__treatment",
+      "trial": 1,
+      "valid": true
+    },
+    {
+      "activated": false,
+      "baseline_outcome": "passed",
+      "expected_activation": false,
+      "leverage_claim": "no-resource-evidence",
+      "task_id": "pdf-excel-diff",
+      "treatment_outcome": "passed",
+      "treatment_path": "workspace/skillbench/heldout-v8-final2/treatment/pdf-excel-diff__treatment",
+      "trial": 1,
+      "valid": true
+    },
+    {
+      "activated": true,
+      "baseline_outcome": "passed",
+      "expected_activation": true,
+      "leverage_claim": "opened-only",
+      "task_id": "powerlifting-coef-calc",
+      "treatment_outcome": "passed",
+      "treatment_path": "workspace/skillbench/heldout-v8-final2/treatment/powerlifting-coef-calc__treatment",
+      "trial": 1,
+      "valid": true
+    },
+    {
+      "activated": true,
+      "baseline_outcome": "failed",
+      "expected_activation": true,
+      "leverage_claim": "methodology-leverage",
+      "task_id": "protein-expression-analysis",
+      "treatment_outcome": "passed",
+      "treatment_path": "workspace/skillbench/heldout-v8-final2/treatment/protein-expression-analysis__treatment",
+      "trial": 1,
+      "valid": true
+    },
+    {
+      "activated": false,
+      "baseline_outcome": "efficiency_failure",
+      "expected_activation": false,
+      "leverage_claim": "no-resource-evidence",
+      "task_id": "reserves-at-risk-calc",
+      "treatment_outcome": "efficiency_failure",
+      "treatment_path": "workspace/skillbench/heldout-v8-final2/treatment/reserves-at-risk-calc__treatment",
+      "trial": 1,
+      "valid": true
+    },
+    {
+      "activated": false,
+      "baseline_outcome": "efficiency_failure",
+      "expected_activation": false,
+      "leverage_claim": "no-resource-evidence",
+      "task_id": "sales-pivot-analysis",
+      "treatment_outcome": "efficiency_failure",
+      "treatment_path": "workspace/skillbench/heldout-v8-final2/treatment/sales-pivot-analysis__treatment",
+      "trial": 1,
+      "valid": true
+    },
+    {
+      "activated": true,
+      "baseline_outcome": "failed",
+      "expected_activation": true,
+      "leverage_claim": "methodology-leverage",
+      "task_id": "sec-financial-report",
+      "treatment_outcome": "failed",
+      "treatment_path": "workspace/skillbench/heldout-v8-final2/treatment/sec-financial-report__treatment",
+      "trial": 1,
+      "valid": true
+    },
+    {
+      "activated": true,
+      "baseline_outcome": "failed",
+      "expected_activation": true,
+      "leverage_claim": "opened-only",
+      "task_id": "weighted-gdp-calc",
+      "treatment_outcome": "efficiency_failure",
+      "treatment_path": "workspace/skillbench/heldout-v8-final2/treatment/weighted-gdp-calc__treatment",
+      "trial": 1,
+      "valid": true
+    }
+  ]
+}

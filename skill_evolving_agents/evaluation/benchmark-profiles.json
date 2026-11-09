@@ -1,0 +1,119 @@
+{
+  "schema_version": 1,
+  "time_profiles": {
+    "smoke-15m": {
+      "time_seconds": 900,
+      "max_trials": 4,
+      "repetitions": 1,
+      "max_parallel": 2,
+      "full_coverage": false,
+      "budgets": {
+        "wall_seconds": 300,
+        "tool_calls": 60,
+        "cost_usd": 0.5
+      }
+    },
+    "quick-1h": {
+      "time_seconds": 3600,
+      "max_trials": 12,
+      "repetitions": 1,
+      "max_parallel": 4,
+      "full_coverage": false,
+      "budgets": {
+        "wall_seconds": 600,
+        "tool_calls": 100,
+        "cost_usd": 1.0
+      }
+    },
+    "standard-3h": {
+      "time_seconds": 10800,
+      "max_trials": 24,
+      "repetitions": 1,
+      "max_parallel": 6,
+      "full_coverage": true,
+      "budgets": {
+        "wall_seconds": 900,
+        "tool_calls": 120,
+        "cost_usd": 2.0
+      }
+    },
+    "deep-1d": {
+      "time_seconds": 86400,
+      "max_trials": 96,
+      "repetitions": 3,
+      "max_parallel": 8,
+      "full_coverage": true,
+      "budgets": {
+        "wall_seconds": 1200,
+        "tool_calls": 180,
+        "cost_usd": 3.0
+      }
+    }
+  },
+  "cost_tiers": {
+    "low": {
+      "max_trials": 4,
+      "max_parallel": 2,
+      "budget_multiplier": 0.5,
+      "max_cost_usd": 10,
+      "max_repetitions": 1
+    },
+    "standard": {
+      "max_trials": 24,
+      "max_parallel": 6,
+      "budget_multiplier": 1.0,
+      "max_cost_usd": 120,
+      "max_repetitions": 3
+    },
+    "high": {
+      "max_trials": 96,
+      "max_parallel": 8,
+      "budget_multiplier": 1.5,
+      "max_cost_usd": 600,
+      "max_repetitions": 3
+    }
+  },
+  "aliases": {
+    "15m": "smoke-15m",
+    "1h": "quick-1h",
+    "3h": "standard-3h",
+    "1d": "deep-1d"
+  },
+  "task_runtime_seconds": {
+    "citation-check": 300,
+    "court-form-filling": 510,
+    "pdf-excel-diff": 90,
+    "sales-pivot-analysis": 660,
+    "weighted-gdp-calc": 240,
+    "lab-unit-harmonization": 150,
+    "manufacturing-codebook-normalization": 900,
+    "sec-financial-report": 120,
+    "protein-expression-analysis": 360,
+    "earthquake-plate-calculation": 90,
+    "powerlifting-coef-calc": 210,
+    "reserves-at-risk-calc": 630,
+    "financial-modeling-qa": 120,
+    "energy-market-pricing": 630,
+    "econ-detrending-correlation": 60,
+    "invoice-fraud-detection": 60
+  },
+  "build_overhead_seconds": 120,
+  "task_build_seconds": {
+    "citation-check": 90,
+    "court-form-filling": 150,
+    "pdf-excel-diff": 90,
+    "sales-pivot-analysis": 150,
+    "weighted-gdp-calc": 120,
+    "lab-unit-harmonization": 120,
+    "manufacturing-codebook-normalization": 300,
+    "sec-financial-report": 150,
+    "protein-expression-analysis": 240,
+    "earthquake-plate-calculation": 90,
+    "powerlifting-coef-calc": 90,
+    "reserves-at-risk-calc": 240,
+    "financial-modeling-qa": 300,
+    "energy-market-pricing": 180,
+    "econ-detrending-correlation": 90,
+    "invoice-fraud-detection": 600
+  }
+}

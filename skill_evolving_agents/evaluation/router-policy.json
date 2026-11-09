@@ -1,10 +1,11 @@
 {
   "schema_version": 1,
-  "strategy": "embedding-recall-feedback-intent-abstention-v3",
+  "strategy": "embedding-recall-feedback-intent-abstention-v4",
   "recall_k": 5,
   "top_k": 1,
   "minimum_score": 0.35,
   "minimum_margin": 0.04,
+  "feedback_min_observations": 1,
   "document_max_chars": 1200,
   "feedback_formula": {
     "reward_delta_weight": 0.15,

@@ -1,0 +1,409 @@
+{
+  "accuracy": {
+    "absolute_lift": 0.5,
+    "baseline_efficiency_failures": 1,
+    "baseline_outcome_pass_rate": 0.0,
+    "baseline_outcome_passes": 0,
+    "baseline_pass_rate": 0.0,
+    "baseline_passes": 0,
+    "baseline_wilson_95": [
+      0.0,
+      0.65762
+    ],
+    "discordant_exact_p": 1.0,
+    "lifts": 1,
+    "regressions": 0,
+    "treatment_efficiency_failures": 1,
+    "treatment_outcome_pass_rate": 0.5,
+    "treatment_outcome_passes": 1,
+    "treatment_pass_rate": 0.5,
+    "treatment_passes": 1,
+    "treatment_wilson_95": [
+      0.094531,
+      0.905469
+    ],
+    "unchanged": 1
+  },
+  "benchmark": "skillsbench@1.1",
+  "budgets": {
+    "cost_usd": 2.0,
+    "exceeded_outcome": "efficiency_failure",
+    "schema_version": 1,
+    "tool_calls": 120,
+    "wall_seconds": 900
+  },
+  "cohort": "heldout-v4-round2",
+  "efficiency": {
+    "baseline_agent_seconds": 660.1,
+    "baseline_efficiency_failures": 1,
+    "baseline_tool_calls": 166,
+    "budget_policy": "strict-wall-tool-cost-budget-v1",
+    "efficiency_failure_rate": 0.5,
+    "mean_agent_seconds_delta": -60.0,
+    "mean_tool_call_delta": 5.5,
+    "treatment_agent_seconds": 540.1,
+    "treatment_efficiency_failures": 1,
+    "treatment_tool_calls": 177
+  },
+  "gap_count": 5,
+  "gaps": [
+    {
+      "code": "efficiency_failure",
+      "evidence": {
+        "cost_available": false,
+        "limits": {
+          "cost_usd": 2.0,
+          "tool_calls": 120.0,
+          "wall_seconds": 900.0
+        },
+        "observed": {
+          "cost_usd": null,
+          "tool_calls": 166.0,
+          "wall_seconds": 510.1
+        },
+        "outcome": "efficiency_failure",
+        "policy": "strict-wall-tool-cost-budget-v1",
+        "schema_version": 1,
+        "violations": [
+          {
+            "limit": 120.0,
+            "metric": "tool_calls",
+            "observed": 166.0,
+            "overage": 46.0
+          }
+        ],
+        "within_budget": false
+      },
+      "next_action": "Tighten the skill workflow or scope; keep the hard budget and rerun only after the expected call/time path is shorter.",
+      "severity": "efficiency",
+      "task_id": "ada-bathroom-plan-repair",
+      "trial": 1
+    },
+    {
+      "code": "task_budget_infeasible",
+      "evidence": {
+        "cost_available": false,
+        "limits": {
+          "cost_usd": 2.0,
+          "tool_calls": 120.0,
+          "wall_seconds": 900.0
+        },
+        "observed": {
+          "cost_usd": null,
+          "tool_calls": 140.0,
+          "wall_seconds": 600.1
+        },
+        "outcome": "efficiency_failure",
+        "policy": "strict-wall-tool-cost-budget-v1",
+        "schema_version": 1,
+        "violations": [
+          {
+            "limit": 120.0,
+            "metric": "tool_calls",
+            "observed": 140.0,
+            "overage": 20.0
+          }
+        ],
+        "within_budget": false
+      },
+      "next_action": "The task is not feasible under the hard call budget: its baseline already failed while exceeding the limit. Do not rerun the same setup; raise the budget only with approval, or abstain/remove the task.",
+      "severity": "efficiency",
+      "task_id": "ada-bathroom-plan-repair",
+      "trial": 1
+    },
+    {
+      "code": "no_lift_no_efficiency",
+      "evidence": {
+        "baseline_tool_calls": 140,
+        "treatment_tool_calls": 166
+      },
+      "next_action": "Do not iterate this skill blindly; change the finding, the workflow, or the router evidence first.",
+      "severity": "quality",
+      "task_id": "ada-bathroom-plan-repair",
+      "trial": 1
+    },
+    {
+      "code": "still_failing",
+      "evidence": {
+        "activation": "injected",
+        "baseline_tool_calls": 140,
+        "leverage_claim": "opened-only",
+        "treatment_tool_calls": 166
+      },
+      "next_action": "Inspect the treatment trajectory's first wrong action and the verifier failure; change the skill or abstain before rerunning.",
+      "severity": "quality",
+      "task_id": "ada-bathroom-plan-repair",
+      "trial": 1
+    },
+    {
+      "code": "execution_evidence_reported",
+      "evidence": {
+        "claim": "reported-executable-leverage",
+        "reported": [
+          "scripts/export_part_meshes.mjs"
+        ],
+        "tool_call_reduction": 15
+      },
+      "next_action": "Preserve tool-call command input in the ACP export; execution is currently self-reported rather than observed. Keep the observed output and exit status.",
+      "severity": "instrumentation-weak",
+      "task_id": "threejs-structure-parser",
+      "trial": 1
+    }
+  ],
+  "gaps_by_code": {
+    "efficiency_failure": 1,
+    "execution_evidence_reported": 1,
+    "no_lift_no_efficiency": 1,
+    "still_failing": 1,
+    "task_budget_infeasible": 1
+  },
+  "instrumentation_gaps": 1,
+  "next_round_blocked_by": [
+    "task_budget_infeasible"
+  ],
+  "paired_report": {
+    "accuracy": {
+      "absolute_lift": 0.5,
+      "baseline_efficiency_failures": 1,
+      "baseline_outcome_pass_rate": 0.0,
+      "baseline_outcome_passes": 0,
+      "baseline_pass_rate": 0.0,
+      "baseline_passes": 0,
+      "baseline_wilson_95": [
+        0.0,
+        0.65762
+      ],
+      "discordant_exact_p": 1.0,
+      "lifts": 1,
+      "regressions": 0,
+      "treatment_efficiency_failures": 1,
+      "treatment_outcome_pass_rate": 0.5,
+      "treatment_outcome_passes": 1,
+      "treatment_pass_rate": 0.5,
+      "treatment_passes": 1,
+      "treatment_wilson_95": [
+        0.094531,
+        0.905469
+      ],
+      "unchanged": 1
+    },
+    "baseline_jobs": [
+      "workspace/skillbench/heldout-v4-round2-20261109/ada-baseline",
+      "workspace/skillbench/heldout-v4-round2-20261109/threejs-baseline-r2"
+    ],
+    "benchmark": "skillsbench@1.1",
+    "budgets": {
+      "cost_usd": 2.0,
+      "exceeded_outcome": "efficiency_failure",
+      "schema_version": 1,
+      "tool_calls": 120,
+      "wall_seconds": 900
+    },
+    "by_domain": {
+      "3d-code-understanding": {
+        "baseline_pass_rate": 0.0,
+        "lifts": 1,
+        "regressions": 0,
+        "tasks": 1,
+        "treatment_pass_rate": 1.0
+      },
+      "architectural-design": {
+        "baseline_pass_rate": 0.0,
+        "lifts": 0,
+        "regressions": 0,
+        "tasks": 1,
+        "treatment_pass_rate": 0.0
+      }
+    },
+    "cohort": "heldout-v4-round2",
+    "coverage": {
+      "domains": 2,
+      "tasks_by_domain": {
+        "3d-code-understanding": 1,
+        "architectural-design": 1
+      }
+    },
+    "efficiency": {
+      "baseline_agent_seconds": 660.1,
+      "baseline_efficiency_failures": 1,
+      "baseline_tool_calls": 166,
+      "budget_policy": "strict-wall-tool-cost-budget-v1",
+      "efficiency_failure_rate": 0.5,
+      "mean_agent_seconds_delta": -60.0,
+      "mean_tool_call_delta": 5.5,
+      "treatment_agent_seconds": 540.1,
+      "treatment_efficiency_failures": 1,
+      "treatment_tool_calls": 177
+    },
+    "excluded_contaminated": [],
+    "excluded_unpaired": {},
+    "paired_tasks": 2,
+    "reward": {
+      "baseline_mean": 0.0,
+      "improvements": 1,
+      "mean_delta": 0.5,
+      "regressions": 0,
+      "treatment_mean": 0.5
+    },
+    "schema_version": 1,
+    "tasks": [
+      {
+        "agent_seconds_delta": -90.0,
+        "baseline_agent_seconds": 600.1,
+        "baseline_budget": {
+          "cost_available": false,
+          "limits": {
+            "cost_usd": 2.0,
+            "tool_calls": 120.0,
+            "wall_seconds": 900.0
+          },
+          "observed": {
+            "cost_usd": null,
+            "tool_calls": 140.0,
+            "wall_seconds": 600.1
+          },
+          "outcome": "efficiency_failure",
+          "policy": "strict-wall-tool-cost-budget-v1",
+          "schema_version": 1,
+          "violations": [
+            {
+              "limit": 120.0,
+              "metric": "tool_calls",
+              "observed": 140.0,
+              "overage": 20.0
+            }
+          ],
+          "within_budget": false
+        },
+        "baseline_outcome": "efficiency_failure",
+        "baseline_passed": false,
+        "baseline_reward": 0.0,
+        "baseline_tool_calls": 140,
+        "domain": "architectural-design",
+        "pass_delta": 0,
+        "reward_delta": 0.0,
+        "task_id": "ada-bathroom-plan-repair",
+        "tool_call_delta": 26,
+        "treatment_agent_seconds": 510.1,
+        "treatment_budget": {
+          "cost_available": false,
+          "limits": {
+            "cost_usd": 2.0,
+            "tool_calls": 120.0,
+            "wall_seconds": 900.0
+          },
+          "observed": {
+            "cost_usd": null,
+            "tool_calls": 166.0,
+            "wall_seconds": 510.1
+          },
+          "outcome": "efficiency_failure",
+          "policy": "strict-wall-tool-cost-budget-v1",
+          "schema_version": 1,
+          "violations": [
+            {
+              "limit": 120.0,
+              "metric": "tool_calls",
+              "observed": 166.0,
+              "overage": 46.0
+            }
+          ],
+          "within_budget": false
+        },
+        "treatment_outcome": "efficiency_failure",
+        "treatment_passed": false,
+        "treatment_reward": 0.0,
+        "treatment_tool_calls": 166,
+        "trial": 1
+      },
+      {
+        "agent_seconds_delta": -30.0,
+        "baseline_agent_seconds": 60.0,
+        "baseline_budget": {
+          "cost_available": false,
+          "limits": {
+            "cost_usd": 2.0,
+            "tool_calls": 120.0,
+            "wall_seconds": 900.0
+          },
+          "observed": {
+            "cost_usd": null,
+            "tool_calls": 26.0,
+            "wall_seconds": 60.0
+          },
+          "outcome": "failed",
+          "policy": "strict-wall-tool-cost-budget-v1",
+          "schema_version": 1,
+          "violations": [],
+          "within_budget": true
+        },
+        "baseline_outcome": "failed",
+        "baseline_passed": false,
+        "baseline_reward": 0.0,
+        "baseline_tool_calls": 26,
+        "domain": "3d-code-understanding",
+        "pass_delta": 1,
+        "reward_delta": 1.0,
+        "task_id": "threejs-structure-parser",
+        "tool_call_delta": -15,
+        "treatment_agent_seconds": 30.0,
+        "treatment_budget": {
+          "cost_available": false,
+          "limits": {
+            "cost_usd": 2.0,
+            "tool_calls": 120.0,
+            "wall_seconds": 900.0
+          },
+          "observed": {
+            "cost_usd": null,
+            "tool_calls": 11.0,
+            "wall_seconds": 30.0
+          },
+          "outcome": "passed",
+          "policy": "strict-wall-tool-cost-budget-v1",
+          "schema_version": 1,
+          "violations": [],
+          "within_budget": true
+        },
+        "treatment_outcome": "passed",
+        "treatment_passed": true,
+        "treatment_reward": 1.0,
+        "treatment_tool_calls": 11,
+        "trial": 1
+      }
+    ],
+    "treatment_exposure": "selective-read",
+    "treatment_jobs": [
+      "workspace/skillbench/heldout-v4-round2-20261109/ada-treatment-r2",
+      "workspace/skillbench/heldout-v4-round2-20261109/threejs-treatment-r2"
+    ]
+  },
+  "paired_tasks": 2,
+  "ready_for_next_round": false,
+  "round_id": "v4-round2",
+  "schema_version": 1,
+  "trials": [
+    {
+      "activated": true,
+      "baseline_outcome": "efficiency_failure",
+      "expected_activation": true,
+      "leverage_claim": "opened-only",
+      "task_id": "ada-bathroom-plan-repair",
+      "treatment_outcome": "efficiency_failure",
+      "treatment_path": "workspace/skillbench/heldout-v4-round2-20261109/ada-treatment-r2/2026-11-09__08-57-44/ada-bathroom-plan-repair__7416cb7e",
+      "trial": 1,
+      "valid": true
+    },
+    {
+      "activated": true,
+      "baseline_outcome": "failed",
+      "expected_activation": true,
+      "leverage_claim": "reported-executable-leverage",
+      "task_id": "threejs-structure-parser",
+      "treatment_outcome": "passed",
+      "treatment_path": "workspace/skillbench/heldout-v4-round2-20261109/threejs-treatment-r2/2026-11-09__09-09-14/threejs-structure-parser__1ec4697c",
+      "trial": 1,
+      "valid": true
+    }
+  ]
+}

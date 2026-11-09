@@ -9451,6 +9451,11 @@ class ContractTests(unittest.TestCase):
             with patch.object(
                 sys, "argv", ["run_pipeline.py", "run-codex@2026-10-22T19:32"]
             ):
+                parsed = runner.parse_args()
+            self.assertEqual(parsed.resume_from, "auto")
+            with patch.object(
+                sys, "argv", ["run_pipeline.py", "../escape"]
+            ):
                 with self.assertRaises(SystemExit):
                     runner.parse_args()
 

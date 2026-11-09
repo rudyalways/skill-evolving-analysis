@@ -4,7 +4,8 @@
  *
  * Usage:
  *   node scripts/export-scene.mjs --module <scene.js|scene.mjs> \
- *     --out <artifact-directory|artifact.obj> [--name scene.obj]
+ *     --out <artifact-directory|artifact.obj> [--name scene.obj] \
+ *     [--frame native|blender-z-up]
  *
  * The only scene input is an executable .js/.mjs module exporting
  * createScene().  The command calls it, calls scene.updateMatrixWorld(true),
@@ -21,12 +22,21 @@ import { pathToFileURL } from "node:url";
 import path from "node:path";
 import process from "node:process";
 
-const FRAME = {
-  name: "blender-z-up",
-  source_up: "Y",
-  artifact_up: "Z",
-  rotation_degrees_xyz: [-90, 0, 0],
+const FRAMES = {
+  native: {
+    name: "native",
+    source_up: null,
+    artifact_up: null,
+    rotation_degrees_xyz: [0, 0, 0],
+  },
+  "blender-z-up": {
+    name: "blender-z-up",
+    source_up: "Y",
+    artifact_up: "Z",
+    rotation_degrees_xyz: [-90, 0, 0],
+  },
 };
+const DEFAULT_FRAME = "native";
 
 class ProducerError extends Error {
   constructor(code, message, details = {}) {
@@ -148,9 +158,14 @@ const transformNormal = (n, p) => {
   return length ? v.map((x) => x / length) : v;
 };
 
-// Blender up-axis transfer: (x, y, z) -> (x, z, -y), i.e. -90 degrees about X.
-const framePoint = (p) => [p[0], p[2], -p[1]];
-const frameNormal = (n) => [n[0], n[2], -n[1]];
+// Apply only the frame the task declares. Native coordinates are the default;
+// Blender Z-up maps (x, y, z) -> (x, z, -y), i.e. -90 degrees about X.
+const framePoint = (p, frame) => (
+  frame.name === "blender-z-up" ? [p[0], p[2], -p[1]] : [p[0], p[1], p[2]]
+);
+const frameNormal = (n, frame) => (
+  frame.name === "blender-z-up" ? [n[0], n[2], -n[1]] : [n[0], n[1], n[2]]
+);
 
 const attributeArray = (attribute, label) => {
   if (!attribute) return null;
@@ -282,7 +297,7 @@ const coordinate = (value, label) => {
 };
 const vertexLine = (values, label) => values.map((v) => coordinate(v, label)).join(" ");
 
-const serializeMesh = (mesh, offsets) => {
+const serializeMesh = (mesh, offsets, frame) => {
   const position = mesh.geometry.attributes.position;
   if (!position) {
     fail("MISSING_POSITION", `${mesh.label}: missing geometry.attributes.position`,
@@ -315,13 +330,13 @@ const serializeMesh = (mesh, offsets) => {
   for (let i = 0; i < expandedArray.length; i += 3) {
     const worldPoint = transformPoint(mesh.world,
       [expandedArray[i], expandedArray[i + 1], expandedArray[i + 2]]);
-    lines.push(`v ${vertexLine(framePoint(worldPoint), mesh.label)}`);
+    lines.push(`v ${vertexLine(framePoint(worldPoint, frame), mesh.label)}`);
   }
   if (normalArray) {
     for (let i = 0; i < normalArray.length; i += 3) {
       const normal = transformNormal(
         [normalArray[i], normalArray[i + 1], normalArray[i + 2]], normals);
-      lines.push(`vn ${vertexLine(frameNormal(normal), mesh.label)}`);
+      lines.push(`vn ${vertexLine(frameNormal(normal, frame), mesh.label)}`);
     }
   }
   if (uvArray) {
@@ -380,7 +395,7 @@ const parseArgs = (argv) => {
   return args;
 };
 
-const validateManifest = async (manifestPath, manifest, objPath) => {
+const validateManifest = async (manifestPath, manifest, objPath, frame) => {
   let disk;
   try {
     disk = JSON.parse(await readFile(manifestPath, "utf8"));
@@ -400,7 +415,7 @@ const validateManifest = async (manifestPath, manifest, objPath) => {
   if (disk.mesh_count !== manifest.mesh_count) problems.push("mesh_count");
   if (disk.vertex_count !== vertices) problems.push(`vertex_count (manifest ${disk.vertex_count}, obj ${vertices})`);
   if (disk.triangle_count !== faces) problems.push(`triangle_count (manifest ${disk.triangle_count}, obj ${faces})`);
-  if (disk.frame?.rotation_degrees_xyz?.join(",") !== FRAME.rotation_degrees_xyz.join(",")) {
+  if (disk.frame?.rotation_degrees_xyz?.join(",") !== frame.rotation_degrees_xyz.join(",")) {
     problems.push("frame rotation");
   }
   if (!Array.isArray(disk.meshes) || disk.meshes.length !== manifest.mesh_count) {
@@ -414,7 +429,11 @@ const validateManifest = async (manifestPath, manifest, objPath) => {
 const run = async () => {
   const args = parseArgs(process.argv.slice(2));
   if (!args.module || !args.out) {
-    fail("BAD_ARGUMENT", "usage: export_native_scene.mjs --module <scene.js|scene.mjs> --out <artifact-directory> [--name scene.obj]");
+    fail("BAD_ARGUMENT", "usage: export-scene.mjs --module <scene.js|scene.mjs> --out <artifact-directory> [--name scene.obj] [--frame native|blender-z-up]");
+  }
+  const frame = FRAMES[args.frame || DEFAULT_FRAME];
+  if (!frame) {
+    fail("BAD_ARGUMENT", `unknown --frame ${args.frame}; use native or blender-z-up`);
   }
   if (!/\.(?:js|mjs)$/i.test(args.module)) {
     fail("BAD_MODULE_EXTENSION", `${args.module}: --module must be a .js or .mjs scene module`,
@@ -458,11 +477,16 @@ const run = async () => {
   const manifestPath = path.join(outDir, "manifest.json");
 
   const records = [];
-  const chunks = ["# Native Three.js OBJ, Blender Z-up frame (-90 deg X)", ""];
+  const chunks = [
+    frame.name === "blender-z-up"
+      ? "# Native Three.js OBJ, Blender Z-up frame (-90 deg X)"
+      : "# Native Three.js OBJ, native source frame (no axis transfer)",
+    "",
+  ];
   const offsets = { vertex: 0, normal: 0, uv: 0 };
   let triangleOffset = 0;
   for (const mesh of meshes) {
-    const serialized = serializeMesh(mesh, offsets);
+    const serialized = serializeMesh(mesh, offsets, frame);
     offsets.vertex += serialized.outputVertexCount;
     offsets.normal += serialized.normalCount;
     offsets.uv += serialized.uvCount;
@@ -501,7 +525,7 @@ const run = async () => {
     matrix_world_applied: true,
     artifact: objName,
     manifest: "manifest.json",
-    frame: FRAME,
+    frame,
     numeric_precision: "shortest round-trip decimal (Number#toString)",
     semantics: {
       index_expansion: "toNonIndexed",
@@ -530,7 +554,7 @@ const run = async () => {
     fail("WRITE_FAILED", `${outDir}: cannot write artifact set: ${error.message}`,
       { artifact_root: outDir });
   }
-  await validateManifest(manifestPath, manifest, objPath);
+  await validateManifest(manifestPath, manifest, objPath, frame);
   process.stdout.write(`${JSON.stringify({
     status: "produced",
     artifact_root: outDir,
@@ -539,7 +563,7 @@ const run = async () => {
     mesh_count: records.length,
     vertex_count: vertexCount,
     triangle_count: triangleCount,
-    frame: FRAME.name,
+    frame: frame.name,
   }, null, 2)}\n`);
 };
 

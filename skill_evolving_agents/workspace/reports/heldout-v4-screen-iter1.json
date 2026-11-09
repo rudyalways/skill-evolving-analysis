@@ -1,0 +1,488 @@
+{
+  "accuracy": {
+    "absolute_lift": -0.333333,
+    "baseline_efficiency_failures": 1,
+    "baseline_outcome_pass_rate": 0.333333,
+    "baseline_outcome_passes": 1,
+    "baseline_pass_rate": 0.333333,
+    "baseline_passes": 1,
+    "baseline_wilson_95": [
+      0.061492,
+      0.79234
+    ],
+    "discordant_exact_p": 1.0,
+    "lifts": 0,
+    "regressions": 1,
+    "treatment_efficiency_failures": 0,
+    "treatment_outcome_pass_rate": 0.0,
+    "treatment_outcome_passes": 0,
+    "treatment_pass_rate": 0.0,
+    "treatment_passes": 0,
+    "treatment_wilson_95": [
+      0.0,
+      0.561497
+    ],
+    "unchanged": 2
+  },
+  "benchmark": "skillsbench@1.1",
+  "budgets": {
+    "cost_usd": 2.0,
+    "exceeded_outcome": "efficiency_failure",
+    "schema_version": 1,
+    "tool_calls": 120,
+    "wall_seconds": 900
+  },
+  "cohort": "heldout-v4-screen",
+  "efficiency": {
+    "baseline_agent_seconds": 840.0,
+    "baseline_efficiency_failures": 1,
+    "baseline_tool_calls": 242,
+    "budget_policy": "strict-wall-tool-cost-budget-v1",
+    "efficiency_failure_rate": 0.0,
+    "mean_agent_seconds_delta": -140.0,
+    "mean_tool_call_delta": -25.333333,
+    "treatment_agent_seconds": 420.0,
+    "treatment_efficiency_failures": 0,
+    "treatment_tool_calls": 166
+  },
+  "gap_count": 6,
+  "gaps": [
+    {
+      "code": "baseline_efficiency_failure",
+      "evidence": {
+        "cost_available": false,
+        "limits": {
+          "cost_usd": 2.0,
+          "tool_calls": 120.0,
+          "wall_seconds": 900.0
+        },
+        "observed": {
+          "cost_usd": null,
+          "tool_calls": 198.0,
+          "wall_seconds": 690.0
+        },
+        "outcome": "efficiency_failure",
+        "policy": "strict-wall-tool-cost-budget-v1",
+        "schema_version": 1,
+        "violations": [
+          {
+            "limit": 120.0,
+            "metric": "tool_calls",
+            "observed": 198.0,
+            "overage": 78.0
+          }
+        ],
+        "within_budget": false
+      },
+      "next_action": "The stale baseline exceeded the current hard budget. Run a matched baseline under the same budget before attributing the treatment delta to the skill.",
+      "severity": "efficiency",
+      "task_id": "ada-bathroom-plan-repair",
+      "trial": 1
+    },
+    {
+      "code": "still_failing",
+      "evidence": {
+        "activation": "read",
+        "baseline_tool_calls": 198,
+        "leverage_claim": "methodology-leverage",
+        "treatment_tool_calls": 62
+      },
+      "next_action": "Inspect the treatment trajectory's first wrong action and the verifier failure; change the skill or abstain before rerunning.",
+      "severity": "quality",
+      "task_id": "ada-bathroom-plan-repair",
+      "trial": 1
+    },
+    {
+      "code": "no_lift_no_efficiency",
+      "evidence": {
+        "baseline_tool_calls": 14,
+        "treatment_tool_calls": 60
+      },
+      "next_action": "Do not iterate this skill blindly; change the finding, the workflow, or the router evidence first.",
+      "severity": "quality",
+      "task_id": "threejs-structure-parser",
+      "trial": 1
+    },
+    {
+      "code": "still_failing",
+      "evidence": {
+        "activation": "injected",
+        "baseline_tool_calls": 14,
+        "leverage_claim": "opened-only",
+        "treatment_tool_calls": 60
+      },
+      "next_action": "Inspect the treatment trajectory's first wrong action and the verifier failure; change the skill or abstain before rerunning.",
+      "severity": "quality",
+      "task_id": "threejs-structure-parser",
+      "trial": 1
+    },
+    {
+      "code": "no_executable_leverage",
+      "evidence": {
+        "claim": "opened-only",
+        "resources": {
+          "discovered": [
+            "SKILL.md",
+            "references/native-producer-contract.md",
+            "scripts/[eval]",
+            "scripts/fixtures"
+          ],
+          "executed": [],
+          "opened": [
+            "references/native-producer-contract.md",
+            "scripts/[eval]",
+            "scripts/fixtures"
+          ],
+          "succeeded": []
+        },
+        "tool_call_reduction": -46
+      },
+      "next_action": "Put the exact producer/checker command at the top of SKILL.md and make direct execution the first step.",
+      "severity": "skill-design",
+      "task_id": "threejs-structure-parser",
+      "trial": 1
+    },
+    {
+      "code": "baseline_drift",
+      "evidence": {
+        "baseline_tool_calls": 30,
+        "selection": {
+          "abstention_reasons": [
+            "below-minimum-score",
+            "feedback-regression"
+          ],
+          "selected": []
+        },
+        "treatment_tool_calls": 44
+      },
+      "next_action": "No skill was expected. This is baseline/model drift or task flakiness; rerun a matched baseline under the same setup and do not attribute it to a skill.",
+      "severity": "validity",
+      "task_id": "pptx-reference-formatting",
+      "trial": 1
+    }
+  ],
+  "gaps_by_code": {
+    "baseline_drift": 1,
+    "baseline_efficiency_failure": 1,
+    "no_executable_leverage": 1,
+    "no_lift_no_efficiency": 1,
+    "still_failing": 2
+  },
+  "instrumentation_gaps": 2,
+  "next_round_blocked_by": [
+    "baseline_efficiency_failure",
+    "baseline_drift"
+  ],
+  "paired_report": {
+    "accuracy": {
+      "absolute_lift": -0.333333,
+      "baseline_efficiency_failures": 1,
+      "baseline_outcome_pass_rate": 0.333333,
+      "baseline_outcome_passes": 1,
+      "baseline_pass_rate": 0.333333,
+      "baseline_passes": 1,
+      "baseline_wilson_95": [
+        0.061492,
+        0.79234
+      ],
+      "discordant_exact_p": 1.0,
+      "lifts": 0,
+      "regressions": 1,
+      "treatment_efficiency_failures": 0,
+      "treatment_outcome_pass_rate": 0.0,
+      "treatment_outcome_passes": 0,
+      "treatment_pass_rate": 0.0,
+      "treatment_passes": 0,
+      "treatment_wilson_95": [
+        0.0,
+        0.561497
+      ],
+      "unchanged": 2
+    },
+    "baseline_jobs": [
+      "workspace/skillbench/fresh-v46-heldout-baseline-20261108"
+    ],
+    "benchmark": "skillsbench@1.1",
+    "budgets": {
+      "cost_usd": 2.0,
+      "exceeded_outcome": "efficiency_failure",
+      "schema_version": 1,
+      "tool_calls": 120,
+      "wall_seconds": 900
+    },
+    "by_domain": {
+      "3d-code-understanding": {
+        "baseline_pass_rate": 0.0,
+        "lifts": 0,
+        "regressions": 0,
+        "tasks": 1,
+        "treatment_pass_rate": 0.0
+      },
+      "architectural-design": {
+        "baseline_pass_rate": 0.0,
+        "lifts": 0,
+        "regressions": 0,
+        "tasks": 1,
+        "treatment_pass_rate": 0.0
+      },
+      "document-formatting": {
+        "baseline_pass_rate": 1.0,
+        "lifts": 0,
+        "regressions": 1,
+        "tasks": 1,
+        "treatment_pass_rate": 0.0
+      }
+    },
+    "cohort": "heldout-v4-screen",
+    "coverage": {
+      "domains": 3,
+      "tasks_by_domain": {
+        "3d-code-understanding": 1,
+        "architectural-design": 1,
+        "document-formatting": 1
+      }
+    },
+    "efficiency": {
+      "baseline_agent_seconds": 840.0,
+      "baseline_efficiency_failures": 1,
+      "baseline_tool_calls": 242,
+      "budget_policy": "strict-wall-tool-cost-budget-v1",
+      "efficiency_failure_rate": 0.0,
+      "mean_agent_seconds_delta": -140.0,
+      "mean_tool_call_delta": -25.333333,
+      "treatment_agent_seconds": 420.0,
+      "treatment_efficiency_failures": 0,
+      "treatment_tool_calls": 166
+    },
+    "excluded_contaminated": [],
+    "excluded_unpaired": {},
+    "paired_tasks": 3,
+    "reward": {
+      "baseline_mean": 0.333333,
+      "improvements": 0,
+      "mean_delta": -0.333333,
+      "regressions": 1,
+      "treatment_mean": 0.0
+    },
+    "schema_version": 1,
+    "tasks": [
+      {
+        "agent_seconds_delta": -540.0,
+        "baseline_agent_seconds": 690.0,
+        "baseline_budget": {
+          "cost_available": false,
+          "limits": {
+            "cost_usd": 2.0,
+            "tool_calls": 120.0,
+            "wall_seconds": 900.0
+          },
+          "observed": {
+            "cost_usd": null,
+            "tool_calls": 198.0,
+            "wall_seconds": 690.0
+          },
+          "outcome": "efficiency_failure",
+          "policy": "strict-wall-tool-cost-budget-v1",
+          "schema_version": 1,
+          "violations": [
+            {
+              "limit": 120.0,
+              "metric": "tool_calls",
+              "observed": 198.0,
+              "overage": 78.0
+            }
+          ],
+          "within_budget": false
+        },
+        "baseline_outcome": "efficiency_failure",
+        "baseline_passed": false,
+        "baseline_reward": 0.0,
+        "baseline_tool_calls": 198,
+        "domain": "architectural-design",
+        "pass_delta": 0,
+        "reward_delta": 0.0,
+        "task_id": "ada-bathroom-plan-repair",
+        "tool_call_delta": -136,
+        "treatment_agent_seconds": 150.0,
+        "treatment_budget": {
+          "cost_available": false,
+          "limits": {
+            "cost_usd": 2.0,
+            "tool_calls": 120.0,
+            "wall_seconds": 900.0
+          },
+          "observed": {
+            "cost_usd": null,
+            "tool_calls": 62.0,
+            "wall_seconds": 150.0
+          },
+          "outcome": "failed",
+          "policy": "strict-wall-tool-cost-budget-v1",
+          "schema_version": 1,
+          "violations": [],
+          "within_budget": true
+        },
+        "treatment_outcome": "failed",
+        "treatment_passed": false,
+        "treatment_reward": 0.0,
+        "treatment_tool_calls": 62,
+        "trial": 1
+      },
+      {
+        "agent_seconds_delta": 0.0,
+        "baseline_agent_seconds": 90.0,
+        "baseline_budget": {
+          "cost_available": false,
+          "limits": {
+            "cost_usd": 2.0,
+            "tool_calls": 120.0,
+            "wall_seconds": 900.0
+          },
+          "observed": {
+            "cost_usd": null,
+            "tool_calls": 30.0,
+            "wall_seconds": 90.0
+          },
+          "outcome": "passed",
+          "policy": "strict-wall-tool-cost-budget-v1",
+          "schema_version": 1,
+          "violations": [],
+          "within_budget": true
+        },
+        "baseline_outcome": "passed",
+        "baseline_passed": true,
+        "baseline_reward": 1.0,
+        "baseline_tool_calls": 30,
+        "domain": "document-formatting",
+        "pass_delta": -1,
+        "reward_delta": -1.0,
+        "task_id": "pptx-reference-formatting",
+        "tool_call_delta": 14,
+        "treatment_agent_seconds": 90.0,
+        "treatment_budget": {
+          "cost_available": false,
+          "limits": {
+            "cost_usd": 2.0,
+            "tool_calls": 120.0,
+            "wall_seconds": 900.0
+          },
+          "observed": {
+            "cost_usd": null,
+            "tool_calls": 44.0,
+            "wall_seconds": 90.0
+          },
+          "outcome": "failed",
+          "policy": "strict-wall-tool-cost-budget-v1",
+          "schema_version": 1,
+          "violations": [],
+          "within_budget": true
+        },
+        "treatment_outcome": "failed",
+        "treatment_passed": false,
+        "treatment_reward": 0.0,
+        "treatment_tool_calls": 44,
+        "trial": 1
+      },
+      {
+        "agent_seconds_delta": 120.0,
+        "baseline_agent_seconds": 60.0,
+        "baseline_budget": {
+          "cost_available": false,
+          "limits": {
+            "cost_usd": 2.0,
+            "tool_calls": 120.0,
+            "wall_seconds": 900.0
+          },
+          "observed": {
+            "cost_usd": null,
+            "tool_calls": 14.0,
+            "wall_seconds": 60.0
+          },
+          "outcome": "failed",
+          "policy": "strict-wall-tool-cost-budget-v1",
+          "schema_version": 1,
+          "violations": [],
+          "within_budget": true
+        },
+        "baseline_outcome": "failed",
+        "baseline_passed": false,
+        "baseline_reward": 0.0,
+        "baseline_tool_calls": 14,
+        "domain": "3d-code-understanding",
+        "pass_delta": 0,
+        "reward_delta": 0.0,
+        "task_id": "threejs-structure-parser",
+        "tool_call_delta": 46,
+        "treatment_agent_seconds": 180.0,
+        "treatment_budget": {
+          "cost_available": false,
+          "limits": {
+            "cost_usd": 2.0,
+            "tool_calls": 120.0,
+            "wall_seconds": 900.0
+          },
+          "observed": {
+            "cost_usd": null,
+            "tool_calls": 60.0,
+            "wall_seconds": 180.0
+          },
+          "outcome": "failed",
+          "policy": "strict-wall-tool-cost-budget-v1",
+          "schema_version": 1,
+          "violations": [],
+          "within_budget": true
+        },
+        "treatment_outcome": "failed",
+        "treatment_passed": false,
+        "treatment_reward": 0.0,
+        "treatment_tool_calls": 60,
+        "trial": 1
+      }
+    ],
+    "treatment_exposure": "selective-read",
+    "treatment_jobs": [
+      "workspace/skillbench/heldout-v4-screen-20261108/ada-r3",
+      "workspace/skillbench/heldout-v4-screen-20261108/threejs",
+      "workspace/skillbench/heldout-v4-screen-20261108/pptx"
+    ]
+  },
+  "paired_tasks": 3,
+  "ready_for_next_round": false,
+  "round_id": "v4-screen-1",
+  "schema_version": 1,
+  "trials": [
+    {
+      "activated": true,
+      "baseline_outcome": "efficiency_failure",
+      "expected_activation": true,
+      "leverage_claim": "methodology-leverage",
+      "task_id": "ada-bathroom-plan-repair",
+      "treatment_outcome": "failed",
+      "treatment_path": "workspace/skillbench/heldout-v4-screen-20261108/ada-r3/2026-11-08__22-42-53/ada-bathroom-plan-repair__0045107b",
+      "trial": 1,
+      "valid": true
+    },
+    {
+      "activated": false,
+      "baseline_outcome": "passed",
+      "expected_activation": false,
+      "leverage_claim": "no-resource-evidence",
+      "task_id": "pptx-reference-formatting",
+      "treatment_outcome": "failed",
+      "treatment_path": "workspace/skillbench/heldout-v4-screen-20261108/pptx/2026-11-08__22-52-04/pptx-reference-formatting__702861d1",
+      "trial": 1,
+      "valid": true
+    },
+    {
+      "activated": true,
+      "baseline_outcome": "failed",
+      "expected_activation": true,
+      "leverage_claim": "opened-only",
+      "task_id": "threejs-structure-parser",
+      "treatment_outcome": "failed",
+      "treatment_path": "workspace/skillbench/heldout-v4-screen-20261108/threejs/2026-11-08__22-47-32/threejs-structure-parser__7831e7d2",
+      "trial": 1,
+      "valid": true
+    }
+  ]
+}

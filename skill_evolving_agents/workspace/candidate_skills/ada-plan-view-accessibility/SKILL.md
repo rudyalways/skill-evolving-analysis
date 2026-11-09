@@ -16,6 +16,24 @@ Use this skill for plan-view accessibility checks. It is not a full legal ADA co
 5. If no valid edit is available, inspect the specific failing geometry until the cause is known, or report the unsatisfied rule and stop.
 6. Re-run only under the retry admission rule in `Constraints`, and read the full failing rule set rather than only the first error.
 
+## Environment Preflight
+
+- Treat the DXF file and the task's rules JSON as the authoritative inputs.
+  Confirm both are readable before analysis.
+- The screenshot is an orientation aid, not a measurement source. If it is
+  missing, continue from the DXF; do not spend more than one call looking for
+  it and do not treat its absence as a geometry defect.
+- Use the task environment's DXF library (`ezdxf` when available). Do not make
+  plotting or image-rendering libraries a prerequisite; if `matplotlib` or an
+  image preview is unavailable, fall back to numeric entity inspection.
+- Write the required JSON outputs and the repaired DXF incrementally as each
+  section is established. Preserve partial artifacts when a later step fails so
+  the run is resumable.
+- A missing optional image, a missing plotting package, or a path typo is an
+  environment issue. Do not spend repeated calls installing packages,
+  re-rendering previews, or searching unrelated directories; record the
+  limitation and continue with the authoritative DXF.
+
 ## Plan-View Checks
 
 - Door clear opening: compare the submitted clear width against the minimum in the rules file, commonly 32 inches.
@@ -65,6 +83,7 @@ Use the element id that matches the failed requirement's scope:
 - If none applies, do not re-run. Change the action instead: edit the failing geometry or input, narrow the check, or inspect the failing element. If that is not possible, stop and report the blocking rule.
 - A run with unchanged arguments, inputs, and payload is not new evidence. A near-identical failure on the same rule, such as a 90%-similar payload, is a repeat regardless of how it is worded.
 - Change only what the failing rule requires; preserve unrelated walls, fixtures, and clearances.
+- Missing optional images or plotting libraries never justify a geometry edit or a long environment-repair detour.
 - Do not let a passing run erase the failing rules recorded from earlier runs.
 
 ## Verification

@@ -1,0 +1,753 @@
+{
+  "accuracy": {
+    "absolute_lift": 0.857143,
+    "baseline_efficiency_failures": 0,
+    "baseline_outcome_pass_rate": 0.142857,
+    "baseline_outcome_passes": 1,
+    "baseline_pass_rate": 0.142857,
+    "baseline_passes": 1,
+    "baseline_wilson_95": [
+      0.02568,
+      0.513128
+    ],
+    "discordant_exact_p": 0.03125,
+    "lifts": 6,
+    "regressions": 0,
+    "treatment_efficiency_failures": 0,
+    "treatment_outcome_pass_rate": 1.0,
+    "treatment_outcome_passes": 7,
+    "treatment_pass_rate": 1.0,
+    "treatment_passes": 7,
+    "treatment_wilson_95": [
+      0.64567,
+      1.0
+    ],
+    "unchanged": 1
+  },
+  "benchmark": "skillsbench@1.1",
+  "budgets": {
+    "cost_usd": 2.0,
+    "exceeded_outcome": "efficiency_failure",
+    "schema_version": 1,
+    "tool_calls": 120,
+    "wall_seconds": 900
+  },
+  "cohort": "heldout-v6-round3",
+  "efficiency": {
+    "baseline_agent_seconds": 450.0,
+    "baseline_efficiency_failures": 0,
+    "baseline_tool_calls": 160,
+    "budget_policy": "strict-wall-tool-cost-budget-v1",
+    "efficiency_failure_rate": 0.0,
+    "mean_agent_seconds_delta": 12.857143,
+    "mean_tool_call_delta": 3.0,
+    "treatment_agent_seconds": 540.0,
+    "treatment_efficiency_failures": 0,
+    "treatment_tool_calls": 181
+  },
+  "gap_count": 6,
+  "gaps": [
+    {
+      "code": "efficiency_regression",
+      "evidence": {
+        "additional_calls": 82,
+        "baseline_tool_calls": 33,
+        "treatment_tool_calls": 115
+      },
+      "next_action": "Quality is preserved but cost regressed. Do not promote for this task until the skill removes over-verification or the router abstains.",
+      "severity": "efficiency",
+      "task_id": "pdf-excel-diff",
+      "trial": 1
+    },
+    {
+      "code": "execution_evidence_reported",
+      "evidence": {
+        "claim": "reported-executable-leverage",
+        "reported": [
+          "scripts/export_part_meshes.mjs"
+        ],
+        "tool_call_reduction": 15
+      },
+      "next_action": "Preserve tool-call command input in the ACP export; execution is currently self-reported rather than observed. Keep the observed output and exit status.",
+      "severity": "instrumentation-weak",
+      "task_id": "threejs-structure-parser",
+      "trial": 1
+    },
+    {
+      "code": "execution_evidence_missing",
+      "evidence": {
+        "claim": "opened-only",
+        "resources": {
+          "discovered": [
+            "SKILL.md",
+            "references/native-producer-contract.md",
+            "scripts/fixtures"
+          ],
+          "executed": [],
+          "opened": [
+            "SKILL.md",
+            "references/native-producer-contract.md",
+            "scripts/fixtures"
+          ],
+          "reported": [],
+          "reported_succeeded": [],
+          "succeeded": []
+        },
+        "tool_call_reduction": 5
+      },
+      "next_action": "The treatment passed and reduced calls, but ACP did not retain command input. Preserve tool-call inputs; do not treat this as missing skill execution.",
+      "severity": "instrumentation-weak",
+      "task_id": "threejs-structure-parser",
+      "trial": 3
+    },
+    {
+      "code": "execution_evidence_reported",
+      "evidence": {
+        "claim": "reported-executable-leverage",
+        "reported": [
+          "scripts/check_part_meshes.mjs",
+          "scripts/export_part_meshes.mjs"
+        ],
+        "tool_call_reduction": 4
+      },
+      "next_action": "Preserve tool-call command input in the ACP export; execution is currently self-reported rather than observed. Keep the observed output and exit status.",
+      "severity": "instrumentation-weak",
+      "task_id": "threejs-structure-parser",
+      "trial": 4
+    },
+    {
+      "code": "execution_evidence_reported",
+      "evidence": {
+        "claim": "reported-executable-leverage",
+        "reported": [
+          "scripts/check_part_meshes.mjs",
+          "scripts/export_part_meshes.mjs"
+        ],
+        "tool_call_reduction": 22
+      },
+      "next_action": "Preserve tool-call command input in the ACP export; execution is currently self-reported rather than observed. Keep the observed output and exit status.",
+      "severity": "instrumentation-weak",
+      "task_id": "threejs-structure-parser",
+      "trial": 5
+    },
+    {
+      "code": "execution_evidence_missing",
+      "evidence": {
+        "claim": "opened-only",
+        "resources": {
+          "discovered": [
+            "SKILL.md",
+            "references/native-producer-contract.md",
+            "references/verification-contract.md",
+            "scripts/check_native_scene.mjs",
+            "scripts/export_scene_meshes.mjs",
+            "scripts/export_threejs_scene.mjs",
+            "scripts/fixtures/displace",
+            "scripts/fixtures/native-scene.mjs",
+            "scripts/fixtures/native_scene_displaced.mjs",
+            "scripts/fixtures/native_shape_distorted_ref.json"
+          ],
+          "executed": [],
+          "opened": [
+            "SKILL.md",
+            "references/native-producer-contract.md",
+            "references/verification-contract.md",
+            "scripts/check_native_scene.mjs",
+            "scripts/export_scene_meshes.mjs",
+            "scripts/export_threejs_scene.mjs",
+            "scripts/fixtures/displace",
+            "scripts/fixtures/native-scene.mjs",
+            "scripts/fixtures/native_scene_displaced.mjs",
+            "scripts/fixtures/native_shape_distorted_ref.json"
+          ],
+          "reported": [],
+          "reported_succeeded": [],
+          "succeeded": []
+        },
+        "tool_call_reduction": 6
+      },
+      "next_action": "The treatment passed and reduced calls, but ACP did not retain command input. Preserve tool-call inputs; do not treat this as missing skill execution.",
+      "severity": "instrumentation-weak",
+      "task_id": "threejs-structure-parser",
+      "trial": 6
+    }
+  ],
+  "gaps_by_code": {
+    "efficiency_regression": 1,
+    "execution_evidence_missing": 2,
+    "execution_evidence_reported": 3
+  },
+  "instrumentation_gaps": 0,
+  "next_round_blocked_by": [],
+  "paired_report": {
+    "accuracy": {
+      "absolute_lift": 0.857143,
+      "baseline_efficiency_failures": 0,
+      "baseline_outcome_pass_rate": 0.142857,
+      "baseline_outcome_passes": 1,
+      "baseline_pass_rate": 0.142857,
+      "baseline_passes": 1,
+      "baseline_wilson_95": [
+        0.02568,
+        0.513128
+      ],
+      "discordant_exact_p": 0.03125,
+      "lifts": 6,
+      "regressions": 0,
+      "treatment_efficiency_failures": 0,
+      "treatment_outcome_pass_rate": 1.0,
+      "treatment_outcome_passes": 7,
+      "treatment_pass_rate": 1.0,
+      "treatment_passes": 7,
+      "treatment_wilson_95": [
+        0.64567,
+        1.0
+      ],
+      "unchanged": 1
+    },
+    "baseline_jobs": [
+      "workspace/skillbench/heldout-v4-round2-20261109/threejs-baseline-r2",
+      "workspace/skillbench/heldout-v6-round3/threejs-base-2",
+      "workspace/skillbench/heldout-v6-round3/threejs-base-3",
+      "workspace/skillbench/heldout-v6-round3/threejs-base-4",
+      "workspace/skillbench/heldout-v6-round3/threejs-base-5",
+      "workspace/skillbench/heldout-v6-round3/threejs-base-6",
+      "workspace/skillbench/heldout-v6-round3/pdf-base"
+    ],
+    "benchmark": "skillsbench@1.1",
+    "budgets": {
+      "cost_usd": 2.0,
+      "exceeded_outcome": "efficiency_failure",
+      "schema_version": 1,
+      "tool_calls": 120,
+      "wall_seconds": 900
+    },
+    "by_domain": {
+      "3d-code-understanding": {
+        "baseline_pass_rate": 0.0,
+        "lifts": 6,
+        "regressions": 0,
+        "tasks": 6,
+        "treatment_pass_rate": 1.0
+      },
+      "cross-format-data-validation": {
+        "baseline_pass_rate": 1.0,
+        "lifts": 0,
+        "regressions": 0,
+        "tasks": 1,
+        "treatment_pass_rate": 1.0
+      }
+    },
+    "cohort": "heldout-v6-round3",
+    "coverage": {
+      "domains": 2,
+      "tasks_by_domain": {
+        "3d-code-understanding": 6,
+        "cross-format-data-validation": 1
+      }
+    },
+    "efficiency": {
+      "baseline_agent_seconds": 450.0,
+      "baseline_efficiency_failures": 0,
+      "baseline_tool_calls": 160,
+      "budget_policy": "strict-wall-tool-cost-budget-v1",
+      "efficiency_failure_rate": 0.0,
+      "mean_agent_seconds_delta": 12.857143,
+      "mean_tool_call_delta": 3.0,
+      "treatment_agent_seconds": 540.0,
+      "treatment_efficiency_failures": 0,
+      "treatment_tool_calls": 181
+    },
+    "excluded_contaminated": [],
+    "excluded_unpaired": {},
+    "paired_tasks": 7,
+    "reward": {
+      "baseline_mean": 0.142857,
+      "improvements": 6,
+      "mean_delta": 0.857143,
+      "regressions": 0,
+      "treatment_mean": 1.0
+    },
+    "schema_version": 1,
+    "tasks": [
+      {
+        "agent_seconds_delta": 270.0,
+        "baseline_agent_seconds": 90.0,
+        "baseline_budget": {
+          "cost_available": false,
+          "limits": {
+            "cost_usd": 2.0,
+            "tool_calls": 120.0,
+            "wall_seconds": 900.0
+          },
+          "observed": {
+            "cost_usd": null,
+            "tool_calls": 33.0,
+            "wall_seconds": 90.0
+          },
+          "outcome": "passed",
+          "policy": "strict-wall-tool-cost-budget-v1",
+          "schema_version": 1,
+          "violations": [],
+          "within_budget": true
+        },
+        "baseline_outcome": "passed",
+        "baseline_passed": true,
+        "baseline_reward": 1.0,
+        "baseline_tool_calls": 33,
+        "domain": "cross-format-data-validation",
+        "pass_delta": 0,
+        "reward_delta": 0.0,
+        "task_id": "pdf-excel-diff",
+        "tool_call_delta": 82,
+        "treatment_agent_seconds": 360.0,
+        "treatment_budget": {
+          "cost_available": false,
+          "limits": {
+            "cost_usd": 2.0,
+            "tool_calls": 120.0,
+            "wall_seconds": 900.0
+          },
+          "observed": {
+            "cost_usd": null,
+            "tool_calls": 115.0,
+            "wall_seconds": 360.0
+          },
+          "outcome": "passed",
+          "policy": "strict-wall-tool-cost-budget-v1",
+          "schema_version": 1,
+          "violations": [],
+          "within_budget": true
+        },
+        "treatment_outcome": "passed",
+        "treatment_passed": true,
+        "treatment_reward": 1.0,
+        "treatment_tool_calls": 115,
+        "trial": 1
+      },
+      {
+        "agent_seconds_delta": -30.0,
+        "baseline_agent_seconds": 60.0,
+        "baseline_budget": {
+          "cost_available": false,
+          "limits": {
+            "cost_usd": 2.0,
+            "tool_calls": 120.0,
+            "wall_seconds": 900.0
+          },
+          "observed": {
+            "cost_usd": null,
+            "tool_calls": 26.0,
+            "wall_seconds": 60.0
+          },
+          "outcome": "failed",
+          "policy": "strict-wall-tool-cost-budget-v1",
+          "schema_version": 1,
+          "violations": [],
+          "within_budget": true
+        },
+        "baseline_outcome": "failed",
+        "baseline_passed": false,
+        "baseline_reward": 0.0,
+        "baseline_tool_calls": 26,
+        "domain": "3d-code-understanding",
+        "pass_delta": 1,
+        "reward_delta": 1.0,
+        "task_id": "threejs-structure-parser",
+        "tool_call_delta": -15,
+        "treatment_agent_seconds": 30.0,
+        "treatment_budget": {
+          "cost_available": false,
+          "limits": {
+            "cost_usd": 2.0,
+            "tool_calls": 120.0,
+            "wall_seconds": 900.0
+          },
+          "observed": {
+            "cost_usd": null,
+            "tool_calls": 11.0,
+            "wall_seconds": 30.0
+          },
+          "outcome": "passed",
+          "policy": "strict-wall-tool-cost-budget-v1",
+          "schema_version": 1,
+          "violations": [],
+          "within_budget": true
+        },
+        "treatment_outcome": "passed",
+        "treatment_passed": true,
+        "treatment_reward": 1.0,
+        "treatment_tool_calls": 11,
+        "trial": 1
+      },
+      {
+        "agent_seconds_delta": -30.0,
+        "baseline_agent_seconds": 60.0,
+        "baseline_budget": {
+          "cost_available": false,
+          "limits": {
+            "cost_usd": 2.0,
+            "tool_calls": 120.0,
+            "wall_seconds": 900.0
+          },
+          "observed": {
+            "cost_usd": null,
+            "tool_calls": 17.0,
+            "wall_seconds": 60.0
+          },
+          "outcome": "failed",
+          "policy": "strict-wall-tool-cost-budget-v1",
+          "schema_version": 1,
+          "violations": [],
+          "within_budget": true
+        },
+        "baseline_outcome": "failed",
+        "baseline_passed": false,
+        "baseline_reward": 0.0,
+        "baseline_tool_calls": 17,
+        "domain": "3d-code-understanding",
+        "pass_delta": 1,
+        "reward_delta": 1.0,
+        "task_id": "threejs-structure-parser",
+        "tool_call_delta": -9,
+        "treatment_agent_seconds": 30.0,
+        "treatment_budget": {
+          "cost_available": false,
+          "limits": {
+            "cost_usd": 2.0,
+            "tool_calls": 120.0,
+            "wall_seconds": 900.0
+          },
+          "observed": {
+            "cost_usd": null,
+            "tool_calls": 8.0,
+            "wall_seconds": 30.0
+          },
+          "outcome": "passed",
+          "policy": "strict-wall-tool-cost-budget-v1",
+          "schema_version": 1,
+          "violations": [],
+          "within_budget": true
+        },
+        "treatment_outcome": "passed",
+        "treatment_passed": true,
+        "treatment_reward": 1.0,
+        "treatment_tool_calls": 8,
+        "trial": 2
+      },
+      {
+        "agent_seconds_delta": 0.0,
+        "baseline_agent_seconds": 30.0,
+        "baseline_budget": {
+          "cost_available": false,
+          "limits": {
+            "cost_usd": 2.0,
+            "tool_calls": 120.0,
+            "wall_seconds": 900.0
+          },
+          "observed": {
+            "cost_usd": null,
+            "tool_calls": 14.0,
+            "wall_seconds": 30.0
+          },
+          "outcome": "failed",
+          "policy": "strict-wall-tool-cost-budget-v1",
+          "schema_version": 1,
+          "violations": [],
+          "within_budget": true
+        },
+        "baseline_outcome": "failed",
+        "baseline_passed": false,
+        "baseline_reward": 0.0,
+        "baseline_tool_calls": 14,
+        "domain": "3d-code-understanding",
+        "pass_delta": 1,
+        "reward_delta": 1.0,
+        "task_id": "threejs-structure-parser",
+        "tool_call_delta": -5,
+        "treatment_agent_seconds": 30.0,
+        "treatment_budget": {
+          "cost_available": false,
+          "limits": {
+            "cost_usd": 2.0,
+            "tool_calls": 120.0,
+            "wall_seconds": 900.0
+          },
+          "observed": {
+            "cost_usd": null,
+            "tool_calls": 9.0,
+            "wall_seconds": 30.0
+          },
+          "outcome": "passed",
+          "policy": "strict-wall-tool-cost-budget-v1",
+          "schema_version": 1,
+          "violations": [],
+          "within_budget": true
+        },
+        "treatment_outcome": "passed",
+        "treatment_passed": true,
+        "treatment_reward": 1.0,
+        "treatment_tool_calls": 9,
+        "trial": 3
+      },
+      {
+        "agent_seconds_delta": -30.0,
+        "baseline_agent_seconds": 60.0,
+        "baseline_budget": {
+          "cost_available": false,
+          "limits": {
+            "cost_usd": 2.0,
+            "tool_calls": 120.0,
+            "wall_seconds": 900.0
+          },
+          "observed": {
+            "cost_usd": null,
+            "tool_calls": 17.0,
+            "wall_seconds": 60.0
+          },
+          "outcome": "failed",
+          "policy": "strict-wall-tool-cost-budget-v1",
+          "schema_version": 1,
+          "violations": [],
+          "within_budget": true
+        },
+        "baseline_outcome": "failed",
+        "baseline_passed": false,
+        "baseline_reward": 0.0,
+        "baseline_tool_calls": 17,
+        "domain": "3d-code-understanding",
+        "pass_delta": 1,
+        "reward_delta": 1.0,
+        "task_id": "threejs-structure-parser",
+        "tool_call_delta": -4,
+        "treatment_agent_seconds": 30.0,
+        "treatment_budget": {
+          "cost_available": false,
+          "limits": {
+            "cost_usd": 2.0,
+            "tool_calls": 120.0,
+            "wall_seconds": 900.0
+          },
+          "observed": {
+            "cost_usd": null,
+            "tool_calls": 13.0,
+            "wall_seconds": 30.0
+          },
+          "outcome": "passed",
+          "policy": "strict-wall-tool-cost-budget-v1",
+          "schema_version": 1,
+          "violations": [],
+          "within_budget": true
+        },
+        "treatment_outcome": "passed",
+        "treatment_passed": true,
+        "treatment_reward": 1.0,
+        "treatment_tool_calls": 13,
+        "trial": 4
+      },
+      {
+        "agent_seconds_delta": -60.0,
+        "baseline_agent_seconds": 90.0,
+        "baseline_budget": {
+          "cost_available": false,
+          "limits": {
+            "cost_usd": 2.0,
+            "tool_calls": 120.0,
+            "wall_seconds": 900.0
+          },
+          "observed": {
+            "cost_usd": null,
+            "tool_calls": 36.0,
+            "wall_seconds": 90.0
+          },
+          "outcome": "failed",
+          "policy": "strict-wall-tool-cost-budget-v1",
+          "schema_version": 1,
+          "violations": [],
+          "within_budget": true
+        },
+        "baseline_outcome": "failed",
+        "baseline_passed": false,
+        "baseline_reward": 0.0,
+        "baseline_tool_calls": 36,
+        "domain": "3d-code-understanding",
+        "pass_delta": 1,
+        "reward_delta": 1.0,
+        "task_id": "threejs-structure-parser",
+        "tool_call_delta": -22,
+        "treatment_agent_seconds": 30.0,
+        "treatment_budget": {
+          "cost_available": false,
+          "limits": {
+            "cost_usd": 2.0,
+            "tool_calls": 120.0,
+            "wall_seconds": 900.0
+          },
+          "observed": {
+            "cost_usd": null,
+            "tool_calls": 14.0,
+            "wall_seconds": 30.0
+          },
+          "outcome": "passed",
+          "policy": "strict-wall-tool-cost-budget-v1",
+          "schema_version": 1,
+          "violations": [],
+          "within_budget": true
+        },
+        "treatment_outcome": "passed",
+        "treatment_passed": true,
+        "treatment_reward": 1.0,
+        "treatment_tool_calls": 14,
+        "trial": 5
+      },
+      {
+        "agent_seconds_delta": -30.0,
+        "baseline_agent_seconds": 60.0,
+        "baseline_budget": {
+          "cost_available": false,
+          "limits": {
+            "cost_usd": 2.0,
+            "tool_calls": 120.0,
+            "wall_seconds": 900.0
+          },
+          "observed": {
+            "cost_usd": null,
+            "tool_calls": 17.0,
+            "wall_seconds": 60.0
+          },
+          "outcome": "failed",
+          "policy": "strict-wall-tool-cost-budget-v1",
+          "schema_version": 1,
+          "violations": [],
+          "within_budget": true
+        },
+        "baseline_outcome": "failed",
+        "baseline_passed": false,
+        "baseline_reward": 0.0,
+        "baseline_tool_calls": 17,
+        "domain": "3d-code-understanding",
+        "pass_delta": 1,
+        "reward_delta": 1.0,
+        "task_id": "threejs-structure-parser",
+        "tool_call_delta": -6,
+        "treatment_agent_seconds": 30.0,
+        "treatment_budget": {
+          "cost_available": false,
+          "limits": {
+            "cost_usd": 2.0,
+            "tool_calls": 120.0,
+            "wall_seconds": 900.0
+          },
+          "observed": {
+            "cost_usd": null,
+            "tool_calls": 11.0,
+            "wall_seconds": 30.0
+          },
+          "outcome": "passed",
+          "policy": "strict-wall-tool-cost-budget-v1",
+          "schema_version": 1,
+          "violations": [],
+          "within_budget": true
+        },
+        "treatment_outcome": "passed",
+        "treatment_passed": true,
+        "treatment_reward": 1.0,
+        "treatment_tool_calls": 11,
+        "trial": 6
+      }
+    ],
+    "treatment_exposure": "selective-read",
+    "treatment_jobs": [
+      "workspace/skillbench/heldout-v4-round2-20261109/threejs-treatment-r2",
+      "workspace/skillbench/heldout-v6-round3/threejs-treat-2",
+      "workspace/skillbench/heldout-v6-round3/threejs-treat-3",
+      "workspace/skillbench/heldout-v6-round3/threejs-treat-4",
+      "workspace/skillbench/heldout-v6-round3/threejs-treat-5",
+      "workspace/skillbench/heldout-v6-round3/threejs-treat-6",
+      "workspace/skillbench/heldout-v6-round3/pdf-treat"
+    ]
+  },
+  "paired_tasks": 7,
+  "ready_for_next_round": true,
+  "round_id": "v6-round3",
+  "schema_version": 1,
+  "trials": [
+    {
+      "activated": true,
+      "baseline_outcome": "passed",
+      "expected_activation": true,
+      "leverage_claim": "opened-only",
+      "task_id": "pdf-excel-diff",
+      "treatment_outcome": "passed",
+      "treatment_path": "workspace/skillbench/heldout-v6-round3/pdf-treat/2026-11-09__09-45-03/pdf-excel-diff__1e7a4b99",
+      "trial": 1,
+      "valid": true
+    },
+    {
+      "activated": true,
+      "baseline_outcome": "failed",
+      "expected_activation": false,
+      "leverage_claim": "reported-executable-leverage",
+      "task_id": "threejs-structure-parser",
+      "treatment_outcome": "passed",
+      "treatment_path": "workspace/skillbench/heldout-v4-round2-20261109/threejs-treatment-r2/2026-11-09__09-09-14/threejs-structure-parser__1ec4697c",
+      "trial": 1,
+      "valid": true
+    },
+    {
+      "activated": true,
+      "baseline_outcome": "failed",
+      "expected_activation": false,
+      "leverage_claim": "methodology-leverage",
+      "task_id": "threejs-structure-parser",
+      "treatment_outcome": "passed",
+      "treatment_path": "workspace/skillbench/heldout-v6-round3/threejs-treat-2/2026-11-09__09-41-38/threejs-structure-parser__d955abbc",
+      "trial": 2,
+      "valid": true
+    },
+    {
+      "activated": true,
+      "baseline_outcome": "failed",
+      "expected_activation": false,
+      "leverage_claim": "opened-only",
+      "task_id": "threejs-structure-parser",
+      "treatment_outcome": "passed",
+      "treatment_path": "workspace/skillbench/heldout-v6-round3/threejs-treat-3/2026-11-09__09-43-22/threejs-structure-parser__c9f8f223",
+      "trial": 3,
+      "valid": true
+    },
+    {
+      "activated": true,
+      "baseline_outcome": "failed",
+      "expected_activation": false,
+      "leverage_claim": "reported-executable-leverage",
+      "task_id": "threejs-structure-parser",
+      "treatment_outcome": "passed",
+      "treatment_path": "workspace/skillbench/heldout-v6-round3/threejs-treat-4/2026-11-09__09-47-09/threejs-structure-parser__550b5dba",
+      "trial": 4,
+      "valid": true
+    },
+    {
+      "activated": true,
+      "baseline_outcome": "failed",
+      "expected_activation": false,
+      "leverage_claim": "reported-executable-leverage",
+      "task_id": "threejs-structure-parser",
+      "treatment_outcome": "passed",
+      "treatment_path": "workspace/skillbench/heldout-v6-round3/threejs-treat-5/2026-11-09__09-49-22/threejs-structure-parser__84a0aab1",
+      "trial": 5,
+      "valid": true
+    },
+    {
+      "activated": true,
+      "baseline_outcome": "failed",
+      "expected_activation": false,
+      "leverage_claim": "opened-only",
+      "task_id": "threejs-structure-parser",
+      "treatment_outcome": "passed",
+      "treatment_path": "workspace/skillbench/heldout-v6-round3/threejs-treat-6/2026-11-09__09-51-40/threejs-structure-parser__0a08ac04",
+      "trial": 6,
+      "valid": true
+    }
+  ]
+}

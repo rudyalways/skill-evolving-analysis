@@ -1,6 +1,6 @@
 ---
 name: threejs-source-mesh-export
-description: One-command end-to-end exporter for a native .js/.mjs module exposing createScene(): directly import or execute the module, call scene.updateMatrixWorld(true), export the returned mesh's native geometry.attributes.position and geometry.index buffers through documented toNonIndexed/OBJExporter semantics, and preserve full round-trip numeric precision. The export must be followed by an executed independent world-space preflight that verifies the Blender Z-up -90 degree X rotation and every vertex against a source-derived reconstruction, rejecting manifest-only, count-only, and self-referential results. Use for Three.js modules, createScene, native geometry buffers, indexed meshes, assemblies, parts, links, part/link trees, wheels/rims, unit conversion, scene-root or part-local placement, up-axis transfer, single-OBJ export, one-command end-to-end producer runs, pre-submission checks, wrongly framed exports, missing preflight, and unverifiable without an independent reference.
+description: One-command end-to-end exporter for a native .js/.mjs module exposing createScene(): directly import or execute the module, call scene.updateMatrixWorld(true), export the returned mesh's native geometry.attributes.position and geometry.index buffers through documented toNonIndexed/OBJExporter semantics, and preserve full round-trip numeric precision. The export must be followed by an executed independent world-space preflight that verifies every vertex against a source-derived reconstruction in the task-declared frame (native source coordinates by default; Blender Z-up -90 degree X only when the task explicitly requires it), rejecting manifest-only, count-only, and self-referential results. Use for Three.js modules, createScene, native geometry buffers, indexed meshes, assemblies, parts, links, part/link trees, wheels/rims, unit conversion, scene-root or part-local placement, up-axis transfer, single-OBJ export, one-command end-to-end producer runs, pre-submission checks, wrongly framed exports, missing preflight, and unverifiable without an independent reference.
 ---
 
 # Three.js source mesh export
@@ -39,9 +39,11 @@ export to OBJ, or when an OBJ artifact must preserve that scene's native
 output, part and link meshes, sibling part groups, assembly parts, wheels and
 rims, unit conversion, and scene-root versus part-local placement.
 
-Use it for a one-command end-to-end producer run over the native module, and
-when the export must land in Blender Z-up through a -90 degree X rotation.
-Execute the source module through `scripts/export-scene.mjs`; do not require a
+Use it for a one-command end-to-end producer run over the native module. Choose
+the producer by the requested artifact shape: `scripts/export_part_meshes.mjs`
+for a `part_meshes`/`links` tree, otherwise `scripts/export-scene.mjs`. Apply
+the Blender Z-up -90 degree X transfer only when the task explicitly requires
+Blender Z-up; otherwise preserve native source coordinates. Do not require a
 separate normalized scene, geometry dump, or manifest before execution.
 
 Use it also when a required `part_meshes` tree must contain one directory per
@@ -69,15 +71,27 @@ Do not derive the expected surface from the producer exporter.
 
 ## Workflow
 
-1. Confirm only the native `.js` or `.mjs` module path and the requested OBJ
-   output path or directory; add an optional simple OBJ name only when needed.
+1. Confirm only the native `.js` or `.mjs` module path, the requested artifact
+   shape, and the task-visible frame contract. Read the prompt for an explicit
+   Blender/Z-up/rotation requirement; native source coordinates are the default.
    Then immediately run the documented one-command end-to-end producer. Do not
    inspect the scene, write a normalized intermediate, invoke a checker, probe
    transforms, or test file presence first.
 
+   For a requested `part_meshes`/`links` tree:
+
+   ```bash
+   node scripts/export_part_meshes.mjs --module <scene.js|scene.mjs> \
+     --out <artifact-root>
+   ```
+
+   For a single OBJ (pass `--frame blender-z-up` only when the task explicitly
+   requires it):
+
    ```bash
    node scripts/export-scene.mjs --module <scene.js|scene.mjs> \
-     --out <artifact.obj|artifact-directory> [--name scene.obj]
+     --out <artifact.obj|artifact-directory> [--name scene.obj] \
+     [--frame native|blender-z-up]
    ```
 
 2. That command is the production path. It directly imports or executes the
@@ -89,8 +103,10 @@ Do not derive the expected surface from the producer exporter.
    intermediate and no manifest prerequisite.
 
 3. Export with explicit world-space and target-serializer semantics. For each
-   mesh, apply its `matrixWorld` once, then apply the Blender Z-up -90 degree X
-   frame transfer once. When an index exists, clone and triangle-expand it with
+   mesh, apply its `matrixWorld` once, then apply the task-declared frame once:
+   no axis transfer for native coordinates, or the Blender Z-up -90 degree X
+   transfer only when the task explicitly requires it. Never apply a frame the
+   task did not request. When an index exists, clone and triangle-expand it with
    `toNonIndexed()` or byte-equivalent expansion before face traversal. Document
    and verify `toNonIndexed`/`OBJExporter` behavior for index expansion, source
    triangle and vertex order, one-based references, normals, UVs, and transform
@@ -99,22 +115,24 @@ Do not derive the expected surface from the producer exporter.
    the written OBJ and compare it with those values. The producer writes the
    requested OBJ and a `manifest.json` run record; the record is evidence only.
 
-4. Before submission, run the independent frame and position preflight as a
-   separate executed step:
+4. Before submission, run the independent position preflight as a separate
+   executed step. For a part/link tree use `scripts/check_part_meshes.mjs
+   --module <scene.js|scene.mjs> --root <artifact-root>`. For a single OBJ use:
 
    ```bash
    node scripts/check-export.mjs --module <scene.js|scene.mjs> \
-     --artifact <artifact.obj> [--tolerance <task-tolerance>] [--json <check.json>]
+     --artifact <artifact.obj> [--tolerance <task-tolerance>] \
+     [--frame native|blender-z-up] [--json <check.json>]
    ```
 
    It reloads the module, calls `createScene()`, calls
    `scene.updateMatrixWorld(true)`, and reconstructs source world-space positions
-   through its own code. It applies the -90 degree X Blender Z-up transfer and
-   compares every exported vertex at the task-derived tolerance, reporting the
-   as-exported and rotated comparisons, frame, maximum position delta, source
-   and output bounds, round-trip precision, and failing vertex indices. A clean
-   manifest, matching counts, or producer/reference-exporter agreement is not a
-   substitute for this executed check.
+   through its own code. It compares every exported vertex at the task-derived
+   tolerance in the task-declared frame, reporting the compared frame, maximum
+   position delta, source and output bounds, round-trip precision, and failing
+   vertex indices. A clean manifest, matching counts, or
+   producer/reference-exporter agreement is not a substitute for this executed
+   check.
 
 5. Only a concrete producer failure permits a different production path. Read
    the structured producer error first. Then take at most one bounded action:
@@ -181,10 +199,13 @@ is the matching-count, clean-manifest, wrongly framed near-miss.
   mesh or instance, source face and vertex order, one-based references, the
   original triangle winding, and explicit handling of normals and UVs. Do not
   reorder, merge, split, or rewind faces.
-- Apply the Blender Z-up frame transfer exactly once, after the applied
-  `matrixWorld`: -90 degrees about X, mapping `(x, y, z)` to `(x, z, -y)`, with
-  the same rotation applied to normals. Do not omit it, apply it twice, or
-  accept a self-consistent export in another frame.
+- Apply only the frame the task declares. Native source coordinates are the
+  default and require no axis transfer. When and only when the task explicitly
+  requires Blender Z-up, apply the -90 degree X transfer exactly once after the
+  applied `matrixWorld`: `(x, y, z)` to `(x, z, -y)`, with the same rotation
+  applied to normals. Do not omit a required transfer, apply it twice, or accept
+  a self-consistent export in another frame. Do not add a transfer the task did
+  not request.
 - Derive part and link mesh names from the source scene Group structure. A part
   directory name equals the source Group name; a link OBJ base name equals a
   part name; a part mesh OBJ base name equals the source Mesh name produced by a
@@ -200,8 +221,9 @@ is the matching-count, clean-manifest, wrongly framed near-miss.
   counts, ad hoc diff output, a hand-authored normalized intermediate scene, or
   producer/reference-exporter agreement as proof of frame correctness or
   positional equivalence.
-- The tolerance and the -90 degree X rotation come from the task-visible
-  contract, not from benchmark-specific constants or producer defaults.
+- The tolerance and frame come from the task-visible contract, not from
+  benchmark-specific constants or producer defaults. No task-visible rotation
+  requirement means native coordinates.
 - Replacement or custom export code requires a recorded structured producer
   error and stops after one bounded fallback pass using the same contract.
   Without that error, do not write an alternative producer, and do not add
@@ -227,24 +249,25 @@ Require one executed independent world-space comparison after production, using
 the separate preflight entry point:
 
 ```bash
+node scripts/check_part_meshes.mjs --module <scene.js|scene.mjs> --root <artifact-root>
 node scripts/check-export.mjs --module <scene.js|scene.mjs> \
-  --artifact <artifact.obj> --tolerance <task-tolerance> --json <check.json>
+  --artifact <artifact.obj> --tolerance <task-tolerance> \
+  [--frame native|blender-z-up] --json <check.json>
 ```
 
 The checker independently calls `createScene()`, calls
 `scene.updateMatrixWorld(true)`, derives every expected vertex from the native
 `geometry.attributes.position` and `geometry.index` buffers and each mesh's
 `matrixWorld`, and expands indexed geometry with the documented `toNonIndexed`
-semantics. It applies the -90 degree X frame transfer across every vertex in its
-own code and compares every exported vertex at the task-derived tolerance in
-both the as-exported and rotated frames.
+semantics. It compares every exported vertex at the task-derived tolerance in
+the task-declared frame; it applies the -90 degree X transfer only when the task
+requires Blender Z-up.
 
 The report must name the compared frame, tolerance, maximum position delta,
 source and output bounding boxes, round-trip precision, and failing vertex
-indices for both comparisons. It must exit nonzero on any frame, position,
-index-expansion, or precision mismatch. A wrong-frame case is attributed to the
-frame, and an as-exported pass with a rotated failure is reported as a missing or
-incorrect -90 degree X rotation rather than accepted.
+indices for the declared comparison. It must exit nonzero on any frame,
+position, index-expansion, or precision mismatch. A wrong-frame case is
+attributed to the frame; an unrequested rotation is a frame mismatch.
 
 Prohibit self-referential expectations: expected values may not be produced by
 the same export code path, a producer-derived reference, a patched reference, or

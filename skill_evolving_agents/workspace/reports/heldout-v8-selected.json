@@ -1,0 +1,468 @@
+{
+  "accuracy": {
+    "absolute_lift": 0.166667,
+    "baseline_efficiency_failures": 0,
+    "baseline_outcome_pass_rate": 0.333333,
+    "baseline_outcome_passes": 2,
+    "baseline_pass_rate": 0.333333,
+    "baseline_passes": 2,
+    "baseline_wilson_95": [
+      0.096771,
+      0.700007
+    ],
+    "discordant_exact_p": 1.0,
+    "lifts": 1,
+    "regressions": 0,
+    "treatment_efficiency_failures": 1,
+    "treatment_outcome_pass_rate": 0.5,
+    "treatment_outcome_passes": 3,
+    "treatment_pass_rate": 0.5,
+    "treatment_passes": 3,
+    "treatment_wilson_95": [
+      0.187616,
+      0.812384
+    ],
+    "unchanged": 5
+  },
+  "baseline_jobs": [
+    "workspace/skillbench/heldout-v8-final2/baseline/weighted-gdp-calc__baseline",
+    "workspace/skillbench/heldout-v8-final2/baseline/sec-financial-report__baseline",
+    "workspace/skillbench/heldout-v8-final2/baseline/protein-expression-analysis__baseline",
+    "workspace/skillbench/heldout-v8-final2/baseline/powerlifting-coef-calc__baseline",
+    "workspace/skillbench/heldout-v8-final2/baseline/financial-modeling-qa__baseline",
+    "workspace/skillbench/heldout-v8-final2/baseline/invoice-fraud-detection__baseline"
+  ],
+  "benchmark": "skillsbench@1.1",
+  "budgets": {
+    "cost_usd": 2.0,
+    "exceeded_outcome": "efficiency_failure",
+    "schema_version": 1,
+    "tool_calls": 120,
+    "wall_seconds": 900
+  },
+  "by_domain": {
+    "bioinformatics-spreadsheet-analysis": {
+      "baseline_pass_rate": 0.0,
+      "lifts": 1,
+      "regressions": 0,
+      "tasks": 1,
+      "treatment_pass_rate": 1.0
+    },
+    "document-cross-source-validation": {
+      "baseline_pass_rate": 1.0,
+      "lifts": 0,
+      "regressions": 0,
+      "tasks": 1,
+      "treatment_pass_rate": 1.0
+    },
+    "financial-game-analysis": {
+      "baseline_pass_rate": 0.0,
+      "lifts": 0,
+      "regressions": 0,
+      "tasks": 1,
+      "treatment_pass_rate": 0.0
+    },
+    "financial-reporting": {
+      "baseline_pass_rate": 0.0,
+      "lifts": 0,
+      "regressions": 0,
+      "tasks": 1,
+      "treatment_pass_rate": 0.0
+    },
+    "quantitative-calculation": {
+      "baseline_pass_rate": 0.5,
+      "lifts": 0,
+      "regressions": 0,
+      "tasks": 2,
+      "treatment_pass_rate": 0.5
+    }
+  },
+  "cohort": "heldout-v8-selected",
+  "coverage": {
+    "domains": 5,
+    "tasks_by_domain": {
+      "bioinformatics-spreadsheet-analysis": 1,
+      "document-cross-source-validation": 1,
+      "financial-game-analysis": 1,
+      "financial-reporting": 1,
+      "quantitative-calculation": 2
+    }
+  },
+  "efficiency": {
+    "baseline_agent_seconds": 1110.0,
+    "baseline_efficiency_failures": 0,
+    "baseline_tool_calls": 287,
+    "budget_policy": "strict-wall-tool-cost-budget-v1",
+    "efficiency_failure_rate": 0.166667,
+    "mean_agent_seconds_delta": 95.016667,
+    "mean_tool_call_delta": 25.666667,
+    "treatment_agent_seconds": 1680.1,
+    "treatment_efficiency_failures": 1,
+    "treatment_tool_calls": 441
+  },
+  "excluded_contaminated": [],
+  "excluded_unpaired": {},
+  "paired_tasks": 6,
+  "reward": {
+    "baseline_mean": 0.333333,
+    "improvements": 1,
+    "mean_delta": 0.166667,
+    "regressions": 0,
+    "treatment_mean": 0.5
+  },
+  "schema_version": 1,
+  "tasks": [
+    {
+      "agent_seconds_delta": -60.0,
+      "baseline_agent_seconds": 120.0,
+      "baseline_budget": {
+        "cost_available": false,
+        "limits": {
+          "cost_usd": 2.0,
+          "tool_calls": 120.0,
+          "wall_seconds": 900.0
+        },
+        "observed": {
+          "cost_usd": null,
+          "tool_calls": 48.0,
+          "wall_seconds": 120.0
+        },
+        "outcome": "failed",
+        "policy": "strict-wall-tool-cost-budget-v1",
+        "schema_version": 1,
+        "violations": [],
+        "within_budget": true
+      },
+      "baseline_outcome": "failed",
+      "baseline_passed": false,
+      "baseline_reward": 0.0,
+      "baseline_tool_calls": 48,
+      "domain": "financial-game-analysis",
+      "pass_delta": 0,
+      "reward_delta": 0.0,
+      "task_id": "financial-modeling-qa",
+      "tool_call_delta": -22,
+      "treatment_agent_seconds": 60.0,
+      "treatment_budget": {
+        "cost_available": false,
+        "limits": {
+          "cost_usd": 2.0,
+          "tool_calls": 120.0,
+          "wall_seconds": 900.0
+        },
+        "observed": {
+          "cost_usd": null,
+          "tool_calls": 26.0,
+          "wall_seconds": 60.0
+        },
+        "outcome": "failed",
+        "policy": "strict-wall-tool-cost-budget-v1",
+        "schema_version": 1,
+        "violations": [],
+        "within_budget": true
+      },
+      "treatment_outcome": "failed",
+      "treatment_passed": false,
+      "treatment_reward": 0.0,
+      "treatment_tool_calls": 26,
+      "trial": 1
+    },
+    {
+      "agent_seconds_delta": 180.0,
+      "baseline_agent_seconds": 60.0,
+      "baseline_budget": {
+        "cost_available": false,
+        "limits": {
+          "cost_usd": 2.0,
+          "tool_calls": 120.0,
+          "wall_seconds": 900.0
+        },
+        "observed": {
+          "cost_usd": null,
+          "tool_calls": 13.0,
+          "wall_seconds": 60.0
+        },
+        "outcome": "passed",
+        "policy": "strict-wall-tool-cost-budget-v1",
+        "schema_version": 1,
+        "violations": [],
+        "within_budget": true
+      },
+      "baseline_outcome": "passed",
+      "baseline_passed": true,
+      "baseline_reward": 1.0,
+      "baseline_tool_calls": 13,
+      "domain": "document-cross-source-validation",
+      "pass_delta": 0,
+      "reward_delta": 0.0,
+      "task_id": "invoice-fraud-detection",
+      "tool_call_delta": 43,
+      "treatment_agent_seconds": 240.0,
+      "treatment_budget": {
+        "cost_available": false,
+        "limits": {
+          "cost_usd": 2.0,
+          "tool_calls": 120.0,
+          "wall_seconds": 900.0
+        },
+        "observed": {
+          "cost_usd": null,
+          "tool_calls": 56.0,
+          "wall_seconds": 240.0
+        },
+        "outcome": "passed",
+        "policy": "strict-wall-tool-cost-budget-v1",
+        "schema_version": 1,
+        "violations": [],
+        "within_budget": true
+      },
+      "treatment_outcome": "passed",
+      "treatment_passed": true,
+      "treatment_reward": 1.0,
+      "treatment_tool_calls": 56,
+      "trial": 1
+    },
+    {
+      "agent_seconds_delta": -120.0,
+      "baseline_agent_seconds": 210.0,
+      "baseline_budget": {
+        "cost_available": false,
+        "limits": {
+          "cost_usd": 2.0,
+          "tool_calls": 120.0,
+          "wall_seconds": 900.0
+        },
+        "observed": {
+          "cost_usd": null,
+          "tool_calls": 25.0,
+          "wall_seconds": 210.0
+        },
+        "outcome": "passed",
+        "policy": "strict-wall-tool-cost-budget-v1",
+        "schema_version": 1,
+        "violations": [],
+        "within_budget": true
+      },
+      "baseline_outcome": "passed",
+      "baseline_passed": true,
+      "baseline_reward": 1.0,
+      "baseline_tool_calls": 25,
+      "domain": "quantitative-calculation",
+      "pass_delta": 0,
+      "reward_delta": 0.0,
+      "task_id": "powerlifting-coef-calc",
+      "tool_call_delta": 1,
+      "treatment_agent_seconds": 90.0,
+      "treatment_budget": {
+        "cost_available": false,
+        "limits": {
+          "cost_usd": 2.0,
+          "tool_calls": 120.0,
+          "wall_seconds": 900.0
+        },
+        "observed": {
+          "cost_usd": null,
+          "tool_calls": 26.0,
+          "wall_seconds": 90.0
+        },
+        "outcome": "passed",
+        "policy": "strict-wall-tool-cost-budget-v1",
+        "schema_version": 1,
+        "violations": [],
+        "within_budget": true
+      },
+      "treatment_outcome": "passed",
+      "treatment_passed": true,
+      "treatment_reward": 1.0,
+      "treatment_tool_calls": 26,
+      "trial": 1
+    },
+    {
+      "agent_seconds_delta": -90.0,
+      "baseline_agent_seconds": 360.0,
+      "baseline_budget": {
+        "cost_available": false,
+        "limits": {
+          "cost_usd": 2.0,
+          "tool_calls": 120.0,
+          "wall_seconds": 900.0
+        },
+        "observed": {
+          "cost_usd": null,
+          "tool_calls": 97.0,
+          "wall_seconds": 360.0
+        },
+        "outcome": "failed",
+        "policy": "strict-wall-tool-cost-budget-v1",
+        "schema_version": 1,
+        "violations": [],
+        "within_budget": true
+      },
+      "baseline_outcome": "failed",
+      "baseline_passed": false,
+      "baseline_reward": 0.0,
+      "baseline_tool_calls": 97,
+      "domain": "bioinformatics-spreadsheet-analysis",
+      "pass_delta": 1,
+      "reward_delta": 1.0,
+      "task_id": "protein-expression-analysis",
+      "tool_call_delta": -20,
+      "treatment_agent_seconds": 270.0,
+      "treatment_budget": {
+        "cost_available": false,
+        "limits": {
+          "cost_usd": 2.0,
+          "tool_calls": 120.0,
+          "wall_seconds": 900.0
+        },
+        "observed": {
+          "cost_usd": null,
+          "tool_calls": 77.0,
+          "wall_seconds": 270.0
+        },
+        "outcome": "passed",
+        "policy": "strict-wall-tool-cost-budget-v1",
+        "schema_version": 1,
+        "violations": [],
+        "within_budget": true
+      },
+      "treatment_outcome": "passed",
+      "treatment_passed": true,
+      "treatment_reward": 1.0,
+      "treatment_tool_calls": 77,
+      "trial": 1
+    },
+    {
+      "agent_seconds_delta": 0.0,
+      "baseline_agent_seconds": 120.0,
+      "baseline_budget": {
+        "cost_available": false,
+        "limits": {
+          "cost_usd": 2.0,
+          "tool_calls": 120.0,
+          "wall_seconds": 900.0
+        },
+        "observed": {
+          "cost_usd": null,
+          "tool_calls": 22.0,
+          "wall_seconds": 120.0
+        },
+        "outcome": "failed",
+        "policy": "strict-wall-tool-cost-budget-v1",
+        "schema_version": 1,
+        "violations": [],
+        "within_budget": true
+      },
+      "baseline_outcome": "failed",
+      "baseline_passed": false,
+      "baseline_reward": 0.0,
+      "baseline_tool_calls": 22,
+      "domain": "financial-reporting",
+      "pass_delta": 0,
+      "reward_delta": 0.0,
+      "task_id": "sec-financial-report",
+      "tool_call_delta": -7,
+      "treatment_agent_seconds": 120.0,
+      "treatment_budget": {
+        "cost_available": false,
+        "limits": {
+          "cost_usd": 2.0,
+          "tool_calls": 120.0,
+          "wall_seconds": 900.0
+        },
+        "observed": {
+          "cost_usd": null,
+          "tool_calls": 15.0,
+          "wall_seconds": 120.0
+        },
+        "outcome": "failed",
+        "policy": "strict-wall-tool-cost-budget-v1",
+        "schema_version": 1,
+        "violations": [],
+        "within_budget": true
+      },
+      "treatment_outcome": "failed",
+      "treatment_passed": false,
+      "treatment_reward": 0.0,
+      "treatment_tool_calls": 15,
+      "trial": 1
+    },
+    {
+      "agent_seconds_delta": 660.1,
+      "baseline_agent_seconds": 240.0,
+      "baseline_budget": {
+        "cost_available": false,
+        "limits": {
+          "cost_usd": 2.0,
+          "tool_calls": 120.0,
+          "wall_seconds": 900.0
+        },
+        "observed": {
+          "cost_usd": null,
+          "tool_calls": 82.0,
+          "wall_seconds": 240.0
+        },
+        "outcome": "failed",
+        "policy": "strict-wall-tool-cost-budget-v1",
+        "schema_version": 1,
+        "violations": [],
+        "within_budget": true
+      },
+      "baseline_outcome": "failed",
+      "baseline_passed": false,
+      "baseline_reward": 0.0,
+      "baseline_tool_calls": 82,
+      "domain": "quantitative-calculation",
+      "pass_delta": 0,
+      "reward_delta": 0.0,
+      "task_id": "weighted-gdp-calc",
+      "tool_call_delta": 159,
+      "treatment_agent_seconds": 900.1,
+      "treatment_budget": {
+        "cost_available": false,
+        "limits": {
+          "cost_usd": 2.0,
+          "tool_calls": 120.0,
+          "wall_seconds": 900.0
+        },
+        "observed": {
+          "cost_usd": null,
+          "tool_calls": 241.0,
+          "wall_seconds": 900.1
+        },
+        "outcome": "efficiency_failure",
+        "policy": "strict-wall-tool-cost-budget-v1",
+        "schema_version": 1,
+        "violations": [
+          {
+            "limit": 900.0,
+            "metric": "wall_seconds",
+            "observed": 900.1,
+            "overage": 0.1
+          },
+          {
+            "limit": 120.0,
+            "metric": "tool_calls",
+            "observed": 241.0,
+            "overage": 121.0
+          }
+        ],
+        "within_budget": false
+      },
+      "treatment_outcome": "efficiency_failure",
+      "treatment_passed": false,
+      "treatment_reward": 0.0,
+      "treatment_tool_calls": 241,
+      "trial": 1
+    }
+  ],
+  "treatment_exposure": "selective-read",
+  "treatment_jobs": [
+    "workspace/skillbench/heldout-v8-final2/treatment/weighted-gdp-calc__treatment",
+    "workspace/skillbench/heldout-v8-final2/treatment/sec-financial-report__treatment",
+    "workspace/skillbench/heldout-v8-final2/treatment/protein-expression-analysis__treatment",
+    "workspace/skillbench/heldout-v8-final2/treatment/powerlifting-coef-calc__treatment",
+    "workspace/skillbench/heldout-v8-final2/treatment/financial-modeling-qa__treatment",
+    "workspace/skillbench/heldout-v8-final2/treatment/invoice-fraud-detection__treatment"
+  ]
+}

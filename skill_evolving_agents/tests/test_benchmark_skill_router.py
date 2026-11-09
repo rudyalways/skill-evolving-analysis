@@ -242,6 +242,8 @@ class BenchmarkSkillRouterTest(unittest.TestCase):
             ]
             self.assertEqual(scoped["observations"], 1)
             self.assertEqual(scoped["mean_reward_delta"], 0.2)
+            # A task-scoped event must not become a global prior.
+            self.assertEqual(calibration["skills"], {})
 
     def test_small_semantic_margin_abstains_without_positive_feedback(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

@@ -324,7 +324,8 @@ python3 skill_evolving_agents/run_pipeline.py run-codex-01a135-73turns
 Continue a stamped run from a failed optimize, from verification after
 optimize saved a skill, or from judge after verification completed. This does
 not repeat preprocessing, labeling, diagnosis, or goal. Accepted operations
-are left as they are. The run id is the stamped directory name:
+are left as they are. The run id is the stamped directory name; the `@` and
+minute stamp are part of the safe run identity:
 
 ```bash
 python3 skill_evolving_agents/run_pipeline.py \
@@ -335,10 +336,25 @@ python3 skill_evolving_agents/run_pipeline.py \
   run-codex-01a135-30turns@2026-10-22T19:32 --from judge
 ```
 
+Omitting `--from` on a stamped run is a safe auto-resume: it continues from the
+earliest saved, unaccepted operation (`optimize`, then `verification`, then
+`judge`). If no operation is resumable, it reports that and exits without
+recreating the run. An explicit `--from auto` is equivalent. Run ids reject
+path separators and invalid timestamps; the resolved directory must remain a
+direct child of `workspace/runs`.
+
 `--from optimize` uses the saved operation goal and reruns optimize, verify,
 and judge. It is limited to operations where optimize did not complete.
 `--from judge` requires a completed verification result. A verification
 timeout has no result to judge, so continue it with `--from verification`.
+
+Runs are also subject to strict wall-time, tool-call, and cost budgets. The
+runtime budget is written to `run/config/runtime-budget.json`; a budget
+exhaustion records `outcome: efficiency_failure` in `run/efficiency-failure.json`
+and in the operation publication instead of being reported as a skill-quality
+failure. The environment overrides are `SKILL_EVOLVER_RUN_BUDGET_SECONDS`,
+`SKILL_EVOLVER_RUN_TOOL_CALL_BUDGET`, and
+`SKILL_EVOLVER_RUN_COST_BUDGET_USD`.
 
 Run with optional semantic clustering. Evolution still defaults to selected
 high-confidence findings:

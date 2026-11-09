@@ -16,8 +16,9 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from services.embedding_api.provider import EmbeddingProvider
-from common import skill_resources
+from services.embedding_api.provider import EmbeddingProvider  # noqa: E402
+from common import skill_resources  # noqa: E402
+from common.task_intent import compatibility as task_intent_compatibility  # noqa: E402
 
 
 DEFAULT_POLICY_PATH = Path(__file__).with_name("router-policy.json")
@@ -76,10 +77,13 @@ def load_feedback_calibration(
         if isinstance(skill, str) and skill:
             version = value.get("skill_hash") or "unversioned"
             versioned = f"{skill}@{version}"
-            grouped.setdefault(versioned, []).append(value)
             task_id = value.get("task_id")
             if isinstance(task_id, str) and task_id:
+                # Task-scoped evidence must not leak into the global prior.
+                # Otherwise one costly task suppresses the skill everywhere.
                 grouped_by_task.setdefault(f"{task_id}|{versioned}", []).append(value)
+            else:
+                grouped.setdefault(versioned, []).append(value)
 
     def summarize(groups: dict[str, list[dict[str, Any]]]) -> dict[str, Any]:
         summaries: dict[str, Any] = {}
@@ -130,31 +134,18 @@ def skill_document(path: Path, max_chars: int) -> str:
 
 
 def intent_compatibility(task: str, skill_text: str) -> tuple[bool, str | None]:
-    """Reject high-similarity candidates whose action intent contradicts the task.
+    """Reject high-similarity candidates whose intent contradicts the task.
 
-    Embeddings correctly connect workbook creation with workbook repair, but a
-    repair-only method is harmful for a clean-slate creation task.  This cheap
-    precision gate is deliberately asymmetric: uncertain cases remain eligible.
+    The gate is offline and generalizes from declared object/action scope, not
+    from task names.  A skill scoped to XML document variants cannot own a
+    single presentation-formatting request merely because both mention titles;
+    a Three.js OBJ exporter still owns a Three.js export request, and a
+    plan-view accessibility method still owns an ADA bathroom repair.
+
+    This cheap precision gate is deliberately asymmetric: uncertain cases
+    remain eligible.
     """
-    task_lower = task.lower()
-    skill_lower = skill_text.lower()
-    creation_terms = ("create ", "build ", "generate ", "produce ", "make a new")
-    repair_terms = (
-        "repair ", "fix ", "recover ", "failing", "failure", "wrong", "broken",
-        "incorrect", "error", "incomplete", "missing data",
-    )
-    repair_only_terms = (
-        "repair failing", "repair a failing", "fix failing", "localizes the failing",
-        "failing assertion", "verifier reports a failing",
-    )
-    clean_creation = (
-        any(term in task_lower for term in creation_terms)
-        and not any(term in task_lower for term in repair_terms)
-    )
-    repair_only = any(term in skill_lower for term in repair_only_terms)
-    if clean_creation and repair_only:
-        return False, "create-vs-repair"
-    return True, None
+    return task_intent_compatibility(task, skill_text)
 
 
 def tree_hash(root: Path) -> str:
@@ -180,6 +171,7 @@ def select_task_skills(
     feedback_calibration: dict[str, Any] | None = None,
     recall_k: int | None = None,
     minimum_margin: float = 0.04,
+    feedback_min_observations: int = 1,
     strategy: str = str(ROUTER_POLICY["strategy"]),
 ) -> dict[str, Any]:
     all_skill_paths = {
@@ -279,6 +271,18 @@ def select_task_skills(
         abstention_reasons: list[str] = []
         if ranked and float(ranked[0]["score"]) < minimum_score:
             abstention_reasons.append("below-minimum-score")
+        top_task_feedback = (
+            ranked[0].get("feedback")
+            if ranked and ranked[0].get("feedback_scope") == "task"
+            else None
+        )
+        calibrated_regression = bool(
+            top_task_feedback
+            and int(top_task_feedback.get("observations") or 0)
+            >= feedback_min_observations
+            and float(top_task_feedback.get("mean_reward_delta") or 0) < 0
+            and float(top_task_feedback.get("regression_rate") or 0) > 0
+        )
         if (
             top_k == 1
             and raw_margin is not None
@@ -287,9 +291,20 @@ def select_task_skills(
         ):
             selected = []
             abstention_reasons.append("insufficient-semantic-margin")
+        if calibrated_regression:
+            # Task-scoped benchmark evidence outranks embedding similarity.
+            # A confirmed regression on this exact task cannot be promoted by a
+            # runner-up candidate; abstain and name the cause even when the
+            # calibrated score already fell below the threshold.
+            selected = []
+            abstention_reasons.append("feedback-regression")
         if selected:
+            # Use the full SKILL.md for intent checks.  The embedding document
+            # is deliberately truncated, but a scope statement such as
+            # "Do not use for non-XML formats" often sits below the truncation.
             compatible, mismatch = intent_compatibility(
-                tasks[task_id], documents[selected[0]["skill"]]
+                tasks[task_id],
+                skill_paths[selected[0]["skill"]].read_text(errors="replace"),
             )
             if not compatible:
                 selected = []
@@ -313,6 +328,7 @@ def select_task_skills(
         "recall_k": recall_k or top_k,
         "minimum_score": minimum_score,
         "minimum_margin": minimum_margin,
+        "feedback_min_observations": feedback_min_observations,
         "document_max_chars": document_max_chars,
         "skills_root": str(skills_root.resolve()),
         "skills_root_hash": tree_hash(skills_root),
@@ -409,6 +425,12 @@ def main() -> None:
     parser.add_argument("--recall-k", type=int, default=int(policy["recall_k"]))
     parser.add_argument("--minimum-score", type=float, default=float(policy["minimum_score"]))
     parser.add_argument("--minimum-margin", type=float, default=float(policy["minimum_margin"]))
+    parser.add_argument(
+        "--feedback-min-observations",
+        type=int,
+        default=int(policy.get("feedback_min_observations", 1)),
+        help="task-scoped observations required before negative feedback abstains",
+    )
     parser.add_argument("--document-max-chars", type=int, default=int(policy["document_max_chars"]))
     parser.add_argument(
         "--feedback-database",
@@ -425,6 +447,8 @@ def main() -> None:
         parser.error("--minimum-score must be 0..1")
     if not 0 <= args.minimum_margin <= 1:
         parser.error("--minimum-margin must be 0..1")
+    if args.feedback_min_observations < 1:
+        parser.error("--feedback-min-observations must be at least 1")
     tasks = parse_tasks(args.task)
     feedback_calibration = load_feedback_calibration(
         args.feedback_database,
@@ -446,6 +470,7 @@ def main() -> None:
         "feedback_calibration": feedback_calibration,
         "recall_k": args.recall_k,
         "minimum_margin": args.minimum_margin,
+        "feedback_min_observations": args.feedback_min_observations,
         "strategy": str(policy["strategy"]),
     }
     try:

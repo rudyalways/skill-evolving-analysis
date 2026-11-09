@@ -7,12 +7,48 @@ import argparse
 import hashlib
 import json
 import math
+import sys
 from collections import Counter, defaultdict
 from pathlib import Path
 from statistics import fmean
 from typing import Any
 
-from evaluation.benchmark_trial_validity import audit as audit_trial_validity
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from common.execution_budget import evaluate as evaluate_budget  # noqa: E402
+from evaluation.benchmark_trial_validity import audit as audit_trial_validity  # noqa: E402
+
+DEFAULT_BUDGET_PATH = Path(__file__).with_name("trial-budgets.json")
+
+
+def load_budgets(path: Path | None = None) -> dict[str, Any]:
+    source = path or DEFAULT_BUDGET_PATH
+    if not source.is_file():
+        return {}
+    return json.loads(source.read_text())
+
+
+def _trial_usage(path: Path) -> dict[str, Any]:
+    try:
+        result = json.loads((path / "result.json").read_text())
+    except (OSError, json.JSONDecodeError):
+        result = {}
+    try:
+        timing = json.loads((path / "timing.json").read_text())
+    except (OSError, json.JSONDecodeError):
+        timing = {}
+    agent_result = result.get("agent_result") or {}
+    final_metrics = result.get("final_metrics") or {}
+    return {
+        "agent_seconds": timing.get("agent_execution"),
+        "n_tool_calls": result.get("n_tool_calls"),
+        "cost_usd": agent_result.get("cost_usd")
+        if agent_result.get("cost_usd") is not None
+        else final_metrics.get("total_cost_usd"),
+    }
+
 
 
 def _trial_dirs(jobs: Path | list[Path]) -> dict[str, list[Path]]:
@@ -61,7 +97,9 @@ def build_report(
     exposure: str,
     domains: dict[str, str],
     selection: dict[str, Any] | None = None,
+    budgets: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    active_budgets = budgets if budgets is not None else load_budgets()
     base = _trial_dirs(baseline)
     treated = _trial_dirs(treatment)
     common = sorted(set(base) & set(treated))
@@ -96,6 +134,12 @@ def build_report(
             a_calls = int(_number(after / "result.json", "n_tool_calls"))
             b_time = _number(before / "timing.json", "agent_execution")
             a_time = _number(after / "timing.json", "agent_execution")
+            b_budget = evaluate_budget(
+                _trial_usage(before), active_budgets, passed=b_pass
+            )
+            a_budget = evaluate_budget(
+                _trial_usage(after), active_budgets, passed=a_pass
+            )
             tasks.append({
                 "task_id": task,
                 "trial": trial,
@@ -103,6 +147,10 @@ def build_report(
                 "baseline_passed": b_pass,
                 "treatment_passed": a_pass,
                 "pass_delta": int(a_pass) - int(b_pass),
+                "baseline_outcome": b_budget["outcome"],
+                "treatment_outcome": a_budget["outcome"],
+                "baseline_budget": b_budget,
+                "treatment_budget": a_budget,
                 "baseline_reward": b_reward,
                 "treatment_reward": a_reward,
                 "reward_delta": a_reward - b_reward,
@@ -117,6 +165,14 @@ def build_report(
     n = len(tasks)
     base_pass = sum(row["baseline_passed"] for row in tasks)
     treated_pass = sum(row["treatment_passed"] for row in tasks)
+    base_outcome_pass = sum(row["baseline_outcome"] == "passed" for row in tasks)
+    treated_outcome_pass = sum(row["treatment_outcome"] == "passed" for row in tasks)
+    base_efficiency = sum(
+        row["baseline_outcome"] == "efficiency_failure" for row in tasks
+    )
+    treated_efficiency = sum(
+        row["treatment_outcome"] == "efficiency_failure" for row in tasks
+    )
     lifts = sum(row["pass_delta"] > 0 for row in tasks)
     regressions = sum(row["pass_delta"] < 0 for row in tasks)
     domain_rows: dict[str, list[dict[str, Any]]] = defaultdict(list)
@@ -137,6 +193,7 @@ def build_report(
         "benchmark": benchmark,
         "cohort": cohort,
         "treatment_exposure": exposure,
+        "budgets": active_budgets,
         "baseline_jobs": [str(path) for path in ([baseline] if isinstance(baseline, Path) else baseline)],
         "treatment_jobs": [str(path) for path in ([treatment] if isinstance(treatment, Path) else treatment)],
         "paired_tasks": n,
@@ -154,6 +211,16 @@ def build_report(
             "absolute_lift": round((treated_pass - base_pass) / n, 6) if n else None,
             "baseline_wilson_95": _wilson(base_pass, n),
             "treatment_wilson_95": _wilson(treated_pass, n),
+            "baseline_outcome_passes": base_outcome_pass,
+            "treatment_outcome_passes": treated_outcome_pass,
+            "baseline_outcome_pass_rate": (
+                round(base_outcome_pass / n, 6) if n else None
+            ),
+            "treatment_outcome_pass_rate": (
+                round(treated_outcome_pass / n, 6) if n else None
+            ),
+            "baseline_efficiency_failures": base_efficiency,
+            "treatment_efficiency_failures": treated_efficiency,
             "lifts": lifts,
             "regressions": regressions,
             "unchanged": n - lifts - regressions,
@@ -173,6 +240,12 @@ def build_report(
             "baseline_agent_seconds": sum(r["baseline_agent_seconds"] for r in tasks),
             "treatment_agent_seconds": sum(r["treatment_agent_seconds"] for r in tasks),
             "mean_agent_seconds_delta": round(fmean(r["agent_seconds_delta"] for r in tasks), 6) if n else None,
+            "baseline_efficiency_failures": base_efficiency,
+            "treatment_efficiency_failures": treated_efficiency,
+            "efficiency_failure_rate": (
+                round(treated_efficiency / n, 6) if n else None
+            ),
+            "budget_policy": "strict-wall-tool-cost-budget-v1",
         },
         "coverage": {
             "domains": len(domain_rows),
@@ -195,9 +268,11 @@ def main() -> None:
     parser.add_argument("--exposure", default="selective-read")
     parser.add_argument("--domains", type=Path)
     parser.add_argument("--selection-report", type=Path)
+    parser.add_argument("--budgets", type=Path, default=DEFAULT_BUDGET_PATH)
     parser.add_argument("--out", type=Path, required=True)
     args = parser.parse_args()
     domains = json.loads(args.domains.read_text()) if args.domains else {}
+    budgets = load_budgets(args.budgets)
     selection = None
     if args.selection_report:
         raw = args.selection_report.read_bytes()
@@ -219,7 +294,7 @@ def main() -> None:
                 for task, row in (source.get("tasks") or {}).items()
             },
         }
-    report = build_report(args.baseline, args.treatment, benchmark=args.benchmark, cohort=args.cohort, exposure=args.exposure, domains=domains, selection=selection)
+    report = build_report(args.baseline, args.treatment, benchmark=args.benchmark, cohort=args.cohort, exposure=args.exposure, domains=domains, selection=selection, budgets=budgets)
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
 

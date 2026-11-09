@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "wall_seconds": 900,
+  "tool_calls": 120,
+  "cost_usd": 2.0,
+  "exceeded_outcome": "efficiency_failure"
+}
