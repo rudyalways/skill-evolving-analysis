@@ -16,9 +16,11 @@ real v2 trace-to-publication run and the four-task validation cohort.
   `66d61aec1a400de52e790d678afa9f55bbf6014f63b43d9b5debe13b045c4bc1`
 - Receipt:
   `.../inventory/skills/v2-train-officeval-spreadsheet-001-generated-ski-4bd56df905fc0b88/receipts/5a1ddfcca3897426775b08e398933e95de29821c5249af212fbc84e4c7ae3572.json`
-- Files: `SKILL.md`, `scripts/validate_sheet.py`,
-  `references/spreadsheet-formula-validation.md`,
-  `evals/fixtures/spreadsheet-formula-validation.json`
+- Receipt file SHA-256:
+  `8d72f24ecfaa8bd194b06c16d5f3d6bbf1257df98e6c59c0d6ee5b17ee0d7095`
+- Files: `SKILL.md` (`df797db61064…`), `scripts/validate_sheet.py` (`5d6f4f0826a4…`),
+  `references/spreadsheet-formula-validation.md` (`eba28fbb8844…`),
+  `evals/fixtures/spreadsheet-formula-validation.json` (`86f8f2767229…`)
 - Source trace recorded in receipt: `train-officeval-spreadsheet-5c596cbd`
 - Policy/config: `cli-policy-v1` / `cli-config-v1`
 - No assets; no fabricated asset was added.
