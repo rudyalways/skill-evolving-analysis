@@ -21,7 +21,14 @@ from core.optimization import (  # noqa: E402
     validate_knob_registry,
     validate_metric_spec,
 )
-from core.online_learning import StudyStore, mcts_search, random_search, wide_deep_search  # noqa: E402
+from core.generalization import evaluate_generalization  # noqa: E402
+from core.online_learning import (  # noqa: E402
+    StudyStore,
+    mcts_search,
+    portfolio_search,
+    random_search,
+    wide_deep_search,
+)
 from policy.store import PolicyStore  # noqa: E402
 from policy.contracts import stable_digest  # noqa: E402
 
@@ -54,12 +61,24 @@ def main() -> None:
     decide.add_argument("--candidate", type=Path, required=True)
     decide.add_argument("--output", type=Path, required=True)
     search = sub.add_parser("search")
-    search.add_argument("--algorithm", choices=["random", "wide-deep", "mcts"], required=True)
+    search.add_argument(
+        "--algorithm", choices=["random", "wide-deep", "mcts", "portfolio"], required=True
+    )
     search.add_argument("--knob", action="append", required=True)
     search.add_argument("--count", type=int, default=16)
     search.add_argument("--seed", type=int, default=0)
     search.add_argument("--database", type=Path, required=True)
     search.add_argument("--output", type=Path, required=True)
+    generalize = sub.add_parser("generalize")
+    generalize.add_argument("--observations", type=Path, required=True)
+    generalize.add_argument(
+        "--policy", type=Path, default=ROOT / "config/generalization-search.json"
+    )
+    generalize.add_argument("--database", type=Path)
+    generalize.add_argument("--candidate-config", type=Path)
+    generalize.add_argument("--run-id")
+    generalize.add_argument("--algorithm", default="portfolio")
+    generalize.add_argument("--output", type=Path, required=True)
     learn = sub.add_parser("learn")
     learn.add_argument("--database", type=Path, required=True)
     learn.add_argument("--run-id", required=True)
@@ -115,10 +134,44 @@ def main() -> None:
             candidates = random_search(registry, args.knob, args.count, args.seed)
         elif args.algorithm == "wide-deep":
             candidates = wide_deep_search(registry, args.knob, args.count, args.seed, store)
-        else:
+        elif args.algorithm == "mcts":
             candidates = mcts_search(registry, args.knob, args.count, args.seed, store)
+        else:
+            candidates = portfolio_search(registry, args.knob, args.count, args.seed, store)
         write_json(args.output, {"schema_version": 1, "algorithm": args.algorithm, "candidates": candidates})
         print(f"wrote {len(candidates)} {args.algorithm} candidates to {args.output}")
+    elif args.command == "generalize":
+        observations = json.loads(args.observations.read_text())
+        if not isinstance(observations, list):
+            raise ValueError("generalization observations must be a JSON array")
+        policy = load_spec(args.policy, "generalization search policy")
+        result = evaluate_generalization(observations, policy)
+        learning_args = (args.database, args.candidate_config, args.run_id)
+        if any(learning_args) and not all(learning_args):
+            raise ValueError(
+                "--database, --candidate-config, and --run-id must be supplied together"
+            )
+        if all(learning_args):
+            candidate_config = json.loads(args.candidate_config.read_text())
+            store = StudyStore(args.database)
+            trial_id = store.record_trial(
+                run_id=args.run_id,
+                algorithm=args.algorithm,
+                candidate=candidate_config,
+                reward=float(result["search_reward"]),
+                decision={
+                    "eligible": bool(result["validation_eligible"]),
+                    "stage": "validation",
+                    "holdout_used_for_search": False,
+                },
+            )
+            result["learning"] = {
+                "trial_id": trial_id,
+                "reward_stage": "validation",
+                "holdout_backpropagated": False,
+            }
+        write_json(args.output, result)
+        print(result["decision"])
     elif args.command == "learn":
         store = StudyStore(args.database)
         baseline = json.loads(args.baseline.read_text())

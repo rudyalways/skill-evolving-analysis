@@ -50,6 +50,24 @@ def _trial_usage(path: Path) -> dict[str, Any]:
     }
 
 
+def _trial_result(path: Path) -> dict[str, Any]:
+    try:
+        value = json.loads((path / "result.json").read_text())
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return value if isinstance(value, dict) else {}
+
+
+def _selected_for_task(selection: dict[str, Any] | None, task: str) -> bool | None:
+    """Return the router decision, or None for legacy un-audited reports."""
+    if selection is None:
+        return None
+    row = (selection.get("tasks") or {}).get(task)
+    if not isinstance(row, dict):
+        return None
+    return bool(row.get("selected") or row.get("selection_count"))
+
+
 
 def _trial_dirs(jobs: Path | list[Path]) -> dict[str, list[Path]]:
     rows: dict[str, list[Path]] = defaultdict(list)
@@ -126,6 +144,19 @@ def build_report(
                 continue
             b_reward = float((before / "verifier/reward.txt").read_text().strip())
             a_reward = float((after / "verifier/reward.txt").read_text().strip())
+            before_result = _trial_result(before)
+            after_result = _trial_result(after)
+            baseline_mode = before_result.get("skill_mode")
+            treatment_mode = after_result.get("skill_mode")
+            selected = _selected_for_task(selection, task)
+            exposure_valid = True
+            exposure_error = None
+            if selected is True and treatment_mode != "with-skill":
+                exposure_valid = False
+                exposure_error = "selected-treatment-not-run-with-skill"
+            elif selected is False and treatment_mode == "with-skill":
+                exposure_valid = False
+                exposure_error = "abstained-treatment-ran-with-skill"
             # SkillsBench can emit partial rewards. Its runner counts only a
             # complete reward as a pass, so preserve both representations.
             b_pass = b_reward >= 1.0
@@ -144,6 +175,11 @@ def build_report(
                 "task_id": task,
                 "trial": trial,
                 "domain": domains.get(task, "unclassified"),
+                "router_selected": selected,
+                "baseline_skill_mode": baseline_mode,
+                "treatment_skill_mode": treatment_mode,
+                "exposure_valid": exposure_valid,
+                "exposure_error": exposure_error,
                 "baseline_passed": b_pass,
                 "treatment_passed": a_pass,
                 "pass_delta": int(a_pass) - int(b_pass),
@@ -175,6 +211,15 @@ def build_report(
     )
     lifts = sum(row["pass_delta"] > 0 for row in tasks)
     regressions = sum(row["pass_delta"] < 0 for row in tasks)
+    selected_rows = [row for row in tasks if row["router_selected"] is True]
+    valid_selected = [row for row in selected_rows if row["exposure_valid"]]
+    abstained_rows = [row for row in tasks if row["router_selected"] is False]
+    invalid_exposures = [row for row in tasks if not row["exposure_valid"]]
+    policy_rows = valid_selected + abstained_rows
+    policy_passes = sum(
+        row["treatment_passed"] if row["router_selected"] else row["baseline_passed"]
+        for row in policy_rows
+    )
     domain_rows: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for row in tasks:
         domain_rows[row["domain"]].append(row)
@@ -197,6 +242,43 @@ def build_report(
         "baseline_jobs": [str(path) for path in ([baseline] if isinstance(baseline, Path) else baseline)],
         "treatment_jobs": [str(path) for path in ([treatment] if isinstance(treatment, Path) else treatment)],
         "paired_tasks": n,
+        "exposure_audit": {
+            "audited": selection is not None,
+            "selected": len(selected_rows),
+            "valid_selected": len(valid_selected),
+            "abstained": len(abstained_rows),
+            "invalid": len(invalid_exposures),
+            "ready": selection is not None and not invalid_exposures,
+            "invalid_cells": [
+                {
+                    "task_id": row["task_id"],
+                    "trial": row["trial"],
+                    "error": row["exposure_error"],
+                    "treatment_skill_mode": row["treatment_skill_mode"],
+                }
+                for row in invalid_exposures
+            ],
+        },
+        "policy_accuracy": {
+            "scored_cells": len(policy_rows),
+            "total_cells": n,
+            "passes": policy_passes,
+            "pass_rate": round(policy_passes / len(policy_rows), 6) if policy_rows else None,
+            "target_pass_rate": 0.6,
+            "target_passes": math.ceil(n * 0.6),
+            "target_met": len(policy_rows) == n and policy_passes >= math.ceil(n * 0.6),
+        },
+        "activated_effect": {
+            "valid_exposures": len(valid_selected),
+            "baseline_passes": sum(row["baseline_passed"] for row in valid_selected),
+            "treatment_passes": sum(row["treatment_passed"] for row in valid_selected),
+            "lifts": sum(row["pass_delta"] > 0 for row in valid_selected),
+            "regressions": sum(row["pass_delta"] < 0 for row in valid_selected),
+            "mean_reward_delta": (
+                round(fmean(row["reward_delta"] for row in valid_selected), 6)
+                if valid_selected else None
+            ),
+        },
         "excluded_unpaired": {
             task: abs(len(base.get(task, [])) - len(treated.get(task, [])))
             for task in sorted(set(base) | set(treated))

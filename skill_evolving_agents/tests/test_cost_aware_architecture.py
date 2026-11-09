@@ -30,7 +30,14 @@ from core.optimization import (
     validate_knob_registry,
     validate_metric_spec,
 )
-from core.online_learning import StudyStore, mcts_search, random_search, wide_deep_search
+from core.generalization import evaluate_generalization
+from core.online_learning import (
+    StudyStore,
+    mcts_search,
+    portfolio_search,
+    random_search,
+    wide_deep_search,
+)
 from core.state_machine import (
     StateMachineError,
     StateMachineRuntime,
@@ -237,6 +244,134 @@ class CostAwareArchitectureTests(unittest.TestCase):
                         values["semantic.accept_at"],
                         values["semantic.noise_accept_at"],
                     )
+
+    def test_portfolio_search_is_diverse_and_records_provenance(self) -> None:
+        registry = validate_knob_registry(
+            load_spec(AGENTS / "config/knob-registry.json", "knob registry")
+        )
+        selected = ["semantic.accept_at", "semantic.noise_accept_at"]
+        with tempfile.TemporaryDirectory() as directory:
+            rows = portfolio_search(
+                registry,
+                selected,
+                8,
+                17,
+                StudyStore(Path(directory) / "optimization.sqlite"),
+            )
+        self.assertEqual(len(rows), 8)
+        self.assertEqual(len({row["candidate_id"] for row in rows}), 8)
+        self.assertTrue(all(row["search_sources"] for row in rows))
+        self.assertGreater(
+            len({json.dumps(row["overrides"], sort_keys=True) for row in rows}),
+            6,
+        )
+
+    def test_generalization_reward_never_uses_sealed_holdout(self) -> None:
+        policy = json.loads(
+            (AGENTS / "config/generalization-search.json").read_text()
+        )
+        validation = [
+            {
+                "stage": "validation",
+                "task_id": f"v-{index}",
+                "domain": f"domain-{index % 6}",
+                "baseline_passed": index < 4,
+                "treatment_passed": index < 8,
+                "baseline_tool_calls": 20,
+                "treatment_tool_calls": 18,
+                "efficiency_failure": False,
+            }
+            for index in range(12)
+        ]
+        good_holdout = [
+            {
+                "stage": "holdout",
+                "task_id": f"h-{index}",
+                "domain": f"holdout-{index % 8}",
+                "baseline_passed": index < 5,
+                "treatment_passed": index < 10,
+                "baseline_tool_calls": 20,
+                "treatment_tool_calls": 18,
+                "efficiency_failure": False,
+            }
+            for index in range(16)
+        ]
+        bad_holdout = [
+            {**row, "treatment_passed": False} for row in good_holdout
+        ]
+        good = evaluate_generalization(validation + good_holdout, policy)
+        bad = evaluate_generalization(validation + bad_holdout, policy)
+        self.assertEqual(good["search_reward"], bad["search_reward"])
+        self.assertFalse(good["holdout_used_for_search"])
+        self.assertTrue(good["milestone_met"])
+        self.assertFalse(bad["milestone_met"])
+
+    def test_generalization_penalizes_concentrated_and_regressive_lift(self) -> None:
+        policy = json.loads(
+            (AGENTS / "config/generalization-search.json").read_text()
+        )
+        broad = []
+        concentrated = []
+        for index in range(12):
+            base = {
+                "stage": "validation",
+                "task_id": f"task-{index}",
+                "domain": f"domain-{index % 6}",
+                "baseline_passed": index < 3,
+                "treatment_passed": index < 7,
+                "baseline_tool_calls": 20,
+                "treatment_tool_calls": 20,
+                "efficiency_failure": False,
+            }
+            broad.append(base)
+            concentrated.append({
+                **base,
+                "domain": "single-lift-domain" if 3 <= index < 7 else base["domain"],
+            })
+        broad_result = evaluate_generalization(broad, policy)
+        concentrated_result = evaluate_generalization(concentrated, policy)
+        self.assertGreater(
+            broad_result["search_reward"], concentrated_result["search_reward"]
+        )
+        regressive = [{**row} for row in broad]
+        regressive[0]["treatment_passed"] = False
+        self.assertFalse(evaluate_generalization(regressive, policy)["validation_eligible"])
+
+    def test_generalization_rejects_task_and_family_leakage(self) -> None:
+        policy = json.loads(
+            (AGENTS / "config/generalization-search.json").read_text()
+        )
+        base = {
+            "domain": "spreadsheet",
+            "baseline_passed": False,
+            "treatment_passed": True,
+        }
+        with self.assertRaisesRegex(OptimizationError, "task_id=duplicate"):
+            evaluate_generalization(
+                [
+                    {**base, "stage": "train", "task_id": "duplicate"},
+                    {**base, "stage": "holdout", "task_id": "duplicate"},
+                ],
+                policy,
+            )
+        with self.assertRaisesRegex(OptimizationError, "group_id=family-a"):
+            evaluate_generalization(
+                [
+                    {
+                        **base,
+                        "stage": "validation",
+                        "task_id": "variant-a",
+                        "group_id": "family-a",
+                    },
+                    {
+                        **base,
+                        "stage": "holdout",
+                        "task_id": "variant-b",
+                        "group_id": "family-a",
+                    },
+                ],
+                policy,
+            )
 
     def test_fixed_and_future_policies_share_typed_compiler_boundary(self) -> None:
         registry = validate_knob_registry(

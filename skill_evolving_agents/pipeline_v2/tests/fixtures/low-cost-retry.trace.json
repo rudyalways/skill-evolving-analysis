@@ -1,0 +1,8 @@
+{
+  "id": "trace-json-retry",
+  "source": "json-fixture",
+  "turns": [
+    "the command failed with an error",
+    "retry again after checking the result"
+  ]
+}

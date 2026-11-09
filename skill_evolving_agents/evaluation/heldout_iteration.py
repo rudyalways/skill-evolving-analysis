@@ -92,6 +92,11 @@ def build_iteration(
     round_id: str = "round-1",
 ) -> dict[str, Any]:
     active_budgets = budgets if budgets is not None else load_budgets()
+    selection_rows = _selection(selection)
+    report_selection = (
+        {"tasks": selection_rows, "report": str(selection)}
+        if selection is not None else None
+    )
     report = build_report(
         baseline,
         treatment,
@@ -99,9 +104,9 @@ def build_iteration(
         cohort=cohort,
         exposure="selective-read",
         domains=domains or {},
+        selection=report_selection,
         budgets=active_budgets,
     )
-    selection_rows = _selection(selection)
     treated = _trial_dirs(treatment)
     gaps: list[dict[str, Any]] = []
     trial_evidence: list[dict[str, Any]] = []

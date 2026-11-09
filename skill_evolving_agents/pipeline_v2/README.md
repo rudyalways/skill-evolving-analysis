@@ -1,8 +1,8 @@
 # pipeline_v2
 
-Milestone 0 of the Cordis-native skill-evolution pipeline. This package is a
+Milestones 0–1 of the Cordis-native skill-evolution pipeline. This package is a
 parallel implementation beside the existing Python pipeline; the Python code is
-unchanged and remains the default runtime.
+the compatibility baseline and remains the default runtime.
 
 ## What Milestone 0 contains
 
@@ -21,6 +21,27 @@ unchanged and remains the default runtime.
 
 It intentionally contains **no model providers, no embedding providers, no
 network calls, no Docker, no database, and no paid evaluation**.
+
+## Milestone 1 search control plane
+
+Configuration search and generalization evaluation now have native TypeScript
+capability seams:
+
+- `ConfigurationSearch` proposes a deterministic, diverse portfolio combining
+  wide probes, validation-history exploitation, MCTS-style exploration, and
+  seeded random exploration.
+- `GeneralizationEvaluator` scores validation evidence, enforces disjoint task
+  and task-family membership across stages, and treats holdout as a sealed final
+  gate.
+- Holdout results are never included in `validationReward`, so a feedback
+  learner cannot backpropagate the final test cohort into search.
+- The default acceptance contract is representable as 60% across at least 16
+  held-out tasks and 8 domains, with zero regressions and bounded efficiency
+  failures.
+
+These providers are offline and have no Python dependency. The Python search
+implementation remains a temporary comparison oracle until the v2 controller
+and persistence provider consume these capabilities end to end.
 
 ## Why Cordis
 
@@ -44,6 +65,7 @@ src/contracts/   ids, errors, events, evidence, operations, resources,
                  worker protocol, comparison report
 src/core/        event log, projections, capability registry, run controller
 src/capabilities/ capability interfaces and an in-memory trace fixture
+src/search/      native portfolio search and sealed generalization evaluation
 src/vendor/      narrow ambient Cordis type boundary used only by tsc
 src/index.ts     public package surface
 tests/           focused offline lifecycle, validation, projection, protocol tests
@@ -115,6 +137,7 @@ do not modify it. In a normal installed environment, use `npm run typecheck` and
 
 ## Milestone boundary
 
-Milestone 0 stops at contracts, the event log, projections, provider lifecycle,
-and the worker/comparison schemas. It does not add model-backed providers,
-replay execution, publication receipts, or DSH bundle integration.
+Milestone 1 adds native search and anti-overfitting evaluation capabilities but
+does not yet add the durable study store, an executable run orchestrator,
+model-backed providers, replay execution, publication receipts, or DSH bundle
+integration.

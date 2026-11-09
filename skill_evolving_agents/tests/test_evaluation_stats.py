@@ -7,11 +7,14 @@ from evaluation.benchmark_resource_feedback import build_feedback
 from evaluation.benchmark_skill_router import tree_hash
 
 
-def _trial(root: Path, task: str, suffix: str, passed: float, calls: int, seconds: int) -> None:
+def _trial(root: Path, task: str, suffix: str, passed: float, calls: int, seconds: int, skill_mode: str | None = None) -> None:
     path = root / f"{task}__{suffix}"
     (path / "verifier").mkdir(parents=True)
     (path / "verifier/reward.txt").write_text(str(passed))
-    (path / "result.json").write_text(json.dumps({"n_tool_calls": calls}))
+    result = {"n_tool_calls": calls}
+    if skill_mode is not None:
+        result["skill_mode"] = skill_mode
+    (path / "result.json").write_text(json.dumps(result))
     (path / "timing.json").write_text(json.dumps({"agent_execution": seconds}))
 
 
@@ -72,6 +75,43 @@ def test_paired_report_excludes_answer_contaminated_trial(tmp_path: Path) -> Non
     )
     assert report["paired_tasks"] == 0
     assert report["excluded_contaminated"][0]["task_id"] == "task-a"
+
+
+def test_selective_policy_separates_activation_abstention_and_invalid_exposure(tmp_path: Path) -> None:
+    baseline, treatment = tmp_path / "base", tmp_path / "treated"
+    baseline.mkdir(); treatment.mkdir()
+    for task in ("selected", "abstained", "broken"):
+        _trial(baseline, task, "01", 0, 2, 2, "no-skill")
+    _trial(treatment, "selected", "01", 1, 2, 2, "with-skill")
+    _trial(treatment, "abstained", "01", 1, 2, 2, "no-skill")
+    _trial(treatment, "broken", "01", 1, 2, 2, "no-skill")
+    selection = {"tasks": {
+        "selected": {"selected": [{"skill": "repair"}]},
+        "abstained": {"selected": []},
+        "broken": {"selected": [{"skill": "repair"}]},
+    }}
+    report = build_report(
+        baseline, treatment, benchmark="b@1", cohort="c",
+        exposure="selective-read", domains={}, selection=selection,
+    )
+    assert report["exposure_audit"] == {
+        "audited": True,
+        "selected": 2,
+        "valid_selected": 1,
+        "abstained": 1,
+        "invalid": 1,
+        "ready": False,
+        "invalid_cells": [{
+            "task_id": "broken", "trial": 1,
+            "error": "selected-treatment-not-run-with-skill",
+            "treatment_skill_mode": "no-skill",
+        }],
+    }
+    # The abstained treatment artifact is ignored; policy inherits its baseline.
+    assert report["policy_accuracy"]["scored_cells"] == 2
+    assert report["policy_accuracy"]["passes"] == 1
+    assert report["activated_effect"]["valid_exposures"] == 1
+    assert report["activated_effect"]["lifts"] == 1
 
 
 def test_pipeline_stats_aggregates_funnel_and_cost(tmp_path: Path) -> None:

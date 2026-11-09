@@ -263,3 +263,52 @@ def mcts_search(
         if len(output) == count:
             break
     return output
+
+
+def portfolio_search(
+    registry: dict[str, Any], selected: list[str], count: int, seed: int,
+    store: StudyStore,
+) -> list[dict[str, Any]]:
+    """Blend wide/deep, MCTS, and random exploration into one diverse batch.
+
+    No single search strategy is reliable throughout learning: wide probes are
+    useful before evidence exists, MCTS exploits reusable interactions, and
+    random candidates protect against a prematurely confident tree.  The
+    returned batch records provenance and greedily maximizes categorical
+    Hamming distance so the evaluation budget is not spent on near-duplicates.
+    """
+    if count < 1:
+        raise OptimizationError("count must be positive")
+    pool_size = max(count * 3, 12)
+    sources = (
+        ("wide-deep", wide_deep_search(registry, selected, pool_size, seed, store)),
+        ("mcts", mcts_search(registry, selected, pool_size, seed + 10_003, store)),
+        ("random", random_search(registry, selected, pool_size, seed + 20_003)),
+    )
+    merged: dict[str, dict[str, Any]] = {}
+    for source, rows in sources:
+        for row in rows:
+            key = json.dumps(row["overrides"], sort_keys=True)
+            current = merged.setdefault(key, {**row, "search_sources": []})
+            current["search_sources"].append(source)
+
+    candidates = list(merged.values())
+    chosen: list[dict[str, Any]] = []
+    remaining = candidates[:]
+
+    def distance(left: dict[str, Any], right: dict[str, Any]) -> float:
+        a, b = left["overrides"], right["overrides"]
+        names = set(a) | set(b)
+        return sum(a.get(name) != b.get(name) for name in names) / max(len(names), 1)
+
+    while remaining and len(chosen) < count:
+        def priority(row: dict[str, Any]) -> tuple[float, int, str]:
+            novelty = min((distance(row, prior) for prior in chosen), default=1.0)
+            # Multi-strategy agreement breaks novelty ties, but cannot defeat it.
+            agreement = len(row["search_sources"])
+            return (novelty, agreement, row["candidate_id"])
+
+        best = max(remaining, key=priority)
+        remaining.remove(best)
+        chosen.append(best)
+    return chosen

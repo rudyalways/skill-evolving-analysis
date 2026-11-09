@@ -2,6 +2,13 @@ import type { Candidate, Finding, VerificationEvidence } from '../contracts/evid
 import type { Operation, PublicationReceipt } from '../contracts/operations.ts'
 import type { Resource } from '../contracts/resources.ts'
 import type { SkillId, TraceId } from '../contracts/ids.ts'
+import type {
+  GeneralizationDecision,
+  GeneralizationObservation,
+  GeneralizationPolicy,
+  SearchCandidate,
+  SearchRequest,
+} from '../search/contracts.ts'
 
 /** One normalized trace available to later phases. */
 export interface Trace {
@@ -94,6 +101,21 @@ export interface FeedbackLearner {
   record(input: FeedbackInput): Promise<void>
 }
 
+/** A provider that proposes bounded pipeline configuration candidates. */
+export interface ConfigurationSearch {
+  /** Propose a deterministic, diverse candidate batch. */
+  search(request: SearchRequest): readonly SearchCandidate[]
+}
+
+/** A provider that scores validation without learning from sealed holdout. */
+export interface GeneralizationEvaluator {
+  /** Evaluate disjoint train, validation, and holdout observations. */
+  evaluate(
+    observations: readonly GeneralizationObservation[],
+    policy: GeneralizationPolicy,
+  ): GeneralizationDecision
+}
+
 /** Capability names and their provider interfaces. */
 export interface CapabilityMap {
   traceSource: TraceSource
@@ -104,6 +126,8 @@ export interface CapabilityMap {
   verifier: Verifier
   publisher: Publisher
   feedbackLearner: FeedbackLearner
+  configurationSearch: ConfigurationSearch
+  generalizationEvaluator: GeneralizationEvaluator
 }
 
 /** Every mountable capability name. */

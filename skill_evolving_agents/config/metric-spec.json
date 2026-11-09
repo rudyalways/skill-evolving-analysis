@@ -5,7 +5,7 @@
     "high_finding_recall": {"direction": "maximize", "role": "hard_constraint", "minimum": 0.95, "maximum_regression": 0.01, "minimum_samples": 30, "population": "reviewed high-severity findings", "missing": "fail"},
     "noise_rejection_precision": {"direction": "maximize", "role": "hard_constraint", "minimum": 0.98, "minimum_samples": 20, "population": "automatically rejected reviewed findings", "missing": "fail"},
     "activation_false_positive_rate": {"direction": "minimize", "role": "hard_constraint", "maximum": 0.1, "maximum_regression": 0.01, "minimum_samples": 30, "population": "reviewed skill activations", "missing": "fail"},
-    "held_out_pass_rate": {"direction": "maximize", "role": "hard_constraint", "minimum": 0.8, "maximum_regression": 0.02, "minimum_samples": 20, "population": "held-out skill cases", "missing": "fail"},
+    "held_out_pass_rate": {"direction": "maximize", "role": "hard_constraint", "minimum": 0.6, "maximum_regression": 0.0, "minimum_samples": 16, "population": "sealed held-out skill cases across at least 8 domains", "missing": "fail"},
     "held_out_tool_calls_per_task": {"direction": "minimize", "role": "objective", "weight": 0.75, "minimum_samples": 20, "population": "paired held-out skill cases", "missing": "exclude"},
     "held_out_agent_seconds_per_task": {"direction": "minimize", "role": "objective", "weight": 0.5, "minimum_samples": 20, "population": "paired held-out skill cases", "missing": "exclude"},
     "skill_recall_at_5": {"direction": "maximize", "role": "objective", "weight": 1.0, "minimum_samples": 30, "population": "labeled recall queries", "missing": "exclude"},

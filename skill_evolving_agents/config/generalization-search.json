@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "target_pass_rate": 0.6,
+  "maximum_regressions": 0,
+  "maximum_efficiency_failure_rate": 0.1,
+  "minimum_evidence": {
+    "validation_tasks": 12,
+    "validation_domains": 6,
+    "holdout_tasks": 16,
+    "holdout_domains": 8
+  },
+  "search_reward": {
+    "pass_rate": 1.0,
+    "absolute_lift": 1.0,
+    "regression_rate": 2.0,
+    "efficiency_failure_rate": 1.0,
+    "lift_domain_concentration": 0.25,
+    "positive_call_delta": 0.001
+  },
+  "rules": {
+    "search_stages": ["train", "validation"],
+    "reward_stage": "validation",
+    "sealed_stage": "holdout",
+    "allow_holdout_backpropagation": false,
+    "require_new_holdout_after_promotion": true
+  }
+}

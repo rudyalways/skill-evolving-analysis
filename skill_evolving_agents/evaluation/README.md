@@ -316,6 +316,56 @@ Pareto-style cost and quality objectives.
 It does not promote production configuration. An eligible offline candidate is
 authorized only to enter shadow evaluation.
 
+Use `portfolio` for the default search. It combines isolated wide probes,
+posterior-guided deep search, persistent MCTS, and seeded random exploration,
+then removes duplicates and selects a diverse batch. Do not optimize directly
+on the final held-out cohort:
+
+```bash
+python evaluation/optimize_config.py search --algorithm portfolio \
+  --knob recall.minimum_score --knob evolution.minimum_confidence \
+  --knob edit.min_priority --count 16 --seed 20261109 \
+  --database workspace/optimization.sqlite \
+  --output workspace/search/portfolio.json
+```
+
+Every paired observation used for pipeline search must be labeled `train`,
+`validation`, or `holdout`. Generalization scoring learns only from validation;
+the sealed holdout is reported as a final gate and is never back-propagated to
+MCTS or knob posteriors:
+
+```bash
+python evaluation/optimize_config.py generalize \
+  --observations workspace/search/paired-observations.json \
+  --output workspace/search/generalization-decision.json
+```
+
+After a candidate has complete validation observations, update its persistent
+search posterior with the validation-only reward:
+
+```bash
+python evaluation/optimize_config.py generalize \
+  --observations workspace/search/paired-observations.json \
+  --database workspace/optimization.sqlite \
+  --candidate-config workspace/search/candidate-07.json \
+  --run-id search-round-03-candidate-07 --algorithm portfolio \
+  --output workspace/search/candidate-07-decision.json
+```
+
+Even when the observation file also contains holdout rows, the recorded reward
+is computed exclusively from validation. The result records
+`holdout_backpropagated: false` for audit.
+
+The default milestone is a 60% held-out pass rate across at least 16 tasks and
+8 domains, with zero pass-to-fail regressions and no more than 10% efficiency
+failures. Passing the milestone consumes that cohort: the next promotion must
+use a newly sealed holdout. This prevents repeated tuning against the same 16
+tasks from being presented as generalization.
+
+Use `group_id` for related variants originating from one template, source
+trace, or task family. The scorer rejects any `task_id` or `group_id` that
+appears in more than one stage, even when the visible task names differ.
+
 Available search algorithms are bounded grid, seeded random, wide-and-deep,
 and persistent UCB/MCTS. Reviewed trial outcomes update a Beta success
 posterior and reward exponential moving average for each knob/value choice in
