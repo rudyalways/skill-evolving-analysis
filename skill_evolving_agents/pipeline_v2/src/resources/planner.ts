@@ -370,6 +370,8 @@ interface FamilyContent {
   readonly fixturePath: string
   readonly fixture: string
   readonly fixtureSummary: string
+  /** Optional general recovery identities rendered into SKILL.md. */
+  readonly recovery?: string
 }
 
 function lines(...values: readonly string[]): string {
@@ -738,6 +740,16 @@ const FAMILY_CONTENT: Readonly<Record<FailureFamily, FamilyContent>> = {
       },
     ),
     fixtureSummary: 'safe sheet fixture with expected coordinate and formula checks',
+    recovery: lines(
+      '- Row total: a missing total equals the sum of numeric components in that row.',
+      '- Missing component: total minus the sum of the other numeric components in that row.',
+      '- Share (%): component / row total * 100, rounded once to the sheet precision.',
+      '- Year-over-year (%): (current - prior) / prior * 100, rounded once.',
+      '- CAGR (%): ((end / start) ** (1 / years) - 1) * 100, rounded once.',
+      '- Five-year change: end - start. For a five-year average annual budget, average the five annual values from the start year through the year before the end year (the five-year window), not all six endpoint-inclusive rows.',
+      '- Recover level-1 totals first, then components, then derived percentage/growth sheets.',
+      '- Write the computed numeric value into each recovered cell, not a formula string; spreadsheet verifiers read cell values directly and openpyxl does not recalculate formulas.',
+    ),
   },
   'financial-reconciliation': {
     label: 'financial definition reconciliation',
@@ -841,6 +853,7 @@ function renderSkillDocument(
     '3. Compare the script report with the safe fixture before using any derived value.',
     '4. Report unresolved issues explicitly; never replace a missing value with a guess.',
     '',
+    ...(content.recovery === undefined ? [] : ['## Recovery identities', '', content.recovery, '']),
     '## Resource map',
     '',
     ...resourceLines,
