@@ -130,6 +130,21 @@ def _valid_result(jobs_dir: Path) -> bool:
     return False
 
 
+def _cleanup_docker() -> None:
+    """Reclaim stopped benchmark containers and build cache between cells."""
+    for args in (["container", "prune", "-f"], ["builder", "prune", "-f"]):
+        try:
+            subprocess.run(
+                ["docker", *args],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                timeout=120,
+                check=False,
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            pass
+
+
 def _execute(command: list[str], log_path: Path, timeout: float | None) -> tuple[int, str | None]:
     """Run one bench command with a process-group kill on timeout."""
     started = time.time()
@@ -207,6 +222,8 @@ def run(spec: dict[str, Any], *, dry_run: bool = False) -> dict[str, Any]:
         log_path = jobs_dir / "runner.log"
         started = time.time()
         code, error = _execute(row["command"], log_path, timeout)
+        if spec.get("cleanup_docker", True):
+            _cleanup_docker()
         status = "completed" if code == 0 else "failed"
         if error:
             status = "timed-out"
