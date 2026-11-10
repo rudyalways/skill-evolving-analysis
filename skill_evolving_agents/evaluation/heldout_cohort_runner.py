@@ -130,6 +130,39 @@ def _valid_result(jobs_dir: Path) -> bool:
     return False
 
 
+def _prebuild_images(spec: dict[str, Any]) -> list[dict[str, Any]]:
+    """Build each task environment once before any model call."""
+    results: list[dict[str, Any]] = []
+    for task in spec["tasks"]:
+        environment = Path(task["tasks_dir"]) / "environment"
+        dockerfile = environment / "Dockerfile"
+        row = {"task_id": task["id"], "environment": str(environment), "status": "missing"}
+        if not dockerfile.exists():
+            results.append(row)
+            continue
+        image = f"cohort-prebuild-{task['id']}:latest"
+        try:
+            completed = subprocess.run(
+                ["docker", "build", "-q", "-t", image, str(environment)],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                timeout=1800,
+                check=False,
+            )
+        except (OSError, subprocess.TimeoutExpired) as error:
+            row.update(status="failed", error=str(error))
+            results.append(row)
+            continue
+        row.update(
+            status="built" if completed.returncode == 0 else "failed",
+            exit_code=completed.returncode,
+            output=(completed.stdout or "")[-2000:],
+        )
+        results.append(row)
+    return results
+
+
 def _cleanup_docker() -> None:
     """Reclaim stopped benchmark containers and build cache between cells."""
     for args in (["container", "prune", "-f"], ["builder", "prune", "-f"]):
@@ -206,8 +239,21 @@ def run(spec: dict[str, Any], *, dry_run: bool = False) -> dict[str, Any]:
 
     jobs_root = Path(spec["jobs_root"])
     jobs_root.mkdir(parents=True, exist_ok=True)
+    prebuild = _prebuild_images(spec) if spec.get("prebuild_images", False) else []
+    if prebuild:
+        manifest["image_prebuild"] = prebuild
+        failed_images = {row["task_id"] for row in prebuild if row.get("status") != "built"}
+    else:
+        failed_images = set()
 
     def one(row: dict[str, Any]) -> dict[str, Any]:
+        if row["task_id"] in failed_images:
+            return {
+                **row,
+                "status": "image-build-failed",
+                "exit_code": None,
+                "error": "task image failed prebuild",
+            }
         jobs_dir = Path(row["jobs_dir"])
         jobs_dir.mkdir(parents=True, exist_ok=True)
         if resume and _valid_result(jobs_dir):
@@ -268,6 +314,7 @@ def main() -> None:
     parser.add_argument("--max-wall-seconds", type=float)
     parser.add_argument("--per-trial-timeout", type=float)
     parser.add_argument("--resume", action="store_true")
+    parser.add_argument("--prebuild-images", action="store_true")
     args = parser.parse_args()
     spec = load_spec(args.spec)
     if args.max_wall_seconds is not None:
@@ -276,6 +323,8 @@ def main() -> None:
         spec["per_trial_timeout_seconds"] = args.per_trial_timeout
     if args.resume:
         spec["resume"] = True
+    if args.prebuild_images:
+        spec["prebuild_images"] = True
     manifest = run(spec, dry_run=args.dry_run)
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
