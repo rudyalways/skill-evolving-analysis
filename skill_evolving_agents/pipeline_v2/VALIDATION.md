@@ -198,6 +198,9 @@ A pre-registered 16-task, 8-domain fresh catalog cohort was attempted on
 - unresolved: 4 cells (`exam-block-sequencing`, `syzkaller-ppdev-syzlang`,
   `setup-fuzzing-py`, `seismic-phase-picking`)
 - `grid-dispatch-operator` failed (0.0, 139 calls)
+- remaining attempts (`exam-block-sequencing`, `syzkaller-ppdev-syzlang`,
+  `setup-fuzzing-py`) all failed at agent installation because Docker filled
+  its 37.7 GB VM disk again
 - mathematical maximum: 4 + 4 = **8/16**, below the 10/16 target
 - this cohort cannot produce a 60% result and is not a completed holdout
 
