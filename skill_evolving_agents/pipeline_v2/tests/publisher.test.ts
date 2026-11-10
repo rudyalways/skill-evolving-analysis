@@ -47,6 +47,7 @@ const FAMILY_LABEL: Readonly<Record<FailureFamily, string>> = {
   'codebook-parsing': 'codebook parsing',
   'spreadsheet-formula-validation': 'spreadsheet formula validation',
   'financial-reconciliation': 'financial definition reconciliation',
+  'dialogue-graph-parsing': 'dialogue graph parsing',
 }
 
 const FIXED_TIME = '2026-02-03T04:05:06.000Z'

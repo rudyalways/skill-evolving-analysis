@@ -86,9 +86,9 @@ benchmark treatment that exposed the script in the prompt did not complete
 within the 600s wall budget and was stopped unscored. It is not counted as a
 lift.
 
-## Second validation cohort — baselines only
+## Second validation cohort — partial, not a valid policy cohort
 
-Disjoint from the first validation cohort and from the train generation ID:
+Disjoint baseline tasks from the catalog:
 
 | Task | Domain | Baseline | Calls | Seconds |
 |---|---|---:|---:|---:|
@@ -97,8 +97,33 @@ Disjoint from the first validation cohort and from the train generation ID:
 | data-to-d3 | software-engineering | 0 | 8 | 60 |
 | dialogue-parser | software-engineering | 0.667 partial | 30 | 90 |
 
-Baseline complete passes: **2/4 = 50%**. No treatments were selected/run in this
-cohort yet. It is not a holdout result.
+Baseline complete passes: **2/4 = 50%**.
+
+Selected treatments:
+
+| Task | Exposure | Baseline | Treatment | Calls B/T | Seconds B/T |
+|---|---|---|---:|---:|---:|---:|
+| exceltable-in-ppt | `SKILL.md` read | 1 | 1 | 13/15 | 30/60 |
+| dialogue-parser | `SKILL.md` read | 0.667 | 1.0 | 30/27 | 90/60 |
+
+**Integrity exclusion:** the dialogue skill was generated from the dialogue train
+run, and the benchmark task is the same dialogue-parser task. The 1.0 result is
+a train replay, not a disjoint validation lift, and must not be used as policy
+evidence.
+
+The second cohort therefore has only two domains and no valid
+training-independent policy result. The energy-domain task timed out and the
+cybersecurity task failed its sandbox CPU constraint; neither is scored.
+
+## Dialogue parser capability
+
+A general dialogue-graph parser family was added to the planner. It parses
+bracketed scenes, speaker lines, numbered choices, reachability, and DOT output.
+
+- Local task verifier: **35/35 passed**
+- Train-replay benchmark: **1.0**, `SKILL.md` read, 27 calls
+- It is not counted as a validation lift because of the train/validation task
+  overlap.
 
 ## Gate
 

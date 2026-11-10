@@ -25,6 +25,7 @@ const FAMILY_LABEL: Readonly<Record<FailureFamily, string>> = {
   'codebook-parsing': 'codebook parsing',
   'spreadsheet-formula-validation': 'spreadsheet formula validation',
   'financial-reconciliation': 'financial definition reconciliation',
+  'dialogue-graph-parsing': 'dialogue graph parsing',
 }
 
 function makeFinding(family: FailureFamily): Finding {

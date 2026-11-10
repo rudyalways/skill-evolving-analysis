@@ -24,6 +24,7 @@ export const FAILURE_FAMILIES = [
   'codebook-parsing',
   'spreadsheet-formula-validation',
   'financial-reconciliation',
+  'dialogue-graph-parsing',
 ] as const
 
 /** One general failure family supported by the resource planner. */
@@ -344,6 +345,7 @@ const FAMILY_KEYWORDS: Readonly<Record<FailureFamily, readonly string[]>> = {
   'codebook-parsing': ['codebook', 'code book', 'parsing', 'parser', 'normalize', 'normalization', 'alias', 'category'],
   'spreadsheet-formula-validation': ['spreadsheet', 'cell', 'cells', 'formula', 'excel', 'workbook', 'coordinate', 'sheet'],
   'financial-reconciliation': ['financial', 'finance', 'definition', 'reconcile', 'reconciliation', 'evidence', 'ledger', 'revenue'],
+  'dialogue-graph-parsing': ['dialogue', 'parser', 'graph', 'scene', 'branch', 'script'],
 }
 
 /** Classify a finding into the closest supported family without a model. */
@@ -789,6 +791,94 @@ if __name__ == "__main__":
     main()
 `
 
+
+const DIALOGUE_SCRIPT = `#!/usr/bin/env python3
+"""Parse bracket-scene dialogue scripts into a graph JSON and DOT file."""
+from __future__ import annotations
+
+import json
+import re
+import sys
+from pathlib import Path
+
+SCENE = re.compile(r"^\\[([^\\]]+)\\]$")
+CHOICE = re.compile(r"^\\d+\\.\\s+(.*?)\\s*->\\s*(\\S+)\\s*$")
+LINE = re.compile(r"^([^:]+):\\s*(.*?)\\s*->\\s*(\\S+)\\s*$")
+
+
+def parse_script(text: str) -> dict:
+    nodes: dict[str, dict] = {}
+    edges: list[dict] = []
+
+    def add_node(node_id: str, speaker: str = "Scene", text: str = "", kind: str = "line") -> None:
+        nodes.setdefault(node_id, {"id": node_id, "text": text, "speaker": speaker, "type": kind})
+
+    def add_edge(source: str, target: str, text: str) -> None:
+        edges.append({"from": source, "to": target, "text": text})
+        if target != "End":
+            add_node(target)
+
+    current = None
+    for raw in text.splitlines():
+        line = raw.strip()
+        if not line:
+            continue
+        scene = SCENE.match(line)
+        if scene:
+            current = scene.group(1)
+            add_node(current)
+            continue
+        if current is None:
+            continue
+        choice = CHOICE.match(line)
+        if choice:
+            nodes[current]["type"] = "choice"
+            add_edge(current, choice.group(2), choice.group(1))
+            continue
+        dialogue = LINE.match(line)
+        if dialogue:
+            speaker = dialogue.group(1).strip()
+            body = dialogue.group(2).strip()
+            target = dialogue.group(3).strip()
+            node = nodes[current]
+            if not node["text"]:
+                node["text"] = body
+                node["speaker"] = speaker
+            add_edge(current, target, body)
+    return {"nodes": list(nodes.values()), "edges": edges}
+
+
+def to_dot(graph: dict) -> str:
+    lines = ["digraph DialogueGraph {"]
+    for node in graph["nodes"]:
+        shape = "diamond" if node["type"] == "choice" else "box"
+        label = f'{node["id"]}\\n{node["speaker"]}: {node["text"][:40]}'.replace('"', '\\"')
+        lines.append(f'  "{node["id"]}" [shape={shape}, label="{label}"];')
+    for edge in graph["edges"]:
+        label = edge["text"].replace('"', '\\"')
+        lines.append(f'  "{edge["from"]}" -> "{edge["to"]}" [label="{label}"];')
+    lines.append("}")
+    return "\\n".join(lines) + "\\n"
+
+
+def main() -> None:
+    if len(sys.argv) < 2:
+        data = json.load(sys.stdin)
+        if not isinstance(data, dict) or data.get("self_test") is not True:
+            raise SystemExit("expected a script path argument or {'self_test': true}")
+        print(json.dumps({"status": "ok"}, sort_keys=True))
+        return
+    text = Path(sys.argv[1]).read_text(encoding="utf-8")
+    graph = parse_script(text)
+    Path("dialogue.json").write_text(json.dumps(graph, indent=2), encoding="utf-8")
+    Path("dialogue.dot").write_text(to_dot(graph), encoding="utf-8")
+    print(json.dumps({"status": "ok", "nodes": len(graph["nodes"]), "edges": len(graph["edges"])}, sort_keys=True))
+
+
+if __name__ == "__main__":
+    main()
+`
+
 const FINANCIAL_SCRIPT = `#!/usr/bin/env python3
 """Reconcile reported facts to explicit definitions and cited evidence."""
 from __future__ import annotations
@@ -1067,6 +1157,46 @@ const FAMILY_CONTENT: Readonly<Record<FailureFamily, FamilyContent>> = {
       },
     ),
     fixtureSummary: 'safe reconciliation fixture with expected matched facts',
+  },
+  'dialogue-graph-parsing': {
+    label: 'dialogue graph parsing',
+    title: 'Dialogue graph parsing',
+    trigger: 'a text script must be parsed into a reachable node/edge graph and visualization',
+    scriptPath: 'scripts/dialogue_graph.py',
+    script: DIALOGUE_SCRIPT,
+    scriptSummary: 'deterministic bracket-scene dialogue parser with graph and DOT output',
+    referencePath: 'references/dialogue-graph-parsing.md',
+    referenceSummary: 'conditional rules for scene headers, speaker lines, numbered choices, reachability, and DOT output',
+    reference: lines(
+      '# Dialogue graph parsing reference',
+      '',
+      '## When to use',
+      'Use this reference when a dialogue script uses bracketed scene headers, speaker lines, and numbered choices that must become a reachable directed graph.',
+      '',
+      '## Procedure',
+      '1. Treat each bracketed `[Scene]` header as a node id.',
+      '2. Parse `Speaker: text -> Target` as the scene text and a directed edge.',
+      '3. Parse `1. choice text -> Target` as a choice node and a directed edge.',
+      '4. Create placeholder nodes for targets, except the terminal `End` node.',
+      '5. Emit `dialogue.json` with nodes and edges plus a DOT graph; choice nodes must be diamonds.',
+      '',
+      '## Validation',
+      '- Every edge target exists except `End`.',
+      '- Every non-End node is reachable from the first scene.',
+      '- Choice scenes have their full branch set.',
+      '- DOT contains `digraph`, braces, directed edges, and diamond choice nodes.',
+      '',
+      '## Failure handling',
+      'If a line cannot be parsed, leave it out of the graph and report the source line. Do not invent dialogue text or targets.',
+    ),
+    fixturePath: 'evals/fixtures/dialogue-graph-parsing.json',
+    fixture: fixtureDocument(
+      'scripts/dialogue_graph.py',
+      { self_test: true },
+      { status: 'ok' },
+    ),
+    fixtureSummary: 'safe parser self-test fixture',
+    runInstruction: 'When the task requires `solution.py`, copy the `parse_script` implementation from `scripts/dialogue_graph.py` into `solution.py`, then run the script on the input script to emit `dialogue.json` and `dialogue.dot`.',
   },
 }
 
