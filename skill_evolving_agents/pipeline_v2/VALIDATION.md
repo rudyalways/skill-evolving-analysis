@@ -194,9 +194,11 @@ A pre-registered 16-task, 8-domain fresh catalog cohort was attempted on
   3d-scan-calc, threejs-to-obj), failures 6
 - after further retries: `mario-coin-counting` failed; `seismic-phase-picking`
   still errored
-- validated cells: 11, passes 4, failures 7
-- unresolved: 5 cells
-- mathematical maximum: 4 + 5 = **9/16**, below the 10/16 target
+- validated cells: 12, passes 4, failures 8
+- unresolved: 4 cells (`exam-block-sequencing`, `syzkaller-ppdev-syzlang`,
+  `setup-fuzzing-py`, `seismic-phase-picking`)
+- `grid-dispatch-operator` failed (0.0, 139 calls)
+- mathematical maximum: 4 + 4 = **8/16**, below the 10/16 target
 - this cohort cannot produce a 60% result and is not a completed holdout
 
 The incomplete cohort is **not** a valid holdout and is not scored. No 60%
