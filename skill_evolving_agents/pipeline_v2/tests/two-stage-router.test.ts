@@ -226,6 +226,21 @@ describe('stage one retrieval', () => {
     expect(provider.requests[0]?.skills[0]?.summary).toBe(REPORT_EXPORT.description)
   })
 
+  it('excludes skills marked unselectable', async () => {
+    const inventory = {
+      ...INVENTORY,
+      skills: INVENTORY.skills.map((skill, index) => (
+        index === 0 ? { ...skill, selectable: false } : skill
+      )),
+    }
+    const router = new TwoStageRouter({ inventory, clock: () => 0 })
+    const result = await router.route(REUSE_TASK, BUDGET)
+
+    expect(result.retrieval.skills.map(row => row.skillId)).not.toContain(
+      INVENTORY.skills[0]?.skillId,
+    )
+  })
+
   it('excludes failure families marked unselectable', async () => {
     const inventory = {
       ...INVENTORY,

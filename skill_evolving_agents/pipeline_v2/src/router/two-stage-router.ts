@@ -734,7 +734,11 @@ export class TwoStageRouter {
     this.embedding = options.embedding ?? new DeterministicEmbeddingProvider()
     this.decisionProvider = options.decisionProvider ?? null
     this.clock = options.clock ?? (() => Date.now())
-    this.skillById = new Map(this.inventory.skills.map(skill => [String(skill.skillId), skill]))
+    this.skillById = new Map(
+      this.inventory.skills
+        .filter(skill => skill.selectable !== false)
+        .map(skill => [String(skill.skillId), skill]),
+    )
     this.familyById = new Map(
       this.inventory.failureFamilies
         .filter(family => family.selectable !== false)
@@ -751,21 +755,24 @@ export class TwoStageRouter {
     const matrix = embedMatrix(this.embedding, [task.text, ...skillTexts, ...familyTexts])
     const queryVector = matrix === null ? undefined : matrix[0]
 
-    const skillCandidates = this.inventory.skills.map((skill, index): SkillCandidate => {
-      const documentTokens = tokenize(skillDocumentText(skill))
-      const documentVector = matrix === null ? undefined : matrix[index + 1]
-      const embedding = queryVector !== undefined && documentVector !== undefined
-        ? cosine(queryVector, documentVector)
-        : 0
-      const scores = combineScores(
-        lexicalScore(queryTokens, documentTokens),
-        embedding,
-        intentActionCompatibility(task, skill),
-        familyCompatibility(task.family, skill.family),
-        this.config.weights,
-      )
-      return { skillId: skill.skillId, scores }
-    }).sort((left, right) => compareCandidates(left.scores, right.scores, String(left.skillId), String(right.skillId)))
+    const skillCandidates = this.inventory.skills
+      .map((skill, index) => ({ skill, index }))
+      .filter(({ skill }) => skill.selectable !== false)
+      .map(({ skill, index }): SkillCandidate => {
+        const documentTokens = tokenize(skillDocumentText(skill))
+        const documentVector = matrix === null ? undefined : matrix[index + 1]
+        const embedding = queryVector !== undefined && documentVector !== undefined
+          ? cosine(queryVector, documentVector)
+          : 0
+        const scores = combineScores(
+          lexicalScore(queryTokens, documentTokens),
+          embedding,
+          intentActionCompatibility(task, skill),
+          familyCompatibility(task.family, skill.family),
+          this.config.weights,
+        )
+        return { skillId: skill.skillId, scores }
+      }).sort((left, right) => compareCandidates(left.scores, right.scores, String(left.skillId), String(right.skillId)))
       .slice(0, this.config.stage1Limit)
 
     const familyCandidates = this.inventory.failureFamilies
