@@ -183,6 +183,8 @@ A pre-registered 16-task, 8-domain fresh catalog cohort was attempted on
 - completed failures: 5
 - environment failures: 8 Docker build/agent-install failures
 - remaining: 2 tasks not completed before the run was stopped
+- sequential retries of failed cells also failed before producing results
+  (Docker Compose build or agent-install errors)
 
 The incomplete cohort is **not** a valid holdout and is not scored. No 60%
 claim can be derived from it.
