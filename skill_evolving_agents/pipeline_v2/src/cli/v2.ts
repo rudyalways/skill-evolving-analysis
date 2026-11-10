@@ -50,6 +50,7 @@ function seedInventory(family: FailureFamily): RouterInventory {
       intents: ['evolve-skill'],
       actions: ['update'],
       keywords: family.split('-'),
+      selectable: true,
     }],
     failureFamilies: [{
       familyId: family,
@@ -58,6 +59,7 @@ function seedInventory(family: FailureFamily): RouterInventory {
       intents: ['evolve-skill'],
       actions: ['update'],
       keywords: family.split('-'),
+      selectable: true,
     }],
   }
 }

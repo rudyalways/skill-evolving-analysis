@@ -769,22 +769,23 @@ export class TwoStageRouter {
       .slice(0, this.config.stage1Limit)
 
     const familyCandidates = this.inventory.failureFamilies
-      .filter(family => family.selectable !== false)
-      .map((family, index): FailureFamilyCandidate => {
-      const documentTokens = tokenize(failureFamilyText(family))
-      const documentVector = matrix === null ? undefined : matrix[this.inventory.skills.length + index + 1]
-      const embedding = queryVector !== undefined && documentVector !== undefined
-        ? cosine(queryVector, documentVector)
-        : 0
-      const scores = combineScores(
-        lexicalScore(queryTokens, documentTokens),
-        embedding,
-        intentActionCompatibility(task, family),
-        familyCompatibility(task.family, family.family),
-        this.config.weights,
-      )
-      return { familyId: family.familyId, scores }
-    }).sort((left, right) => compareCandidates(left.scores, right.scores, left.familyId, right.familyId))
+      .map((family, index) => ({ family, index }))
+      .filter(({ family }) => family.selectable !== false)
+      .map(({ family, index }): FailureFamilyCandidate => {
+        const documentTokens = tokenize(failureFamilyText(family))
+        const documentVector = matrix === null ? undefined : matrix[this.inventory.skills.length + index + 1]
+        const embedding = queryVector !== undefined && documentVector !== undefined
+          ? cosine(queryVector, documentVector)
+          : 0
+        const scores = combineScores(
+          lexicalScore(queryTokens, documentTokens),
+          embedding,
+          intentActionCompatibility(task, family),
+          familyCompatibility(task.family, family.family),
+          this.config.weights,
+        )
+        return { familyId: family.familyId, scores }
+      }).sort((left, right) => compareCandidates(left.scores, right.scores, left.familyId, right.familyId))
       .slice(0, this.config.stage1Limit)
 
     return {
