@@ -226,6 +226,21 @@ describe('stage one retrieval', () => {
     expect(provider.requests[0]?.skills[0]?.summary).toBe(REPORT_EXPORT.description)
   })
 
+  it('excludes failure families marked unselectable', async () => {
+    const inventory = {
+      ...INVENTORY,
+      failureFamilies: INVENTORY.failureFamilies.map((family, index) => (
+        index === 0 ? { ...family, selectable: false } : family
+      )),
+    }
+    const router = new TwoStageRouter({ inventory, clock: () => 0 })
+    const result = await router.route(REUSE_TASK, BUDGET)
+
+    expect(result.retrieval.failureFamilies.map(row => row.familyId)).not.toContain(
+      INVENTORY.failureFamilies[0]?.familyId,
+    )
+  })
+
   it('abstains when no candidate has enough evidence', async () => {
     const router = new TwoStageRouter({ inventory: INVENTORY, clock: () => 0 })
     const result = await router.route(UNRELATED_TASK, BUDGET)

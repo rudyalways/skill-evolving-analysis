@@ -21,6 +21,8 @@ export interface SkillDocument {
   readonly actions?: readonly string[]
   readonly keywords?: readonly string[]
   readonly text?: string
+  /** When false, stage-one excludes this skill from selection. */
+  readonly selectable?: boolean
 }
 
 /** One reusable failure family available to stage-one recall. */
@@ -31,6 +33,8 @@ export interface FailureFamilyDocument {
   readonly intents?: readonly string[]
   readonly actions?: readonly string[]
   readonly keywords?: readonly string[]
+  /** When false, stage-one excludes this family from selection. */
+  readonly selectable?: boolean
 }
 
 /** The current skill and failure-family inventory. */
@@ -731,7 +735,11 @@ export class TwoStageRouter {
     this.decisionProvider = options.decisionProvider ?? null
     this.clock = options.clock ?? (() => Date.now())
     this.skillById = new Map(this.inventory.skills.map(skill => [String(skill.skillId), skill]))
-    this.familyById = new Map(this.inventory.failureFamilies.map(family => [family.familyId, family]))
+    this.familyById = new Map(
+      this.inventory.failureFamilies
+        .filter(family => family.selectable !== false)
+        .map(family => [family.familyId, family]),
+    )
   }
 
   /** Run stage one only: score and rank every skill and failure-family candidate. */
@@ -760,7 +768,9 @@ export class TwoStageRouter {
     }).sort((left, right) => compareCandidates(left.scores, right.scores, String(left.skillId), String(right.skillId)))
       .slice(0, this.config.stage1Limit)
 
-    const familyCandidates = this.inventory.failureFamilies.map((family, index): FailureFamilyCandidate => {
+    const familyCandidates = this.inventory.failureFamilies
+      .filter(family => family.selectable !== false)
+      .map((family, index): FailureFamilyCandidate => {
       const documentTokens = tokenize(failureFamilyText(family))
       const documentVector = matrix === null ? undefined : matrix[this.inventory.skills.length + index + 1]
       const embedding = queryVector !== undefined && documentVector !== undefined
