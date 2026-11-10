@@ -165,7 +165,8 @@ implementation checklist.
 
 - Skill generation: succeeded
 - Benchmark rerun: **not scored**; the sandbox timed out during deepagents
-  installation at the 600s wall cap
+  installation at the 600s wall cap, and a retry with a 1,200s execution budget
+  timed out during agent execution. No verifier result was produced.
 - No reward, exposure, or lift is claimed for this cell
 
 The next retry must first confirm the data-to-d3 agent environment installs
