@@ -172,6 +172,21 @@ implementation checklist.
 The next retry must first confirm the data-to-d3 agent environment installs
 within budget; otherwise it is an infrastructure exclusion.
 
+
+## Fresh 16-task/8-domain holdout attempt — invalid
+
+A pre-registered 16-task, 8-domain fresh catalog cohort was attempted on
+2026-11-10. It did **not** complete:
+
+- completed baselines: 6
+- completed passes: 1 (`financial-modeling-qa`)
+- completed failures: 5
+- environment failures: 8 Docker build/agent-install failures
+- remaining: 2 tasks not completed before the run was stopped
+
+The incomplete cohort is **not** a valid holdout and is not scored. No 60%
+claim can be derived from it.
+
 ## Gate
 
 - Positive absolute lift: **yes on validation** (+25pp selective, +100pp activated)
