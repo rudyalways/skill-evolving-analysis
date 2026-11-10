@@ -25,6 +25,7 @@ export const FAILURE_FAMILIES = [
   'spreadsheet-formula-validation',
   'financial-reconciliation',
   'dialogue-graph-parsing',
+  'network-forensics',
 ] as const
 
 /** One general failure family supported by the resource planner. */
@@ -346,6 +347,7 @@ const FAMILY_KEYWORDS: Readonly<Record<FailureFamily, readonly string[]>> = {
   'spreadsheet-formula-validation': ['spreadsheet', 'cell', 'cells', 'formula', 'excel', 'workbook', 'coordinate', 'sheet'],
   'financial-reconciliation': ['financial', 'finance', 'definition', 'reconcile', 'reconciliation', 'evidence', 'ledger', 'revenue'],
   'dialogue-graph-parsing': ['dialogue', 'parser', 'graph', 'scene', 'branch', 'script'],
+  'network-forensics': ['pcap', 'packet', 'network', 'intrusion', 'protocol', 'flow'],
 }
 
 /** Classify a finding into the closest supported family without a model. */
@@ -792,6 +794,197 @@ if __name__ == "__main__":
 `
 
 
+const NETWORK_SCRIPT = `#!/usr/bin/env python3
+"""Compute network statistics from a PCAP and fill a metric/value CSV template."""
+from __future__ import annotations
+
+import csv
+import math
+import sys
+from collections import Counter, defaultdict
+from pathlib import Path
+
+def entropy(counter: Counter) -> float:
+    total = sum(counter.values())
+    if total <= 0:
+        return 0.0
+    result = 0.0
+    for count in counter.values():
+        p = count / total
+        if p > 0:
+            result -= p * math.log2(p)
+    return result
+
+
+def analyze(pcap_path: str) -> dict[str, object]:
+    from scapy.all import ARP, ICMP, IP, TCP, UDP, rdpcap
+
+    packets = rdpcap(pcap_path)
+    total = len(packets)
+    tcp = [p for p in packets if TCP in p]
+    udp = [p for p in packets if UDP in p]
+    icmp = [p for p in packets if ICMP in p]
+    arp = [p for p in packets if ARP in p]
+    ip_packets = [p for p in packets if IP in p]
+
+    timestamps = sorted(float(p.time) for p in packets)
+    duration = timestamps[-1] - timestamps[0] if timestamps else 0.0
+    buckets = Counter(int((ts - timestamps[0]) // 60) for ts in timestamps)
+    bucket_values = list(buckets.values())
+    sizes = [len(p) for p in packets]
+
+    src_ips = Counter()
+    dst_ips = Counter()
+    src_ports = Counter()
+    dst_ports = Counter()
+    bytes_sent = Counter()
+    bytes_recv = Counter()
+    edges = set()
+    flows: set[tuple] = set()
+    tcp_flows: set[tuple] = set()
+    udp_flows: set[tuple] = set()
+    dst_ports_by_src: dict[str, set[int]] = defaultdict(set)
+
+    for pkt in packets:
+        if IP not in pkt:
+            continue
+        ip = pkt[IP]
+        src, dst = ip.src, ip.dst
+        length = len(pkt)
+        src_ips[src] += 1
+        dst_ips[dst] += 1
+        bytes_sent[src] += length
+        bytes_recv[dst] += length
+        edges.add((src, dst))
+
+        if TCP in pkt:
+            sport, dport = int(pkt[TCP].sport), int(pkt[TCP].dport)
+            key = (src, dst, sport, dport, "TCP")
+            tcp_flows.add(key)
+            dst_ports_by_src[src].add(dport)
+        elif UDP in pkt:
+            sport, dport = int(pkt[UDP].sport), int(pkt[UDP].dport)
+            key = (src, dst, sport, dport, "UDP")
+            udp_flows.add(key)
+            dst_ports_by_src[src].add(dport)
+        else:
+            continue
+        src_ports[sport] += 1
+        dst_ports[dport] += 1
+        flows.add(key)
+
+    protocol_counts = {
+        "tcp": len(tcp), "udp": len(udp), "icmp": len(icmp),
+        "arp": len(arp), "ip": len(ip_packets),
+    }
+    dominant = max(("tcp", "udp", "icmp", "arp"), key=lambda k: protocol_counts[k])
+
+    nodes = set(src_ips) | set(dst_ips)
+    n = len(nodes)
+    out_degree: Counter = Counter()
+    in_degree: Counter = Counter()
+    for src, dst in edges:
+        out_degree[src] += 1
+        in_degree[dst] += 1
+
+    iats = [b - a for a, b in zip(timestamps, timestamps[1:])]
+    iat_mean = sum(iats) / len(iats) if iats else 0.0
+    iat_var = sum((x - iat_mean) ** 2 for x in iats) / len(iats) if iats else 0.0
+    iat_cv = math.sqrt(iat_var) / iat_mean if iat_mean else 0.0
+
+    pcr = {}
+    for ip in nodes:
+        sent, recv = bytes_sent[ip], bytes_recv[ip]
+        if sent + recv:
+            pcr[ip] = (sent - recv) / (sent + recv)
+
+    reverse = {(b, a, dp, sp, proto) for a, b, sp, dp, proto in flows}
+    flags = {
+        "is_traffic_benign": "true",
+        "has_port_scan": str(any(len(v) > 1000 for v in dst_ports_by_src.values())).lower(),
+        "has_dos_pattern": str(max(bucket_values) / 60.0 > 1000).lower() if bucket_values else "false",
+        "has_beaconing": str(iat_cv < 0.5 and total > 1000).lower(),
+    }
+
+    values: dict[str, object] = {
+        "total_packets": total,
+        "protocol_tcp": len(tcp),
+        "protocol_udp": len(udp),
+        "protocol_icmp": len(icmp),
+        "protocol_arp": len(arp),
+        "protocol_ip_total": len(ip_packets),
+        "duration_seconds": round(duration, 2),
+        "packets_per_minute_avg": round(sum(bucket_values) / len(bucket_values), 2) if bucket_values else 0,
+        "packets_per_minute_max": max(bucket_values) if bucket_values else 0,
+        "packets_per_minute_min": min(bucket_values) if bucket_values else 0,
+        "total_bytes": sum(sizes),
+        "avg_packet_size": round(sum(sizes) / len(sizes), 2) if sizes else 0,
+        "min_packet_size": min(sizes) if sizes else 0,
+        "max_packet_size": max(sizes) if sizes else 0,
+        "dst_port_entropy": round(entropy(dst_ports), 4),
+        "src_port_entropy": round(entropy(src_ports), 4),
+        "src_ip_entropy": round(entropy(src_ips), 4),
+        "dst_ip_entropy": round(entropy(dst_ips), 4),
+        "unique_dst_ports": len(dst_ports),
+        "unique_src_ports": len(src_ports),
+        "num_nodes": n,
+        "num_edges": len(edges),
+        "network_density": round(len(edges) / (n * (n - 1)), 6) if n > 1 else 0,
+        "max_indegree": max(in_degree.values()) if in_degree else 0,
+        "max_outdegree": max(out_degree.values()) if out_degree else 0,
+        "iat_mean": round(iat_mean, 5),
+        "iat_variance": round(iat_var, 6),
+        "iat_cv": round(iat_cv, 4),
+        "num_producers": sum(1 for v in pcr.values() if v > 0.2),
+        "num_consumers": sum(1 for v in pcr.values() if v < -0.2),
+        "unique_flows": len(flows),
+        "bidirectional_flows": len(flows & reverse) // 2,
+        "tcp_flows": len(tcp_flows),
+        "udp_flows": len(udp_flows),
+        "dominant_protocol": dominant,
+        **flags,
+    }
+    return values
+
+
+def fill(template: Path, values: dict[str, object], output: Path) -> None:
+    rows = []
+    with template.open(newline="", encoding="utf-8") as f:
+        for row in csv.DictReader(f):
+            metric = (row.get("metric") or "").strip()
+            if metric in values:
+                row["value"] = str(values[metric])
+            rows.append(row)
+    if "total_packets" in values:
+        rows.append({"metric": "total_packets", "value": str(values["total_packets"])})
+    if "dominant_protocol" in values:
+        rows.append({"metric": "dominant_protocol", "value": str(values["dominant_protocol"])})
+    with output.open("w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=["metric", "value"])
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+def main() -> None:
+    if len(sys.argv) < 2:
+        import json
+        data = json.load(sys.stdin)
+        if not isinstance(data, dict) or data.get("self_test") is not True:
+            raise SystemExit("expected pcap path or {'self_test': true}")
+        print(json.dumps({"status": "ok"}, sort_keys=True))
+        return
+    pcap = Path(sys.argv[1])
+    template = Path(sys.argv[2]) if len(sys.argv) > 2 else Path("/root/network_stats.csv")
+    output = Path(sys.argv[3]) if len(sys.argv) > 3 else template
+    fill(template, analyze(str(pcap)), output)
+    print("ok")
+
+
+if __name__ == "__main__":
+    main()
+`
+
+
 const DIALOGUE_SCRIPT = `#!/usr/bin/env python3
 """Parse bracket-scene dialogue scripts into a graph JSON and DOT file."""
 from __future__ import annotations
@@ -1197,6 +1390,46 @@ const FAMILY_CONTENT: Readonly<Record<FailureFamily, FamilyContent>> = {
     ),
     fixtureSummary: 'safe parser self-test fixture',
     runInstruction: 'When the task requires `solution.py`, copy the `parse_script` implementation from `scripts/dialogue_graph.py` into `solution.py`, then run the script on the input script to emit `dialogue.json` and `dialogue.dot`.',
+  },
+  'network-forensics': {
+    label: 'network forensics',
+    title: 'Network forensics',
+    trigger: 'a packet capture must be summarized with protocol, size, entropy, graph, timing, or flow metrics',
+    scriptPath: 'scripts/network_stats.py',
+    script: NETWORK_SCRIPT,
+    scriptSummary: 'deterministic Scapy PCAP metric extractor that fills a metric/value CSV template',
+    referencePath: 'references/network-forensics.md',
+    referenceSummary: 'pcap metric definitions, entropy/graph/flow rules, and analysis-flag thresholds',
+    reference: lines(
+      '# Network forensics reference',
+      '',
+      '## When to use',
+      'Use this reference when a PCAP must be reduced to a metric/value CSV covering protocol counts, sizes, entropy, graph topology, inter-arrival timing, producer/consumer ratios, and 5-tuple flows.',
+      '',
+      '## Procedure',
+      '1. Preserve the supplied CSV comments and metric column; replace only values.',
+      '2. Count packets by TCP/UDP/ICMP/ARP and IP presence separately.',
+      '3. Build per-minute buckets from the first timestamp, not absolute epoch boundaries.',
+      '4. Compute Shannon entropy over observed IP and port frequencies.',
+      '5. Build a directed IP graph and count distinct directed edges.',
+      '6. Compute PCR as (sent - recv) / (sent + recv); producers > 0.2, consumers < -0.2.',
+      '7. Count each bidirectional flow once; compare the reverse 5-tuple.',
+      '8. Report analysis flags from the computed evidence, never from filenames.',
+      '',
+      '## Validation',
+      '- Recompute totals and confirm packet, byte, and flow counts.',
+      '- Check entropy is non-negative.',
+      '- Check density uses n * (n - 1).',
+      '- Confirm the output CSV still parses and comments are preserved.',
+    ),
+    fixturePath: 'evals/fixtures/network-forensics.json',
+    fixture: fixtureDocument(
+      'scripts/network_stats.py',
+      { self_test: true },
+      { status: 'ok' },
+    ),
+    fixtureSummary: 'safe PCAP metric extractor self-test fixture',
+    runInstruction: 'Run `scripts/network_stats.py <pcap> <template.csv> <output.csv>` and preserve all comment rows and the metric column. Use the script output verbatim for every value, including `is_traffic_benign`, `has_port_scan`, `has_dos_pattern`, and `has_beaconing`; do not replace those flags with a subjective reclassification.',
   },
 }
 

@@ -141,6 +141,22 @@ bracketed scenes, speaker lines, numbered choices, reachability, and DOT output.
 - It is not counted as a validation lift because of the train/validation task
   overlap.
 
+
+## Network-forensics development loop (not validation)
+
+Added a generic Scapy-based PCAP metric extractor and network-forensics family.
+
+- Local DAPT verifier: **37/37 passed**
+- Baseline: 0.0, 30 calls, 210s
+- First skill treatment: 0.0, 36 calls; 35/37 checks; agent overrode two
+  task-defined analysis flags
+- Updated skill instruction: use script flags verbatim
+- Rerun: **1.0**, 16 calls, 60s, verified `SKILL.md` read, no efficiency failure
+
+This is a **train replay** because the skill was generated from the DAPT baseline
+trace. It demonstrates the intended run → trace → update → rerun loop, but it is
+not a disjoint validation or holdout result.
+
 ## Gate
 
 - Positive absolute lift: **yes on validation** (+25pp selective, +100pp activated)
