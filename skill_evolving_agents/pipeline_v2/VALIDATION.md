@@ -192,7 +192,12 @@ A pre-registered 16-task, 8-domain fresh catalog cohort was attempted on
   still errored
 - validated cells so far: 10, passes 4 (financial-modeling-qa, pddl-tpp-planning,
   3d-scan-calc, threejs-to-obj), failures 6
-- still unresolved: 6 cells; holdout remains incomplete and unscored
+- after further retries: `mario-coin-counting` failed; `seismic-phase-picking`
+  still errored
+- validated cells: 11, passes 4, failures 7
+- unresolved: 5 cells
+- mathematical maximum: 4 + 5 = **9/16**, below the 10/16 target
+- this cohort cannot produce a 60% result and is not a completed holdout
 
 The incomplete cohort is **not** a valid holdout and is not scored. No 60%
 claim can be derived from it.
