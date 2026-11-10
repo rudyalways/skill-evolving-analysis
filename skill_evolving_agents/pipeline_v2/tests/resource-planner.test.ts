@@ -66,6 +66,7 @@ describe('resource planner failure families', () => {
       expect(plan.bundle['SKILL.md']).toContain('/skills/')
       expect(plan.bundle['SKILL.md']).toContain('Execution rules')
       expect(plan.bundle['SKILL.md']).toContain('authoritative')
+      expect(plan.bundle['SKILL.md']).toContain('Stop rules')
       expect(plan.bundle[plan.skill.path]).toBeDefined()
       expect(paths).toHaveLength(family === 'spreadsheet-formula-validation' ? 5 : 3)
       expect(paths.some((path) => path.startsWith('scripts/'))).toBe(true)
