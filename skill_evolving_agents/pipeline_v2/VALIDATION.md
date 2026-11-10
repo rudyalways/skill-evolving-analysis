@@ -86,6 +86,20 @@ benchmark treatment that exposed the script in the prompt did not complete
 within the 600s wall budget and was stopped unscored. It is not counted as a
 lift.
 
+## Second validation cohort — baselines only
+
+Disjoint from the first validation cohort and from the train generation ID:
+
+| Task | Domain | Baseline | Calls | Seconds |
+|---|---|---:|---:|---:|
+| exceltable-in-ppt | office-white-collar | 1 | 13 | 30 |
+| pptx-reference-formatting | office-white-collar | 1 | 51 | 120 |
+| data-to-d3 | software-engineering | 0 | 8 | 60 |
+| dialogue-parser | software-engineering | 0.667 partial | 30 | 90 |
+
+Baseline complete passes: **2/4 = 50%**. No treatments were selected/run in this
+cohort yet. It is not a holdout result.
+
 ## Gate
 
 - Positive absolute lift: **yes on validation** (+25pp selective, +100pp activated)
