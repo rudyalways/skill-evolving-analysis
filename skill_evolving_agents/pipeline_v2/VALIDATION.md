@@ -183,8 +183,16 @@ A pre-registered 16-task, 8-domain fresh catalog cohort was attempted on
 - completed failures: 5
 - environment failures: 8 Docker build/agent-install failures
 - remaining: 2 tasks not completed before the run was stopped
-- sequential retries of failed cells also failed before producing results
-  (Docker Compose build or agent-install errors)
+- sequential retries initially failed under four-way concurrency
+- root cause: the Docker VM disk was 100% full; after removing stale
+  containers/build cache, all eight previously failed task images built
+  successfully
+- retries produced: `pddl-tpp-planning` pass, `3d-scan-calc` pass,
+  `threejs-to-obj` pass, `organize-messy-files` fail; `seismic-phase-picking`
+  still errored
+- validated cells so far: 10, passes 4 (financial-modeling-qa, pddl-tpp-planning,
+  3d-scan-calc, threejs-to-obj), failures 6
+- still unresolved: 6 cells; holdout remains incomplete and unscored
 
 The incomplete cohort is **not** a valid holdout and is not scored. No 60%
 claim can be derived from it.
