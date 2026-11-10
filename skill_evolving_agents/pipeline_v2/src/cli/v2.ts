@@ -80,14 +80,14 @@ async function loadInventory(path: string | null, family: FailureFamily): Promis
   }
 }
 
-function familyFor(traceText: string): FailureFamily {
+function familyFor(traceText: string): FailureFamily | undefined {
   return classifyFailureFamily({
     id: findingId('cli-routing'),
     traceId: traceId('cli-routing'),
     detector: 'cli-routing',
     confidence: 0.5,
     summary: traceText.slice(0, 1000),
-  }) ?? 'spreadsheet-formula-validation'
+  })
 }
 
 function reportFromResult(
@@ -184,6 +184,9 @@ async function execute(options: ReturnType<typeof parseArgs>): Promise<number> {
   if (firstTrace === undefined) issue('--trace-file', 'trace source is empty')
   const trace = await traceSource.read(firstTrace)
   const family = familyFor(trace.turns.join('\n'))
+  if (family === undefined) {
+    issue('--trace-file', 'no supported failure family detected; refusing to generate an unrelated skill')
+  }
   const inventory = await loadInventory(options.sourceInventory, family)
   const store = await openStudyStore(options.store)
   const ctx = new Context()
