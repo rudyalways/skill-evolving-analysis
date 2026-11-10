@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto'
 import {
+  chmod,
   mkdir,
   mkdtemp,
   open,
@@ -806,6 +807,20 @@ async function readJson(path: string): Promise<unknown | undefined> {
       path,
       cause: errorMessage(error),
     })
+  }
+}
+
+/** Make published trees readable by the sandbox user (directories 755, files 644). */
+async function normalizePermissions(root: string): Promise<void> {
+  await chmod(root, 0o755)
+  const entries = await readdir(root, { withFileTypes: true })
+  for (const entry of entries) {
+    const target = join(root, entry.name)
+    if (entry.isDirectory()) {
+      await normalizePermissions(target)
+    } else if (entry.isFile()) {
+      await chmod(target, 0o644)
+    }
   }
 }
 
@@ -1695,6 +1710,7 @@ export class WorkspacePublisher {
         }
         stagePath = await mkdtemp(join(located.skillDir, '.publish-'))
         await this.materialize(stagePath, effective.entries)
+        await normalizePermissions(stagePath)
         try {
           await rename(stagePath, versionPath)
           stagePath = undefined

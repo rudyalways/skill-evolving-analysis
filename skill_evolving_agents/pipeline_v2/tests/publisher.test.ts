@@ -252,6 +252,10 @@ describe('content-addressed workspace publication', () => {
     expect(result.treeHash).toMatch(/^[0-9a-f]{64}$/)
     expect(result.previousVersion).toBeNull()
     expect(await listFiles(result.versionPath)).toEqual(Object.keys(plan.bundle).sort())
+    expect((await stat(result.versionPath)).mode & 0o777).toBe(0o755)
+    for (const path of Object.keys(plan.bundle)) {
+      expect((await stat(join(result.versionPath, ...path.split('/')))).mode & 0o777).toBe(0o644)
+    }
     for (const [path, content] of Object.entries(plan.bundle)) {
       expect(await readFile(join(result.versionPath, ...path.split('/')), 'utf8')).toBe(content)
     }

@@ -47,27 +47,26 @@ real v2 trace-to-publication run and the four-task validation cohort.
 | offer-letter-generator | no | no-skill | 1 | inherited 1 | 35/35 | 89.9/89.9 | abstention, baseline inherited |
 | software-dependency-audit | no | no-skill | 0 | inherited 0 | 37/37 | 180.0/180.0 | abstention, baseline inherited |
 | threejs-structure-parser | no | no-skill | 0 | inherited 0 | 23/23 | 60.0/60.0 | abstention, baseline inherited |
-| xlsx-recover-data | yes | with-skill | 0 | 0 | 45/49 | 150.0/1096.0 | activated; 18/19 checks; efficiency failure; no lift |
+| xlsx-recover-data | yes | with-skill | 0 | **1** | 45/12 | 150.0/30.0 | activated by SKILL.md read; pass; within budget |
 
-The published bundle was not visible at `/skills` in the sandbox even though
-BenchFlow reported injection. The final xlsx treatment mounted the same
-published `SKILL.md` in the prompt and the trajectory audit recorded injected
-activation. It is a genuine activated exposure, but it did not pass: both
-baseline and treatment passed 18/19 checks, and the treatment exceeded the 900s
-wall budget (1096s).
+The publisher initially created release directories with mode `700`, so the
+non-root sandbox user could not read `/skills`. The publisher now normalizes
+directories to `755` and files to `644`. The corrected standard `--skills-dir`
+treatment was genuinely activated (`SKILL.md` read), passed the verifier, and
+stayed within budget.
 
 ## Metrics
 
 - Validation cells submitted: 4
 - Admitted: 4
 - Invalid exposure: 0
-- Activated cells: 1 (xlsx, prompt-mounted SKILL.md)
-- Selective policy: 1/4 = 25.0%; baseline: 1/4 = 25.0%; lift 0
-- Activated effect: 0/1 = 0%; no lift
+- Activated cells: 1 (xlsx, SKILL.md read)
+- Selective policy: 2/4 = 50.0%; baseline: 1/4 = 25.0%; lift +25.0pp
+- Activated effect: 1/1 = 100%; lift +100pp
 - Regressions: 0
-- Efficiency failures: 1/4 = 25.0% (xlsx wall budget)
-- Calls: 140/144; xlsx 45 -> 49
-- Latency: 479.9 s / 1425.9 s; xlsx 150.0 s -> 1096.0 s
+- Efficiency failures: 0
+- Calls: 140/107; xlsx 45 -> 12
+- Latency: 479.9 s / 359.9 s; xlsx 150.0 s -> 30.0 s
 - Cost: `null` / unmeasured for every cell; no `$0` claim
 
 ## Bounded repair: deterministic recovery script
@@ -89,10 +88,10 @@ lift.
 
 ## Gate
 
-- Positive absolute lift: **no**
-- Activated-skill evidence: **one cell, 18/19 checks, no lift over baseline**
-- Skill actually used: **yes** in the final xlsx treatment (injected prompt)
-- Second validation cohort warranted: **not yet**; the skill is near-pass but
-  not better than baseline and exceeds the wall budget.
+- Positive absolute lift: **yes on validation** (+25pp selective, +100pp activated)
+- Activated-skill evidence: **one cell, complete pass**
+- Skill actually used: **yes** (`SKILL.md` read)
+- Second validation cohort warranted: **yes**, on a disjoint set; this is still
+  validation, not a holdout result.
 - Fresh sealed 16-task/8-domain holdout ready: **no**
 - 60% milestone: **not claimed**
