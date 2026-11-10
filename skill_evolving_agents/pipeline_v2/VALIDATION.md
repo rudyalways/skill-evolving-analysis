@@ -96,6 +96,7 @@ Disjoint baseline tasks from the catalog:
 | pptx-reference-formatting | office-white-collar | 1 | 51 | 120 |
 | data-to-d3 | software-engineering | 0 | 8 | 60 |
 | dialogue-parser | software-engineering | 0.667 partial | 30 | 90 |
+| dapt-intrusion-detection | cybersecurity | 0 | 30 | 210 |
 
 Baseline complete passes: **2/4 = 50%**.
 
@@ -111,9 +112,24 @@ run, and the benchmark task is the same dialogue-parser task. The 1.0 result is
 a train replay, not a disjoint validation lift, and must not be used as policy
 evidence.
 
-The second cohort therefore has only two domains and no valid
-training-independent policy result. The energy-domain task timed out and the
-cybersecurity task failed its sandbox CPU constraint; neither is scored.
+The energy-domain task timed out and the first cybersecurity attempt failed its
+sandbox CPU constraint. `dapt-intrusion-detection` completed as the third
+domain.
+
+Excluding the train-overlap dialogue cell, the valid second cohort is:
+
+| Task | Domain | Baseline | Treatment |
+|---|---|---:|---:|
+| exceltable-in-ppt | office-white-collar | 1 | 1 |
+| pptx-reference-formatting | office-white-collar | 1 | baseline inherited |
+| data-to-d3 | software-engineering | 0 | baseline inherited |
+| dapt-intrusion-detection | cybersecurity | 0 | baseline inherited |
+
+- Valid cohort: 4 tasks / 3 domains
+- Baseline: 2/4 = 50%
+- Selective policy: 2/4 = 50%
+- Lift: 0
+- No training-independent second-cohort lift.
 
 ## Dialogue parser capability
 
