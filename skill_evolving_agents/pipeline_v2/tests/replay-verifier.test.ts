@@ -153,7 +153,9 @@ describe('ReplayVerifier executable planner bundles', () => {
       expect(evidence.status).toBe('pass')
       expect(evidence.summary).toContain('verified')
       const runs = runsOf(evidence)
-      expect(runs).toHaveLength(2)
+      expect(runs).toHaveLength(
+        plan.resources.filter((row) => row.resource.kind === 'scripts').length * 2,
+      )
       expect(detailsOf(evidence).repairableReasons).toEqual([])
       expect(detailsOf(evidence).terminalReasons).toEqual([])
       for (const run of runs) {
@@ -167,7 +169,7 @@ describe('ReplayVerifier executable planner bundles', () => {
         expect(String(run.stderrHash)).toHaveLength(64)
       }
       expect(runs[0]?.outputHash).toBe(runs[1]?.outputHash)
-    })
+    }, 30_000)
   }
 
   it('accepts plan context supplied to the constructor through the Verifier boundary', async () => {
@@ -305,9 +307,9 @@ describe('ReplayVerifier execution failures', () => {
 
 describe('ReplayVerifier determinism', () => {
   it('records identical output hashes for repeated deterministic runs', async () => {
-    const plan = planFor('spreadsheet-formula-validation')
+    const plan = planFor('unit-harmonization')
     const evidence = await new ReplayVerifier({ runner }).verify(
-      makeOperation('spreadsheet-formula-validation'),
+      makeOperation('unit-harmonization'),
       { plan },
     )
 

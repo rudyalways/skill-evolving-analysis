@@ -372,6 +372,10 @@ interface FamilyContent {
   readonly fixtureSummary: string
   /** Optional general recovery identities rendered into SKILL.md. */
   readonly recovery?: string
+  /** Optional extra resource drafts for this family. */
+  readonly extraDrafts?: readonly ResourceDraft[]
+  /** Optional execution instruction rendered into the procedure. */
+  readonly runInstruction?: string
 }
 
 function lines(...values: readonly string[]): string {
@@ -525,6 +529,260 @@ def main() -> None:
     status = "ok" if not issues else "issues"
     report = {"status": status, "checked": len(cells), "issues": issues}
     print(json.dumps(report, sort_keys=True, separators=(",", ":")))
+
+
+if __name__ == "__main__":
+    main()
+`
+
+
+const RECOVERY_SCRIPT = `#!/usr/bin/env python3
+"""Recover missing cells in a financial workbook from accounting identities."""
+from __future__ import annotations
+
+import json
+import sys
+from pathlib import Path
+from typing import Any
+
+MISSING = {"???", "??", "?"}
+BUDGET_TOTAL = "Total"
+
+
+def is_number(value: Any) -> bool:
+    return isinstance(value, (int, float)) and not isinstance(value, bool)
+
+
+def is_missing(value: Any) -> bool:
+    return isinstance(value, str) and value.strip() in MISSING
+
+
+def rounded(value: float, places: int = 2) -> float | int:
+    result = round(float(value), places)
+    if places == 0 and abs(result - round(result)) < 1e-9:
+        return int(round(result))
+    return result
+
+
+def header_map(worksheet: Any, row: int) -> dict[str, int]:
+    result: dict[str, int] = {}
+    for cell in worksheet[row]:
+        value = cell.value
+        if isinstance(value, str) and value.strip():
+            result[value.strip()] = cell.column
+    return result
+
+
+def find_header(worksheet: Any, label: str, limit: int = 15) -> int | None:
+    for row in range(1, min(worksheet.max_row, limit) + 1):
+        for cell in worksheet[row]:
+            if isinstance(cell.value, str) and cell.value.strip() == label:
+                return row
+    return None
+
+
+def numeric_years(worksheet: Any, header_row: int) -> list[int]:
+    years: list[int] = []
+    for row in range(header_row + 1, worksheet.max_row + 1):
+        value = worksheet.cell(row=row, column=1).value
+        if isinstance(value, int) and 1900 <= value <= 2100:
+            years.append(value)
+    return years
+
+
+def row_for_year(worksheet: Any, header_row: int, year: int) -> int | None:
+    for row in range(header_row + 1, worksheet.max_row + 1):
+        if worksheet.cell(row=row, column=1).value == year:
+            return row
+    return None
+
+
+def sheet_by_title(workbook: Any, needle: str) -> Any | None:
+    for worksheet in workbook.worksheets:
+        title = f"{worksheet.title} {worksheet.cell(row=1, column=1).value or ''}".lower()
+        if needle in title:
+            return worksheet
+    return None
+
+
+def recover(path: Path, output: Path | None = None) -> dict[str, Any]:
+    try:
+        import openpyxl
+    except ImportError as error:
+        raise RuntimeError("openpyxl is required to recover financial workbooks") from error
+
+    workbook = openpyxl.load_workbook(path)
+    budget = None
+    budget_header = None
+    for worksheet in workbook.worksheets:
+        header = find_header(worksheet, "Fiscal Year")
+        if header is None:
+            continue
+        columns = header_map(worksheet, header)
+        if BUDGET_TOTAL in columns:
+            budget = worksheet
+            budget_header = header
+            break
+    if budget is None or budget_header is None:
+        raise ValueError("no budget sheet with a Fiscal Year header and Total column")
+    budget_columns = header_map(budget, budget_header)
+    budget_years = numeric_years(budget, budget_header)
+    if not budget_years:
+        raise ValueError("budget sheet has no numeric year rows")
+
+    yoy = sheet_by_title(workbook, "year-over-year") or sheet_by_title(workbook, "yoy")
+    shares = sheet_by_title(workbook, "share")
+    growth = sheet_by_title(workbook, "growth")
+    yoy_header = find_header(yoy, "Fiscal Year") if yoy is not None else None
+    shares_header = find_header(shares, "Fiscal Year") if shares is not None else None
+    growth_header = find_header(growth, "Metric") if growth is not None else None
+    yoy_columns = header_map(yoy, yoy_header) if yoy is not None and yoy_header else {}
+    shares_columns = header_map(shares, shares_header) if shares is not None and shares_header else {}
+    growth_columns = header_map(growth, growth_header) if growth is not None and growth_header else {}
+
+    def budget_value(year: int, header: str) -> Any:
+        row = row_for_year(budget, budget_header, year)
+        column = budget_columns.get(header)
+        if row is None or column is None:
+            return None
+        return budget.cell(row=row, column=column).value
+
+    # Solve budget rows repeatedly: totals first, then single missing components.
+    component_headers = [
+        name for name in budget_columns
+        if name not in {BUDGET_TOTAL, "Fiscal Year", "Metric"}
+    ]
+    for _ in range(6):
+        changed = False
+        for year in budget_years:
+            row = row_for_year(budget, budget_header, year)
+            if row is None:
+                continue
+            cells = {name: budget.cell(row=row, column=budget_columns[name]) for name in component_headers}
+            total = budget.cell(row=row, column=budget_columns[BUDGET_TOTAL])
+            missing_components = [name for name, cell in cells.items() if is_missing(cell.value)]
+            numeric_components = [cell.value for cell in cells.values() if is_number(cell.value)]
+            if is_missing(total.value) and not missing_components and len(numeric_components) == len(component_headers):
+                total.value = rounded(sum(numeric_components), 0)
+                changed = True
+            elif is_number(total.value) and len(missing_components) == 1:
+                other = sum(cell.value for cell in cells.values() if is_number(cell.value))
+                cells[missing_components[0]].value = rounded(total.value - other, 0)
+                changed = True
+        if not changed:
+            break
+
+    # If a total is still missing because a component is unknown, infer it from
+    # the year-over-year total, then solve the remaining component.
+    for _ in range(3):
+        changed = False
+        if yoy is not None and yoy_header is not None and "Total" in yoy_columns:
+            for year in budget_years:
+                budget_row = row_for_year(budget, budget_header, year)
+                yoy_row = row_for_year(yoy, yoy_header, year)
+                if budget_row is None or yoy_row is None:
+                    continue
+                total_cell = budget.cell(row=budget_row, column=budget_columns[BUDGET_TOTAL])
+                if not is_missing(total_cell.value):
+                    continue
+                yoy_total = yoy.cell(row=yoy_row, column=yoy_columns["Total"]).value
+                prior = budget_value(year - 1, BUDGET_TOTAL)
+                if is_number(yoy_total) and is_number(prior):
+                    total_cell.value = rounded(prior * (1 + yoy_total / 100), 0)
+                    changed = True
+        for year in budget_years:
+            row = row_for_year(budget, budget_header, year)
+            if row is None:
+                continue
+            cells = {name: budget.cell(row=row, column=budget_columns[name]) for name in component_headers}
+            total = budget.cell(row=row, column=budget_columns[BUDGET_TOTAL])
+            missing_components = [name for name, cell in cells.items() if is_missing(cell.value)]
+            if is_number(total.value) and len(missing_components) == 1:
+                other = sum(cell.value for cell in cells.values() if is_number(cell.value))
+                cells[missing_components[0]].value = rounded(total.value - other, 0)
+                changed = True
+        if not changed:
+            break
+
+    # Recover year-over-year values from adjacent budget rows.
+    if yoy is not None and yoy_header is not None:
+        for year in numeric_years(yoy, yoy_header):
+            row = row_for_year(yoy, yoy_header, year)
+            if row is None:
+                continue
+            for name, column in yoy_columns.items():
+                cell = yoy.cell(row=row, column=column)
+                if not is_missing(cell.value) or name not in budget_columns:
+                    continue
+                current = budget_value(year, name)
+                prior = budget_value(year - 1, name)
+                if is_number(current) and is_number(prior) and prior != 0:
+                    cell.value = rounded((current - prior) / prior * 100, 2)
+
+    # Recover shares from budget values.
+    if shares is not None and shares_header is not None:
+        for year in numeric_years(shares, shares_header):
+            row = row_for_year(shares, shares_header, year)
+            total = budget_value(year, BUDGET_TOTAL)
+            if row is None or not is_number(total) or total == 0:
+                continue
+            for name, column in shares_columns.items():
+                cell = shares.cell(row=row, column=column)
+                if not is_missing(cell.value) or name not in budget_columns:
+                    continue
+                part = budget_value(year, name)
+                if is_number(part):
+                    cell.value = rounded(part / total * 100, 2)
+
+    # Recover growth analysis from the five-year window.
+    if growth is not None and growth_header is not None:
+        end_year = max(budget_years)
+        start_year = max(min(budget_years), end_year - 5)
+        for row in range(growth_header + 1, growth.max_row + 1):
+            label = growth.cell(row=row, column=1).value
+            if not isinstance(label, str):
+                continue
+            key = label.strip().lower()
+            for name, column in growth_columns.items():
+                if name == "Metric" or name not in budget_columns:
+                    continue
+                cell = growth.cell(row=row, column=column)
+                if not is_missing(cell.value):
+                    continue
+                start = budget_value(start_year, name)
+                end = budget_value(end_year, name)
+                if not is_number(start) or not is_number(end):
+                    continue
+                if "cagr" in key:
+                    cell.value = rounded(((end / start) ** (1 / (end_year - start_year)) - 1) * 100, 2)
+                elif "fy" in key and str(start_year) in key:
+                    cell.value = start
+                elif "fy" in key and str(end_year) in key:
+                    cell.value = end
+                elif "change" in key:
+                    cell.value = rounded(end - start, 0)
+                elif "avg" in key or "average" in key:
+                    window = [budget_value(year, name) for year in range(start_year, end_year)]
+                    window = [value for value in window if is_number(value)]
+                    if window:
+                        cell.value = rounded(sum(window) / len(window), 1)
+    if output is None:
+        stem = path.stem
+        if stem.endswith("_incomplete"):
+            stem = stem[: -len("_incomplete")]
+        output = path.with_name(stem + "_recovered.xlsx")
+    workbook.save(output)
+    return {"status": "ok", "recovered": [str(output)]}
+
+
+def main() -> None:
+    if len(sys.argv) > 1:
+        print(json.dumps(recover(Path(sys.argv[1])), sort_keys=True))
+        return
+    data = json.load(sys.stdin)
+    if not isinstance(data, dict) or data.get("self_test") is not True:
+        raise SystemExit("expected a workbook path argument or {'self_test': true}")
+    print(json.dumps({"status": "ok", "recovered": []}, sort_keys=True, separators=(",", ":")))
 
 
 if __name__ == "__main__":
@@ -750,6 +1008,21 @@ const FAMILY_CONTENT: Readonly<Record<FailureFamily, FamilyContent>> = {
       '- Recover level-1 totals first, then components, then derived percentage/growth sheets.',
       '- Write the computed numeric value into each recovered cell, not a formula string; spreadsheet verifiers read cell values directly and openpyxl does not recalculate formulas.',
     ),
+    runInstruction: 'When the input is a workbook with missing values, run `python3 scripts/recover_financial_table.py <workbook-path>`; it writes the recovered workbook next to the input and prints a JSON summary.',
+    extraDrafts: [
+      {
+        path: 'scripts/recover_financial_table.py',
+        kind: 'scripts',
+        content: RECOVERY_SCRIPT,
+        rationale: 'deterministic accounting-identity recovery for financial workbooks',
+      },
+      {
+        path: 'evals/fixtures/recover-financial-table.json',
+        kind: 'evals',
+        content: fixtureDocument('scripts/recover_financial_table.py', { self_test: true }, { status: 'ok' }),
+        rationale: 'safe self-test fixture for the recovery script',
+      },
+    ],
   },
   'financial-reconciliation': {
     label: 'financial definition reconciliation',
@@ -850,6 +1123,7 @@ function renderSkillDocument(
     '',
     '1. Read the conditional reference before choosing a normalization path.',
     '2. Run the deterministic script with the task input encoded as JSON on standard input.',
+    ...(content.runInstruction === undefined ? [] : [content.runInstruction]),
     '3. Compare the script report with the safe fixture before using any derived value.',
     '4. Report unresolved issues explicitly; never replace a missing value with a guess.',
     '',
@@ -994,6 +1268,7 @@ function buildDrafts(
       rationale: `safe expected-output fixture for ${content.scriptPath}`,
     },
   ]
+  drafts.push(...(content.extraDrafts ?? []))
   const template = request.outputTemplate
   if (template !== undefined) {
     drafts.push({

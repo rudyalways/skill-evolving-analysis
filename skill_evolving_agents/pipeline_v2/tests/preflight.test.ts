@@ -103,8 +103,12 @@ describe('executable preflight clean bundles', () => {
       expect(report.checks.every((row) => row.status === 'pass')).toBe(true)
       expect(check(report, 'script-execution')?.status).toBe('pass')
       expect(check(report, 'expected-outputs')?.status).toBe('pass')
-      expect(report.metrics.scripts).toBe(1)
-      expect(report.metrics.fixtures).toBe(1)
+      expect(report.metrics.scripts).toBe(
+        plan.resources.filter((row) => row.resource.kind === 'scripts').length,
+      )
+      expect(report.metrics.fixtures).toBe(
+        plan.resources.filter((row) => row.resource.kind === 'evals').length,
+      )
     })
   }
 

@@ -70,6 +70,23 @@ wall budget (1096s).
 - Latency: 479.9 s / 1425.9 s; xlsx 150.0 s -> 1096.0 s
 - Cost: `null` / unmeasured for every cell; no `$0` claim
 
+## Bounded repair: deterministic recovery script
+
+A general financial-workbook recovery script was added to the generated skill:
+
+- `scripts/recover_financial_table.py`
+- `evals/fixtures/recover-financial-table.json`
+
+It solves rows from totals, infers missing totals from year-over-year evidence,
+derives shares, YoY, CAGR, five-year change, and the five-year-window average,
+and writes numeric values. Against the validation workbook it produces a
+workbook that passes the task verifier **19/19 locally**.
+
+This is a local executable-verifier result, not a benchmark result. The
+benchmark treatment that exposed the script in the prompt did not complete
+within the 600s wall budget and was stopped unscored. It is not counted as a
+lift.
+
 ## Gate
 
 - Positive absolute lift: **no**
