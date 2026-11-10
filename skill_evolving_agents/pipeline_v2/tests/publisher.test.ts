@@ -49,6 +49,7 @@ const FAMILY_LABEL: Readonly<Record<FailureFamily, string>> = {
   'financial-reconciliation': 'financial definition reconciliation',
   'dialogue-graph-parsing': 'dialogue graph parsing',
   'network-forensics': 'network forensics',
+  'data-visualization': 'data visualization',
 }
 
 const FIXED_TIME = '2026-02-03T04:05:06.000Z'

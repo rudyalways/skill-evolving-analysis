@@ -157,6 +157,20 @@ This is a **train replay** because the skill was generated from the DAPT baselin
 trace. It demonstrates the intended run → trace → update → rerun loop, but it is
 not a disjoint validation or holdout result.
 
+
+## Data-visualization development loop (incomplete)
+
+Added a `data-visualization` family with a D3 output-layout validator and an
+implementation checklist.
+
+- Skill generation: succeeded
+- Benchmark rerun: **not scored**; the sandbox timed out during deepagents
+  installation at the 600s wall cap
+- No reward, exposure, or lift is claimed for this cell
+
+The next retry must first confirm the data-to-d3 agent environment installs
+within budget; otherwise it is an infrastructure exclusion.
+
 ## Gate
 
 - Positive absolute lift: **yes on validation** (+25pp selective, +100pp activated)

@@ -26,6 +26,7 @@ export const FAILURE_FAMILIES = [
   'financial-reconciliation',
   'dialogue-graph-parsing',
   'network-forensics',
+  'data-visualization',
 ] as const
 
 /** One general failure family supported by the resource planner. */
@@ -348,6 +349,7 @@ const FAMILY_KEYWORDS: Readonly<Record<FailureFamily, readonly string[]>> = {
   'financial-reconciliation': ['financial', 'finance', 'definition', 'reconcile', 'reconciliation', 'evidence', 'ledger', 'revenue'],
   'dialogue-graph-parsing': ['dialogue', 'parser', 'graph', 'scene', 'branch', 'script'],
   'network-forensics': ['pcap', 'packet', 'network', 'intrusion', 'protocol', 'flow'],
+  'data-visualization': ['d3', 'visualization', 'chart', 'bubble', 'table', 'web'],
 }
 
 /** Classify a finding into the closest supported family without a model. */
@@ -793,6 +795,45 @@ if __name__ == "__main__":
     main()
 `
 
+
+const D3_SCRIPT = `#!/usr/bin/env python3
+"""Validate the expected D3 output layout without requiring a browser."""
+from __future__ import annotations
+
+import json
+import sys
+from pathlib import Path
+
+
+def check(root: Path) -> dict:
+    required = [
+        "index.html",
+        "js/d3.v6.min.js",
+        "js/visualization.js",
+        "css/style.css",
+        "data",
+    ]
+    missing = [name for name in required if not (root / name).exists()]
+    return {"status": "ok" if not missing else "missing", "missing": missing}
+
+
+def main() -> None:
+    if len(sys.argv) < 2:
+        data = json.load(sys.stdin)
+        if not isinstance(data, dict) or data.get("self_test") is not True:
+            raise SystemExit("expected output root or {'self_test': true}")
+        print(json.dumps({"status": "ok"}, sort_keys=True))
+        return
+    root = Path(sys.argv[1])
+    result = check(root)
+    print(json.dumps(result, sort_keys=True))
+    if result["missing"]:
+        raise SystemExit(1)
+
+
+if __name__ == "__main__":
+    main()
+`
 
 const NETWORK_SCRIPT = `#!/usr/bin/env python3
 """Compute network statistics from a PCAP and fill a metric/value CSV template."""
@@ -1430,6 +1471,47 @@ const FAMILY_CONTENT: Readonly<Record<FailureFamily, FamilyContent>> = {
     ),
     fixtureSummary: 'safe PCAP metric extractor self-test fixture',
     runInstruction: 'Run `scripts/network_stats.py <pcap> <template.csv> <output.csv>` and preserve all comment rows and the metric column. Use the script output verbatim for every value, including `is_traffic_benign`, `has_port_scan`, `has_dos_pattern`, and `has_beaconing`; do not replace those flags with a subjective reclassification.',
+  },
+  'data-visualization': {
+    label: 'data visualization',
+    title: 'Data visualization',
+    trigger: 'a CSV or dataset must become a browser-rendered interactive chart plus a linked table',
+    scriptPath: 'scripts/validate_d3_bundle.py',
+    script: D3_SCRIPT,
+    scriptSummary: 'checks the required D3 output layout and reports missing files',
+    referencePath: 'references/data-visualization.md',
+    referenceSummary: 'implementation checklist for data loading, force layout, legends, tooltip, table formatting, and cross-highlighting',
+    reference: lines(
+      '# Data visualization reference',
+      '',
+      '## When to use',
+      'Use this reference when a browser-delivered visualization must load local CSV data and render an interactive chart with a linked table.',
+      '',
+      '## Procedure',
+      '1. Persist every required artifact: index.html, js/d3.v6.min.js, js/visualization.js, css/style.css, and a copied data directory.',
+      '2. Load data with d3.csv and normalize numeric fields; treat missing market caps explicitly.',
+      '3. Size bubbles by market cap; use a uniform size for ETFs.',
+      '4. Cluster by sector with forceX/forceY; prevent overlap with forceCollide; keep cluster centers visible.',
+      '5. Add a complete sector legend and ticker labels.',
+      '6. Show a tooltip with ticker, name, and sector only when the fields exist.',
+      '7. Render the table with readable market-cap formatting.',
+      '8. Link bubble click and table row click through a shared highlighted state.',
+      '',
+      '## Validation',
+      '- Run the layout validator and fix every missing file.',
+      '- Serve over HTTP and check the browser console for errors.',
+      '- Check all required columns and all sectors are present.',
+      '- Check ETF rows do not show the excluded tooltip fields.',
+      '- Check click/highlight behavior in both directions.',
+    ),
+    fixturePath: 'evals/fixtures/data-visualization.json',
+    fixture: fixtureDocument(
+      'scripts/validate_d3_bundle.py',
+      { self_test: true },
+      { status: 'ok' },
+    ),
+    fixtureSummary: 'safe D3 layout validator self-test fixture',
+    runInstruction: 'Use `scripts/validate_d3_bundle.py <output-root>` after building the app, then fix every missing artifact before finishing.',
   },
 }
 

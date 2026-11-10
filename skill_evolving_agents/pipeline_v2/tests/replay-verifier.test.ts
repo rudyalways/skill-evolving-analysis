@@ -27,6 +27,7 @@ const FAMILY_LABEL: Readonly<Record<FailureFamily, string>> = {
   'financial-reconciliation': 'financial definition reconciliation',
   'dialogue-graph-parsing': 'dialogue graph parsing',
   'network-forensics': 'network forensics',
+  'data-visualization': 'data visualization',
 }
 
 function makeFinding(family: FailureFamily): Finding {
