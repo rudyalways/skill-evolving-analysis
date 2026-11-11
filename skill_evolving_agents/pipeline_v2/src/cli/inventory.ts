@@ -28,7 +28,7 @@ function parseFrontmatter(text: string): Frontmatter {
 
 const FAMILY_HINTS: readonly (readonly [RegExp, string])[] = [
   [/openpyxl|excel|xlsx|spreadsheet/i, 'spreadsheet-formula-validation'],
-  [/threejs|three\.js|mesh|obj/i, 'threejs-graphics'],
+  [/three\.?js|\bmeshes?\b|\bobj\b/i, 'threejs-graphics'],
   [/dialogue|parser/i, 'dialogue-graph-parsing'],
   [/pcap|packet|network|intrusion/i, 'network-forensics'],
   [/invoice|financial|ledger|reconcil/i, 'financial-reconciliation'],
