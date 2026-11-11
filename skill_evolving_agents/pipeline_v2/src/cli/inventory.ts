@@ -59,7 +59,14 @@ export async function inventoryFromSkills(root: string): Promise<RouterInventory
     const name = meta.name || entry.name
     const description = meta.description || name
     const family = meta.family || inferFamily(name, description)
-    const keywords = (meta.keywords || name).split(/[,\s]+/).filter(Boolean)
+    const alias = name
+      .replace(/threejs/gi, 'three js')
+      .replace(/openpyxl/gi, 'open pyxl')
+      .replace(/[^a-zA-Z0-9]+/g, ' ')
+    const keywords = [...new Set([
+      ...(meta.keywords || name).split(/[,\s]+/),
+      ...alias.split(/\s+/),
+    ].filter(Boolean))]
     skills.push({
       skillId: skillId(`inventory-${entry.name}`),
       name,
