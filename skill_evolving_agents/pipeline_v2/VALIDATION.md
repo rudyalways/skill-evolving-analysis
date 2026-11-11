@@ -221,6 +221,21 @@ This is a train replay because the skill was generated from the same
 software-dependency-audit baseline trace. It is a development improvement, not
 a disjoint validation or holdout result.
 
+
+## Econometrics development capability
+
+Added an annual macro time-series family:
+
+- parse annual ERP rows;
+- deflate nominal PCE/PFI by the supplied CPI;
+- log-transform and apply the HP filter with lambda 100;
+- compute Pearson correlation and write five decimals.
+
+Local task verifier: **4/4 passed**; computed `0.68828` against expected
+`0.68885` within the ±0.001 tolerance.
+
+This was validated locally, not on a benchmark or sealed holdout.
+
 ## Gate
 
 - Positive absolute lift: **yes on validation** (+25pp selective, +100pp activated)

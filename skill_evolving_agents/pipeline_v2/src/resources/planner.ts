@@ -28,6 +28,7 @@ export const FAILURE_FAMILIES = [
   'network-forensics',
   'data-visualization',
   'dependency-audit',
+  'econometrics',
 ] as const
 
 /** One general failure family supported by the resource planner. */
@@ -352,6 +353,7 @@ const FAMILY_KEYWORDS: Readonly<Record<FailureFamily, readonly string[]>> = {
   'network-forensics': ['pcap', 'packet', 'network', 'intrusion', 'protocol', 'flow'],
   'data-visualization': ['d3', 'visualization', 'chart', 'bubble', 'table', 'web'],
   'dependency-audit': ['dependency', 'vulnerability', 'cve', 'security', 'audit', 'package-lock'],
+  'econometrics': ['econom', 'inflation', 'cpi', 'hp-filter', 'detrend', 'correlation', 'time-series'],
 }
 
 /** Classify a finding into the closest supported family without a model. */
@@ -797,6 +799,73 @@ if __name__ == "__main__":
     main()
 `
 
+
+const ECON_SCRIPT = `#!/usr/bin/env python3
+"""Deflate annual PCE/PFI series, HP-filter logs, and correlate cycles."""
+from __future__ import annotations
+
+import json
+import sys
+from pathlib import Path
+
+
+def read_annual(path: Path, column: int = 1) -> dict[int, float]:
+    import numpy as np
+    import pandas as pd
+
+    frame = pd.read_excel(path, header=None)
+    data: dict[int, float] = {}
+    for _, row in frame.iterrows():
+        try:
+            year = int(float(row.iloc[0]))
+        except (TypeError, ValueError):
+            continue
+        try:
+            value = float(row.iloc[column])
+        except (TypeError, ValueError):
+            continue
+        if 1973 <= year <= 2024 and not np.isnan(value):
+            data[year] = value
+    return data
+
+
+def compute(root: Path) -> float:
+    import numpy as np
+    import pandas as pd
+    from statsmodels.tsa.filters.hp_filter import hpfilter
+
+    pce = read_annual(root / "ERP-2025-table10.xls")
+    pfi = read_annual(root / "ERP-2025-table12.xls")
+    cpi_frame = pd.read_excel(root / "CPI.xlsx", header=0)
+    cpi = {int(year): float(value) for year, value in zip(cpi_frame["Year"], cpi_frame["CPI_2024"])}
+    years = sorted(set(pce) & set(pfi) & set(cpi))
+    if len(years) < 3:
+        raise SystemExit("not enough overlapping annual observations")
+    real_pce = np.array([pce[year] / cpi[year] for year in years])
+    real_pfi = np.array([pfi[year] / cpi[year] for year in years])
+    cycle_pce, _ = hpfilter(np.log(real_pce), lamb=100)
+    cycle_pfi, _ = hpfilter(np.log(real_pfi), lamb=100)
+    return float(np.corrcoef(cycle_pce, cycle_pfi)[0, 1])
+
+
+def main() -> None:
+    if len(sys.argv) < 2:
+        data = json.load(sys.stdin)
+        if not isinstance(data, dict) or data.get("self_test") is not True:
+            raise SystemExit("expected data root or {'self_test': true}")
+        print(json.dumps({"status": "ok"}, sort_keys=True))
+        return
+    root = Path(sys.argv[1])
+    value = compute(root)
+    output = Path(sys.argv[2]) if len(sys.argv) > 2 else root / "answer.txt"
+    with output.open("w", encoding="utf-8") as stream:
+        stream.write(f"{value:.5f}\\n")
+    print(json.dumps({"correlation": round(value, 5)}, sort_keys=True))
+
+
+if __name__ == "__main__":
+    main()
+`
 
 const AUDIT_SCRIPT = `#!/usr/bin/env python3
 """Run an offline Trivy scan over a lockfile and write the audit CSV."""
@@ -1641,6 +1710,39 @@ const FAMILY_CONTENT: Readonly<Record<FailureFamily, FamilyContent>> = {
     fixture: fixtureDocument('scripts/audit_dependencies.py', { self_test: true }, { status: 'ok' }),
     fixtureSummary: 'safe dependency-audit self-test fixture',
     runInstruction: 'Run `python3 scripts/audit_dependencies.py <package-lock.json> <security_audit.csv>` and do not add vulnerabilities outside HIGH/CRITICAL.',
+  },
+  'econometrics': {
+    label: 'econometrics',
+    title: 'Econometric time-series analysis',
+    trigger: 'annual nominal series must be deflated, log-transformed, HP-filtered, and correlated',
+    scriptPath: 'scripts/econ_cycles.py',
+    script: ECON_SCRIPT,
+    scriptSummary: 'CPI deflation, HP-filter cycle extraction, and Pearson correlation',
+    referencePath: 'references/econometrics.md',
+    referenceSummary: 'annual-row extraction, CPI deflation, log transformation, HP lambda selection, and correlation reporting',
+    reference: lines(
+      '# Econometrics reference',
+      '',
+      '## When to use',
+      'Use this reference for annual macroeconomic series that must be converted to real terms and decomposed into trend and cycle.',
+      '',
+      '## Procedure',
+      '1. Parse annual rows by numeric year; ignore headers, quarterly rows, and notes.',
+      '2. Deflate nominal values by the supplied CPI index.',
+      '3. Take the natural logarithm of each real series.',
+      '4. Apply the Hodrick-Prescott filter with lambda 100 for annual data.',
+      '5. Correlate the two cyclical components with Pearson correlation.',
+      '6. Round to five decimal places and write only the number.',
+      '',
+      '## Validation',
+      '- Confirm overlapping years and no missing values.',
+      '- Check correlation is in [-1, 1].',
+      '- Check the answer file has a decimal point and no scientific notation.',
+    ),
+    fixturePath: 'evals/fixtures/econometrics.json',
+    fixture: fixtureDocument('scripts/econ_cycles.py', { self_test: true }, { status: 'ok' }),
+    fixtureSummary: 'safe econometrics self-test fixture',
+    runInstruction: 'Run `python3 scripts/econ_cycles.py <data-root> <answer.txt>` and write only the rounded coefficient.',
   },
 }
 

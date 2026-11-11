@@ -27,6 +27,7 @@ const FAMILY_LABEL: Readonly<Record<FailureFamily, string>> = {
   'network-forensics': 'network forensics',
   'data-visualization': 'data visualization',
   'dependency-audit': 'dependency audit',
+  'econometrics': 'econometrics',
 }
 
 function makeFinding(family: FailureFamily): Finding {
