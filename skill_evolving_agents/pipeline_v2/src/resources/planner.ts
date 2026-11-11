@@ -27,6 +27,7 @@ export const FAILURE_FAMILIES = [
   'dialogue-graph-parsing',
   'network-forensics',
   'data-visualization',
+  'dependency-audit',
 ] as const
 
 /** One general failure family supported by the resource planner. */
@@ -350,6 +351,7 @@ const FAMILY_KEYWORDS: Readonly<Record<FailureFamily, readonly string[]>> = {
   'dialogue-graph-parsing': ['dialogue', 'parser', 'graph', 'scene', 'branch', 'script'],
   'network-forensics': ['pcap', 'packet', 'network', 'intrusion', 'protocol', 'flow'],
   'data-visualization': ['d3', 'visualization', 'chart', 'bubble', 'table', 'web'],
+  'dependency-audit': ['dependency', 'vulnerability', 'cve', 'security', 'audit', 'package-lock'],
 }
 
 /** Classify a finding into the closest supported family without a model. */
@@ -795,6 +797,100 @@ if __name__ == "__main__":
     main()
 `
 
+
+const AUDIT_SCRIPT = `#!/usr/bin/env python3
+"""Run an offline Trivy scan over a lockfile and write the audit CSV."""
+from __future__ import annotations
+
+import asyncio
+import csv
+import json
+import os
+import sys
+from pathlib import Path
+
+FIELDS = ["Package", "Version", "CVE_ID", "Severity", "CVSS_Score", "Fixed_Version", "Title", "Url"]
+
+
+def find_cache() -> str:
+    for candidate in ("/root/trivy-cache", "/root/.cache/trivy", "trivy-cache"):
+        if (Path(candidate) / "db" / "trivy.db").exists():
+            return candidate
+    return "/root/trivy-cache"
+
+
+def score(vuln: dict) -> object:
+    cvss = vuln.get("CVSS") or {}
+    for source in ("nvd", "ghsa", "redhat"):
+        entry = cvss.get(source) or {}
+        value = entry.get("V3Score")
+        if value is not None:
+            return value
+    return "N/A"
+
+
+def scan(lockfile: Path, output: Path) -> int:
+    cache = find_cache()
+    report = output.with_suffix(".trivy.json")
+    command = [
+        "trivy", "fs", str(lockfile),
+        "--format", "json", "--output", str(report),
+        "--scanners", "vuln", "--skip-db-update", "--offline-scan",
+        "--cache-dir", cache,
+    ]
+    async def run() -> tuple[int, bytes, bytes]:
+        process = await asyncio.create_subprocess_exec(
+            *command,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        stdout, stderr = await process.communicate()
+        return process.returncode, stdout, stderr
+
+    code, _, stderr = asyncio.run(run())
+    if code != 0:
+        sys.stderr.write(stderr.decode("utf-8", errors="replace"))
+        return code
+    data = json.loads(report.read_text(encoding="utf-8"))
+    rows = []
+    for result in data.get("Results") or []:
+        for vuln in result.get("Vulnerabilities") or []:
+            severity = str(vuln.get("Severity") or "").upper()
+            if severity not in {"HIGH", "CRITICAL"}:
+                continue
+            rows.append({
+                "Package": vuln.get("PkgName") or "",
+                "Version": vuln.get("InstalledVersion") or "",
+                "CVE_ID": vuln.get("VulnerabilityID") or "",
+                "Severity": severity,
+                "CVSS_Score": score(vuln),
+                "Fixed_Version": vuln.get("FixedVersion") or "N/A",
+                "Title": vuln.get("Title") or "N/A",
+                "Url": vuln.get("PrimaryURL") or "",
+            })
+    rows.sort(key=lambda row: (row["Package"], row["Version"], row["CVE_ID"]))
+    with output.open("w", newline="", encoding="utf-8") as stream:
+        writer = csv.DictWriter(stream, fieldnames=FIELDS)
+        writer.writeheader()
+        writer.writerows(rows)
+    return 0
+
+
+def main() -> None:
+    if len(sys.argv) < 2:
+        data = json.load(sys.stdin)
+        if not isinstance(data, dict) or data.get("self_test") is not True:
+            raise SystemExit("expected lockfile path or {'self_test': true}")
+        print(json.dumps({"status": "ok"}, sort_keys=True))
+        return
+    lockfile = Path(sys.argv[1])
+    output = Path(sys.argv[2]) if len(sys.argv) > 2 else Path("/root/security_audit.csv")
+    raise SystemExit(scan(lockfile, output))
+
+
+if __name__ == "__main__":
+    main()
+`
 
 const D3_SCRIPT = `#!/usr/bin/env python3
 """Validate the expected D3 output layout without requiring a browser."""
@@ -1512,6 +1608,39 @@ const FAMILY_CONTENT: Readonly<Record<FailureFamily, FamilyContent>> = {
     ),
     fixtureSummary: 'safe D3 layout validator self-test fixture',
     runInstruction: 'Use `scripts/validate_d3_bundle.py <output-root>` after building the app, then fix every missing artifact before finishing.',
+  },
+  'dependency-audit': {
+    label: 'dependency audit',
+    title: 'Dependency audit',
+    trigger: 'a lockfile must be audited for HIGH or CRITICAL vulnerabilities and reported as a CSV',
+    scriptPath: 'scripts/audit_dependencies.py',
+    script: AUDIT_SCRIPT,
+    scriptSummary: 'offline Trivy lockfile scan with HIGH/CRITICAL CSV reporting',
+    referencePath: 'references/dependency-audit.md',
+    referenceSummary: 'offline Trivy cache selection, CVSS fallback, severity filtering, and CSV field mapping',
+    reference: lines(
+      '# Dependency audit reference',
+      '',
+      '## When to use',
+      'Use this reference when a dependency lockfile must be audited offline and reported as a flat CSV.',
+      '',
+      '## Procedure',
+      '1. Locate the Trivy offline database under `/root/trivy-cache`, `/root/.cache/trivy`, or `trivy-cache`.',
+      '2. Run `trivy fs <lockfile> --scanners vuln --skip-db-update --offline-scan --format json`.',
+      '3. Keep only HIGH and CRITICAL vulnerabilities.',
+      '4. Extract CVSS v3 from NVD, then GHSA, then RedHat; use N/A if absent.',
+      '5. Map Package, Version, CVE_ID, Severity, CVSS_Score, Fixed_Version, Title, and Url.',
+      '6. Sort rows deterministically and write the exact CSV header.',
+      '',
+      '## Validation',
+      '- The CSV must parse and contain only HIGH/CRITICAL rows.',
+      '- Missing fixed versions must be `N/A`, not empty.',
+      '- The report must come from the offline database, not a network lookup.',
+    ),
+    fixturePath: 'evals/fixtures/dependency-audit.json',
+    fixture: fixtureDocument('scripts/audit_dependencies.py', { self_test: true }, { status: 'ok' }),
+    fixtureSummary: 'safe dependency-audit self-test fixture',
+    runInstruction: 'Run `python3 scripts/audit_dependencies.py <package-lock.json> <security_audit.csv>` and do not add vulnerabilities outside HIGH/CRITICAL.',
   },
 }
 

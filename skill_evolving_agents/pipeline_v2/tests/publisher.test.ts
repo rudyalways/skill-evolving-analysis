@@ -50,6 +50,7 @@ const FAMILY_LABEL: Readonly<Record<FailureFamily, string>> = {
   'dialogue-graph-parsing': 'dialogue graph parsing',
   'network-forensics': 'network forensics',
   'data-visualization': 'data visualization',
+  'dependency-audit': 'dependency audit',
 }
 
 const FIXED_TIME = '2026-02-03T04:05:06.000Z'

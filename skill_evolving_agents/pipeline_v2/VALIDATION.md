@@ -207,6 +207,20 @@ A pre-registered 16-task, 8-domain fresh catalog cohort was attempted on
 The incomplete cohort is **not** a valid holdout and is not scored. No 60%
 claim can be derived from it.
 
+
+## Dependency-audit development loop (train replay)
+
+Added an offline Trivy dependency-audit family with exact HIGH/CRITICAL CSV reporting.
+
+- Baseline: 0.0, 37 calls, abstained
+- Generated skill: **1.0**, 13 calls, verified `SKILL.md` read, no efficiency failure
+- Replay safety: `subprocess.run` is rejected; the scanner launch uses
+  `asyncio.create_subprocess_exec`
+
+This is a train replay because the skill was generated from the same
+software-dependency-audit baseline trace. It is a development improvement, not
+a disjoint validation or holdout result.
+
 ## Gate
 
 - Positive absolute lift: **yes on validation** (+25pp selective, +100pp activated)
