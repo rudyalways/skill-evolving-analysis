@@ -26,6 +26,22 @@ function parseFrontmatter(text: string): Frontmatter {
   return fields
 }
 
+const FAMILY_HINTS: readonly (readonly [RegExp, string])[] = [
+  [/openpyxl|excel|xlsx|spreadsheet/i, 'spreadsheet-formula-validation'],
+  [/threejs|three\.js|mesh|obj/i, 'threejs-graphics'],
+  [/dialogue|parser/i, 'dialogue-graph-parsing'],
+  [/pcap|packet|network|intrusion/i, 'network-forensics'],
+  [/invoice|financial|ledger|reconcil/i, 'financial-reconciliation'],
+]
+
+function inferFamily(name: string, description: string): string {
+  const text = `${name} ${description}`
+  for (const [pattern, family] of FAMILY_HINTS) {
+    if (pattern.test(text)) return family
+  }
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, '-')
+}
+
 /** Read immediate skill directories and produce a deterministic inventory. */
 export async function inventoryFromSkills(root: string): Promise<RouterInventory> {
   const base = resolve(root)
@@ -42,7 +58,7 @@ export async function inventoryFromSkills(root: string): Promise<RouterInventory
     const meta = parseFrontmatter(text)
     const name = meta.name || entry.name
     const description = meta.description || name
-    const family = meta.family || name.toLowerCase().replace(/[^a-z0-9]+/g, '-')
+    const family = meta.family || inferFamily(name, description)
     const keywords = (meta.keywords || name).split(/[,\s]+/).filter(Boolean)
     skills.push({
       skillId: skillId(`inventory-${entry.name}`),
